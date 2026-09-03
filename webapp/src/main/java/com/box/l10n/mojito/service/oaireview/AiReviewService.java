@@ -20,6 +20,10 @@ import com.box.l10n.mojito.rest.textunit.AiReviewType;
 import com.box.l10n.mojito.rest.textunit.AiReviewType.AiReviewTextUnitVariantOutput;
 import com.box.l10n.mojito.service.oaireview.AiReviewBatchesImportJob.AiReviewBatchesImportInput;
 import com.box.l10n.mojito.service.oaireview.AiReviewBatchesImportJob.AiReviewBatchesImportOutput;
+import com.box.l10n.mojito.service.oaireview.AiReviewResponseValidator.InvalidReviewResponseException;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
+import com.box.l10n.mojito.service.oaitranslate.GlossaryService;
+import com.box.l10n.mojito.service.oaitranslate.GlossaryService.GlossaryTrie;
 import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
 import com.box.l10n.mojito.service.pollableTask.MsgArg;
 import com.box.l10n.mojito.service.pollableTask.Pollable;
@@ -105,6 +109,10 @@ public class AiReviewService {
 
   MeterRegistry meterRegistry;
 
+  private final GlossaryService glossaryService;
+
+  private final AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService;
+
   /**
    * openAIClient and openAIClientPool are nullable. The public API will check for the client if
    * they are not configured will throw an exception (keeping code minimal for now, could split into
@@ -125,7 +133,9 @@ public class AiReviewService {
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
       PollableTaskBlobStorage pollableTaskBlobStorage,
       PollableTaskService pollableTaskService,
-      MeterRegistry meterRegistry) {
+      MeterRegistry meterRegistry,
+      GlossaryService glossaryService,
+      AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService) {
     this.textUnitSearcher = Objects.requireNonNull(textUnitSearcher);
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.textUnitVariantRepository = Objects.requireNonNull(textUnitVariantRepository);
@@ -140,6 +150,9 @@ public class AiReviewService {
     this.pollableTaskBlobStorage = pollableTaskBlobStorage;
     this.pollableTaskService = pollableTaskService;
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
+    this.glossaryService = Objects.requireNonNull(glossaryService);
+    this.aiTranslateLocalePromptSuffixService =
+        Objects.requireNonNull(aiTranslateLocalePromptSuffixService);
   }
 
   public record AiReviewInput(
@@ -152,11 +165,49 @@ public class AiReviewService {
       String runName,
       String reviewType) {}
 
-  public record AiReviewTextUnitInput(long stringId, String source, String sourceDescription) {}
+  public record AiReviewTextUnitInput(long stringId, String source, String description) {}
 
   public record AiReviewTextUnitVariantInput(
-      String locale, String source, String sourceDescription, ExistingTarget existingTarget) {
+      String locale,
+      String source,
+      String sourceDescription,
+      ExistingTarget existingTarget,
+      List<ReviewGlossaryTerm> glossaryTerms) {
+
+    public AiReviewTextUnitVariantInput(
+        String locale, String source, String sourceDescription, ExistingTarget existingTarget) {
+      this(locale, source, sourceDescription, existingTarget, List.of());
+    }
+
     public record ExistingTarget(String content, boolean hasBrokenPlaceholders) {}
+  }
+
+  public record ReviewGlossaryTerm(
+      String source,
+      String target,
+      String definition,
+      String sourceNote,
+      String targetNote,
+      String partOfSpeech,
+      String enforcement,
+      boolean doNotTranslate,
+      boolean caseSensitive) {}
+
+  public AiReviewTextUnitVariantOutput getAiReviewSingleTextUnit(TextUnitDTO textUnitDTO) {
+    List<GlossaryService.GlossaryTerm> glossaryTerms =
+        glossaryService
+            .findMatchesForRepositoryAndLocale(
+                null,
+                textUnitDTO.getRepositoryName(),
+                null,
+                textUnitDTO.getTargetLocale(),
+                textUnitDTO.getSource(),
+                textUnitDTO.getTmTextUnitId())
+            .stream()
+            .map(GlossaryService.MatchedGlossaryTerm::glossaryTerm)
+            .distinct()
+            .toList();
+    return getAiReviewSingleTextUnit(getVariantReviewInput(textUnitDTO, glossaryTerms));
   }
 
   public AiReviewTextUnitVariantOutput getAiReviewSingleTextUnit(
@@ -167,26 +218,31 @@ public class AiReviewService {
 
     ResponsesRequest responsesRequest =
         getResponsesRequest(
-            AiReviewType.PROMPT_ALL,
+            getReviewPrompt(AiReviewType.ALL, input.locale()),
             inputAsJsonString,
             aiReviewConfigurationProperties.getModelName(),
-            AiReviewTextUnitVariantOutput.class);
+            AiReviewTextUnitVariantOutput.class,
+            false);
 
     logger.info(objectMapper.writeValueAsStringUnchecked(responsesRequest));
 
-    OpenAIClient openAIClient =
-        OpenAIClient.builder()
-            .apiKey(aiReviewConfigurationProperties.getOpenaiClientToken())
-            .build();
+    OpenAIClient openAIClient = getOpenAIClient();
 
     String model = aiReviewConfigurationProperties.getModelName();
     Tags requestTags = metricTags("single", null, model, input.locale());
     Stopwatch requestStopwatch = Stopwatch.createStarted();
-    ResponsesResponse responsesResponse;
+    AiReviewTextUnitVariantOutput output;
     try {
-      responsesResponse =
-          openAIClient.getResponses(responsesRequest, resolveRequestTimeout(input)).join();
-    } catch (CompletionException e) {
+      ResponsesResponse responsesResponse =
+          openAIClient
+              .getResponses(responsesRequest, resolveRequestTimeout(inputAsJsonString))
+              .join();
+      output =
+          objectMapper.readValueUnchecked(
+              AiReviewResponseValidator.outputText(responsesResponse),
+              AiReviewTextUnitVariantOutput.class);
+      logger.info(objectMapper.writeValueAsStringUnchecked(responsesResponse));
+    } catch (RuntimeException e) {
       if (isTimeoutException(e)) {
         incrementCounter(metricName("timeouts"), requestTags);
       }
@@ -196,12 +252,7 @@ public class AiReviewService {
     }
     recordRequestDuration(requestTags, null, requestStopwatch);
 
-    logger.info(objectMapper.writeValueAsStringUnchecked(responsesResponse));
-
-    String jsonResponse = responsesResponse.outputText();
-    AiReviewTextUnitVariantOutput aiReviewTextUnitVariantOutput =
-        objectMapper.readValueUnchecked(jsonResponse, AiReviewTextUnitVariantOutput.class);
-    return aiReviewTextUnitVariantOutput;
+    return output;
   }
 
   public PollableFuture<Void> aiReviewAsync(AiReviewInput aiReviewInput) {
@@ -300,6 +351,14 @@ public class AiReviewService {
       return Mono.empty();
     }
 
+    GlossaryTrie glossaryTrie =
+        aiReviewType.isForTextUnitVariantReview()
+            ? glossaryService.loadLinkedGlossaryTrieForLocale(
+                repositoryLocale.getRepository().getId(),
+                repositoryLocale.getLocale().getBcp47Tag())
+            : null;
+    String prompt = getReviewPrompt(aiReviewType, repositoryLocale.getLocale().getBcp47Tag());
+
     logger.info(
         "Starting parallel processing for each string in locale: {}, count: {}",
         repositoryLocale.getLocale().getBcp47Tag(),
@@ -312,7 +371,13 @@ public class AiReviewService {
                 Flux.fromIterable(batch)
                     .flatMap(
                         textUnitDTO ->
-                            getResponseForTextUnitDTO(textUnitDTO, model, openAIClientPool)
+                            getResponseForTextUnitDTO(
+                                    textUnitDTO,
+                                    model,
+                                    openAIClientPool,
+                                    aiReviewType,
+                                    prompt,
+                                    glossaryTrie)
                                 .retryWhen(
                                     Retry.backoff(5, Duration.ofSeconds(1))
                                         .filter(this::isRetryableException)
@@ -385,7 +450,7 @@ public class AiReviewService {
         aiReviewProtoRepository.findTmTextUnitVariantIdsByLocaleIdAndRepositoryId(
             repositoryLocale.getLocale().getId(),
             repositoryLocale.getRepository().getId(),
-            runName);
+            resolveReviewRunName(runName));
 
     logger.info(
         "Get translated strings for locale: '{}' in repository: '{}'",
@@ -421,6 +486,9 @@ public class AiReviewService {
 
   private <T> Mono<Void> submitForSave(
       String runName, List<MyRecord> results, Class<T> outputClass) {
+    if (results.isEmpty()) {
+      return Mono.empty();
+    }
     String targetLocale = results.get(0).textUnitDTO().getTargetLocale();
     logger.info("Submit for save for locale {}", targetLocale);
     List<AiReviewProto> forSave =
@@ -430,7 +498,8 @@ public class AiReviewService {
                   TextUnitDTO textUnitDTO = myRecord.textUnitDTO();
                   ResponsesResponse responsesResponse = myRecord.responsesResponse();
 
-                  String completionOutputAsJson = responsesResponse.outputText();
+                  String completionOutputAsJson =
+                      AiReviewResponseValidator.outputText(responsesResponse);
 
                   // this is just to check the format right now since we save the json anyway.
                   T completionOutput =
@@ -442,7 +511,7 @@ public class AiReviewService {
                       completionOutput);
 
                   AiReviewProto aiReviewProto = new AiReviewProto();
-                  aiReviewProto.setRunName(runName);
+                  aiReviewProto.setRunName(resolveReviewRunName(runName));
                   aiReviewProto.setTmTextUnitVariant(
                       textUnitVariantRepository.getReferenceById(
                           textUnitDTO.getTmTextUnitVariantId()));
@@ -470,53 +539,44 @@ public class AiReviewService {
   }
 
   private Mono<MyRecord> getResponseForTextUnitDTO(
-      TextUnitDTO textUnitDTO, String model, OpenAIClientPool openAIClientPool) {
-
-    AiReviewTextUnitVariantInput aiReviewTextUnitVariantInput =
-        new AiReviewTextUnitVariantInput(
-            textUnitDTO.getTargetLocale(),
-            textUnitDTO.getSource(),
-            textUnitDTO.getComment(),
-            new AiReviewTextUnitVariantInput.ExistingTarget(
-                textUnitDTO.getTarget(), !textUnitDTO.isIncludedInLocalizedFile()));
+      TextUnitDTO textUnitDTO,
+      String model,
+      OpenAIClientPool openAIClientPool,
+      AiReviewType aiReviewType,
+      String prompt,
+      GlossaryTrie glossaryTrie) {
 
     String inputAsJsonString =
-        objectMapper.writeValueAsStringUnchecked(aiReviewTextUnitVariantInput);
+        objectMapper.writeValueAsStringUnchecked(
+            getReviewInput(textUnitDTO, aiReviewType.isForTextUnitVariantReview(), glossaryTrie));
     ResponsesRequest responsesRequest =
         getResponsesRequest(
-            AiReviewType.PROMPT_ALL, inputAsJsonString, model, AiReviewTextUnitVariantOutput.class);
+            prompt, inputAsJsonString, model, aiReviewType.getOutputJsonSchemaClass(), false);
 
     Tags requestTags =
         metricTags(
             "noBatch", textUnitDTO.getRepositoryName(), model, textUnitDTO.getTargetLocale());
 
     return Mono.defer(
-            () -> {
-              Stopwatch requestStopwatch = Stopwatch.createStarted();
-              return Mono.fromFuture(
-                  openAIClientPool
-                      .submit(
-                          openAIClient ->
-                              openAIClient.getResponses(
-                                  responsesRequest,
-                                  resolveRequestTimeout(aiReviewTextUnitVariantInput)))
-                      .whenComplete(
-                          (responsesResponse, throwable) ->
-                              recordRequestDuration(requestTags, throwable, requestStopwatch)));
-            })
-        .handle(
-            (responsesResponse, sink) -> {
-              String jsonReview = responsesResponse.outputText();
-              try {
-                objectMapper.readValueUnchecked(jsonReview, AiReviewTextUnitVariantOutput.class);
-              } catch (UncheckedIOException e) {
-                logger.error(
-                    "Can't deserialize the response: {}, content: {}", e.getMessage(), jsonReview);
-                sink.error(e);
-                return;
-              }
-              sink.next(new MyRecord(textUnitDTO, responsesResponse));
-            });
+        () -> {
+          Stopwatch requestStopwatch = Stopwatch.createStarted();
+          return Mono.fromFuture(
+              openAIClientPool
+                  .submit(
+                      openAIClient ->
+                          openAIClient.getResponses(
+                              responsesRequest, resolveRequestTimeout(inputAsJsonString)))
+                  .thenApply(
+                      responsesResponse -> {
+                        String jsonReview = AiReviewResponseValidator.outputText(responsesResponse);
+                        objectMapper.readValueUnchecked(
+                            jsonReview, aiReviewType.getOutputJsonSchemaClass());
+                        return new MyRecord(textUnitDTO, responsesResponse);
+                      })
+                  .whenComplete(
+                      (result, throwable) ->
+                          recordRequestDuration(requestTags, throwable, requestStopwatch)));
+        });
   }
 
   private boolean isRetryableException(Throwable throwable) {
@@ -592,7 +652,7 @@ public class AiReviewService {
       PollableFuture<AiReviewBatchesImportOutput> aiReviewBatchesImportOutputPollableFuture =
           aiReviewBatchesImportAsync(
               new AiReviewBatchesImportInput(
-                  aiReviewInput.runName(),
+                  resolveReviewRunName(aiReviewInput.runName()),
                   createdBatches,
                   skippedLocales,
                   batchCreationErrors,
@@ -637,9 +697,9 @@ public class AiReviewService {
                       objectMapper.readValueUnchecked(
                           line, OpenAIClient.ResponsesResponseBatchFileLine.class);
 
-                  if (responsesResponseBatchFileLine.response().statusCode() != 200) {
-                    throw new RuntimeException(
-                        "Response batch file line failed: " + responsesResponseBatchFileLine);
+                  if (responsesResponseBatchFileLine.response() == null
+                      || responsesResponseBatchFileLine.response().statusCode() != 200) {
+                    throw new InvalidReviewResponseException("AI review batch response failed.");
                   }
 
                   String completionOutputAsJson =
@@ -658,6 +718,7 @@ public class AiReviewService {
                   Long tmTextUnitVariantId =
                       Long.valueOf(responsesResponseBatchFileLine.customId());
                   AiReviewProto aiReviewProto = new AiReviewProto();
+                  // The run was versioned when the batch was created. Preserve old in-flight runs.
                   aiReviewProto.setRunName(runName);
                   aiReviewProto.setTmTextUnitVariant(
                       textUnitVariantRepository.getReferenceById(tmTextUnitVariantId));
@@ -736,8 +797,12 @@ public class AiReviewService {
               textUnitDTOS,
               model,
               aiReviewType.getOutputJsonSchemaClass(),
-              aiReviewType.getPrompt(),
-              aiReviewType.isForTextUnitVariantReview());
+              getReviewPrompt(aiReviewType, repositoryLocale.getLocale().getBcp47Tag()),
+              aiReviewType.isForTextUnitVariantReview(),
+              aiReviewType.isForTextUnitVariantReview()
+                  ? glossaryService.loadLinkedGlossaryTrieForLocale(
+                      repository.getId(), repositoryLocale.getLocale().getBcp47Tag())
+                  : null);
 
       OpenAIClient.UploadFileResponse uploadFileResponse =
           getOpenAIClient()
@@ -768,34 +833,18 @@ public class AiReviewService {
       String model,
       Class<?> outputJsonSchemaClass,
       String prompt,
-      boolean forTextUnitVariantReview) {
+      boolean forTextUnitVariantReview,
+      GlossaryTrie glossaryTrie) {
     return textUnitDTOS.stream()
         .map(
             textUnitDTO -> {
-              String inputAsJsonString;
-
-              if (forTextUnitVariantReview) {
-                AiReviewTextUnitVariantInput aiReviewTextUnitVariantInput =
-                    new AiReviewTextUnitVariantInput(
-                        textUnitDTO.getTargetLocale(),
-                        textUnitDTO.getSource(),
-                        textUnitDTO.getComment(),
-                        new AiReviewTextUnitVariantInput.ExistingTarget(
-                            textUnitDTO.getTarget(), !textUnitDTO.isIncludedInLocalizedFile()));
-                inputAsJsonString =
-                    objectMapper.writeValueAsStringUnchecked(aiReviewTextUnitVariantInput);
-              } else {
-                AiReviewTextUnitInput aiReviewTextUnitInput =
-                    new AiReviewTextUnitInput(
-                        textUnitDTO.getTmTextUnitId(),
-                        textUnitDTO.getSource(),
-                        textUnitDTO.getComment());
-                inputAsJsonString = objectMapper.writeValueAsStringUnchecked(aiReviewTextUnitInput);
-              }
+              String inputAsJsonString =
+                  objectMapper.writeValueAsStringUnchecked(
+                      getReviewInput(textUnitDTO, forTextUnitVariantReview, glossaryTrie));
 
               ResponsesRequest responsesRequest =
                   getResponsesRequest(
-                      prompt, inputAsJsonString, getModel(model), outputJsonSchemaClass);
+                      prompt, inputAsJsonString, getModel(model), outputJsonSchemaClass, true);
 
               return OpenAIClient.RequestBatchFileLine.forResponse(
                   textUnitDTO.getTmTextUnitVariantId().toString(), responsesRequest);
@@ -805,15 +854,77 @@ public class AiReviewService {
   }
 
   ResponsesRequest getResponsesRequest(
-      String prompt, String inputAsJsonString, String model, Class<?> outputJsonSchemaClass) {
+      String prompt,
+      String inputAsJsonString,
+      String model,
+      Class<?> outputJsonSchemaClass,
+      boolean useBatch) {
     return ResponsesRequest.builder()
         .model(model)
         .instructions(prompt)
         .reasoningEffort(aiReviewConfigurationProperties.getResponses().getReasoningEffort())
         .textVerbosity(aiReviewConfigurationProperties.getResponses().getTextVerbosity())
+        .serviceTier(
+            useBatch ? null : aiReviewConfigurationProperties.getResponses().getServiceTier())
         .addUserText(inputAsJsonString)
         .addJsonSchema(outputJsonSchemaClass)
         .build();
+  }
+
+  private Object getReviewInput(
+      TextUnitDTO textUnitDTO, boolean forTextUnitVariantReview, GlossaryTrie glossaryTrie) {
+    return forTextUnitVariantReview
+        ? getVariantReviewInput(
+            textUnitDTO,
+            glossaryTrie == null
+                ? List.of()
+                : List.copyOf(glossaryTrie.findTerms(textUnitDTO.getSource())))
+        : new AiReviewTextUnitInput(
+            textUnitDTO.getTmTextUnitId(), textUnitDTO.getSource(), textUnitDTO.getComment());
+  }
+
+  private AiReviewTextUnitVariantInput getVariantReviewInput(
+      TextUnitDTO textUnitDTO, List<GlossaryService.GlossaryTerm> matchedTerms) {
+    List<ReviewGlossaryTerm> glossaryTerms =
+        matchedTerms.stream()
+            .filter(term -> !Objects.equals(term.tmTextUnitId(), textUnitDTO.getTmTextUnitId()))
+            .map(
+                term ->
+                    new ReviewGlossaryTerm(
+                        term.source(),
+                        term.doNotTranslate() && term.target() == null
+                            ? term.source()
+                            : term.target(),
+                        term.definition(),
+                        term.comment(),
+                        term.targetComment(),
+                        term.partOfSpeech(),
+                        term.enforcement(),
+                        term.doNotTranslate(),
+                        term.caseSensitive()))
+            .toList();
+    return new AiReviewTextUnitVariantInput(
+        textUnitDTO.getTargetLocale(),
+        textUnitDTO.getSource(),
+        textUnitDTO.getComment(),
+        new AiReviewTextUnitVariantInput.ExistingTarget(
+            textUnitDTO.getTarget(), !textUnitDTO.isIncludedInLocalizedFile()),
+        glossaryTerms);
+  }
+
+  private String getReviewPrompt(AiReviewType aiReviewType, String localeTag) {
+    if (!aiReviewType.isForTextUnitVariantReview()) {
+      return aiReviewType.getPrompt();
+    }
+    String suffix = aiTranslateLocalePromptSuffixService.getLocalePromptSuffix(localeTag);
+    return suffix == null || suffix.isBlank()
+        ? aiReviewType.getPrompt()
+        : "%s %s".formatted(aiReviewType.getPrompt(), suffix);
+  }
+
+  /** Keep old frontend cache rows intact while using the current review policy for new requests. */
+  public static String resolveReviewRunName(String runName) {
+    return "for-frontend".equals(runName) ? "for-frontend-v2" : runName;
   }
 
   private String getBatchLineOutputAsJson(
@@ -821,7 +932,8 @@ public class AiReviewService {
       String line,
       OpenAIClient.ResponsesResponseBatchFileLine responsesResponseBatchFileLine) {
     if (Objects.equals(batchEndpoint, "/v1/responses")) {
-      return responsesResponseBatchFileLine.response().responsesResponse().outputText();
+      return AiReviewResponseValidator.outputText(
+          responsesResponseBatchFileLine.response().responsesResponse());
     }
 
     OpenAIClient.ChatCompletionResponseBatchFileLine chatCompletionResponseBatchFileLine =
@@ -931,7 +1043,8 @@ public class AiReviewService {
       return "timeout";
     }
     Throwable cause = unwrapCompletionException(throwable);
-    if (cause instanceof OpenAIClientResponseException) {
+    if (cause instanceof OpenAIClientResponseException
+        || cause instanceof InvalidReviewResponseException) {
       return "provider_failed";
     }
     return "failed";
@@ -945,19 +1058,13 @@ public class AiReviewService {
     return null;
   }
 
-  private Duration resolveRequestTimeout(AiReviewTextUnitVariantInput input) {
-    int textCharCount =
-        safeLength(input.source())
-            + safeLength(input.sourceDescription())
-            + safeLength(input.existingTarget() == null ? null : input.existingTarget().content());
+  private Duration resolveRequestTimeout(String inputAsJsonString) {
     return aiReviewConfigurationProperties
         .getTimeout()
         .resolveRequestTimeout(
-            1, textCharCount, aiReviewConfigurationProperties.getResponses().getReasoningEffort());
-  }
-
-  private int safeLength(String value) {
-    return value == null ? 0 : value.length();
+            1,
+            inputAsJsonString.length(),
+            aiReviewConfigurationProperties.getResponses().getReasoningEffort());
   }
 
   /**

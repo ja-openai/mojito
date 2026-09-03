@@ -122,6 +122,28 @@ public class OpenAIClientTest {
         chatCompletionsResponse.choices().get(0).message().content());
   }
 
+  @Test
+  public void testChatCompletionBatchReasoningIsOptionalAndSerializedWithApiFieldName() {
+    ObjectMapper objectMapper = new ObjectMapper();
+    OpenAIClient.ChatCompletionsRequest reasoningRequest =
+        chatCompletionsRequest().model("test-model").reasoningEffort("max").build();
+    OpenAIClient.ChatCompletionsRequest legacyRequest =
+        chatCompletionsRequest().model(GPT_3_5_TURBO).build();
+
+    JsonNode reasoningPayload =
+        objectMapper.valueToTree(
+            OpenAIClient.RequestBatchFileLine.forChatCompletion("42", reasoningRequest));
+    JsonNode legacyPayload =
+        objectMapper.valueToTree(
+            OpenAIClient.RequestBatchFileLine.forChatCompletion("43", legacyRequest));
+
+    assertEquals("max", reasoningPayload.at("/body/reasoning_effort").asText());
+    assertFalse(reasoningPayload.path("body").has("reasoningEffort"));
+    assertFalse(reasoningPayload.path("body").has("service_tier"));
+    assertFalse(legacyPayload.path("body").has("reasoning_effort"));
+    assertNull(legacyRequest.reasoningEffort());
+  }
+
   /**
    * Test error that will be shown if the response can't be parse by the bean provided by the
    * library. Ideally, it should not happen, but in case it does the message must be clear.
@@ -233,6 +255,113 @@ public class OpenAIClientTest {
     assertEquals("completed", responsesResponse.status());
     assertEquals(1, responsesResponse.output().size());
     assertEquals("Enregistrer", responsesResponse.outputText());
+  }
+
+  @Test
+  public void testGetResponsesWithReasoningAndDifferentReturnedServiceTier() throws Exception {
+    OpenAIClient.ResponsesRequest responsesRequest =
+        OpenAIClient.ResponsesRequest.builder()
+            .model("test-model")
+            .reasoningEffort("max")
+            .serviceTier("fast")
+            .addUserText("Translate 'Save' to French.")
+            .build();
+    HttpResponse<String> mockResponse = mock(HttpResponse.class);
+    when(mockResponse.statusCode()).thenReturn(200);
+    when(mockResponse.body())
+        .thenReturn(
+            """
+            {
+              "id": "resp_reasoning",
+              "status": "completed",
+              "service_tier": "default",
+              "output": [
+                {"id": "rs_1", "type": "reasoning", "summary": []},
+                {
+                  "id": "msg_1", "type": "message", "status": "completed",
+                  "role": "assistant",
+                  "content": [{"type": "output_text", "text": "Enregistrer"}]
+                }
+              ]
+            }
+            """);
+    HttpClient mockHttpClient = mock(HttpClient.class);
+    ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+    when(mockHttpClient.sendAsync(requestCaptor.capture(), any(HttpResponse.BodyHandler.class)))
+        .thenReturn(CompletableFuture.completedFuture(mockResponse));
+    OpenAIClient client = OpenAIClient.builder().apiKey(API_KEY).httpClient(mockHttpClient).build();
+
+    OpenAIClient.ResponsesResponse response =
+        client.getResponses(responsesRequest, Duration.ofSeconds(204)).join();
+
+    JsonNode payload =
+        new ObjectMapper()
+            .readTree(
+                bodyPublisherToString(requestCaptor.getValue().bodyPublisher().orElseThrow()));
+    assertEquals("max", payload.path("reasoning").path("effort").asText());
+    assertEquals("fast", payload.path("service_tier").asText());
+    assertFalse(payload.has("serviceTier"));
+    assertEquals(Duration.ofSeconds(204), requestCaptor.getValue().timeout().orElseThrow());
+    assertEquals("default", response.serviceTier());
+    assertEquals("Enregistrer", response.outputText());
+  }
+
+  @Test
+  public void testResponsesRequestOmitsUnspecifiedServiceTierIncludingBatchPayload() {
+    ObjectMapper objectMapper = new ObjectMapper();
+    OpenAIClient.ResponsesRequest request =
+        OpenAIClient.ResponsesRequest.builder().model("test-model").serviceTier(" ").build();
+    JsonNode payload = objectMapper.valueToTree(request);
+    JsonNode batchPayload =
+        objectMapper.valueToTree(OpenAIClient.RequestBatchFileLine.forResponse("42", request));
+
+    assertFalse(payload.has("service_tier"));
+    assertFalse(batchPayload.path("body").has("service_tier"));
+    assertNull(request.serviceTier());
+  }
+
+  @Test
+  public void testBatchRequestDropsOnlineServiceTierAndKeepsReasoningAndContext() {
+    OpenAIClient.ResponsesRequest request =
+        OpenAIClient.ResponsesRequest.builder()
+            .model("test-model")
+            .instructions("Translate with the glossary.")
+            .reasoningEffort("max")
+            .serviceTier("fast")
+            .textVerbosity("low")
+            .addUserText("Save")
+            .addMetadata("locale", "fr")
+            .build();
+
+    JsonNode payload =
+        new ObjectMapper()
+            .valueToTree(OpenAIClient.RequestBatchFileLine.forResponse("42", request));
+
+    assertFalse(payload.path("body").has("service_tier"));
+    assertEquals("max", payload.at("/body/reasoning/effort").asText());
+    assertEquals("low", payload.at("/body/text/verbosity").asText());
+    assertEquals("Save", payload.at("/body/input/0/content/0/text").asText());
+    assertEquals("Translate with the glossary.", payload.at("/body/instructions").asText());
+    assertEquals("fr", payload.at("/body/metadata/locale").asText());
+    assertEquals("fast", request.serviceTier());
+  }
+
+  @Test
+  public void testResponsesWithoutMessageTextReturnEmptyOutput() throws Exception {
+    OpenAIClient client = OpenAIClient.builder().apiKey(API_KEY).build();
+    for (String json :
+        List.of(
+            "{\"status\":\"failed\"}",
+            "{\"status\":\"incomplete\",\"output\":[{\"type\":\"reasoning\",\"summary\":[]}]}",
+            """
+            {"status":"completed","output":[
+              {"type":"message","content":[{"type":"refusal","refusal":"Cannot translate"}]}
+            ]}
+            """)) {
+      OpenAIClient.ResponsesResponse response =
+          client.objectMapper.readValue(json, OpenAIClient.ResponsesResponse.class);
+      assertEquals("", response.outputText());
+    }
   }
 
   @Test

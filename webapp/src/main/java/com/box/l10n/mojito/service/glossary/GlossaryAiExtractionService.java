@@ -4,6 +4,7 @@ import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.openai.OpenAIClient;
 import com.box.l10n.mojito.openai.OpenAIClient.ResponsesRequest;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
+import com.box.l10n.mojito.service.oaireview.AiReviewResponseValidator;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -166,6 +167,7 @@ public class GlossaryAiExtractionService {
             .instructions(EXTRACTED_TERM_REVIEW_PROMPT)
             .reasoningEffort(aiReviewConfigurationProperties.getResponses().getReasoningEffort())
             .textVerbosity(aiReviewConfigurationProperties.getResponses().getTextVerbosity())
+            .serviceTier(aiReviewConfigurationProperties.getResponses().getServiceTier())
             .addUserText(inputJson)
             .addJsonSchema(ExtractedTermReviewOutput.class)
             .build();
@@ -177,7 +179,8 @@ public class GlossaryAiExtractionService {
             .resolveRequestTimeout(
                 1, charCount, aiReviewConfigurationProperties.getResponses().getReasoningEffort());
 
-    String jsonResponse = openAIClient.getResponses(request, timeout).join().outputText();
+    String jsonResponse =
+        AiReviewResponseValidator.outputText(openAIClient.getResponses(request, timeout).join());
     ExtractedTermReviewOutput output =
         objectMapper.readValueUnchecked(jsonResponse, ExtractedTermReviewOutput.class);
     return output == null || output.reviews() == null ? List.of() : output.reviews();
@@ -197,6 +200,7 @@ public class GlossaryAiExtractionService {
             .instructions(instructions)
             .reasoningEffort(aiReviewConfigurationProperties.getResponses().getReasoningEffort())
             .textVerbosity(aiReviewConfigurationProperties.getResponses().getTextVerbosity())
+            .serviceTier(aiReviewConfigurationProperties.getResponses().getServiceTier())
             .addUserText(inputJson)
             .addJsonSchema(CandidateSignalOutput.class)
             .build();
@@ -208,7 +212,8 @@ public class GlossaryAiExtractionService {
             .resolveRequestTimeout(
                 1, charCount, aiReviewConfigurationProperties.getResponses().getReasoningEffort());
 
-    String jsonResponse = openAIClient.getResponses(request, timeout).join().outputText();
+    String jsonResponse =
+        AiReviewResponseValidator.outputText(openAIClient.getResponses(request, timeout).join());
     CandidateSignalOutput output =
         objectMapper.readValueUnchecked(jsonResponse, CandidateSignalOutput.class);
     return output == null || output.candidates() == null ? List.of() : output.candidates();

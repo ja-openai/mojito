@@ -123,6 +123,7 @@ class AiTranslateLegacyBatchService {
                 repository,
                 aiTranslateInput.sourceTextMaxCountPerLocale(),
                 getModel(aiTranslateInput),
+                getReasoningEffort(aiTranslateInput),
                 aiTranslateInput.tmTextUnitIds(),
                 aiTranslateInput.promptSuffix(),
                 StatusFilter.valueOf(aiTranslateInput.statusFilter()),
@@ -159,6 +160,7 @@ class AiTranslateLegacyBatchService {
       Repository repository,
       int sourceTextMaxCountPerLocale,
       String model,
+      String reasoningEffort,
       List<Long> tmTextUnitIds,
       String promptSuffix,
       StatusFilter statusFilter,
@@ -209,6 +211,7 @@ class AiTranslateLegacyBatchService {
         generateBatchFileContent(
             textUnitDTOWithVariantCommentsList,
             model,
+            reasoningEffort,
             promptSuffix,
             aiTranslateType,
             relatedStringsProvider,
@@ -288,6 +291,7 @@ class AiTranslateLegacyBatchService {
       List<AiTranslateService.TextUnitDTOWithVariantComments>
           textUnitDTOSUnitDTOWithVariantComments,
       String model,
+      String reasoningEffort,
       String promptPrefix,
       AiTranslateType aiTranslateType,
       AiTranslateRelatedStringsProvider relatedStringsProvider,
@@ -316,8 +320,12 @@ class AiTranslateLegacyBatchService {
               ChatCompletionsRequest chatCompletionsRequest =
                   getChatCompletionsRequest(
                       model,
+                      reasoningEffort,
                       AiTranslateService.getPrompt(aiTranslateType.getPrompt(), promptPrefix),
-                      completionInput,
+                      aiTranslateType.supportsMultipleTextUnits()
+                          ? AiTranslateType.CompletionMultiTextUnitInput.from(
+                              textUnitDTO.getTmTextUnitId(), completionInput)
+                          : completionInput,
                       aiTranslateType);
 
               return RequestBatchFileLine.forChatCompletion(
@@ -392,19 +400,22 @@ class AiTranslateLegacyBatchService {
 
   private static CompletionInput.GlossaryTerm convertGlossaryTerm(GlossaryService.GlossaryTerm gt) {
     String target = gt.doNotTranslate() && gt.target() == null ? gt.source() : gt.target();
-    return new CompletionInput.GlossaryTerm(gt.source(), gt.comment(), target, gt.targetComment());
+    return new CompletionInput.GlossaryTerm(
+        gt.source(), gt.comment(), target, gt.targetComment(), gt.doNotTranslate());
   }
 
   private ChatCompletionsRequest getChatCompletionsRequest(
       String model,
+      String reasoningEffort,
       String prompt,
-      CompletionInput completionInput,
+      Object completionInput,
       AiTranslateType aiTranslateType) {
     String inputAsJsonString = objectMapper.writeValueAsStringUnchecked(completionInput);
     ObjectNode jsonSchema = createJsonSchema(aiTranslateType.getOutputJsonSchemaClass());
 
     return chatCompletionsRequest()
         .model(model)
+        .reasoningEffort(reasoningEffort)
         .maxCompletionTokens(AiTranslateService.MAX_COMPLETION_TOKENS)
         .temperature(getTemperatureForReasoningModels(model))
         .messages(
@@ -417,6 +428,16 @@ class AiTranslateLegacyBatchService {
                 new ChatCompletionsRequest.JsonFormat.JsonSchema(
                     true, "request_json_format", jsonSchema)))
         .build();
+  }
+
+  private String getReasoningEffort(AiTranslateService.AiTranslateInput input) {
+    String model = getModel(input);
+    if (!"gpt-5.6-sol".equals(model) && !"gpt-5.6".equals(model)) {
+      return null;
+    }
+    return input.reasoningEffort() == null || input.reasoningEffort().isBlank()
+        ? aiTranslateConfigurationProperties.getResponses().getReasoningEffort()
+        : input.reasoningEffort();
   }
 
   private Set<RepositoryLocale> getFilteredRepositoryLocales(

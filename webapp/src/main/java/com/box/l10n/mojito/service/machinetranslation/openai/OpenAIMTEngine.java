@@ -21,8 +21,6 @@ import java.util.function.Function;
 public class OpenAIMTEngine implements MachineTranslationEngine {
 
   static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
-  static final String REASONING_EFFORT = "none";
-  static final String TEXT_VERBOSITY = "low";
 
   static final String PROMPT =
       """
@@ -30,7 +28,9 @@ public class OpenAIMTEngine implements MachineTranslationEngine {
 
       Translate every item from sourceBcp47Tag to its targetLocale.
       Return exactly one translation object for every input item, preserving each id and targetLocale.
-      Preserve placeholders, ICU MessageFormat syntax, HTML/XML tags and attributes, variables, and code-like tokens exactly.
+      Preserve the source meaning, including negation, conditions, quantities, names, and units. Do not add claims or omit meaning to match the source length.
+      Preserve placeholders, ICU/MessageFormat 2 syntax, HTML/XML tags and attributes, variables, and code-like tokens exactly.
+      Use natural target-locale grammar and register. Check each translation against its own source before returning it.
       Translate only natural-language text. Do not add explanations or commentary.
       """;
 
@@ -84,16 +84,31 @@ public class OpenAIMTEngine implements MachineTranslationEngine {
         OpenAIClient.ResponsesRequest.builder()
             .model(aiTranslateConfigurationProperties.getModelName())
             .instructions(PROMPT)
-            .reasoningEffort(REASONING_EFFORT)
-            .textVerbosity(TEXT_VERBOSITY)
+            .reasoningEffort(aiTranslateConfigurationProperties.getResponses().getReasoningEffort())
+            .textVerbosity(aiTranslateConfigurationProperties.getResponses().getTextVerbosity())
+            .serviceTier(aiTranslateConfigurationProperties.getResponses().getServiceTier())
             .addUserText(objectMapper.writeValueAsStringUnchecked(translationRequest))
             .addJsonSchema(OpenAITranslationResponse.class)
             .build();
 
+    OpenAIClient.ResponsesResponse providerResponse =
+        openAIClient.getResponses(responsesRequest, resolveRequestTimeout()).join();
+    if (!"completed".equals(providerResponse.status())
+        || providerResponse.error() != null
+        || providerResponse.incompleteDetails() != null) {
+      throw new IllegalStateException("OpenAI MT response did not complete successfully");
+    }
     OpenAITranslationResponse translationResponse =
         objectMapper.readValueUnchecked(
-            openAIClient.getResponses(responsesRequest, REQUEST_TIMEOUT).join().outputText(),
-            OpenAITranslationResponse.class);
+            providerResponse.outputText(), OpenAITranslationResponse.class);
+    if (translationResponse.translations() == null
+        || translationResponse.translations().size() != items.size()) {
+      throw new IllegalStateException("Unexpected number of MT response items");
+    }
+    if (translationResponse.translations().stream()
+        .anyMatch(item -> item == null || item.id() == null)) {
+      throw new IllegalStateException("Missing MT response item id");
+    }
 
     Map<Integer, TranslationResponseItem> translationsById =
         translationResponse.translations().stream()
@@ -116,6 +131,9 @@ public class OpenAIMTEngine implements MachineTranslationEngine {
         }
 
         String text = responseItem.text();
+        if (text == null || (!isBlankTranslation(item.sourceText()) && isBlankTranslation(text))) {
+          throw new IllegalStateException("Empty MT response for item id: " + item.id());
+        }
         TranslationDTO translation = new TranslationDTO();
         translation.setTranslationSource(getSource());
         translation.setBcp47Tag(targetBcp47Tag);
@@ -129,6 +147,26 @@ public class OpenAIMTEngine implements MachineTranslationEngine {
     return translationsBySourceText.build();
   }
 
+  private Duration resolveRequestTimeout() {
+    var timeout = aiTranslateConfigurationProperties.getNoBatch().getTimeout();
+    int seconds =
+        timeout.applyReasoningEffortMultiplier(
+            (int) REQUEST_TIMEOUT.toSeconds(),
+            aiTranslateConfigurationProperties.getResponses().getReasoningEffort());
+    if (timeout.getMaxSeconds() > 0) {
+      seconds = Math.min(seconds, timeout.getMaxSeconds());
+    }
+    if (timeout.getMinSeconds() > 0) {
+      seconds = Math.max(seconds, timeout.getMinSeconds());
+    }
+    return Duration.ofSeconds(seconds);
+  }
+
+  private static boolean isBlankTranslation(String value) {
+    return value == null
+        || value.codePoints().allMatch(c -> Character.isWhitespace(c) || Character.isSpaceChar(c));
+  }
+
   public record OpenAITranslationRequest(
       String sourceBcp47Tag, TextType sourceTextType, List<TranslationRequestItem> items) {}
 
@@ -136,5 +174,5 @@ public class OpenAIMTEngine implements MachineTranslationEngine {
 
   public record OpenAITranslationResponse(List<TranslationResponseItem> translations) {}
 
-  public record TranslationResponseItem(int id, String targetLocale, String text) {}
+  public record TranslationResponseItem(Integer id, String targetLocale, String text) {}
 }

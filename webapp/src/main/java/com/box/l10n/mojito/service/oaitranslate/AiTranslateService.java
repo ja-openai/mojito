@@ -68,7 +68,6 @@ import com.google.common.base.Stopwatch;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.http.HttpTimeoutException;
@@ -288,7 +287,8 @@ public class AiTranslateService {
       String screenshotUUID,
       List<TextUnitDTOWithVariantComments> textUnitDTOWithVariantCommentsList) {}
 
-  record SourcePromptRuleBucket(List<Long> ruleIds, List<String> ruleNames, String promptSuffix) {}
+  record SourcePromptRuleBucket(
+      List<Long> ruleIds, List<String> ruleNames, String promptSuffix, Long singleTextUnitId) {}
 
   record PreparedNoBatchTextUnit(
       TextUnitDTOWithVariantComments textUnitDTOWithVariantComments, TextUnit textUnit) {}
@@ -473,7 +473,10 @@ public class AiTranslateService {
                 new SourcePromptRuleBucket(
                     matchedPromptSuffixes.ruleIds(),
                     matchedPromptSuffixes.ruleNames(),
-                    matchedPromptSuffixes.promptSuffix());
+                    matchedPromptSuffixes.promptSuffix(),
+                    aiTranslateType.supportsMultipleTextUnits()
+                        ? null
+                        : textUnitDTO.getTmTextUnitId());
             textUnitsByPromptRuleBucket
                 .computeIfAbsent(sourcePromptRuleBucket, ignored -> new ArrayList<>())
                 .add(
@@ -530,7 +533,10 @@ public class AiTranslateService {
             CompletionMultiTextUnitInput completionMultiTextUnitInput = builder.build();
 
             String inputAsJsonString =
-                objectMapper.writeValueAsStringUnchecked(completionMultiTextUnitInput);
+                objectMapper.writeValueAsStringUnchecked(
+                    aiTranslateType.supportsMultipleTextUnits()
+                        ? completionMultiTextUnitInput
+                        : CompletionInput.from(completionMultiTextUnitInput));
 
             String prompt =
                 getPrompt(
@@ -545,6 +551,7 @@ public class AiTranslateService {
                     .model(model)
                     .instructions(prompt)
                     .reasoningEffort(getReasoningEffort(aiTranslateInput))
+                    .serviceTier(aiTranslateConfigurationProperties.getResponses().getServiceTier())
                     .textVerbosity(getTextVerbosity(aiTranslateInput))
                     .addUserText(inputAsJsonString)
                     .addJsonSchema(aiTranslateType.getOutputJsonSchemaClass());
@@ -714,15 +721,23 @@ public class AiTranslateService {
                               currentTask.getId(), lineageRequestGroupId, responsesResponse);
                       Object completionOutput;
                       try {
+                        validateResponseCompleted(responsesResponse);
                         String completionOutputAsJson = responsesResponse.outputText();
 
                         completionOutput =
                             objectMapper.readValueUnchecked(
                                 completionOutputAsJson, aiTranslateType.getOutputJsonSchemaClass());
+                        validateCompletionOutput(
+                            aiTranslateType,
+                            textUnitsByScreenshotWithResponsesResponse
+                                .requestedTextUnitDTOWithVariantCommentsList()
+                                .stream()
+                                .map(TextUnitDTOWithVariantComments::textUnitDTO)
+                                .toList(),
+                            completionOutput);
                       } catch (Throwable t) {
                         String errorMessage =
-                            "Error trying to parse the JSON completion output: %s"
-                                .formatted(t.getMessage());
+                            "Invalid AI translation response: %s".formatted(t.getMessage());
                         incrementCounter(metricName("parseFailures"), requestTags);
                         logger.debug(errorMessage, t);
 
@@ -1307,6 +1322,37 @@ public class AiTranslateService {
       String error,
       String lineageRequestGroupId) {}
 
+  static void validateResponseCompleted(ResponsesResponse response) {
+    if (!"completed".equals(response.status())
+        || response.error() != null
+        || response.incompleteDetails() != null) {
+      throw new IllegalArgumentException("AI translation response did not complete successfully");
+    }
+  }
+
+  static void validateCompletionOutput(
+      AiTranslateType type, List<TextUnitDTO> requestedTextUnits, Object completionOutput) {
+    type.validateCompletionOutput(
+        requestedTextUnits.stream().map(TextUnitDTO::getTmTextUnitId).toList(), completionOutput);
+    for (TextUnitDTO textUnit : requestedTextUnits) {
+      if (completionOutput instanceof AiTranslateType.CompletionOutput reviewedOutput
+          && !Objects.equals(textUnit.getSource(), reviewedOutput.source())) {
+        throw new IllegalArgumentException(
+            "Translation output does not match the requested source");
+      }
+      AiTranslateType.TargetWithMetadata target =
+          type.getTargetWithMetadata(textUnit.getTmTextUnitId(), completionOutput);
+      String fixedTarget =
+          AiTranslateTargetAutoFix.fixTarget(textUnit.getSource(), target.target());
+      if (fixedTarget == null
+          || (isBlankTranslation(fixedTarget) && !isBlankTranslation(textUnit.getSource()))) {
+        throw new IllegalArgumentException(
+            "AI translation returned an empty target for tmTextUnitId: "
+                + textUnit.getTmTextUnitId());
+      }
+    }
+  }
+
   List<String> importBatch(
       RetrieveBatchResponse retrieveBatchResponse,
       AiTranslateType aiTranslateType,
@@ -1358,28 +1404,39 @@ public class AiTranslateService {
                         null, null, null, errorMessage, null);
                   }
 
-                  String completionOutputAsJson =
-                      chatCompletionResponseBatchFileLine
-                          .response()
-                          .chatCompletionsResponse()
-                          .choices()
-                          .getFirst()
-                          .message()
-                          .content();
-
                   TextUnitDTO textUnitDTO =
                       tmTextUnitIdToTextUnitDTOs.get(
                           Long.valueOf(chatCompletionResponseBatchFileLine.customId()));
 
+                  if (textUnitDTO == null) {
+                    return new TextUnitDTOWithVariantCommentOrError(
+                        null,
+                        null,
+                        null,
+                        "Batch response contains an unrequested text unit id",
+                        null);
+                  }
+
                   Object completionOutput;
                   try {
+                    ChatCompletionsResponse.Choice choice =
+                        chatCompletionResponseBatchFileLine
+                            .response()
+                            .chatCompletionsResponse()
+                            .choices()
+                            .getFirst();
+                    if (!"stop".equals(choice.finishReason())) {
+                      throw new IllegalArgumentException(
+                          "AI translation response did not complete successfully");
+                    }
                     completionOutput =
                         objectMapper.readValueUnchecked(
-                            completionOutputAsJson, aiTranslateType.getOutputJsonSchemaClass());
-                  } catch (UncheckedIOException e) {
+                            choice.message().content(), aiTranslateType.getOutputJsonSchemaClass());
+                    validateCompletionOutput(
+                        aiTranslateType, List.of(textUnitDTO), completionOutput);
+                  } catch (RuntimeException e) {
                     String errorMessage =
-                        "Error trying to parse the JSON completion output: %s"
-                            .formatted(e.getMessage());
+                        "Invalid AI translation response: %s".formatted(e.getMessage());
                     logger.debug(errorMessage, e);
                     return new TextUnitDTOWithVariantCommentOrError(
                         null,
@@ -1444,9 +1501,20 @@ public class AiTranslateService {
           lineageRequestGroupId);
     }
 
-    textUnitDTO.setStatus(importStatus);
     String newTarget =
         AiTranslateTargetAutoFix.fixTarget(textUnitDTO.getSource(), targetWithMetadata.target());
+    if (newTarget == null
+        || (isBlankTranslation(newTarget) && !isBlankTranslation(textUnitDTO.getSource()))) {
+      return new TextUnitDTOWithVariantCommentOrError(
+          completionId,
+          new TextUnitDTOWithVariantComment(textUnitDTO, null),
+          oldTarget,
+          "AI translation returned an empty target for tmTextUnitId: %s"
+              .formatted(textUnitDTO.getTmTextUnitId()),
+          lineageRequestGroupId);
+    }
+
+    textUnitDTO.setStatus(importStatus);
     textUnitDTO.setTarget(newTarget);
     textUnitDTO.setTranslatorIdentity(BulkImportLineageService.AI_TRANSLATE_IDENTITY);
     textUnitDTO.setReviewerIdentity(BulkImportLineageService.NOT_REVIEWED_IDENTITY);
@@ -1465,6 +1533,11 @@ public class AiTranslateService {
         oldTarget,
         null,
         lineageRequestGroupId);
+  }
+
+  private static boolean isBlankTranslation(String value) {
+    return value == null
+        || value.codePoints().allMatch(c -> Character.isWhitespace(c) || Character.isSpaceChar(c));
   }
 
   @Pollable(message = "AiTranslateService Retry import for job id: {id}")
@@ -1627,7 +1700,8 @@ public class AiTranslateService {
 
     String target = gt.doNotTranslate() && gt.target() == null ? gt.source() : gt.target();
 
-    return new CompletionInput.GlossaryTerm(gt.source(), gt.comment(), target, gt.targetComment());
+    return new CompletionInput.GlossaryTerm(
+        gt.source(), gt.comment(), target, gt.targetComment(), gt.doNotTranslate());
   }
 
   private static CompletionMultiTextUnitInput.TextUnit.GlossaryTerm convertGlossaryTermForMulti(
@@ -1636,7 +1710,7 @@ public class AiTranslateService {
     String target = gt.doNotTranslate() && gt.target() == null ? gt.source() : gt.target();
 
     return new CompletionMultiTextUnitInput.TextUnit.GlossaryTerm(
-        gt.source(), gt.comment(), target, gt.targetComment());
+        gt.source(), gt.comment(), target, gt.targetComment(), gt.doNotTranslate());
   }
 
   // TODO(ja) duplicated

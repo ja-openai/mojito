@@ -8,6 +8,8 @@ import com.box.l10n.mojito.openai.OpenAIClient.ResponsesResponse;
 import com.box.l10n.mojito.rest.textunit.AiReviewType.AiReviewTextUnitVariantOutput;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
+import com.box.l10n.mojito.service.oaireview.AiReviewResponseValidator;
+import com.box.l10n.mojito.service.oaireview.AiReviewResponseValidator.InvalidReviewResponseException;
 import com.box.l10n.mojito.service.oaireview.AiReviewService.AiReviewTextUnitVariantInput;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
@@ -80,7 +82,7 @@ public class AiReviewChatWS {
     }
 
     AiReviewTextUnitVariantInput.ExistingTarget existingTarget = null;
-    String target = normalizeOptionalText(request.target());
+    String target = hasText(request.target()) ? request.target() : null;
     if (target != null) {
       existingTarget = new AiReviewTextUnitVariantInput.ExistingTarget(target, false);
     }
@@ -99,6 +101,7 @@ public class AiReviewChatWS {
             .instructions(getPrompt(localeTag))
             .reasoningEffort(aiReviewConfigurationProperties.getResponses().getReasoningEffort())
             .textVerbosity(aiReviewConfigurationProperties.getResponses().getTextVerbosity())
+            .serviceTier(aiReviewConfigurationProperties.getResponses().getServiceTier())
             .addUserText(inputPayload)
             .addJsonSchema(AiReviewTextUnitVariantOutput.class);
     String integrityContextMessage = buildIntegrityContextMessage(request.tmTextUnitId(), target);
@@ -135,20 +138,26 @@ public class AiReviewChatWS {
             integrityContextMessage,
             conversationMessages);
     Stopwatch requestStopwatch = Stopwatch.createStarted();
-    ResponsesResponse responsesResponse;
+    AiReviewTextUnitVariantOutput output;
     try {
-      responsesResponse = getResponsesWithRetry(responsesRequest, localeTag, requestTimeout);
+      ResponsesResponse responsesResponse =
+          getResponsesWithRetry(responsesRequest, localeTag, requestTimeout);
+      String jsonResponse = AiReviewResponseValidator.outputText(responsesResponse);
+      output = objectMapper.readValueUnchecked(jsonResponse, AiReviewTextUnitVariantOutput.class);
+      logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
+    } catch (InvalidReviewResponseException e) {
+      ResponseStatusException failure =
+          new ResponseStatusException(
+              HttpStatus.BAD_GATEWAY,
+              "AI review provider returned an incomplete response. Please retry.",
+              e);
+      recordRequestDuration(localeTag, failure, requestStopwatch);
+      throw failure;
     } catch (RuntimeException e) {
       recordRequestDuration(localeTag, e, requestStopwatch);
       throw e;
     }
     recordRequestDuration(localeTag, null, requestStopwatch);
-
-    logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
-
-    String jsonResponse = responsesResponse.outputText();
-    AiReviewTextUnitVariantOutput output =
-        objectMapper.readValueUnchecked(jsonResponse, AiReviewTextUnitVariantOutput.class);
 
     String reply = output.target() != null ? output.target().explanation() : null;
     if (!hasText(reply) && output.reviewRequired() != null) {

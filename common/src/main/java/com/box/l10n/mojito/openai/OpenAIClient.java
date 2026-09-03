@@ -184,7 +184,18 @@ public class OpenAIClient {
       List<InputMessage> input,
       Reasoning reasoning,
       TextContainer text,
-      Map<String, String> metadata) {
+      Map<String, String> metadata,
+      @JsonProperty("service_tier") @JsonInclude(JsonInclude.Include.NON_NULL) String serviceTier) {
+
+    public ResponsesRequest(
+        String model,
+        String instructions,
+        List<InputMessage> input,
+        Reasoning reasoning,
+        TextContainer text,
+        Map<String, String> metadata) {
+      this(model, instructions, input, reasoning, text, metadata, null);
+    }
 
     public record Reasoning(String effort) {}
 
@@ -295,6 +306,7 @@ public class OpenAIClient {
       private Reasoning reasoning;
       private TextContainer textContainer;
       private Map<String, String> metadata = new HashMap<>();
+      private String serviceTier;
 
       public Builder model(String model) {
         this.model = model;
@@ -308,6 +320,11 @@ public class OpenAIClient {
 
       public Builder reasoningEffort(String effort) {
         this.reasoning = effort == null ? null : new Reasoning(effort);
+        return this;
+      }
+
+      public Builder serviceTier(String serviceTier) {
+        this.serviceTier = serviceTier == null || serviceTier.isBlank() ? null : serviceTier.trim();
         return this;
       }
 
@@ -380,7 +397,8 @@ public class OpenAIClient {
             input,
             reasoning,
             textContainer,
-            this.metadata.isEmpty() ? null : this.metadata);
+            this.metadata.isEmpty() ? null : this.metadata,
+            serviceTier);
       }
     }
 
@@ -399,13 +417,44 @@ public class OpenAIClient {
       String model,
       List<Output> output,
       Usage usage,
-      Map<String, String> metadata) {
+      Map<String, String> metadata,
+      @JsonProperty("service_tier") @JsonInclude(JsonInclude.Include.NON_NULL) String serviceTier) {
+
+    public ResponsesResponse(
+        String id,
+        String object,
+        Long createdAt,
+        String status,
+        Error error,
+        IncompleteDetails incompleteDetails,
+        String model,
+        List<Output> output,
+        Usage usage,
+        Map<String, String> metadata) {
+      this(
+          id,
+          object,
+          createdAt,
+          status,
+          error,
+          incompleteDetails,
+          model,
+          output,
+          usage,
+          metadata,
+          null);
+    }
 
     public String outputText() {
+      if (output == null) {
+        return "";
+      }
       return output.stream()
+          .filter(o -> "message".equals(o.type()) && o.content() != null)
           .flatMap(o -> o.content().stream())
           .filter(c -> "output_text".equals(c.type()))
           .map(Content::text)
+          .filter(Objects::nonNull)
           .collect(Collectors.joining());
     }
 
@@ -547,7 +596,34 @@ public class OpenAIClient {
       @JsonProperty("top_p") Float topP,
       @JsonProperty("frequency_penalty") Float frequencyPenalty,
       @JsonProperty("presence_penalty") Float presencePenalty,
-      @JsonProperty("response_format") ResponseFormat responseFormat) {
+      @JsonProperty("response_format") ResponseFormat responseFormat,
+      @JsonProperty("reasoning_effort") @JsonInclude(JsonInclude.Include.NON_NULL)
+          String reasoningEffort) {
+
+    public ChatCompletionsRequest(
+        String model,
+        List<Message> messages,
+        Integer seed,
+        Boolean stream,
+        Float temperature,
+        Integer maxCompletionTokens,
+        Float topP,
+        Float frequencyPenalty,
+        Float presencePenalty,
+        ResponseFormat responseFormat) {
+      this(
+          model,
+          messages,
+          seed,
+          stream,
+          temperature,
+          maxCompletionTokens,
+          topP,
+          frequencyPenalty,
+          presencePenalty,
+          responseFormat,
+          null);
+    }
 
     static String ENDPOINT = "/v1/chat/completions";
 
@@ -721,6 +797,7 @@ public class OpenAIClient {
       private Float frequencyPenalty;
       private Float presencePenalty;
       private ResponseFormat responseFormat;
+      private String reasoningEffort;
 
       public Builder model(Models model) {
         return model(model.name);
@@ -776,6 +853,12 @@ public class OpenAIClient {
         return this;
       }
 
+      public Builder reasoningEffort(String reasoningEffort) {
+        this.reasoningEffort =
+            reasoningEffort == null || reasoningEffort.isBlank() ? null : reasoningEffort.trim();
+        return this;
+      }
+
       public ChatCompletionsRequest build() {
         return new ChatCompletionsRequest(
             model,
@@ -787,7 +870,8 @@ public class OpenAIClient {
             topP,
             frequencyPenalty,
             presencePenalty,
-            responseFormat);
+            responseFormat,
+            reasoningEffort);
       }
     }
 
@@ -1081,7 +1165,16 @@ public class OpenAIClient {
 
     public static RequestBatchFileLine forResponse(
         String customId, ResponsesRequest responsesRequest) {
-      return new RequestBatchFileLine(customId, "POST", "/v1/responses", responsesRequest);
+      // Batch has its own scheduling; online processing tiers do not apply.
+      ResponsesRequest batchRequest =
+          new ResponsesRequest(
+              responsesRequest.model(),
+              responsesRequest.instructions(),
+              responsesRequest.input(),
+              responsesRequest.reasoning(),
+              responsesRequest.text(),
+              responsesRequest.metadata());
+      return new RequestBatchFileLine(customId, "POST", "/v1/responses", batchRequest);
     }
   }
 

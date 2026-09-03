@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.machinetranslation.openai;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -40,6 +41,7 @@ public class OpenAIMTEngineTest {
     aiTranslateConfigurationProperties.setModelName("gpt-test");
     aiTranslateConfigurationProperties.getResponses().setReasoningEffort("high");
     aiTranslateConfigurationProperties.getResponses().setTextVerbosity("high");
+    aiTranslateConfigurationProperties.getResponses().setServiceTier("priority");
     openAIMTEngine =
         new OpenAIMTEngine(
             openAIClient, aiTranslateConfigurationProperties, new PlaceholderEncoder());
@@ -87,9 +89,10 @@ public class OpenAIMTEngineTest {
 
     OpenAIClient.ResponsesRequest request = requestCaptor.getValue();
     assertEquals("gpt-test", request.model());
-    assertEquals(OpenAIMTEngine.REASONING_EFFORT, request.reasoning().effort());
-    assertEquals(OpenAIMTEngine.TEXT_VERBOSITY, request.text().verbosity());
-    assertEquals(OpenAIMTEngine.REQUEST_TIMEOUT, timeoutCaptor.getValue());
+    assertEquals("high", request.reasoning().effort());
+    assertEquals("high", request.text().verbosity());
+    assertEquals("priority", request.serviceTier());
+    assertEquals(Duration.ofSeconds(300), timeoutCaptor.getValue());
 
     OpenAIClient.ResponsesRequest.InputMessage.Text inputText =
         (OpenAIClient.ResponsesRequest.InputMessage.Text)
@@ -98,6 +101,70 @@ public class OpenAIMTEngineTest {
     assertTrue(inputText.text().contains("\"sourceText\":\"Hello\""));
     assertTrue(inputText.text().contains("\"targetLocale\":\"fr-FR\""));
     assertTrue(inputText.text().contains("\"targetLocale\":\"de-DE\""));
+  }
+
+  @Test
+  public void translateRejectsIncompleteProviderResponse() {
+    OpenAIClient.ResponsesResponse completed =
+        responsesResponse(
+            """
+            {"translations":[{"id":0,"targetLocale":"fr-FR","text":"Bonjour"}]}
+            """);
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                new OpenAIClient.ResponsesResponse(
+                    completed.id(),
+                    completed.object(),
+                    completed.createdAt(),
+                    "incomplete",
+                    null,
+                    new OpenAIClient.ResponsesResponse.IncompleteDetails("max_output_tokens"),
+                    completed.model(),
+                    completed.output(),
+                    null,
+                    null)));
+
+    assertThrows(
+        IllegalStateException.class,
+        () ->
+            openAIMTEngine.getTranslationsBySourceText(
+                List.of("Hello"), "en", List.of("fr-FR"), TextType.TEXT, null, false));
+  }
+
+  @Test
+  public void translateRejectsMissingOrNullTargetIds() {
+    for (String output :
+        List.of(
+            "{\"translations\":[{\"targetLocale\":\"fr-FR\",\"text\":\"Bonjour\"}]}",
+            "{\"translations\":[{\"id\":null,\"targetLocale\":\"fr-FR\",\"text\":\"Bonjour\"}]}")) {
+      when(openAIClient.getResponses(any(), any()))
+          .thenReturn(CompletableFuture.completedFuture(responsesResponse(output)));
+
+      assertThrows(
+          IllegalStateException.class,
+          () ->
+              openAIMTEngine.getTranslationsBySourceText(
+                  List.of("Hello"), "en", List.of("fr-FR"), TextType.TEXT, null, false));
+    }
+  }
+
+  @Test
+  public void translateRejectsUnexpectedOrEmptyTargets() {
+    for (String output :
+        List.of(
+            "{\"translations\":[{\"id\":0,\"targetLocale\":\"fr-FR\",\"text\":\"Bonjour\"},{\"id\":1,\"targetLocale\":\"fr-FR\",\"text\":\"Autre\"}]}",
+            "{\"translations\":[{\"id\":0,\"targetLocale\":\"fr-FR\",\"text\":\" \"}]}",
+            "{\"translations\":[{\"id\":0,\"targetLocale\":\"fr-FR\",\"text\":\"\\u00a0\"}]}")) {
+      when(openAIClient.getResponses(any(), any()))
+          .thenReturn(CompletableFuture.completedFuture(responsesResponse(output)));
+
+      assertThrows(
+          IllegalStateException.class,
+          () ->
+              openAIMTEngine.getTranslationsBySourceText(
+                  List.of("Hello"), "en", List.of("fr-FR"), TextType.TEXT, null, false));
+    }
   }
 
   @Test

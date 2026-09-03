@@ -55,6 +55,26 @@ public class AiReviewWSTest {
   }
 
   @Test
+  public void cacheOnlyReviewDoesNotReusePreviousPolicyRun() {
+    AiReviewProto oldReview = new AiReviewProto();
+    oldReview.setJsonReview("{\"target\":{\"content\":\"Old suggestion\"}}");
+    when(aiReviewProtoRepository.findByTmTextUnitVariantIdAndRunName(
+            any(), org.mockito.ArgumentMatchers.anyString()))
+        .thenAnswer(
+            invocation -> "for-frontend".equals(invocation.getArgument(1)) ? oldReview : null);
+
+    AiReviewWS.ProtoAiReviewSingleTextUnitResponse response =
+        aiReviewWS.getAiReviewForSingleTextUnit(
+            new AiReviewWS.ProtoAiReviewSingleTextUnitRequest(31L), true);
+
+    assertNull(response.aiReviewOutput());
+    assertEquals(1.0, precomputedLookupCount("cache_only", "miss"), 0.0);
+    verify(aiReviewProtoRepository).findByTmTextUnitVariantIdAndRunName(31L, "for-frontend-v2");
+    verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
+  }
+
+  @Test
   public void cacheOnlySingleTextUnitReviewReturnsCachedReviewAfterTextUnitLookup() {
     AiReviewProto aiReviewProto = new AiReviewProto();
     aiReviewProto.setJsonReview(
@@ -82,7 +102,7 @@ public class AiReviewWSTest {
     assertEquals("Afficher les aperçus mobiles", response.aiReviewOutput().target().content());
     assertEquals(1.0, precomputedLookupCount("cache_only", "hit"), 0.0);
     verify(textUnitSearcher).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(org.mockito.ArgumentMatchers.any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
   }
 
   @Test
@@ -99,7 +119,7 @@ public class AiReviewWSTest {
     assertNull(response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("cache_only", "miss"), 0.0);
     verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
   }
 
   @Test
@@ -118,7 +138,7 @@ public class AiReviewWSTest {
     assertNull(response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("cache_only", "unreadable"), 0.0);
     verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
   }
 
   @Test
@@ -148,7 +168,7 @@ public class AiReviewWSTest {
     assertNull(response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("cache_only", "stale"), 0.0);
     verify(textUnitSearcher).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
   }
 
   @Test
@@ -167,7 +187,7 @@ public class AiReviewWSTest {
     assertNull(response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("cache_only", "empty"), 0.0);
     verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
   }
 
   @Test
@@ -193,7 +213,7 @@ public class AiReviewWSTest {
     assertNull(response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("cache_only", "empty"), 0.0);
     verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
   }
 
   @Test
@@ -219,7 +239,7 @@ public class AiReviewWSTest {
     assertNull(response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("cache_only", "empty"), 0.0);
     verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
   }
 
   @Test
@@ -246,7 +266,7 @@ public class AiReviewWSTest {
     assertNull(response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("cache_only", "empty"), 0.0);
     verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
   }
 
   @Test
@@ -274,7 +294,7 @@ public class AiReviewWSTest {
     assertEquals(true, response.aiReviewOutput().reviewRequired().required());
     assertEquals(1.0, precomputedLookupCount("cache_only", "hit"), 0.0);
     verify(textUnitSearcher).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
   }
 
   @Test
@@ -306,7 +326,7 @@ public class AiReviewWSTest {
     assertEquals("Afficher les aperçus mobiles", response.aiReviewOutput().target().content());
     assertEquals(1.0, precomputedLookupCount("live_or_compute", "hit"), 0.0);
     verify(textUnitSearcher).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
     verify(aiReviewProtoRepository, never()).save(any(AiReviewProto.class));
   }
 
@@ -339,7 +359,7 @@ public class AiReviewWSTest {
     assertEquals("Wrong tmTextUnitVariantId", exception.getMessage());
     assertEquals(1.0, precomputedLookupCount("live_or_compute", "stale"), 0.0);
     verify(textUnitSearcher).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService, never()).getAiReviewSingleTextUnit(any(TextUnitDTO.class));
     verify(aiReviewProtoRepository, never()).save(any(AiReviewProto.class));
   }
 
@@ -367,7 +387,8 @@ public class AiReviewWSTest {
             null,
             null,
             null);
-    when(aiReviewService.getAiReviewSingleTextUnit(any())).thenReturn(reviewOutput);
+    when(aiReviewService.getAiReviewSingleTextUnit(any(TextUnitDTO.class)))
+        .thenReturn(reviewOutput);
 
     AiReviewWS.ProtoAiReviewSingleTextUnitResponse response =
         aiReviewWS.getAiReviewForSingleTextUnit(
@@ -377,7 +398,7 @@ public class AiReviewWSTest {
     assertSame(reviewOutput, response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("live_or_compute", "empty"), 0.0);
     verify(textUnitSearcher).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService).getAiReviewSingleTextUnit(textUnit);
     ArgumentCaptor<AiReviewProto> savedReview = ArgumentCaptor.forClass(AiReviewProto.class);
     verify(aiReviewProtoRepository).save(savedReview.capture());
     assertSame(aiReviewProto, savedReview.getValue());
@@ -408,7 +429,8 @@ public class AiReviewWSTest {
             null,
             null,
             null);
-    when(aiReviewService.getAiReviewSingleTextUnit(any())).thenReturn(reviewOutput);
+    when(aiReviewService.getAiReviewSingleTextUnit(any(TextUnitDTO.class)))
+        .thenReturn(reviewOutput);
 
     AiReviewWS.ProtoAiReviewSingleTextUnitResponse response =
         aiReviewWS.getAiReviewForSingleTextUnit(
@@ -418,7 +440,7 @@ public class AiReviewWSTest {
     assertSame(reviewOutput, response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("live_or_compute", "unreadable"), 0.0);
     verify(textUnitSearcher).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService).getAiReviewSingleTextUnit(textUnit);
     ArgumentCaptor<AiReviewProto> savedReview = ArgumentCaptor.forClass(AiReviewProto.class);
     verify(aiReviewProtoRepository).save(savedReview.capture());
     assertSame(aiReviewProto, savedReview.getValue());
@@ -447,7 +469,8 @@ public class AiReviewWSTest {
             null,
             new AiReviewTextUnitVariantOutput.ExistingTargetRating("Good translation.", 2),
             null);
-    when(aiReviewService.getAiReviewSingleTextUnit(any())).thenReturn(reviewOutput);
+    when(aiReviewService.getAiReviewSingleTextUnit(any(TextUnitDTO.class)))
+        .thenReturn(reviewOutput);
     TMTextUnitVariant variant = new TMTextUnitVariant();
     when(tmTextUnitVariantRepository.getReferenceById(31L)).thenReturn(variant);
 
@@ -459,7 +482,7 @@ public class AiReviewWSTest {
     assertSame(reviewOutput, response.aiReviewOutput());
     assertEquals(1.0, precomputedLookupCount("live_or_compute", "miss"), 0.0);
     verify(textUnitSearcher).search(any(TextUnitSearcherParameters.class));
-    verify(aiReviewService).getAiReviewSingleTextUnit(any());
+    verify(aiReviewService).getAiReviewSingleTextUnit(textUnit);
     ArgumentCaptor<AiReviewProto> savedReview = ArgumentCaptor.forClass(AiReviewProto.class);
     verify(aiReviewProtoRepository).save(savedReview.capture());
     assertSame(variant, savedReview.getValue().getTmTextUnitVariant());

@@ -5,7 +5,6 @@ import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.textunit.AiReviewType.AiReviewTextUnitVariantOutput;
 import com.box.l10n.mojito.service.oaireview.AiReviewService;
-import com.box.l10n.mojito.service.oaireview.AiReviewService.AiReviewTextUnitVariantInput;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.tm.AiReviewProtoRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
@@ -33,7 +32,7 @@ public class AiReviewWS {
   /** logger */
   static Logger logger = LoggerFactory.getLogger(AiReviewWS.class);
 
-  static final String RUN_NAME_FOR_FRONTEND = "for-frontend";
+  static final String RUN_NAME_FOR_FRONTEND = AiReviewService.resolveReviewRunName("for-frontend");
   static final String PRECOMPUTED_REVIEW_LOOKUP_METRIC = "AiReviewWS.precomputedReviewLookup";
 
   AiReviewProtoRepository aiReviewProtoRepository;
@@ -148,15 +147,7 @@ public class AiReviewWS {
 
     if (aiReviewTextUnitVariantOutput == null) {
 
-      AiReviewTextUnitVariantInput input =
-          new AiReviewTextUnitVariantInput(
-              textUnit.getTargetLocale(),
-              textUnit.getSource(),
-              textUnit.getComment(),
-              new AiReviewTextUnitVariantInput.ExistingTarget(
-                  textUnit.getTarget(), !textUnit.isIncludedInLocalizedFile()));
-
-      aiReviewTextUnitVariantOutput = aiReviewService.getAiReviewSingleTextUnit(input);
+      aiReviewTextUnitVariantOutput = aiReviewService.getAiReviewSingleTextUnit(textUnit);
 
       AiReviewProto aiReviewProto =
           alreadyReviewed != null

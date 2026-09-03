@@ -84,13 +84,27 @@ AiTranslateService_requestsInFlight{mode="no_batch"}
 
 ## AI Review
 
+AI Review defaults to `max` reasoning, `low` text verbosity, and `default` online processing. Override
+these with `l10n.ai-review.responses.reasoning-effort`, `text-verbosity`, and `service-tier`.
+Interactive review and glossary AI share these settings; provider Batch uses the reasoning and
+verbosity settings but omits the online processing tier. The provider response retains the actual
+`service_tier`, which can differ from the requested tier. It is available in captured response
+payloads; existing model/locale metric tags alone do not prove the requested processing tier was used.
+Direct requests use configurable adaptive timeout multipliers (`medium=4`, `high=6`, `xhigh=8`,
+`max=12`), capped at 300 seconds by default. These budgets are not measured latency or quality gains.
+See `032-ai-translation-quality.md` for the translation/review contract and evaluation plan.
+
 Use `AiReviewChatWS_requestDuration_seconds_*` for interactive review chat latency and
 `AiReviewService_requestDuration_seconds_*` for async/legacy review request latency. Both expose a
 `result` tag with `completed`, `timeout`, `provider_failed`, or `failed`.
 
 Review-project pages first check `/api/proto-ai-review-single-text-unit` with
 `onlyPrecomputed=true` when the automatic review has no page-only context messages. The backend reads
-the `for-frontend` cached run. Cache hits are rendered without calling the live interactive review
+the `for-frontend-v2` cached run. The public `for-frontend` run name maps to this version for new
+precompute work, so old context-free reviews are not reused as current-policy reviews. Already
+scheduled old batches retain their stored run names on import. Custom run names are unchanged;
+future glossary/model/configuration edits do not automatically invalidate cached rows.
+Cache hits are rendered without calling the live interactive review
 endpoint, after the cached variant is revalidated through the existing text-unit lookup. If the page
 has deterministic warning context or matched glossary context, the review page skips the precomputed
 cache and calls live review so speed does not weaken review quality. Cache misses, unreadable cache

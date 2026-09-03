@@ -1,5 +1,10 @@
 # AI Translation Feedback Evaluation
 
+The current generation, candidate validation, and review policies are documented in
+`032-ai-translation-quality.md`. Its regression tests establish request/output contracts;
+linguistic quality still needs the human evidence described here. Compare prompt changes and
+reasoning effort separately before attributing any improvement to `max` reasoning.
+
 ## Why this lives in Mojito
 
 Mojito already has the two pieces an evaluation needs:

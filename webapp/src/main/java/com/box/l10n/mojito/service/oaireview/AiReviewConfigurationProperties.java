@@ -56,8 +56,9 @@ public class AiReviewConfigurationProperties {
   }
 
   public static class ResponsesProperties {
-    String reasoningEffort = "none";
+    String reasoningEffort = "max";
     String textVerbosity = "low";
+    String serviceTier = "default";
 
     public String getReasoningEffort() {
       return reasoningEffort;
@@ -74,6 +75,14 @@ public class AiReviewConfigurationProperties {
     public void setTextVerbosity(String textVerbosity) {
       this.textVerbosity = textVerbosity;
     }
+
+    public String getServiceTier() {
+      return serviceTier;
+    }
+
+    public void setServiceTier(String serviceTier) {
+      this.serviceTier = serviceTier;
+    }
   }
 
   public static class TimeoutProperties {
@@ -86,6 +95,8 @@ public class AiReviewConfigurationProperties {
     double reasoningLowMultiplier = 2.5;
     double reasoningMediumMultiplier = 4.0;
     double reasoningHighMultiplier = 6.0;
+    double reasoningXhighMultiplier = 8.0;
+    double reasoningMaxMultiplier = 12.0;
 
     public int getBaseSeconds() {
       return baseSeconds;
@@ -159,6 +170,22 @@ public class AiReviewConfigurationProperties {
       this.reasoningHighMultiplier = reasoningHighMultiplier;
     }
 
+    public double getReasoningXhighMultiplier() {
+      return reasoningXhighMultiplier;
+    }
+
+    public void setReasoningXhighMultiplier(double reasoningXhighMultiplier) {
+      this.reasoningXhighMultiplier = reasoningXhighMultiplier;
+    }
+
+    public double getReasoningMaxMultiplier() {
+      return reasoningMaxMultiplier;
+    }
+
+    public void setReasoningMaxMultiplier(double reasoningMaxMultiplier) {
+      this.reasoningMaxMultiplier = reasoningMaxMultiplier;
+    }
+
     public Duration resolveRequestTimeout(
         int messageCount, int textCharCount, String reasoningEffort) {
       int timeoutSeconds =
@@ -186,6 +213,8 @@ public class AiReviewConfigurationProperties {
         case "low" -> reasoningLowMultiplier;
         case "medium" -> reasoningMediumMultiplier;
         case "high" -> reasoningHighMultiplier;
+        case "xhigh" -> reasoningXhighMultiplier;
+        case "max" -> reasoningMaxMultiplier;
         default -> reasoningNoneMultiplier;
       };
     }

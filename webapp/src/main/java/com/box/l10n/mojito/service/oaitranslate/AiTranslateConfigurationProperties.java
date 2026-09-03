@@ -122,6 +122,8 @@ public class AiTranslateConfigurationProperties {
       double reasoningLowMultiplier = 2.5;
       double reasoningMediumMultiplier = 4.0;
       double reasoningHighMultiplier = 6.0;
+      double reasoningXhighMultiplier = 8.0;
+      double reasoningMaxMultiplier = 12.0;
 
       public int getBaseSeconds() {
         return baseSeconds;
@@ -203,6 +205,22 @@ public class AiTranslateConfigurationProperties {
         this.reasoningHighMultiplier = reasoningHighMultiplier;
       }
 
+      public double getReasoningXhighMultiplier() {
+        return reasoningXhighMultiplier;
+      }
+
+      public void setReasoningXhighMultiplier(double reasoningXhighMultiplier) {
+        this.reasoningXhighMultiplier = reasoningXhighMultiplier;
+      }
+
+      public double getReasoningMaxMultiplier() {
+        return reasoningMaxMultiplier;
+      }
+
+      public void setReasoningMaxMultiplier(double reasoningMaxMultiplier) {
+        this.reasoningMaxMultiplier = reasoningMaxMultiplier;
+      }
+
       public int applyReasoningEffortMultiplier(int timeoutSeconds, String reasoningEffort) {
         return (int) Math.ceil(timeoutSeconds * getReasoningEffortMultiplier(reasoningEffort));
       }
@@ -215,6 +233,8 @@ public class AiTranslateConfigurationProperties {
           case "low" -> reasoningLowMultiplier;
           case "medium" -> reasoningMediumMultiplier;
           case "high" -> reasoningHighMultiplier;
+          case "xhigh" -> reasoningXhighMultiplier;
+          case "max" -> reasoningMaxMultiplier;
           default -> reasoningNoneMultiplier;
         };
       }
@@ -295,8 +315,9 @@ public class AiTranslateConfigurationProperties {
   }
 
   public static class ResponsesProperties {
-    String reasoningEffort = "medium";
+    String reasoningEffort = "max";
     String textVerbosity = "low";
+    String serviceTier = "default";
 
     public String getReasoningEffort() {
       return reasoningEffort;
@@ -312,6 +333,14 @@ public class AiTranslateConfigurationProperties {
 
     public void setTextVerbosity(String textVerbosity) {
       this.textVerbosity = textVerbosity;
+    }
+
+    public String getServiceTier() {
+      return serviceTier;
+    }
+
+    public void setServiceTier(String serviceTier) {
+      this.serviceTier = serviceTier;
     }
   }
 

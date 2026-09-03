@@ -26,7 +26,7 @@ const RELATED_STRINGS_OPTIONS = ['NONE', 'USAGES', 'ID_PREFIX'];
 const TRANSLATE_TYPE_OPTIONS = ['WITH_REVIEW', 'TARGET_ONLY', 'TARGET_ONLY_NEW'];
 const STATUS_FILTER_OPTIONS = ['FOR_TRANSLATION', 'ALL'];
 const IMPORT_STATUS_OPTIONS = ['REVIEW_NEEDED', 'APPROVED', 'TRANSLATION_NEEDED'];
-const REASONING_EFFORT_OPTIONS = ['none', 'low', 'medium', 'high'];
+const REASONING_EFFORT_OPTIONS = ['none', 'low', 'medium', 'high', 'xhigh', 'max'];
 const TEXT_VERBOSITY_OPTIONS = ['low', 'medium', 'high'];
 const SOURCE_TEXT_SIZES = [
   { value: 50, label: '50' },

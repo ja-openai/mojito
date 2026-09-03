@@ -275,10 +275,14 @@ public class AiReviewChatWSTest {
             null,
             List.of(new AiReviewChatWS.AiReviewChatMessage("user", "go"))));
 
+    ArgumentCaptor<OpenAIClient.ResponsesRequest> requestCaptor =
+        ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
     ArgumentCaptor<Duration> timeoutCaptor = ArgumentCaptor.forClass(Duration.class);
-    verify(openAIClient).getResponses(any(), timeoutCaptor.capture());
+    verify(openAIClient).getResponses(requestCaptor.capture(), timeoutCaptor.capture());
 
-    assertEquals(Duration.ofSeconds(21), timeoutCaptor.getValue());
+    assertEquals("max", requestCaptor.getValue().reasoning().effort());
+    assertEquals("default", requestCaptor.getValue().serviceTier());
+    assertEquals(Duration.ofSeconds(252), timeoutCaptor.getValue());
   }
 
   @Test
@@ -304,7 +308,7 @@ public class AiReviewChatWSTest {
 
     assertEquals(HttpStatus.GATEWAY_TIMEOUT, exception.getStatusCode());
     assertEquals(
-        "AI review request timed out after 17 seconds. Please retry.", exception.getReason());
+        "AI review request timed out after 204 seconds. Please retry.", exception.getReason());
     assertEquals(
         1.0,
         meterRegistry
@@ -436,6 +440,78 @@ public class AiReviewChatWSTest {
         AiReviewChatWS.DEFAULT_REVIEW_PROMPT,
         ((OpenAIClient.ResponsesRequest.InputMessage.Text) input.get(1).content().getFirst())
             .text());
+  }
+
+  @Test
+  public void chatRejectsIncompleteResponseEvenWhenSuggestionJsonIsValid() {
+    OpenAIClient.ResponsesResponse complete = successResponse("Unfinished suggestion.");
+    OpenAIClient.ResponsesResponse incomplete =
+        new OpenAIClient.ResponsesResponse(
+            complete.id(),
+            complete.object(),
+            complete.createdAt(),
+            "incomplete",
+            null,
+            new OpenAIClient.ResponsesResponse.IncompleteDetails("max_output_tokens"),
+            complete.model(),
+            complete.output(),
+            complete.usage(),
+            complete.metadata());
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(incomplete));
+
+    ResponseStatusException failure =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                aiReviewChatWS.chat(
+                    new AiReviewChatWS.AiReviewChatRequest(
+                        "Save",
+                        "保存",
+                        "ja-JP",
+                        null,
+                        null,
+                        List.of(new AiReviewChatWS.AiReviewChatMessage("user", "Review.")))));
+
+    assertEquals(HttpStatus.BAD_GATEWAY, failure.getStatusCode());
+    verify(openAIClient).getResponses(any(), any());
+    assertEquals(
+        1L,
+        meterRegistry
+            .find("AiReviewChatWS.requestDuration")
+            .tag("result", "provider_failed")
+            .timer()
+            .count());
+    assertNull(
+        meterRegistry.find("AiReviewChatWS.requestDuration").tag("result", "completed").timer());
+  }
+
+  @Test
+  public void chatPreservesMeaningfulTargetWhitespaceInReviewInput() {
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(successResponse("No change needed.")));
+
+    aiReviewChatWS.chat(
+        new AiReviewChatWS.AiReviewChatRequest(
+            " Save ",
+            " 保存 ",
+            "ja-JP",
+            null,
+            42L,
+            List.of(new AiReviewChatWS.AiReviewChatMessage("user", "Review this translation."))));
+
+    ArgumentCaptor<OpenAIClient.ResponsesRequest> requestCaptor =
+        ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
+    verify(openAIClient).getResponses(requestCaptor.capture(), any());
+    String inputJson =
+        ((OpenAIClient.ResponsesRequest.InputMessage.Text)
+                requestCaptor.getValue().input().getFirst().content().getFirst())
+            .text();
+    AiReviewService.AiReviewTextUnitVariantInput input =
+        new ObjectMapper()
+            .readValueUnchecked(inputJson, AiReviewService.AiReviewTextUnitVariantInput.class);
+    assertEquals(" 保存 ", input.existingTarget().content());
+    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, " 保存 ");
   }
 
   private OpenAIClient.ResponsesResponse.Output responseOutput(String text) {
