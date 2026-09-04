@@ -115,7 +115,10 @@ controls:
 Workbench also has a view-level **Display** dropdown in the result subbar:
 
 - **Hidden characters: Auto / All / Off** controls both inactive result-row
-  rendering and the active editor markers.
+  rendering and the active editor markers. The active editor's **Hidden chars**
+  dropdown overrides only that translation during the current edit; source
+  previews and other rows keep the view-level setting. Starting another edit or
+  changing the view-level setting resets this override.
 - **Placeholder highlights: On / Off** controls placeholder, tag, and ICU marker
   highlighting in inactive result rows. It does not disable active-editor
   protection.

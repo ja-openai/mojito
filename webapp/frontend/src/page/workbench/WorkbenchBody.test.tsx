@@ -20,11 +20,18 @@ vi.mock('../../components/virtual/useMeasuredRowRefs', () => ({
 }));
 
 vi.mock('../../components/virtual/useVirtualRows', () => ({
-  useVirtualRows: () => ({
+  useVirtualRows: ({ count }: { count: number }) => ({
     scrollRef: { current: null },
     virtualizer: {},
-    items: [{ index: 0, key: 'row-1', start: 0, end: 100, size: 100, lane: 0 }],
-    totalSize: 100,
+    items: Array.from({ length: count }, (_, index) => ({
+      index,
+      key: `row-${index + 1}`,
+      start: index * 100,
+      end: (index + 1) * 100,
+      size: 100,
+      lane: 0,
+    })),
+    totalSize: count * 100,
     scrollToIndex: vi.fn(),
     measureElement: vi.fn(),
   }),
@@ -100,7 +107,6 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
     onRestoreScrollConsumed: noop,
     isVisibleTextEditorEnabled: true,
     translationMarksMode: 'auto',
-    onChangeTranslationMarksMode: noop,
     showProtectedTokens: true,
     showDateMetadata: true,
     showSavedBy: false,
@@ -153,6 +159,119 @@ describe('WorkbenchBody', () => {
       expect(protectedToken).toHaveTextContent('price');
       expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
     });
+  });
+
+  it.each([false, true])(
+    'limits inline hidden-character changes to the active target (MF2: %s)',
+    async (mf2) => {
+      const row: WorkbenchRow = {
+        ...editingRow,
+        ...(mf2 ? { messageFormat: 'MF2' as const } : {}),
+        source: 'Hello world',
+        translation: 'Bonjour monde',
+      };
+      const onChangeEditingValue = vi.fn();
+      const { container } = renderWorkbenchBody({
+        rows: [row, { ...row, id: 'row-2', tmTextUnitId: 4 }],
+        editingValue: row.translation ?? '',
+        onChangeEditingValue,
+      });
+      const editor = await within(
+        container.querySelector('[data-editing="true"]') as HTMLElement,
+      ).findByRole('textbox', {
+        name: mf2 ? 'Target Message' : 'Text editor',
+      });
+      const markedSpaces = '.visible-text-editor__marked-char--space';
+      expect(container.querySelectorAll(markedSpaces)).toHaveLength(0);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Hidden characters: Auto' }));
+      fireEvent.click(screen.getByRole('option', { name: 'All' }));
+
+      await waitFor(() => expect(editor.querySelectorAll(markedSpaces)).toHaveLength(1));
+      expect(container.querySelectorAll(markedSpaces)).toHaveLength(1);
+      expect(editor).toHaveFocus();
+      expect(editor.textContent).toBe(row.translation);
+      expect(onChangeEditingValue).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Hidden characters: All' }));
+      fireEvent.click(screen.getByRole('option', { name: 'Off' }));
+
+      await waitFor(() => expect(container.querySelectorAll(markedSpaces)).toHaveLength(0));
+      expect(editor.textContent).toBe(row.translation);
+      expect(onChangeEditingValue).not.toHaveBeenCalled();
+    },
+  );
+
+  it('resets inline hidden-character mode when switching or reopening a string', async () => {
+    const secondRow = { ...editingRow, id: 'row-2', tmTextUnitId: 4 };
+    const { container, updateProps } = renderWorkbenchBody({
+      rows: [editingRow, secondRow],
+    });
+    await within(container.querySelector('[data-editing="true"]') as HTMLElement).findByRole(
+      'textbox',
+      { name: 'Text editor' },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Hidden characters: Auto' }));
+    fireEvent.click(screen.getByRole('option', { name: 'All' }));
+    expect(screen.getByRole('button', { name: 'Hidden characters: All' })).toBeInTheDocument();
+
+    updateProps({ editingRowId: secondRow.id });
+
+    expect(
+      await screen.findByRole('button', { name: 'Hidden characters: Auto' }),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll('.visible-text-editor__marked-char--space')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Hidden characters: Auto' }));
+    fireEvent.click(screen.getByRole('option', { name: 'All' }));
+
+    updateProps({ editingRowId: null });
+
+    expect(
+      screen.queryByRole('button', { name: 'Hidden characters: All' }),
+    ).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.visible-text-editor__marked-char--space')).toHaveLength(0);
+
+    updateProps({ editingRowId: secondRow.id });
+
+    expect(
+      await screen.findByRole('button', { name: 'Hidden characters: Auto' }),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll('.visible-text-editor__marked-char--space')).toHaveLength(0);
+  });
+
+  it('applies the global display mode to previews and resets the active editor override', async () => {
+    const row = { ...editingRow, source: 'Hello world', translation: 'Bonjour monde' };
+    const { container, updateProps } = renderWorkbenchBody({
+      rows: [row, { ...row, id: 'row-2', tmTextUnitId: 4 }],
+      editingValue: row.translation,
+      translationMarksMode: 'all',
+    });
+    const editor = await within(
+      container.querySelector('[data-editing="true"]') as HTMLElement,
+    ).findByRole('textbox', { name: 'Text editor' });
+    const markedSpaces = '.visible-text-editor__marked-char--space';
+    expect(container.querySelectorAll(markedSpaces)).toHaveLength(4);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hidden characters: All' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Off' }));
+
+    await waitFor(() => expect(editor.querySelectorAll(markedSpaces)).toHaveLength(0));
+    expect(container.querySelectorAll(markedSpaces)).toHaveLength(3);
+
+    updateProps({ translationMarksMode: 'auto' });
+
+    expect(
+      await screen.findByRole('button', { name: 'Hidden characters: Auto' }),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll(markedSpaces)).toHaveLength(0);
+
+    updateProps({ translationMarksMode: 'all' });
+
+    expect(
+      await screen.findByRole('button', { name: 'Hidden characters: All' }),
+    ).toBeInTheDocument();
+    expect(editor.querySelectorAll(markedSpaces)).toHaveLength(1);
+    expect(container.querySelectorAll(markedSpaces)).toHaveLength(4);
   });
 
   it('routes an MF2 source to the structured editor', async () => {

@@ -491,7 +491,6 @@ export function WorkbenchPageView({
         onRestoreScrollConsumed={onRestoreScrollConsumed}
         isVisibleTextEditorEnabled={isVisibleTextEditorEnabled}
         translationMarksMode={translationMarksMode}
-        onChangeTranslationMarksMode={setTranslationMarksMode}
         showProtectedTokens={showProtectedTokens}
         showDateMetadata={showDateMetadata}
         showSavedBy={showSavedBy}

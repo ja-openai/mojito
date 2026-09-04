@@ -71,7 +71,6 @@ type WorkbenchBodyProps = {
   onRestoreScrollConsumed: () => void;
   isVisibleTextEditorEnabled: boolean;
   translationMarksMode: VisibleTextMarksMode;
-  onChangeTranslationMarksMode: (mode: VisibleTextMarksMode) => void;
   showProtectedTokens: boolean;
   showDateMetadata: boolean;
   showSavedBy: boolean;
@@ -131,12 +130,15 @@ export function WorkbenchBody({
   onRestoreScrollConsumed,
   isVisibleTextEditorEnabled,
   translationMarksMode,
-  onChangeTranslationMarksMode,
   showProtectedTokens,
   showDateMetadata,
   showSavedBy,
 }: WorkbenchBodyProps) {
   const navigate = useNavigate();
+  const [editingMarksMode, setEditingMarksMode] = useState(translationMarksMode);
+  useEffect(() => {
+    setEditingMarksMode(translationMarksMode);
+  }, [editingRowId, translationMarksMode]);
   const editingRow = editingRowId ? rows.find((row) => row.id === editingRowId) : null;
   const editingRowIsMf2 = Boolean(
     editingRow &&
@@ -715,9 +717,9 @@ export function WorkbenchBody({
                           className="workbench-page__mf2-editor"
                           documentKey={mf2DocumentKey}
                           locale={row.locale}
-                          marksMode={translationMarksMode}
+                          marksMode={editingMarksMode}
                           onChange={handleMf2Snapshot}
-                          onChangeMarksMode={onChangeTranslationMarksMode}
+                          onChangeMarksMode={setEditingMarksMode}
                           onSubmit={() => {
                             if (canSaveRowEditing && !isSaving) {
                               onSaveEditing();
@@ -785,8 +787,8 @@ export function WorkbenchBody({
                           controlBar={
                             useAssistedTranslationEditor
                               ? {
-                                  marksMode: translationMarksMode,
-                                  onChangeMarksMode: onChangeTranslationMarksMode,
+                                  marksMode: editingMarksMode,
+                                  onChangeMarksMode: setEditingMarksMode,
                                   protectedTokenCount: translationProtectedTokens.length,
                                 }
                               : undefined
@@ -794,7 +796,7 @@ export function WorkbenchBody({
                           disabled={!row.canEdit || isSaving}
                           readOnly={!isEditing || !row.canEdit || isSaving}
                           ref={isEditing ? setTranslationInputRef : undefined}
-                          marksMode={translationMarksMode}
+                          marksMode={isEditing ? editingMarksMode : translationMarksMode}
                           protectedDiagnostics={translationProtectedDiagnostics}
                           protectedTokens={translationProtectedTokens}
                           spellCheck={true}
