@@ -76,6 +76,21 @@ Background, Batch, and single-item fallback reviews receive repository-scoped gl
 locale guidance. Requested source-only review modes keep their own input and output schema.
 Interactive pages retain their existing warning/glossary context path.
 
+Review Project interactive AI review separates non-breaking-space presence from quality warnings.
+NBSP (`U+00A0`) and narrow NBSP (`U+202F`) are sent as neutral character observations with total
+counts and up to 20 one-based Unicode code point positions per type in the raw target. The model
+must assess placement using the locale, surrounding text, and supplied style guidance, explain a
+specific misuse before proposing a correction, and preserve valid non-breaking spaces. Absence
+from the source does not by itself make a target space erroneous. Existing boundary-whitespace,
+repeated-space, tab, control, and other warnings still reach the model independently.
+
+The same context builder runs for initial review, chat follow-up, and retry using that request's
+target. Presence observations require live review, including narrow-NBSP-only targets that
+previously could use precomputed review; targets without page context retain the cache path.
+This frontend change does not alter saved text, save-time integrity checks, the existing UI
+inspection signal, or Hidden chars Auto/All/Off. Neutral UI presentation and deterministic
+locale-specific typography checks remain separate design work; no per-locale rule table is added.
+
 Do-not-translate terms retain an approved locale-specific target when one exists; the source is
 only the fallback. Responses output must be complete and contain message text before it can become
 a suggestion or cached review, even when a partial response contains parseable JSON. Legacy

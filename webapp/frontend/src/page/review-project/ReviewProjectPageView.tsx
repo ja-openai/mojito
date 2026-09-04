@@ -98,6 +98,7 @@ import { useReviewProjectSearchEnabled } from '../../hooks/useReviewProjectSearc
 import { useUser } from '../../hooks/useUser';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
+import { buildAiTranslationContextMessage } from '../../utils/aiTranslationContext';
 import {
   formatLocalDate as formatDate,
   formatLocalDateTime as formatDateTime,
@@ -793,24 +794,6 @@ function buildTranslationWarnings(source: string, target: string): TranslationWa
   }
 
   return warnings;
-}
-
-function buildAiWarningContextMessage(warnings: TranslationWarning[]): AiReviewMessage | null {
-  if (warnings.length === 0) {
-    return null;
-  }
-
-  const warningLines = warnings
-    .map((warning) => `- ${warning.code}: ${warning.message}`)
-    .join('\n');
-  return {
-    role: 'user',
-    content: [
-      'Context only: deterministic translation quality warnings for current target text.',
-      'Use these warnings when scoring and proposing edits.',
-      warningLines,
-    ].join('\n'),
-  };
 }
 
 function isEditableKeyboardTarget(target: EventTarget | null) {
@@ -2604,12 +2587,15 @@ function DetailPane({
       content: DEFAULT_AI_REVIEW_PROMPT,
     };
     const initialWarnings = buildTranslationWarnings(source ?? '', snapshot.target);
-    const warningContextMessage = buildAiWarningContextMessage(initialWarnings);
+    const translationContextMessage = buildAiTranslationContextMessage(
+      initialWarnings,
+      snapshot.target,
+    );
     const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
     void (async () => {
       try {
-        const contextMessages = [warningContextMessage, glossaryContextMessage].filter(
+        const contextMessages = [translationContextMessage, glossaryContextMessage].filter(
           (message): message is AiReviewMessage => message != null,
         );
         if (contextMessages.length === 0) {
@@ -3206,11 +3192,12 @@ function DetailPane({
           role: message.sender,
           content: message.content,
         }));
-        const warningContextMessage = buildAiWarningContextMessage(
+        const translationContextMessage = buildAiTranslationContextMessage(
           buildTranslationWarnings(source ?? '', draftTarget),
+          draftTarget,
         );
         const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
-        const contextMessages = [warningContextMessage, glossaryContextMessage].filter(
+        const contextMessages = [translationContextMessage, glossaryContextMessage].filter(
           (message): message is AiReviewMessage => message != null,
         );
 
@@ -3290,8 +3277,9 @@ function DetailPane({
           }))
         : [{ role: 'user', content: DEFAULT_AI_REVIEW_PROMPT }];
     const retryTarget = baseMessages.length > 0 ? draftTarget : snapshot.target;
-    const warningContextMessage = buildAiWarningContextMessage(
+    const translationContextMessage = buildAiTranslationContextMessage(
       buildTranslationWarnings(source ?? '', retryTarget),
+      retryTarget,
     );
     const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
@@ -3302,7 +3290,7 @@ function DetailPane({
     aiRequestAbortControllerRef.current = abortController;
     void (async () => {
       try {
-        const contextMessages = [warningContextMessage, glossaryContextMessage].filter(
+        const contextMessages = [translationContextMessage, glossaryContextMessage].filter(
           (message): message is AiReviewMessage => message != null,
         );
         const response = await requestAiReview(

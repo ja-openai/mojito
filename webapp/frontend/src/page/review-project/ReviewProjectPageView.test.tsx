@@ -6,6 +6,7 @@ import type * as ReactRouterDom from 'react-router-dom';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { AiReviewRequest } from '../../api/ai-review';
 import type * as GlossariesApi from '../../api/glossaries';
 import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
@@ -1302,6 +1303,124 @@ one {{Você tem {$count} arquivo.}}
     );
     expect(requestPayload.messages[0]?.content).toContain('double-space');
     expect(await screen.findByText('Live review with warning context.')).toBeInTheDocument();
+  });
+
+  it.each([
+    { target: 'Pay\u00a0{price} now', locale: 'en-US', assisted: false, code: 'U+00A0' },
+    { target: 'Payer\u202f{price}', locale: 'fr-FR', assisted: true, code: 'U+202F' },
+  ])(
+    'sends neutral $code context for $locale with assisted=$assisted',
+    async ({ target, locale, assisted, code }) => {
+      visibleTextEditorEnabledMock.mockReturnValue(assisted);
+      const onRequestSaveDecision = vi.fn();
+      renderReviewProjectPageView({
+        project: {
+          ...project,
+          locale: { ...project.locale!, bcp47Tag: locale },
+          reviewProjectTextUnits: [
+            {
+              ...textUnit,
+              baselineTmTextUnitVariant: {
+                ...textUnit.baselineTmTextUnitVariant!,
+                content: target,
+              },
+            },
+          ],
+        },
+        mutations: buildMutations({ onRequestSaveDecision }),
+      });
+
+      await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+      expect(fetchPrecomputedAiReviewMock).not.toHaveBeenCalled();
+      const [payload] = requestAiReviewMock.mock.calls[0] as [AiReviewRequest];
+      expect(payload.target).toBe(target);
+      expect(payload.localeTag).toBe(locale);
+      expect(payload.messages[0].content).toContain('neutral character observations');
+      expect(payload.messages[0].content).toContain(code);
+      expect(payload.messages[0].content).not.toContain(
+        'deterministic translation quality warnings',
+      );
+      expect(payload.messages[0].content).not.toContain('Contains non-breaking spaces.');
+      expect(onRequestSaveDecision).not.toHaveBeenCalled();
+      if (!assisted) {
+        expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(target);
+        // Preserve the existing inspection signal for plain-editor users.
+        expect(screen.getByRole('button', { name: '1 translation warnings' })).toBeInTheDocument();
+      } else {
+        expect(document.querySelector('[data-marker="⏤"]')).toBeInTheDocument();
+      }
+    },
+  );
+
+  it('keeps neutral observations separate from a real boundary warning', async () => {
+    const target = '\u00a0Pay {price}\u202fnow';
+    renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectTextUnits: [
+          {
+            ...textUnit,
+            baselineTmTextUnitVariant: { ...textUnit.baselineTmTextUnitVariant!, content: target },
+          },
+        ],
+      },
+    });
+
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+    const [payload] = requestAiReviewMock.mock.calls[0] as [AiReviewRequest];
+    const [warnings, observations] = payload.messages[0].content.split('\n\n');
+    expect(warnings).toContain('leading-space: Unexpected leading whitespace at start.');
+    expect(warnings).not.toMatch(/NBSP|non-breaking|nbsp/);
+    expect(observations).toContain('NBSP (U+00A0)');
+    expect(observations).toContain('NNBSP (U+202F)');
+    expect(payload.target).toBe(target);
+  });
+
+  it('rebuilds neutral space observations from the correct target on follow-up and retry', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    requestAiReviewMock.mockRejectedValueOnce(new Error('Initial review failed'));
+    const baseline = 'Pay\u00a0{price} now';
+    renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectTextUnits: [
+          {
+            ...textUnit,
+            baselineTmTextUnitVariant: {
+              ...textUnit.baselineTmTextUnitVariant!,
+              content: baseline,
+            },
+          },
+        ],
+      },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+    await screen.findByText('No issues found.');
+    const [initialRetry] = requestAiReviewMock.mock.calls[1] as [AiReviewRequest];
+    expect(initialRetry.target).toBe(baseline);
+    expect(initialRetry.messages[0].content).toContain('NBSP (U+00A0)');
+
+    const draft = 'Pay {price}\u202fnow';
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: draft },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Ask AI for a suggestion'), {
+      target: { value: 'Check this spacing.' },
+    });
+    requestAiReviewMock.mockRejectedValueOnce(new Error('Follow-up failed'));
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(4));
+
+    for (const [payload] of requestAiReviewMock.mock.calls.slice(2) as [AiReviewRequest][]) {
+      expect(payload.target).toBe(draft);
+      expect(payload.messages[0].content).toContain('NNBSP (U+202F)');
+      expect(payload.messages[0].content).not.toContain('NBSP (U+00A0)');
+      expect(payload.messages[0].content).not.toContain(
+        'deterministic translation quality warnings',
+      );
+    }
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(draft);
   });
 
   it('falls back to live AI review when precomputed lookup fails', async () => {
