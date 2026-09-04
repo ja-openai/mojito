@@ -1,16 +1,29 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   loadReviewProjectSearchEnabled,
   saveReviewProjectSearchEnabled,
 } from '../../utils/reviewProjectSearchPreference';
 import {
+  getVisibleTextEditorEnabledKey,
   loadVisibleTextEditorEnabled,
+  saveVisibleTextEditorEnabled,
   VISIBLE_TEXT_EDITOR_ENABLED_KEY,
 } from '../../utils/visibleTextEditorPreference';
+import {
+  loadReviewProjectShortcutHelpPreference,
+  saveReviewProjectShortcutHelpPreference,
+} from '../review-project/review-project-preferences';
+import {
+  loadPreferredLocales,
+  loadPreferredWorksetSize,
+  PREFERRED_LOCALES_KEY,
+  savePreferredLocales,
+  savePreferredWorksetSize,
+} from '../workbench/workbench-preferences';
 import { SettingsPage } from './SettingsPage';
 
 const TEST_USERNAME = 'translator';
@@ -27,6 +40,24 @@ function renderSettingsPage() {
   });
 }
 
+function editorToggle() {
+  return screen.getByRole('checkbox', {
+    name: /Use the assisted rich text editor in Workbench, Review Project, and text unit details/,
+  });
+}
+
+function searchToggle() {
+  return screen.getByRole('checkbox', {
+    name: /Show Search in Review Project and text-unit details/,
+  });
+}
+
+function shortcutToggle() {
+  return screen.getByRole('checkbox', {
+    name: /Show shortcut bar at the bottom of review projects/,
+  });
+}
+
 vi.mock('../../hooks/useRepositories', () => ({
   useRepositories: () => ({ data: [], isLoading: false, isError: false }),
 }));
@@ -36,7 +67,7 @@ vi.mock('../../hooks/useUser', () => ({
     username: currentUsername,
     role: 'ROLE_TRANSLATOR',
     canTranslateAllLocales: false,
-    userLocales: [],
+    userLocales: ['fr'],
   }),
 }));
 
@@ -46,148 +77,285 @@ describe('SettingsPage', () => {
     currentUsername = TEST_USERNAME;
   });
 
-  it('stages the assisted translation editor opt-in until Save', async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('stages changes across sections and persists them with one Save changes button', async () => {
     const user = userEvent.setup();
     window.localStorage.setItem(VISIBLE_TEXT_EDITOR_ENABLED_KEY, 'true');
     renderSettingsPage();
 
-    const translationEditorSection = screen
-      .getByRole('heading', { name: 'Translation editor' })
-      .closest('section');
-    expect(translationEditorSection).not.toBeNull();
-    const section = within(translationEditorSection as HTMLElement);
+    const save = screen.getByRole('button', { name: 'Save changes' });
+    expect(screen.getAllByRole('button', { name: 'Save changes' })).toHaveLength(1);
+    expect(save).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeDisabled();
+    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
+    expect(editorToggle()).not.toBeChecked();
+    expect(shortcutToggle()).toBeChecked();
 
-    const assistedEditorToggle = section.getByRole('checkbox', {
-      name: /Use the assisted rich text editor in Workbench, Review Project, and text unit details/,
-    });
-    const saveButton = section.getByRole('button', { name: 'Save' });
-    expect(assistedEditorToggle).not.toBeChecked();
-    expect(saveButton).toBeDisabled();
+    await user.type(screen.getByRole('spinbutton', { name: 'Result size limit' }), '25');
+    await user.click(editorToggle());
+    await user.click(searchToggle());
+    await user.click(shortcutToggle());
+    await user.click(screen.getByRole('button', { name: 'Select preferred locales' }));
+    await user.click(screen.getByRole('button', { name: 'Select your locales' }));
+
+    expect(loadPreferredWorksetSize()).toBeNull();
     expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(false);
-    expect(
-      screen.getByText(
-        'Saved separately for each Mojito user in this browser after you select Save. New users start with it off.',
-      ),
-    ).toBeInTheDocument();
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
+    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('bottom');
+    expect(loadPreferredLocales()).toEqual([]);
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    expect(save).toBeEnabled();
 
-    await user.click(assistedEditorToggle);
+    await user.click(save);
 
-    expect(assistedEditorToggle).toBeChecked();
-    expect(saveButton).toBeEnabled();
-    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(false);
-
-    await user.click(saveButton);
-
+    expect(loadPreferredWorksetSize()).toBe(25);
     expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(true);
     expect(loadVisibleTextEditorEnabled('admin')).toBe(false);
-    expect(saveButton).toBeDisabled();
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
+    expect(loadReviewProjectSearchEnabled('admin')).toBe(false);
+    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('header');
+    expect(loadPreferredLocales()).toEqual(['fr']);
+    expect(save).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeDisabled();
+    expect(screen.getByText('Changes saved')).toBeInTheDocument();
   });
 
-  it('resets only the draft and discards unsaved changes on navigation', async () => {
+  it('stages Restore defaults across sections and lets Discard changes restore saved values', async () => {
     const user = userEvent.setup();
-    window.localStorage.setItem(`${VISIBLE_TEXT_EDITOR_ENABLED_KEY}.${TEST_USERNAME}`, 'true');
-    const view = renderSettingsPage();
-    const translationEditorSection = screen
-      .getByRole('heading', { name: 'Translation editor' })
-      .closest('section');
-    expect(translationEditorSection).not.toBeNull();
-    const section = within(translationEditorSection as HTMLElement);
-    const assistedEditorToggle = section.getByRole('checkbox', {
-      name: /Use the assisted rich text editor in Workbench, Review Project, and text unit details/,
-    });
+    savePreferredWorksetSize(25);
+    savePreferredLocales(['fr']);
+    saveVisibleTextEditorEnabled(true, TEST_USERNAME);
+    saveReviewProjectSearchEnabled(true, TEST_USERNAME);
+    saveReviewProjectShortcutHelpPreference('header', 'bottom');
+    renderSettingsPage();
 
-    expect(assistedEditorToggle).toBeChecked();
-    await user.click(section.getByRole('button', { name: 'Reset' }));
+    const restoreDefaults = screen.getByRole('button', { name: 'Restore defaults' });
+    const workset = screen.getByRole('spinbutton', { name: 'Result size limit' });
+    await user.click(restoreDefaults);
 
-    expect(assistedEditorToggle).not.toBeChecked();
+    expect(workset).toHaveValue(null);
+    expect(editorToggle()).not.toBeChecked();
+    expect(searchToggle()).not.toBeChecked();
+    expect(shortcutToggle()).toBeChecked();
+    expect(screen.getByText('No preferred locales set.')).toBeInTheDocument();
+    expect(loadPreferredWorksetSize()).toBe(25);
+    expect(loadPreferredLocales()).toEqual(['fr']);
     expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(true);
-    expect(section.getByRole('button', { name: 'Save' })).toBeEnabled();
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
+    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('header');
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
 
-    view.unmount();
-    renderSettingsPage();
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
 
-    expect(
-      screen.getByRole('checkbox', {
-        name: /Use the assisted rich text editor in Workbench, Review Project, and text unit details/,
-      }),
-    ).toBeChecked();
+    expect(workset).toHaveValue(25);
+    expect(editorToggle()).toBeChecked();
+    expect(searchToggle()).toBeChecked();
+    expect(shortcutToggle()).not.toBeChecked();
+    expect(screen.queryByText('No preferred locales set.')).not.toBeInTheDocument();
+    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+
+    await user.click(restoreDefaults);
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(loadPreferredWorksetSize()).toBeNull();
+    expect(loadPreferredLocales()).toEqual([]);
+    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(false);
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
+    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('bottom');
   });
 
-  it('stages Search opt-in and opt-out until Save and preserves the saved setting on reload', async () => {
+  it('discards unsaved editor, Search, and shortcut changes on navigation', async () => {
     const user = userEvent.setup();
     const view = renderSettingsPage();
-    const section = within(screen.getByRole('region', { name: 'Translation search' }));
-    const toggle = section.getByRole('checkbox', {
-      name: /Show Search in Review Project and text-unit details/,
-    });
-    const save = section.getByRole('button', { name: 'Save' });
-
-    expect(toggle).not.toBeChecked();
-    expect(save).toBeDisabled();
-    expect(section.getByRole('button', { name: 'Reset' })).toBeDisabled();
-    expect(
-      section.getByText(
-        'Search current translations across repositories. Off by default; enable it to try the preview.',
-      ),
-    ).toBeInTheDocument();
-    await user.click(toggle);
-    expect(toggle).toBeChecked();
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
-    await user.click(save);
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
-    expect(loadReviewProjectSearchEnabled('other-user')).toBe(false);
-    expect(save).toBeDisabled();
+    await user.click(editorToggle());
+    await user.click(searchToggle());
+    await user.click(shortcutToggle());
 
     view.unmount();
     renderSettingsPage();
-    const reloaded = within(screen.getByRole('region', { name: 'Translation search' }));
-    const reloadedToggle = reloaded.getByRole('checkbox', {
-      name: /Show Search in Review Project and text-unit details/,
-    });
-    expect(reloadedToggle).toBeChecked();
-    await user.click(reloadedToggle);
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
-    await user.click(reloaded.getByRole('button', { name: 'Save' }));
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
-    expect(reloaded.getByRole('button', { name: 'Save' })).toBeDisabled();
+
+    expect(editorToggle()).not.toBeChecked();
+    expect(searchToggle()).not.toBeChecked();
+    expect(shortcutToggle()).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   });
 
-  it('keeps Search Reset as a draft until Save and discards unsaved changes on navigation', async () => {
+  it('preserves saved Search on reload and stages opting out until Save changes', async () => {
     const user = userEvent.setup();
+    const view = renderSettingsPage();
+    expect(searchToggle()).not.toBeChecked();
+    await user.click(searchToggle());
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    view.unmount();
+    renderSettingsPage();
+    expect(searchToggle()).toBeChecked();
+    await user.click(searchToggle());
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  });
+
+  it('switches account preferences and discards their drafts when the signed-in account changes', async () => {
+    const user = userEvent.setup();
+    saveVisibleTextEditorEnabled(true, TEST_USERNAME);
     saveReviewProjectSearchEnabled(true, TEST_USERNAME);
     const view = renderSettingsPage();
-    const section = within(screen.getByRole('region', { name: 'Translation search' }));
-
-    await user.click(section.getByRole('button', { name: 'Reset' }));
-    expect(section.getByRole('checkbox', { name: /Show Search/ })).not.toBeChecked();
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
-    expect(section.getByRole('button', { name: 'Save' })).toBeEnabled();
-
-    view.unmount();
-    renderSettingsPage();
-    expect(screen.getByRole('checkbox', { name: /Show Search/ })).toBeChecked();
-  });
-
-  it('switches Search saved state and drafts with the signed-in account', async () => {
-    const user = userEvent.setup();
-    saveReviewProjectSearchEnabled(true, TEST_USERNAME);
-    const view = renderSettingsPage();
-    const searchSection = () => within(screen.getByRole('region', { name: 'Translation search' }));
-    expect(searchSection().getByRole('checkbox', { name: /Show Search/ })).toBeChecked();
-    await user.click(searchSection().getByRole('checkbox', { name: /Show Search/ }));
+    expect(editorToggle()).toBeChecked();
+    expect(searchToggle()).toBeChecked();
+    await user.click(editorToggle());
+    await user.click(searchToggle());
 
     currentUsername = 'other-user';
     view.rerender(<SettingsPage />);
-    expect(searchSection().getByRole('checkbox', { name: /Show Search/ })).not.toBeChecked();
-    expect(searchSection().getByRole('button', { name: 'Save' })).toBeDisabled();
-    await user.click(searchSection().getByRole('checkbox', { name: /Show Search/ }));
-    await user.click(searchSection().getByRole('button', { name: 'Save' }));
+    expect(editorToggle()).not.toBeChecked();
+    expect(searchToggle()).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    await user.click(editorToggle());
+    await user.click(searchToggle());
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(loadVisibleTextEditorEnabled('other-user')).toBe(true);
     expect(loadReviewProjectSearchEnabled('other-user')).toBe(true);
+    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(true);
     expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
 
     currentUsername = TEST_USERNAME;
     view.rerender(<SettingsPage />);
-    expect(searchSection().getByRole('checkbox', { name: /Show Search/ })).toBeChecked();
-    expect(searchSection().getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(editorToggle()).toBeChecked();
+    expect(searchToggle()).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  });
+
+  it('blocks Save changes for an invalid result limit while allowing drafts to be discarded', async () => {
+    const user = userEvent.setup();
+    renderSettingsPage();
+    const workset = screen.getByRole('spinbutton', { name: 'Result size limit' });
+
+    await user.type(workset, '0');
+
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeEnabled();
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    expect(screen.getByText('Enter a positive whole number.')).toBeInTheDocument();
+    await user.click(editorToggle());
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(false);
+
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+
+    expect(workset).toHaveValue(null);
+    expect(editorToggle()).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeDisabled();
+    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
+  });
+
+  it('saves only changed preferences and preserves current stored values for unchanged settings', async () => {
+    const user = userEvent.setup();
+    saveReviewProjectShortcutHelpPreference('hidden', 'bottom');
+    renderSettingsPage();
+    await user.click(editorToggle());
+
+    // Simulate another view changing a preference that this page has not edited.
+    savePreferredWorksetSize(75);
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(true);
+    expect(loadPreferredWorksetSize()).toBe(75);
+    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('hidden');
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  });
+
+  it('preserves a locale draft when another tab updates the saved locales', async () => {
+    const user = userEvent.setup();
+    savePreferredLocales(['de']);
+    renderSettingsPage();
+    const localeSelector = screen.getByRole('button', { name: 'Select preferred locales' });
+    await user.click(localeSelector);
+    await user.click(screen.getByRole('button', { name: 'Select your locales' }));
+
+    act(() => {
+      savePreferredLocales(['es']);
+      window.dispatchEvent(new StorageEvent('storage', { key: PREFERRED_LOCALES_KEY }));
+    });
+
+    expect(localeSelector).toHaveTextContent('My locales');
+    expect(loadPreferredLocales()).toEqual(['es']);
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(loadPreferredLocales()).toEqual(['fr']);
+  });
+
+  it('keeps a failed Search save as a draft and allows retrying when storage recovers', async () => {
+    const user = userEvent.setup();
+    renderSettingsPage();
+    await user.click(searchToggle());
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('Storage unavailable');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
+    expect(searchToggle()).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeEnabled();
+    expect(screen.getByText('Could not save all changes. Please try again.')).toBeInTheDocument();
+    expect(screen.queryByText('Changes saved')).not.toBeInTheDocument();
+
+    await user.click(searchToggle());
+
+    expect(screen.getByRole('status')).toHaveTextContent('No unsaved changes');
+    expect(screen.getByRole('status')).not.toHaveClass('is-error');
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeDisabled();
+    expect(
+      screen.queryByText('Could not save all changes. Please try again.'),
+    ).not.toBeInTheDocument();
+
+    setItem.mockRestore();
+    await user.click(searchToggle());
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
+    expect(screen.getByText('Changes saved')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    expect(
+      screen.queryByText('Could not save all changes. Please try again.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('retains successfully saved values when a later preference write throws', async () => {
+    const user = userEvent.setup();
+    renderSettingsPage();
+    const workset = screen.getByRole('spinbutton', { name: 'Result size limit' });
+    await user.type(workset, '25');
+    await user.click(editorToggle());
+    const originalSetItem = Storage.prototype.setItem.bind(window.localStorage);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+      if (key === getVisibleTextEditorEnabledKey(TEST_USERNAME)) {
+        throw new Error('Storage unavailable');
+      }
+      originalSetItem(key, value);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(loadPreferredWorksetSize()).toBe(25);
+    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(false);
+    expect(editorToggle()).toBeChecked();
+    expect(screen.getByText('Could not save all changes. Please try again.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+
+    expect(workset).toHaveValue(25);
+    expect(editorToggle()).not.toBeChecked();
+    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   });
 });

@@ -397,6 +397,9 @@ Sample pickers, parser-mode selectors, and fixture controls are demo-only and
 should stay outside the textarea chrome.
 
 Initial rollout is user opt-in through **My Settings > Translation editor**.
+All personal settings are edited as drafts and applied together with **Save changes**
+in the shared sticky footer. **Discard changes** restores saved values;
+**Restore defaults** stages the defaults until Save changes is selected.
 The local preference is scoped to the signed-in Mojito username in the current
 browser so account switching does not carry the opt-in across roles. The default
 path remains the native textarea. This lets admins and early testers validate the

@@ -15,7 +15,9 @@ configured locales, or return to the active locale.
 Both entry points start hidden for everyone, including admins. Enable them in
 **My Settings > Translation search** (`/settings/me#review-project-search`) by
 checking **Show Search in Review Project and text-unit details (preview)** and
-selecting Save. Uncheck it and Save to disable; Reset stages the default off state.
+selecting **Save changes** in the shared sticky footer. Uncheck it and save to disable.
+**Discard changes** restores all saved settings; **Restore defaults** stages their
+defaults, including the default off state for Search, until Save changes is selected.
 This personal preference is
 saved separately for each Mojito username in the current browser, like the
 assisted-editor opt-in. Switching accounts does not carry it to another user.
@@ -95,7 +97,7 @@ the translation author.
 
 Frontend tests cover shared controls, default and edited scopes, compound queries,
 pagination, author display, stale-request isolation, errors, and keyboard handling.
-Preference tests cover default-off behavior, staged Save/Reset, account isolation,
+Preference tests cover default-off behavior, staged saving and restoring defaults, account isolation,
 and disabling an active panel from the same or another browser tab.
 Detail-page tests cover lazy expansion, shared search defaults and results,
 collapse/reopen state, resets, and draft preservation when Search is disabled.

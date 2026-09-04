@@ -12,6 +12,70 @@
   max-width: 96rem;
 }
 
+.personal-settings-page {
+  height: calc(100dvh - var(--app-shell-header-height));
+  display: flex;
+  flex-direction: column;
+}
+
+.personal-settings-page__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.settings-page--personal .settings-note {
+  margin: 0;
+}
+
+.settings-page--personal .settings-card + .settings-card {
+  margin-top: var(--space-2);
+}
+
+.personal-settings-page__defaults {
+  margin-top: var(--space-3);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.personal-settings-page__footer {
+  flex-shrink: 0;
+  border-top: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.personal-settings-page__actions {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-7);
+  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.personal-settings-page__status {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.personal-settings-page__status.is-error {
+  color: var(--color-danger);
+}
+
+.personal-settings-page .settings-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.personal-settings-page__actions .settings-actions {
+  flex-shrink: 0;
+}
+
 .settings-subpage {
   min-height: 100vh;
   display: flex;
@@ -497,6 +561,22 @@
 
   .settings-subpage__topbar {
     padding: 0 var(--space-4);
+  }
+
+  .personal-settings-page__actions {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+}
+
+@media (max-width: 36rem) {
+  .personal-settings-page__actions {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .personal-settings-page__actions .settings-actions {
+    margin-left: auto;
   }
 }
 
