@@ -246,7 +246,8 @@ editor's scoped escape hatch, MF2 raw mode exposes declarations, selectors,
 keys, and every variant at once. Source-contract diagnostics block saving a
 changed skeleton; locking placeholders returns to the protected structured view.
 Keyboard reference is available through a compact
-**Shortcuts** disclosure instead of occupying an always-visible row. Clean
+**Shortcuts** disclosure with the same muted text and regular weight as adjacent
+editor controls, instead of occupying an always-visible row. Clean
 documents do not show a passive success diagnostic; form badges, inline
 diagnostics, and a collapsible issue summary appear only when there is something
 actionable.
