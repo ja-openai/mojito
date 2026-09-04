@@ -1,7 +1,7 @@
 import './app.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import {
   BrowserRouter,
   Navigate,
@@ -27,6 +27,7 @@ import { MonitoringPage } from './page/monitoring/MonitoringPage';
 import { RepositoriesPage } from './page/repositories/RepositoriesPage';
 import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
 import { ReviewProjectFindReplacePage } from './page/review-project-find-replace/ReviewProjectFindReplacePage';
+import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from './page/review-projects/review-projects-session-state';
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
 import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
@@ -67,6 +68,7 @@ import { BidiHelperPage } from './page/tools/BidiHelperPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { IcuMessagePreviewPage } from './page/tools/IcuMessagePreviewPage';
 import { TextAssistPrototypePage } from './page/tools/TextAssistPrototypePage';
+import { WORKBENCH_SESSION_QUERY_KEY } from './page/workbench/workbench-session-state';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
 import { canAccessGlossaries } from './utils/permissions';
 
@@ -107,9 +109,63 @@ function isNavPathActive(pathname: string, navPath: string) {
   return pathname === navPath || pathname.startsWith(`${navPath}/`);
 }
 
+type FilterSessionTokens = {
+  workbench: string | null;
+  reviewProjects: string | null;
+};
+
+function getSessionToken(searchParams: URLSearchParams, key: string) {
+  const token = searchParams.get(key)?.trim();
+  return token || null;
+}
+
+function buildNavTarget(path: string, queryKey: string, token: string | null) {
+  if (!token) {
+    return path;
+  }
+  const searchParams = new URLSearchParams();
+  searchParams.set(queryKey, token);
+  return `${path}?${searchParams.toString()}`;
+}
+
 function AppLayout({ showHeader }: { showHeader: boolean }) {
   const user = useUser();
   const location = useLocation();
+  const currentSearchParams = new URLSearchParams(location.search);
+  const [filterSessionTokens, setFilterSessionTokens] = useState<FilterSessionTokens>({
+    workbench: null,
+    reviewProjects: null,
+  });
+
+  let { workbench, reviewProjects } = filterSessionTokens;
+  if (location.pathname === '/workbench') {
+    workbench = getSessionToken(currentSearchParams, WORKBENCH_SESSION_QUERY_KEY);
+  }
+  if (isNavPathActive(location.pathname, '/review-projects')) {
+    const token = getSessionToken(currentSearchParams, REVIEW_PROJECTS_SESSION_QUERY_KEY);
+    // A dashboard reset clears its token; detail routes without one keep the remembered session.
+    if (location.pathname === '/review-projects' || token) {
+      reviewProjects = token;
+    }
+  }
+
+  useEffect(() => {
+    setFilterSessionTokens((current) =>
+      workbench === current.workbench && reviewProjects === current.reviewProjects
+        ? current
+        : { workbench, reviewProjects },
+    );
+  }, [workbench, reviewProjects]);
+
+  const dashboardNavTargets: Partial<Record<string, string>> = {
+    '/workbench': buildNavTarget('/workbench', WORKBENCH_SESSION_QUERY_KEY, workbench),
+    '/review-projects': buildNavTarget(
+      '/review-projects',
+      REVIEW_PROJECTS_SESSION_QUERY_KEY,
+      reviewProjects,
+    ),
+  };
+
   const canAccessIncidents = user.role === 'ROLE_ADMIN' || user.role === 'ROLE_PM';
   const canAccessStringAuthoring = user.role === 'ROLE_ADMIN';
   const headerNavItems = [
@@ -132,7 +188,7 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
               {headerNavItems.map(({ to, label }) => (
                 <NavLink
                   key={to}
-                  to={to}
+                  to={dashboardNavTargets[to] ?? to}
                   className={({ isActive }) => {
                     const isSettingsSection =
                       to === '/settings/system' &&

@@ -84,6 +84,7 @@ function renderTextUnitDetailPage(path = '/text-units/3?locale=pt-PT') {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
+          <Route path="/workbench" element={<h1>Workbench dashboard</h1>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -279,4 +280,20 @@ describe('TextUnitDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     expect(saveTextUnitMock).not.toHaveBeenCalled();
   });
+
+  it.each(['/text-units/3?locale=pt-PT', '/text-units/3?locale=pt-PT&from=workbench'])(
+    'returns to Workbench in the current tab from %s',
+    async (path) => {
+      const closeSpy = vi.spyOn(window, 'close').mockImplementation(() => undefined);
+      renderTextUnitDetailPage(path);
+
+      try {
+        fireEvent.click(screen.getByRole('button', { name: 'Back to workbench' }));
+        expect(await screen.findByRole('heading', { name: 'Workbench dashboard' })).toBeVisible();
+        expect(closeSpy).not.toHaveBeenCalled();
+      } finally {
+        closeSpy.mockRestore();
+      }
+    },
+  );
 });

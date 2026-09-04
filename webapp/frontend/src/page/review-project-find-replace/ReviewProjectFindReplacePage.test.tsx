@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as ReviewProjectsApi from '../../api/review-projects';
@@ -68,14 +68,21 @@ function renderPage(path = '/review-projects/7/find-replace') {
               path="/review-projects/:projectId/find-replace"
               element={<ReviewProjectFindReplacePage />}
             />
-            <Route
-              path="/review-projects/:projectId"
-              element={<div>Review project destination</div>}
-            />
+            <Route path="/review-projects/:projectId" element={<ReviewProjectDestination />} />
           </Routes>
         </MemoryRouter>
       </UserContext.Provider>
     </QueryClientProvider>,
+  );
+}
+
+function ReviewProjectDestination() {
+  const location = useLocation();
+  return (
+    <>
+      <div>Review project destination</div>
+      <div data-testid="review-project-location">{`${location.pathname}${location.search}`}</div>
+    </>
   );
 }
 
@@ -109,6 +116,24 @@ describe('ReviewProjectFindReplacePage', () => {
     expect(screen.getByRole('heading', { name: 'Translation cleanup' })).toBeInTheDocument();
     expect(screen.getAllByText('Translation cleanup')).toHaveLength(1);
     expect(screen.getByText('Find and replace')).toBeInTheDocument();
+  });
+
+  it('preserves the encoded review-projects session when navigating back', () => {
+    renderPage('/review-projects/7/find-replace?rps=review%2Bsession%2F%3F%26%3D&unrelated=value');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Back to review project' }));
+
+    expect(screen.getByTestId('review-project-location').textContent).toBe(
+      '/review-projects/7?rps=review%2Bsession%2F%3F%26%3D',
+    );
+  });
+
+  it('returns directly to the review project when there is no dashboard session', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Back to review project' }));
+
+    expect(screen.getByTestId('review-project-location').textContent).toBe('/review-projects/7');
   });
 
   it('shows current-to-working diffs after applying a replacement', () => {
@@ -199,7 +224,7 @@ describe('ReviewProjectFindReplacePage', () => {
       isLoading: false,
     });
 
-    renderPage();
+    renderPage('/review-projects/7/find-replace?rps=review%2Bsession%2F%3F%26%3D');
 
     fireEvent.change(screen.getByLabelText('Find'), { target: { value: 'Réflexionbam' } });
     fireEvent.change(screen.getByLabelText('Replace'), { target: { value: 'Raisonnement' } });
@@ -208,6 +233,9 @@ describe('ReviewProjectFindReplacePage', () => {
 
     await screen.findByText('Review project destination');
     expect(saveReviewProjectTextUnitSuggestionMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('review-project-location').textContent).toBe(
+      '/review-projects/7?rps=review%2Bsession%2F%3F%26%3D',
+    );
     expect(saveReviewProjectTextUnitDecisionMock).not.toHaveBeenCalled();
     expect(saveReviewProjectTextUnitSuggestionMock).toHaveBeenCalledWith({
       textUnitId: 101,

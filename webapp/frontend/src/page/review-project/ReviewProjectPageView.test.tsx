@@ -343,6 +343,7 @@ function buildMutations(
 function renderReviewProjectPageView(
   overrides: Partial<ReviewProjectPageViewProps> = {},
   currentUser: ApiUserProfile = user,
+  initialEntry?: string,
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -366,7 +367,7 @@ function renderReviewProjectPageView(
   return render(
     <QueryClientProvider client={queryClient}>
       <UserContext.Provider value={currentUser}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={initialEntry ? [initialEntry] : undefined}>
           <ReviewProjectPageView {...props} />
         </MemoryRouter>
       </UserContext.Provider>
@@ -406,6 +407,19 @@ describe('ReviewProjectPageView', () => {
     fireEvent.keyDown(window, { key: 'f', ctrlKey: true, shiftKey: true });
 
     expect(navigateMock).toHaveBeenCalledWith('/review-projects/7/find-replace');
+  });
+
+  it('preserves the review-projects session when opening find and replace', () => {
+    renderReviewProjectPageView({}, user, '/review-projects/7?rps=review-session');
+
+    expect(screen.getByRole('link', { name: 'Find and replace' })).toHaveAttribute(
+      'href',
+      '/review-projects/7/find-replace?rps=review-session',
+    );
+
+    fireEvent.keyDown(window, { key: 'f', ctrlKey: true, shiftKey: true });
+
+    expect(navigateMock).toHaveBeenCalledWith('/review-projects/7/find-replace?rps=review-session');
   });
 
   it('does not intercept normal browser find', () => {

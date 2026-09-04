@@ -884,7 +884,15 @@ export function ReviewProjectPageView({
   );
   const canStartFindReplace =
     project?.status === 'OPEN' && !isProjectTerminology && textUnits.length > 0;
-  const findReplaceHref = `/review-projects/${projectId}/find-replace`;
+  const findReplaceHref = useMemo(() => {
+    const path = `/review-projects/${projectId}/find-replace`;
+    if (!reviewProjectsSessionKey) {
+      return path;
+    }
+    const params = new URLSearchParams();
+    params.set(REVIEW_PROJECTS_SESSION_QUERY_KEY, reviewProjectsSessionKey);
+    return `${path}?${params.toString()}`;
+  }, [projectId, reviewProjectsSessionKey]);
 
   const layoutRef = useRef<HTMLDivElement>(null);
   const detailPaneRef = useRef<HTMLDivElement>(null);

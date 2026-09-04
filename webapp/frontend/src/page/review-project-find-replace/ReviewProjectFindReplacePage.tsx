@@ -3,7 +3,7 @@ import './review-project-find-replace-page.css';
 
 import { type QueryClient, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   type ApiReviewProjectDetail,
@@ -42,6 +42,7 @@ import {
 import { buildInlineDiffParts } from '../../utils/inlineDiff';
 import { toHtmlLangTag } from '../../utils/localeTag';
 import { formatIntegerCount } from '../../utils/numberFormat';
+import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
 import {
   applyReviewProjectFindReplacePlan,
   buildReviewProjectFindReplacePlan,
@@ -155,8 +156,17 @@ function FindReplaceSession({
   refreshError: boolean;
 }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const projectId = project.id;
+  const reviewProjectsSessionKey = searchParams.get(REVIEW_PROJECTS_SESSION_QUERY_KEY);
+  const reviewProjectHref = useMemo(() => {
+    const path = `/review-projects/${projectId}`;
+    if (!reviewProjectsSessionKey) return path;
+    const params = new URLSearchParams();
+    params.set(REVIEW_PROJECTS_SESSION_QUERY_KEY, reviewProjectsSessionKey);
+    return `${path}?${params.toString()}`;
+  }, [projectId, reviewProjectsSessionKey]);
   const draftKey = useMemo(
     () => ['review-project-bulk-draft', username, projectId] as const,
     [projectId, username],
@@ -500,7 +510,7 @@ function FindReplaceSession({
         setApplyToProjectMessage(formatApplySuccessMessage(applyMode, savedCount));
       }
       queryClient.removeQueries({ queryKey: draftKey, exact: true });
-      void navigate(`/review-projects/${project.id}`);
+      void navigate(reviewProjectHref);
     } catch (error) {
       if (!mountedRef.current) return;
       setApplyToProjectError(
@@ -584,7 +594,7 @@ function FindReplaceSession({
           <div className="review-project-page__header-group review-project-page__header-group--left">
             <Link
               className="review-project-page__header-back-link"
-              to={`/review-projects/${project.id}`}
+              to={reviewProjectHref}
               aria-label="Back to review project"
               title="Back to review project"
             >

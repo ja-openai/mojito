@@ -22,6 +22,15 @@ Plan (narrow)
 - Provide nav links for `/repositories` and `/workbench`; redirect `/` and fallthrough paths to `/repositories`.
 - Add `app.css` with CSS variables (colors, spacing, radius) and shell layout styles, and import it in `App.tsx`.
 
+Stateful dashboard navigation
+- Workbench and Review Projects keep their current filters in per-tab `sessionStorage`, addressed by
+  the `ws` and `rps` query tokens respectively.
+- The shared header retains the latest observed token for each dashboard while navigating among
+  header routes, and Review Project subroutes propagate `rps` through their back links.
+- Workbench Details opens in a separate tab with `noopener`; its Back action navigates to Workbench
+  in that tab. The original tab's filters are not restored there because their `sessionStorage`
+  payload is tab-scoped. Filter-session tokens are not shareable links.
+
 Open questions
 - Should navigation highlight active routes or adopt a design-system component?
 - Do we want per-route code splitting once pages grow?
