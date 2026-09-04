@@ -254,9 +254,12 @@ actionable.
 **Insert special** is shared by MF2, assisted, and plain-text translation editors
 in Workbench, Review Project, Find/Replace working targets, and text-unit details.
 It inserts at the caret or replaces selected text; phrase-direction actions wrap
-the selection. The compact single-column menu uses normal-weight action labels
-and aligned character hints. Keyboard-specific shortcuts stay in tooltips.
-Read-only and disabled editors cannot insert characters.
+the selection. The menu groups spaces and punctuation, direction marks, and phrase
+direction with aligned character hints. **System keyboard help** opens a separate
+view with macOS and Windows character-picker and input-language shortcuts, plus
+links to system setup instructions. Escape returns focus to the translation before
+using a system shortcut. The [Characters and input languages guide](../../docs/_docs/guides/014-typing-characters.md)
+provides the full instructions. Read-only and disabled editors cannot insert characters.
 
 The guided editor uses one outer border and focus ring around the text and controls.
 Variant rows meet that frame directly, with separators between forms. Messages

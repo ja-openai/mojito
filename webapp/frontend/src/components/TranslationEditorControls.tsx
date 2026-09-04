@@ -1,6 +1,6 @@
 import './visible-text-editor.css';
 
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
 import type { VisibleTextMarksMode } from './visibleTextFormatting';
 
@@ -123,63 +123,142 @@ export function HiddenCharactersMenu({
 export type SpecialTextTool = {
   code: string;
   label: string;
-  shortcut?: string;
   text?: string;
   title: string;
   wrap?: readonly [string, string];
 };
 
-const TEXT_TOOLS: Array<SpecialTextTool> = [
+const TEXT_TOOL_GROUPS: Array<{ label: string; tools: SpecialTextTool[] }> = [
   {
-    code: 'NBSP',
-    label: 'No-break space',
-    text: '\u00A0',
-    title: 'Insert a space that keeps adjacent words together.',
+    label: 'Spaces & punctuation',
+    tools: [
+      {
+        code: 'NBSP',
+        label: 'No-break space',
+        text: '\u00A0',
+        title: 'Insert a space that keeps adjacent words together.',
+      },
+      {
+        code: 'NNBSP',
+        label: 'Narrow no-break',
+        text: '\u202F',
+        title: 'Insert a narrow non-breaking space.',
+      },
+      {
+        code: '\u2019',
+        label: 'Curly apostrophe',
+        text: '\u2019',
+        title: 'Insert a typographic apostrophe.',
+      },
+    ],
   },
   {
-    code: 'NNBSP',
-    label: 'Narrow no-break',
-    text: '\u202F',
-    title: 'Insert a narrow non-breaking space.',
+    label: 'Direction marks',
+    tools: [
+      {
+        code: 'LRM',
+        label: 'LTR mark',
+        text: '\u200E',
+        title: 'Insert a left-to-right mark for nearby punctuation.',
+      },
+      {
+        code: 'RLM',
+        label: 'RTL mark',
+        text: '\u200F',
+        title: 'Insert a right-to-left mark for nearby punctuation.',
+      },
+    ],
   },
   {
-    code: 'LRM',
-    label: 'LTR mark',
-    text: '\u200E',
-    title: 'Insert a left-to-right mark for nearby punctuation.',
-  },
-  {
-    code: 'RLM',
-    label: 'RTL mark',
-    text: '\u200F',
-    title: 'Insert a right-to-left mark for nearby punctuation.',
-  },
-  {
-    code: 'LRI/PDI',
-    label: 'Keep LTR phrase',
-    title: 'Wrap the selection as an isolated left-to-right phrase.',
-    wrap: ['\u2066', '\u2069'],
-  },
-  {
-    code: 'RLI/PDI',
-    label: 'Keep RTL phrase',
-    title: 'Wrap the selection as an isolated right-to-left phrase.',
-    wrap: ['\u2067', '\u2069'],
-  },
-  {
-    code: 'FSI/PDI',
-    label: 'Auto-direction phrase',
-    title: 'Wrap the selection and let its first strong character choose direction.',
-    wrap: ['\u2068', '\u2069'],
-  },
-  {
-    code: '\u2019',
-    label: 'Curly apostrophe',
-    shortcut: 'Mac US: \u2325\u21E7]',
-    text: '\u2019',
-    title: 'Insert a typographic apostrophe. OS shortcuts depend on keyboard layout and IME.',
+    label: 'Phrase direction',
+    tools: [
+      {
+        code: 'LRI/PDI',
+        label: 'Keep LTR phrase',
+        title: 'Wrap the selection as an isolated left-to-right phrase.',
+        wrap: ['\u2066', '\u2069'],
+      },
+      {
+        code: 'RLI/PDI',
+        label: 'Keep RTL phrase',
+        title: 'Wrap the selection as an isolated right-to-left phrase.',
+        wrap: ['\u2067', '\u2069'],
+      },
+      {
+        code: 'FSI/PDI',
+        label: 'Auto-direction phrase',
+        title: 'Wrap the selection and let its first strong character choose direction.',
+        wrap: ['\u2068', '\u2069'],
+      },
+    ],
   },
 ];
+
+function SystemKeyboardHelp() {
+  return (
+    <div className="visible-text-editor__keyboard-help">
+      <p>
+        Press <kbd>Esc</kbd> to return to your translation, then use a shortcut.
+      </p>
+      <section>
+        <h4>macOS</h4>
+        <dl>
+          <div>
+            <dt>Characters & emoji</dt>
+            <dd>
+              <kbd>Ctrl</kbd> <kbd aria-label="Command">⌘</kbd> <kbd>Space</kbd>
+            </dd>
+          </div>
+          <div>
+            <dt>Switch input language</dt>
+            <dd>
+              <kbd>Ctrl</kbd> <kbd>Space</kbd>
+            </dd>
+          </div>
+        </dl>
+        <a
+          aria-label="Add a keyboard or input method on macOS (opens in a new tab)"
+          data-translation-editor-control
+          href="https://support.apple.com/guide/mac-help/mchlp1406/mac"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Add a keyboard or input method ↗
+        </a>
+      </section>
+      <section>
+        <h4>Windows</h4>
+        <dl>
+          <div>
+            <dt>Characters & emoji</dt>
+            <dd>
+              <kbd>Win</kbd> <kbd>.</kbd>
+            </dd>
+          </div>
+          <div>
+            <dt>Switch input language</dt>
+            <dd>
+              <kbd>Win</kbd> <kbd>Space</kbd>
+            </dd>
+          </div>
+        </dl>
+        <a
+          aria-label="Add a keyboard or input method on Windows (opens in a new tab)"
+          data-translation-editor-control
+          href="https://support.microsoft.com/en-us/windows/hardware/input-devices/manage-the-language-and-keyboard-input-layout-settings-in-windows"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Add a keyboard or input method ↗
+        </a>
+      </section>
+      <p>
+        Use a character picker for symbols, or a language input method (IME) to compose text. Input
+        switching requires another keyboard in your system settings.
+      </p>
+    </div>
+  );
+}
 
 export function SpecialTextTools({
   disabled = false,
@@ -195,6 +274,44 @@ export function SpecialTextTools({
   open: boolean;
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const menuId = useId();
+  const helpId = useId();
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    const control = menuRef.current;
+    if (!panel || !control) return;
+    panel.scrollTop = 0;
+    const positionPanel = () => {
+      const padding = 12;
+      const gap = 6;
+      const anchor = control.getBoundingClientRect();
+      const spaceAbove = anchor.top - padding - gap;
+      const spaceBelow = window.innerHeight - anchor.bottom - padding - gap;
+      panel.style.maxHeight = `${Math.max(0, Math.min(480, Math.max(spaceAbove, spaceBelow)))}px`;
+      panel.style.transform = '';
+      const rect = panel.getBoundingClientRect();
+      const offsetX = Math.max(
+        padding - rect.left,
+        Math.min(0, window.innerWidth - padding - rect.right),
+      );
+      const offsetY =
+        rect.height > spaceBelow && spaceAbove > spaceBelow
+          ? -rect.height - anchor.height - gap * 2
+          : 0;
+      panel.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    };
+    positionPanel();
+    window.addEventListener('resize', positionPanel);
+    window.addEventListener('scroll', positionPanel, true);
+    return () => {
+      window.removeEventListener('resize', positionPanel);
+      window.removeEventListener('scroll', positionPanel, true);
+    };
+  }, [open, showKeyboardHelp]);
 
   useEffect(() => {
     if (!open) return;
@@ -223,34 +340,70 @@ export function SpecialTextTools({
   return (
     <div className="visible-text-editor__special-control" ref={menuRef}>
       <button
+        aria-controls={menuId}
         aria-expanded={open}
         className="visible-text-editor__control-button visible-text-editor__special-button"
         data-translation-editor-control
         disabled={disabled}
-        onClick={() => onOpenChange(!open)}
+        onClick={() => {
+          setShowKeyboardHelp(false);
+          onOpenChange(!open);
+        }}
         onMouseDown={(event) => event.preventDefault()}
         type="button"
       >
         Insert special
+        <span className="visible-text-editor__marks-chevron" aria-hidden="true" />
       </button>
-      <div className="visible-text-editor__special-menu" hidden={!open}>
-        {TEXT_TOOLS.map((tool) => (
-          <button
-            data-translation-editor-control
-            disabled={disabled}
-            key={tool.code}
-            onClick={() => {
-              onApplyTextTool(tool);
-              onOpenChange(false);
-            }}
-            onMouseDown={(event) => event.preventDefault()}
-            title={tool.shortcut ? `${tool.title} ${tool.shortcut}` : tool.title}
-            type="button"
-          >
-            <span>{tool.label}</span>
-            <small>{tool.code}</small>
-          </button>
-        ))}
+      <div className="visible-text-editor__special-menu" hidden={!open} id={menuId} ref={panelRef}>
+        <div hidden={showKeyboardHelp}>
+          {TEXT_TOOL_GROUPS.map((group) => (
+            <div
+              className="visible-text-editor__special-group"
+              key={group.label}
+              role="group"
+              aria-label={group.label}
+            >
+              <div className="visible-text-editor__special-group-label" aria-hidden="true">
+                {group.label}
+              </div>
+              {group.tools.map((tool) => (
+                <button
+                  className="visible-text-editor__special-option"
+                  data-translation-editor-control
+                  disabled={disabled}
+                  key={tool.code}
+                  onClick={() => {
+                    onApplyTextTool(tool);
+                    onOpenChange(false);
+                  }}
+                  onMouseDown={(event) => event.preventDefault()}
+                  title={tool.title}
+                  type="button"
+                >
+                  <span>{tool.label}</span>
+                  <small aria-hidden="true">{tool.code}</small>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+        <button
+          aria-controls={helpId}
+          aria-expanded={showKeyboardHelp}
+          className="visible-text-editor__keyboard-help-toggle"
+          data-translation-editor-control
+          disabled={disabled}
+          onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
+          onMouseDown={(event) => event.preventDefault()}
+          type="button"
+        >
+          <span>{showKeyboardHelp ? 'Back to characters' : 'System keyboard help'}</span>
+          <span aria-hidden="true">{showKeyboardHelp ? '←' : '→'}</span>
+        </button>
+        <div id={helpId} hidden={!showKeyboardHelp}>
+          <SystemKeyboardHelp />
+        </div>
       </div>
     </div>
   );

@@ -275,6 +275,54 @@ describe('TranslationTextEditor', () => {
   );
 
   it.each([true, false])(
+    'preserves the insertion point through keyboard help navigation (assisted: %s)',
+    async (assisted) => {
+      const user = userEvent.setup();
+      const ref = createRef<VisibleTextEditorHandle>();
+      const handleChange = vi.fn();
+      const restoreDom = installProseMirrorHistoryDomMock();
+
+      try {
+        render(
+          <ControlledTranslationTextEditor
+            assisted={assisted}
+            editorRef={ref}
+            initialValue="Bonjour monde"
+            onValueChange={handleChange}
+          />,
+        );
+        const editor = await screen.findByRole('textbox', { name: 'Text editor' });
+        act(() => ref.current?.setSelection({ start: 8, end: 13 }));
+        await user.click(screen.getByRole('button', { name: 'Insert special' }));
+        const helpButton = screen.getByRole('button', { name: 'System keyboard help' });
+        helpButton.focus();
+        await user.keyboard('{Enter}');
+
+        expect(screen.getByRole('heading', { name: 'macOS' })).toBeVisible();
+        expect(screen.getByRole('heading', { name: 'Windows' })).toBeVisible();
+        expect(helpButton).toHaveFocus();
+        expect(screen.getByText('No-break space')).not.toBeVisible();
+        expect(handleChange).not.toHaveBeenCalled();
+
+        await user.keyboard(' ');
+        expect(screen.getByText('No-break space')).toBeVisible();
+        await user.keyboard('{Enter}');
+        await user.keyboard('{Escape}');
+
+        expect(editor).toHaveFocus();
+        expect(ref.current?.getSelection()).toEqual({ start: 8, end: 13 });
+        await user.click(screen.getByRole('button', { name: 'Insert special' }));
+        expect(screen.getByText('macOS')).not.toBeVisible();
+        await user.click(screen.getByRole('button', { name: 'Curly apostrophe' }));
+        expect(handleChange).toHaveBeenLastCalledWith('Bonjour \u2019');
+        expect(editor).toHaveFocus();
+      } finally {
+        restoreDom();
+      }
+    },
+  );
+
+  it.each([true, false])(
     'prevents special-character insertion while disabled or read-only (assisted: %s)',
     async (assisted) => {
       const user = userEvent.setup();

@@ -50,6 +50,8 @@ Use Workbench to fix bugs, communicate context to translation teams and manage g
 
 To add or edit a translation, select the text unit you would like to edit. Then click on `Enter new translation` or on the existing translation. Enter a new translation and hit `Save.`
 
+For special characters and typing in another language, see [Characters and input languages](/docs/guides/typing-characters/).
+
 Warning! Every time you add or edit a translation through workbench, it is marked as `final`. If you want the translation to go through additional workflow steps, you need to mark it for translation or for `review`.
 
 ### Request translation for a text unit

@@ -936,13 +936,16 @@
   color: var(--color-accent);
 }
 
-.visible-text-editor__special-menu[hidden] {
+.visible-text-editor__special-menu[hidden],
+.visible-text-editor__special-menu [hidden] {
   display: none;
 }
 
 .visible-text-editor__special-menu {
-  inline-size: max-content;
-  max-inline-size: min(280px, calc(100cqw - 32px));
+  inline-size: 304px;
+  max-inline-size: calc(100vw - 32px);
+  max-block-size: min(480px, 70vh);
+  overflow-y: auto;
   inset-inline-start: 0;
   min-width: 0;
   position: absolute;
@@ -950,47 +953,149 @@
   z-index: 110;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-text) 14%, transparent);
-  display: grid;
-  gap: 0;
-  grid-template-columns: minmax(0, 1fr);
-  margin-top: 4px;
-  padding: 4px;
+  border-radius: 10px;
+  box-shadow:
+    0 4px 8px color-mix(in srgb, var(--color-text) 4%, transparent),
+    0 16px 40px color-mix(in srgb, var(--color-text) 12%, transparent);
+  margin-top: 6px;
+  padding: 6px;
+  text-align: start;
 }
 
-.visible-text-editor__special-menu button {
+.visible-text-editor__special-group {
+  padding: 4px 0 6px;
+}
+
+.visible-text-editor__special-group + .visible-text-editor__special-group {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  padding-top: 8px;
+}
+
+.visible-text-editor__special-group-label {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 0 9px 4px;
+}
+
+.visible-text-editor__special-option,
+.visible-text-editor__keyboard-help-toggle {
   align-items: center;
   background: transparent;
   border: 0;
-  border-radius: 4px;
+  border-radius: 5px;
   color: var(--color-text);
   cursor: pointer;
   display: grid;
   font: inherit;
   font-size: 13px;
   font-weight: 400;
-  gap: 20px;
+  gap: 12px;
   grid-template-columns: minmax(0, 1fr) auto;
   line-height: 1.35;
-  min-height: 26px;
-  padding: 4px 8px;
+  min-height: 30px;
+  padding: 5px 9px;
   text-align: start;
+  width: 100%;
 }
 
-.visible-text-editor__special-menu button:hover,
-.visible-text-editor__special-menu button:focus-visible {
+.visible-text-editor__special-option:hover,
+.visible-text-editor__special-option:focus-visible,
+.visible-text-editor__keyboard-help-toggle:hover,
+.visible-text-editor__keyboard-help-toggle:focus-visible {
   background: var(--color-surface-muted);
 }
 
-.visible-text-editor__special-menu button:focus-visible {
+.visible-text-editor__special-menu :focus-visible {
   outline: 2px solid var(--color-focus-border);
   outline-offset: -2px;
 }
 
-.visible-text-editor__special-menu small {
+.visible-text-editor__special-option small {
+  background: var(--color-surface-muted);
+  border-radius: 3px;
   color: var(--color-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
+  line-height: 1.4;
+  padding: 1px 4px;
   white-space: nowrap;
+}
+
+.visible-text-editor__keyboard-help-toggle {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+  min-height: 34px;
+}
+
+.visible-text-editor__keyboard-help-toggle[aria-expanded='true'] {
+  color: var(--color-accent);
+}
+
+.visible-text-editor__keyboard-help {
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  padding: 0 9px 4px;
+}
+
+.visible-text-editor__keyboard-help p {
+  color: var(--color-text-muted);
+  font-size: inherit;
+  line-height: inherit;
+  margin: 12px 0;
+}
+
+.visible-text-editor__keyboard-help section + section {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.visible-text-editor__keyboard-help h4 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.visible-text-editor__keyboard-help dl {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.visible-text-editor__keyboard-help dl > div {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  justify-content: space-between;
+}
+
+.visible-text-editor__keyboard-help dd {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.visible-text-editor__keyboard-help kbd {
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11px;
+  padding: 1px 4px;
+}
+
+.visible-text-editor__keyboard-help a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.visible-text-editor__keyboard-help a:hover {
+  text-decoration: underline;
 }
