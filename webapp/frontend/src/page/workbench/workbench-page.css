@@ -1165,6 +1165,7 @@
   align-items: center;
   gap: var(--space-1);
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .workbench-page__translation-button:disabled {

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { type ComponentProps } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,21 +19,29 @@ vi.mock('../../components/virtual/useMeasuredRowRefs', () => ({
   }),
 }));
 
+const virtualRowsMock = vi.hoisted(() => ({
+  visibleIndices: null as number[] | null,
+  scrollToIndex: vi.fn(),
+  measureElement: vi.fn(),
+}));
+
 vi.mock('../../components/virtual/useVirtualRows', () => ({
   useVirtualRows: ({ count }: { count: number }) => ({
     scrollRef: { current: null },
     virtualizer: {},
-    items: Array.from({ length: count }, (_, index) => ({
-      index,
-      key: `row-${index + 1}`,
-      start: index * 100,
-      end: (index + 1) * 100,
-      size: 100,
-      lane: 0,
-    })),
+    items: Array.from({ length: count }, (_, index) => index)
+      .filter((index) => virtualRowsMock.visibleIndices?.includes(index) ?? true)
+      .map((index) => ({
+        index,
+        key: `row-${index + 1}`,
+        start: index * 100,
+        end: (index + 1) * 100,
+        size: 100,
+        lane: 0,
+      })),
     totalSize: count * 100,
-    scrollToIndex: vi.fn(),
-    measureElement: vi.fn(),
+    scrollToIndex: virtualRowsMock.scrollToIndex,
+    measureElement: virtualRowsMock.measureElement,
   }),
 }));
 
@@ -105,6 +113,7 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
     restoreScrollTop: null,
     restoreRowId: null,
     onRestoreScrollConsumed: noop,
+    onOpenDetails: noop,
     isVisibleTextEditorEnabled: true,
     translationMarksMode: 'auto',
     showProtectedTokens: true,
@@ -128,17 +137,21 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
   };
 }
 
-function getDetailsButton() {
-  return screen.getByRole('button', { name: 'Details' });
+function getDetailsLink() {
+  return screen.getByRole('link', { name: 'Details' });
 }
 
 describe('WorkbenchBody', () => {
   beforeEach(() => {
     noop.mockClear();
+    virtualRowsMock.visibleIndices = null;
+    virtualRowsMock.scrollToIndex.mockReset();
+    virtualRowsMock.measureElement.mockReset();
     vi.spyOn(window, 'open').mockImplementation(() => null);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -802,18 +815,121 @@ paused {{En pause}}
     ).not.toBeInTheDocument();
   });
 
-  it('opens Details in a new window', () => {
-    renderWorkbenchBody({
+  it('opens Details in the current workbench session with its scroll position', () => {
+    const onOpenDetails = vi.fn();
+    const { container } = renderWorkbenchBody({
       editingRowId: null,
       editingValue: '',
+      onOpenDetails,
+    });
+    const scrollElement = container.querySelector('.virtual-scroll') as HTMLElement;
+    scrollElement.scrollTop = 425;
+    const link = getDetailsLink();
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+
+    expect(link).toHaveAttribute('href', '/text-units/3?locale=pt-PT');
+    expect(link).not.toHaveAttribute('target');
+    fireEvent(link, click);
+
+    expect(click.defaultPrevented).toBe(true);
+    expect(onOpenDetails).toHaveBeenCalledExactlyOnceWith(editingRow, 425);
+    expect(window.open).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Ctrl', { ctrlKey: true }],
+    ['Meta', { metaKey: true }],
+    ['Shift', { shiftKey: true }],
+    ['Alt', { altKey: true }],
+    ['middle button', { button: 1 }],
+  ] as const)('preserves native Details navigation for %s clicks', (_name, modifiers) => {
+    const onOpenDetails = vi.fn();
+    renderWorkbenchBody({ editingRowId: null, onOpenDetails });
+    const click = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      ...modifiers,
     });
 
-    fireEvent.click(getDetailsButton());
+    // Do not execute jsdom's deferred, unsupported cross-document navigation.
+    vi.useFakeTimers();
+    fireEvent(getDetailsLink(), click);
 
-    expect(window.open).toHaveBeenCalledWith(
-      '/text-units/3?locale=pt-PT',
-      '_blank',
-      'noopener,noreferrer',
+    expect(click.defaultPrevented).toBe(false);
+    expect(onOpenDetails).not.toHaveBeenCalled();
+    expect(window.open).not.toHaveBeenCalled();
+    vi.clearAllTimers();
+  });
+
+  it('waits for a virtualized return row before consuming restoration and focusing Details', () => {
+    const targetRow = { ...editingRow, id: 'row-2', tmTextUnitId: 4 };
+    const onRestoreScrollConsumed = vi.fn();
+    const onStartEditing = vi.fn();
+    const frames = new Map<number, FrameRequestCallback>();
+    let nextFrame = 0;
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frames.set(++nextFrame, callback);
+      return nextFrame;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => frames.delete(id));
+    const flushFrames = () =>
+      act(() => {
+        const callbacks = [...frames.values()];
+        frames.clear();
+        callbacks.forEach((callback) => callback(0));
+      });
+    virtualRowsMock.visibleIndices = [0];
+    virtualRowsMock.scrollToIndex.mockImplementation((index: number) => {
+      virtualRowsMock.visibleIndices = [index];
+    });
+    const { container, updateProps } = renderWorkbenchBody({
+      rows: [editingRow, targetRow],
+      editingRowId: null,
+      restoreRowId: targetRow.id,
+      restoreScrollTop: 625,
+      onRestoreScrollConsumed,
+      onStartEditing,
+    });
+
+    expect(virtualRowsMock.scrollToIndex).toHaveBeenCalledWith(1, { align: 'center' });
+    expect(container.querySelector('[data-workbench-row-id="row-2"]')).toBeNull();
+    flushFrames();
+    expect(onRestoreScrollConsumed).not.toHaveBeenCalled();
+
+    updateProps({});
+    const target = container.querySelector('[data-workbench-row-id="row-2"]') as HTMLElement;
+    const scrollIntoView = vi.fn();
+    target.scrollIntoView = scrollIntoView;
+    expect(onRestoreScrollConsumed).not.toHaveBeenCalled();
+    flushFrames();
+
+    expect((container.querySelector('.virtual-scroll') as HTMLElement).scrollTop).toBe(625);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    expect(within(target).getByRole('link', { name: 'Details' })).toHaveFocus();
+    expect(onStartEditing).not.toHaveBeenCalled();
+    expect(onRestoreScrollConsumed).toHaveBeenCalledOnce();
+  });
+
+  it('restores the saved scroll position when the return row is no longer in the results', async () => {
+    const onRestoreScrollConsumed = vi.fn();
+    const onStartEditing = vi.fn();
+    const { container, updateProps } = renderWorkbenchBody({
+      editingRowId: null,
+      restoreRowId: 'removed-row',
+      restoreScrollTop: 425,
+      onRestoreScrollConsumed,
+      onStartEditing,
+    });
+    onRestoreScrollConsumed.mockImplementation(() =>
+      updateProps({ restoreRowId: null, restoreScrollTop: null }),
     );
+
+    await waitFor(() => expect(onRestoreScrollConsumed).toHaveBeenCalledOnce());
+
+    expect((container.querySelector('.virtual-scroll') as HTMLElement).scrollTop).toBe(425);
+    expect(virtualRowsMock.scrollToIndex).not.toHaveBeenCalled();
+    expect(getDetailsLink()).not.toHaveFocus();
+    expect(onStartEditing).not.toHaveBeenCalled();
   });
 });

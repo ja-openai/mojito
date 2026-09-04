@@ -51,6 +51,10 @@ type PendingBulkAction =
   | { kind: 'delete'; count: number }
   | { kind: 'status'; count: number; statusLabel: string };
 
+type PendingDiscardAction =
+  | { kind: 'edit'; rowId: string; translation: string | null }
+  | { kind: 'navigate'; onContinue: () => void };
+
 type Params = {
   apiRows: WorkbenchRow[];
   canSearch: boolean;
@@ -111,7 +115,8 @@ type UseWorkbenchEditsResult = {
   confirmValidationSave: () => void;
   retryValidationSave: () => void;
   dismissValidationSave: () => void;
-  pendingEditingTarget: { rowId: string; translation: string | null } | null;
+  showDiscardDialog: boolean;
+  requestNavigate: (onContinue: () => void) => void;
   confirmDiscardEditing: () => void;
   dismissDiscardEditing: () => void;
   clearWorksetEdits: () => void;
@@ -139,10 +144,9 @@ export function useWorkbenchEdits({
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [editingInitialValue, setEditingInitialValue] = useState('');
-  const [pendingEditingTarget, setPendingEditingTarget] = useState<{
-    rowId: string;
-    translation: string | null;
-  } | null>(null);
+  const [pendingDiscardAction, setPendingDiscardAction] = useState<PendingDiscardAction | null>(
+    null,
+  );
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [bulkActionErrorMessage, setBulkActionErrorMessage] = useState<string | null>(null);
   const [pendingValidationSave, setPendingValidationSave] = useState<{
@@ -359,7 +363,7 @@ export function useWorkbenchEdits({
       setEditingRowId(null);
       setEditingValue('');
       setEditingInitialValue('');
-      setPendingEditingTarget(null);
+      setPendingDiscardAction(null);
       setPendingValidationSave(null);
       setSaveErrorMessage(null);
       setStatusSavingRowIds(new Set());
@@ -396,7 +400,7 @@ export function useWorkbenchEdits({
       setEditingRowId(null);
       setEditingValue('');
       setEditingInitialValue('');
-      setPendingEditingTarget(null);
+      setPendingDiscardAction(null);
       setPendingValidationSave(null);
       setSaveErrorMessage(null);
       setStatusSavingRowIds(new Set());
@@ -425,7 +429,7 @@ export function useWorkbenchEdits({
     setSaveErrorMessage(null);
     setBulkActionErrorMessage(null);
     setPendingValidationSave(null);
-    setPendingEditingTarget(null);
+    setPendingDiscardAction(null);
   }, []);
 
   const handleCancelEditing = useCallback(() => {
@@ -437,7 +441,7 @@ export function useWorkbenchEdits({
     setSaveErrorMessage(null);
     setBulkActionErrorMessage(null);
     setPendingValidationSave(null);
-    setPendingEditingTarget(null);
+    setPendingDiscardAction(null);
   }, []);
 
   const handleChangeEditingValue = useCallback((value: string) => {
@@ -445,6 +449,11 @@ export function useWorkbenchEdits({
   }, []);
 
   const hasUnsavedChanges = editingRowId !== null && editingValue !== editingInitialValue;
+  const hasPendingWrites =
+    saveTextUnitMutation.isPending ||
+    statusSavingRowIds.size > 0 ||
+    deleteAllMutation.isPending ||
+    updateAllStatusesMutation.isPending;
   const canSaveEditing = useMemo(() => {
     if (!editingRowId) {
       return false;
@@ -464,7 +473,7 @@ export function useWorkbenchEdits({
         return;
       }
       if (editingRowId && editingRowId !== rowId && hasUnsavedChanges) {
-        setPendingEditingTarget({ rowId, translation });
+        setPendingDiscardAction({ kind: 'edit', rowId, translation });
         return;
       }
 
@@ -473,15 +482,40 @@ export function useWorkbenchEdits({
     [apiRows, editingRowId, hasUnsavedChanges, handleStartEditing],
   );
 
+  const requestNavigate = useCallback(
+    (onContinue: () => void) => {
+      if (hasPendingWrites) {
+        setSaveErrorMessage('Wait for the current save to finish before leaving.');
+        return;
+      }
+      if (hasUnsavedChanges) {
+        setPendingDiscardAction({ kind: 'navigate', onContinue });
+        return;
+      }
+      handleCancelEditing();
+      onContinue();
+    },
+    [handleCancelEditing, hasPendingWrites, hasUnsavedChanges],
+  );
+
   const confirmDiscardEditing = useCallback(() => {
-    if (!pendingEditingTarget) {
+    if (!pendingDiscardAction) {
       return;
     }
-    handleStartEditing(pendingEditingTarget.rowId, pendingEditingTarget.translation);
-  }, [pendingEditingTarget, handleStartEditing]);
+    if (hasPendingWrites) {
+      setSaveErrorMessage('Wait for the current save to finish before leaving.');
+      return;
+    }
+    if (pendingDiscardAction.kind === 'edit') {
+      handleStartEditing(pendingDiscardAction.rowId, pendingDiscardAction.translation);
+    } else {
+      handleCancelEditing();
+      pendingDiscardAction.onContinue();
+    }
+  }, [pendingDiscardAction, hasPendingWrites, handleStartEditing, handleCancelEditing]);
 
   const dismissDiscardEditing = useCallback(() => {
-    setPendingEditingTarget(null);
+    setPendingDiscardAction(null);
   }, []);
 
   const saveAfterValidation = useCallback(
@@ -790,7 +824,7 @@ export function useWorkbenchEdits({
     setEditingRowId(null);
     setEditingValue('');
     setEditingInitialValue('');
-    setPendingEditingTarget(null);
+    setPendingDiscardAction(null);
     setPendingValidationSave(null);
     clearWorksetEdits();
   }, [canSearch, clearWorksetEdits]);
@@ -851,7 +885,8 @@ export function useWorkbenchEdits({
     confirmValidationSave,
     retryValidationSave,
     dismissValidationSave,
-    pendingEditingTarget,
+    showDiscardDialog: pendingDiscardAction !== null,
+    requestNavigate,
     confirmDiscardEditing,
     dismissDiscardEditing,
     clearWorksetEdits,

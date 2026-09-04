@@ -9,6 +9,11 @@ import { normalizeMessageFormat } from '../../components/mf2/messageFormat';
 import { WORKSET_SIZE_DEFAULT, WORKSET_SIZE_MIN } from './workbench-constants';
 import type { WorkbenchRow } from './workbench-types';
 
+export const buildTextUnitDetailPath = (row: WorkbenchRow) => {
+  const params = new URLSearchParams({ locale: row.locale });
+  return `/text-units/${row.tmTextUnitId}?${params.toString()}`;
+};
+
 export const clampWorksetSize = (value: number) => {
   if (!Number.isFinite(value)) {
     return WORKSET_SIZE_DEFAULT;

@@ -37,6 +37,8 @@ type SearchQueryKey = ['workbench-search', TextUnitSearchRequest | null];
 
 type Params = {
   initialSearchRequest?: TextUnitSearchRequest | null;
+  initialResultSortField?: WorkbenchResultSortField;
+  initialResultSortDirection?: WorkbenchResultSortDirection;
   canEditLocale?: (locale: string) => boolean;
 };
 
@@ -290,7 +292,12 @@ function buildSearchRequestFromInputs({
   };
 }
 
-export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Params): SearchState {
+export function useWorkbenchSearch({
+  initialSearchRequest,
+  initialResultSortField = 'source',
+  initialResultSortDirection = 'default',
+  canEditLocale,
+}: Params): SearchState {
   const { data: preferences } = useUserPreferences();
   const preferredWorksetSize = preferences?.worksetSize ?? WORKSET_SIZE_DEFAULT;
   const [activeSearchRequest, setActiveSearchRequest] = useState<TextUnitSearchRequest | null>(
@@ -323,26 +330,54 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     [],
   );
 
-  const [textSearchOperator, setTextSearchOperator] = useState<WorkbenchTextSearchOperator>('AND');
-  const [textSearchConditions, setTextSearchConditions] = useState<WorkbenchTextSearchCondition[]>(
-    () => [createSimpleTextSearchCondition()],
+  const initialTextSearch = initialSearchRequest
+    ? getCanonicalTextSearch(initialSearchRequest)
+    : undefined;
+  const [textSearchOperator, setTextSearchOperator] = useState<WorkbenchTextSearchOperator>(
+    initialTextSearch?.operator ?? 'AND',
   );
-  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('ALL');
-  const [glossaryStatusFilter, setGlossaryStatusFilter] =
-    useState<GlossaryStatusFilterValue>('ALL');
-  const [hasTouchedGlossaryStatusFilter, setHasTouchedGlossaryStatusFilter] = useState(false);
-  const [includeUsed, setIncludeUsed] = useState(true);
-  const [includeUnused, setIncludeUnused] = useState(false);
-  const [includeTranslate, setIncludeTranslate] = useState(true);
-  const [includeDoNotTranslate, setIncludeDoNotTranslate] = useState(true);
-  const [createdBefore, setCreatedBefore] = useState<string | null>(null);
-  const [createdAfter, setCreatedAfter] = useState<string | null>(null);
-  const [translationCreatedBefore, setTranslationCreatedBefore] = useState<string | null>(null);
-  const [translationCreatedAfter, setTranslationCreatedAfter] = useState<string | null>(null);
-  const [worksetSize, setWorksetSize] = useState<number>(preferredWorksetSize);
-  const [resultSortField, setResultSortField] = useState<WorkbenchResultSortField>('source');
-  const [resultSortDirection, setResultSortDirection] =
-    useState<WorkbenchResultSortDirection>('default');
+  const [textSearchConditions, setTextSearchConditions] = useState<WorkbenchTextSearchCondition[]>(
+    () =>
+      initialTextSearch
+        ? toEditableTextSearchConditions(initialTextSearch)
+        : [createSimpleTextSearchCondition()],
+  );
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>(
+    (initialSearchRequest?.statusFilter as StatusFilterValue | undefined) ?? 'ALL',
+  );
+  const [glossaryStatusFilter, setGlossaryStatusFilter] = useState<GlossaryStatusFilterValue>(
+    initialSearchRequest?.glossaryStatusFilter ?? 'ALL',
+  );
+  const [hasTouchedGlossaryStatusFilter, setHasTouchedGlossaryStatusFilter] = useState(
+    initialSearchRequest?.glossaryStatusFilter != null,
+  );
+  const [includeUsed, setIncludeUsed] = useState(initialSearchRequest?.usedFilter !== 'UNUSED');
+  const [includeUnused, setIncludeUnused] = useState(
+    initialSearchRequest != null && initialSearchRequest.usedFilter !== 'USED',
+  );
+  const [includeTranslate, setIncludeTranslate] = useState(
+    initialSearchRequest?.doNotTranslateFilter !== true,
+  );
+  const [includeDoNotTranslate, setIncludeDoNotTranslate] = useState(
+    initialSearchRequest?.doNotTranslateFilter !== false,
+  );
+  const [createdBefore, setCreatedBefore] = useState<string | null>(
+    initialSearchRequest?.tmTextUnitCreatedBefore ?? null,
+  );
+  const [createdAfter, setCreatedAfter] = useState<string | null>(
+    initialSearchRequest?.tmTextUnitCreatedAfter ?? null,
+  );
+  const [translationCreatedBefore, setTranslationCreatedBefore] = useState<string | null>(
+    initialSearchRequest?.tmTextUnitVariantCreatedBefore ?? null,
+  );
+  const [translationCreatedAfter, setTranslationCreatedAfter] = useState<string | null>(
+    initialSearchRequest?.tmTextUnitVariantCreatedAfter ?? null,
+  );
+  const [worksetSize, setWorksetSize] = useState<number>(
+    clampWorksetSize(initialSearchRequest?.limit ?? preferredWorksetSize),
+  );
+  const [resultSortField, setResultSortField] = useState(initialResultSortField);
+  const [resultSortDirection, setResultSortDirection] = useState(initialResultSortDirection);
   const hydratedSearchSignatureRef = useRef<string | null>(null);
   const lastHydratedRequestRef = useRef<TextUnitSearchRequest | null>(null);
   const [hasHydratedSearch, setHasHydratedSearch] = useState(initialSearchRequest == null);
@@ -514,7 +549,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   }, [hasHydratedSearch, localeOptions.length, setLocaleSelection]);
 
   useEffect(() => {
-    if (!hasResolvedSelectedRepositories) {
+    if (!hasHydratedSearch || !hasResolvedSelectedRepositories) {
       return;
     }
 
@@ -533,6 +568,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     }
   }, [
     glossaryStatusFilter,
+    hasHydratedSearch,
     hasResolvedSelectedRepositories,
     hasSelectedGlossaryRepository,
     hasTouchedGlossaryStatusFilter,

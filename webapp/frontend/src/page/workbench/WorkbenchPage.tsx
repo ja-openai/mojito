@@ -9,7 +9,11 @@ import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
 import { useWorkbenchCollections } from './useWorkbenchCollections';
 import { useWorkbenchEdits } from './useWorkbenchEdits';
 import { useWorkbenchSearch } from './useWorkbenchSearch';
-import { clampWorksetSize, serializeSearchRequest } from './workbench-helpers';
+import {
+  buildTextUnitDetailPath,
+  clampWorksetSize,
+  serializeSearchRequest,
+} from './workbench-helpers';
 import {
   hasLegacyWorkbenchSearchParams,
   legacyWorkbenchLinkErrorTitle,
@@ -21,7 +25,12 @@ import {
   WORKBENCH_SESSION_QUERY_KEY,
 } from './workbench-session-state';
 import { loadWorkbenchShare } from './workbench-share';
-import type { WorkbenchCollection, WorkbenchShareOverrides } from './workbench-types';
+import type {
+  WorkbenchCollection,
+  WorkbenchReturnState,
+  WorkbenchRow,
+  WorkbenchShareOverrides,
+} from './workbench-types';
 import { WorkbenchPageView } from './WorkbenchPageView';
 
 const statusOptions = ['Accepted', 'To review', 'To translate', 'Rejected'];
@@ -36,6 +45,7 @@ type WorkbenchLocationState = { workbenchSearch?: TextUnitSearchRequest | null }
     localePrompt?: boolean;
     workbenchScrollTop?: number | null;
     workbenchRowId?: string | null;
+    workbenchReturn?: WorkbenchReturnState;
     glossaryContext?: GlossaryWorkbenchContext | null;
   };
 
@@ -53,6 +63,8 @@ export function WorkbenchPage() {
   const [pendingCollectionOpenId, setPendingCollectionOpenId] = useState<string | null>(null);
   const [shareOverrides, setShareOverrides] = useState<WorkbenchShareOverrides | null>(null);
   const location = useLocation();
+  const locationState = (location.state as WorkbenchLocationState | null) ?? null;
+  const returnState = locationState?.workbenchReturn;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const shareId = searchParams.get('shareId');
@@ -68,11 +80,13 @@ export function WorkbenchPage() {
   );
   const deepLinkLocaleKey = deepLinkLocaleTags.join('\u0000');
   const deepLinkRepo = searchParams.get('repo');
-  const [shareIdToHydrate, setShareIdToHydrate] = useState<string | null>(shareId);
-  const [hydratedSearchRequest, setHydratedSearchRequest] = useState<TextUnitSearchRequest | null>(
-    null,
+  const [shareIdToHydrate, setShareIdToHydrate] = useState<string | null>(
+    returnState ? null : shareId,
   );
-  const hydratedWsIdRef = useRef<string | null>(null);
+  const [hydratedSearchRequest, setHydratedSearchRequest] = useState<TextUnitSearchRequest | null>(
+    returnState?.searchRequest ?? null,
+  );
+  const hydratedWsIdRef = useRef<string | null>(returnState ? wsId : null);
   const persistedWsIdRef = useRef<string | null>(wsId);
   const pendingWsHydrationIdRef = useRef<string | null>(wsId);
   const lastPersistedSearchSignatureRef = useRef<string | null>(null);
@@ -80,7 +94,6 @@ export function WorkbenchPage() {
     null,
   );
   const currentUser = useUser();
-  const locationState = (location.state as WorkbenchLocationState | null) ?? null;
   const stateSearchRequest = locationState?.workbenchSearch ?? null;
   const stateLocalePrompt = locationState?.localePrompt ?? false;
   const stateScrollTop =
@@ -92,9 +105,11 @@ export function WorkbenchPage() {
     typeof locationState?.workbenchRowId === 'string' ? locationState.workbenchRowId : null;
   const glossaryContext = locationState?.glossaryContext ?? null;
   const [pendingRestoreScrollTop, setPendingRestoreScrollTop] = useState<number | null>(
-    stateScrollTop,
+    returnState?.scrollTop ?? stateScrollTop,
   );
-  const [pendingRestoreRowId, setPendingRestoreRowId] = useState<string | null>(stateRowId);
+  const [pendingRestoreRowId, setPendingRestoreRowId] = useState<string | null>(
+    returnState?.rowId ?? stateRowId,
+  );
   const userLocales = currentUser.userLocales ?? [];
   const isLimitedTranslator = !currentUser.canTranslateAllLocales && userLocales.length > 0;
   const canEditLocale = useCallback(
@@ -102,7 +117,12 @@ export function WorkbenchPage() {
     [currentUser],
   );
 
-  const search = useWorkbenchSearch({ initialSearchRequest: hydratedSearchRequest, canEditLocale });
+  const search = useWorkbenchSearch({
+    initialSearchRequest: hydratedSearchRequest,
+    initialResultSortField: returnState?.resultSortField,
+    initialResultSortDirection: returnState?.resultSortDirection,
+    canEditLocale,
+  });
   const collections = useWorkbenchCollections();
 
   const clearShareIdFromUrl = useCallback(() => {
@@ -133,11 +153,11 @@ export function WorkbenchPage() {
   }, [location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
-    if (!shareId) {
+    if (!shareId || returnState) {
       return;
     }
     setShareIdToHydrate(shareId);
-  }, [shareId]);
+  }, [returnState, shareId]);
 
   useEffect(() => {
     if (wsId) {
@@ -166,7 +186,7 @@ export function WorkbenchPage() {
 
   // Support direct link via query params (works with cmd/shift click).
   useEffect(() => {
-    if (!deepLinkTmId) return;
+    if (!deepLinkTmId || returnState) return;
     setHydratedSearchRequest({
       searchAttribute: 'tmTextUnitIds',
       searchType: 'exact',
@@ -174,10 +194,10 @@ export function WorkbenchPage() {
       localeTags: deepLinkLocaleTags,
       repositoryIds: deepLinkRepo ? [Number(deepLinkRepo)] : [],
     });
-  }, [deepLinkLocaleKey, deepLinkLocaleTags, deepLinkRepo, deepLinkTmId]);
+  }, [deepLinkLocaleKey, deepLinkLocaleTags, deepLinkRepo, deepLinkTmId, returnState]);
 
   useEffect(() => {
-    if (!stateSearchRequest) {
+    if (!stateSearchRequest || returnState) {
       return;
     }
     setShareIdToHydrate(null);
@@ -191,7 +211,7 @@ export function WorkbenchPage() {
     );
     setHydratedSearchRequest(stateSearchRequest);
     clearWorkbenchSearchState();
-  }, [clearWorkbenchSearchState, stateLocalePrompt, stateSearchRequest]);
+  }, [clearWorkbenchSearchState, returnState, stateLocalePrompt, stateSearchRequest]);
 
   useEffect(() => {
     if (stateScrollTop === null && stateRowId === null) {
@@ -279,20 +299,48 @@ export function WorkbenchPage() {
     );
     persistedWsIdRef.current = nextWsId;
 
-    if (lastPersistedSearchSignatureRef.current === signature && currentWsId === nextWsId) {
+    const returnStateChanged =
+      returnState &&
+      (returnState.resultSortField !== search.resultSortField ||
+        returnState.resultSortDirection !== search.resultSortDirection ||
+        !returnState.searchRequest ||
+        serializeSearchRequest(returnState.searchRequest) !== signature);
+
+    if (
+      lastPersistedSearchSignatureRef.current === signature &&
+      currentWsId === nextWsId &&
+      !returnStateChanged
+    ) {
       return;
     }
     lastPersistedSearchSignatureRef.current = signature;
-    if (currentWsId === nextWsId) {
+    if (currentWsId === nextWsId && !returnStateChanged) {
       return;
     }
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set(WORKBENCH_SESSION_QUERY_KEY, nextWsId);
-    setSearchParams(nextParams, { replace: true });
+    setSearchParams(nextParams, {
+      replace: true,
+      state: returnStateChanged
+        ? {
+            ...locationState,
+            workbenchReturn: {
+              ...returnState,
+              searchRequest: search.activeSearchRequest,
+              resultSortField: search.resultSortField,
+              resultSortDirection: search.resultSortDirection,
+            },
+          }
+        : locationState,
+    });
   }, [
     hydratedSearchRequest,
+    locationState,
+    returnState,
     search.activeSearchRequest,
     search.hasHydratedSearch,
+    search.resultSortDirection,
+    search.resultSortField,
     searchParams,
     setSearchParams,
   ]);
@@ -306,6 +354,27 @@ export function WorkbenchPage() {
   const { clearWorksetEdits } = edits;
   const { refetchSearch, resetSearch } = search;
 
+  const handleOpenDetails = (row: WorkbenchRow, scrollTop: number) => {
+    edits.requestNavigate(() => {
+      const workbenchReturn: WorkbenchReturnState = {
+        searchRequest: search.activeSearchRequest,
+        resultSortField: search.resultSortField,
+        resultSortDirection: search.resultSortDirection,
+        rowId: row.id,
+        scrollTop,
+      };
+      const workbenchUrl = location.pathname + location.search;
+      // Save on the originating entry so browser Back and Forward restore it too.
+      void navigate(workbenchUrl, {
+        replace: true,
+        state: { ...locationState, workbenchReturn },
+      });
+      void navigate(buildTextUnitDetailPath(row), {
+        state: { from: '/workbench', workbenchUrl, workbenchReturn },
+      });
+    });
+  };
+
   const activeCollectionIds = useMemo(() => {
     const entries = collections.activeCollection?.entries ?? [];
     return new Set(entries.map((entry) => entry.tmTextUnitId));
@@ -318,7 +387,7 @@ export function WorkbenchPage() {
     [search.repositories],
   );
   useEffect(() => {
-    if (shareId || deepLinkTmId || stateSearchRequest || !hasLegacyWorkbenchLink) {
+    if (returnState || shareId || deepLinkTmId || stateSearchRequest || !hasLegacyWorkbenchLink) {
       return;
     }
 
@@ -349,6 +418,7 @@ export function WorkbenchPage() {
   }, [
     deepLinkTmId,
     hasLegacyWorkbenchLink,
+    returnState,
     repositoryIdByName,
     search.repositories.length,
     searchParams,
@@ -623,9 +693,10 @@ export function WorkbenchPage() {
         onConfirmValidationSave={edits.confirmValidationSave}
         onRetryValidationSave={edits.retryValidationSave}
         onDismissValidationDialog={edits.dismissValidationSave}
-        showDiscardDialog={edits.pendingEditingTarget !== null}
+        showDiscardDialog={edits.showDiscardDialog}
         onConfirmDiscardEditing={edits.confirmDiscardEditing}
         onDismissDiscardEditing={edits.dismissDiscardEditing}
+        onOpenDetails={handleOpenDetails}
         translationInputRef={edits.translationInputRef}
         registerRowRef={edits.registerRowRef}
         searchAttribute={search.searchAttribute}

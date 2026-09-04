@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as AiReviewApi from '../../api/ai-review';
@@ -86,7 +86,25 @@ const preferences: ApiUserPreferences = {
   defaultReviewTeamIds: [],
 };
 
-function renderTextUnitDetailPage(path = '/text-units/3?locale=pt-PT') {
+function WorkbenchDestination() {
+  const location = useLocation();
+  const { pathname, search } = location;
+  const state: unknown = location.state;
+  return (
+    <>
+      <h1>Workbench dashboard</h1>
+      <output data-testid="workbench-destination">
+        {JSON.stringify({ pathname, search, state })}
+      </output>
+    </>
+  );
+}
+
+function renderTextUnitDetailPage(
+  path:
+    | string
+    | { pathname: string; search?: string; state?: unknown } = '/text-units/3?locale=pt-PT',
+) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -103,7 +121,7 @@ function renderTextUnitDetailPage(path = '/text-units/3?locale=pt-PT') {
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
-            <Route path="/workbench" element={<h1>Workbench dashboard</h1>} />
+            <Route path="/workbench" element={<WorkbenchDestination />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
@@ -394,6 +412,28 @@ describe('TextUnitDetailPage', () => {
     expect(editor).toHaveValue(safe);
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     expect(saveTextUnitMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the origin URL and return snapshot when Back has no originating history entry', async () => {
+    const workbenchReturn = {
+      searchRequest: { repositoryIds: [7], localeTags: ['pt-PT'], limit: 200 },
+      resultSortField: 'tmTextUnitId',
+      resultSortDirection: 'desc',
+      rowId: '3-pt-PT',
+      scrollTop: 1200,
+    };
+    renderTextUnitDetailPage({
+      pathname: '/text-units/3',
+      search: '?locale=pt-PT',
+      state: { workbenchUrl: '/workbench?ws=origin-session', workbenchReturn },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Back to workbench' }));
+    expect(await screen.findByRole('heading', { name: 'Workbench dashboard' })).toBeVisible();
+    expect(JSON.parse(screen.getByTestId('workbench-destination').textContent!)).toEqual({
+      pathname: '/workbench',
+      search: '?ws=origin-session',
+      state: { workbenchReturn },
+    });
   });
 
   it.each(['/text-units/3?locale=pt-PT', '/text-units/3?locale=pt-PT&from=workbench'])(

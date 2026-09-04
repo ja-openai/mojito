@@ -60,6 +60,7 @@ import { isRtlLocale } from '../../utils/localeDirection';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
 import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
 import { formatStatus, mapUiStatusToApi } from '../workbench/workbench-helpers';
+import type { WorkbenchReturnState } from '../workbench/workbench-types';
 import {
   type TextUnitDetailAiMessage,
   type TextUnitDetailHistoryComment,
@@ -75,6 +76,8 @@ type LocationState = {
   workbenchSearch?: TextUnitSearchRequest | null;
   workbenchScrollTop?: number | null;
   workbenchRowId?: string | null;
+  workbenchUrl?: string;
+  workbenchReturn?: WorkbenchReturnState;
 };
 
 const editorStatusOptions = ['Accepted', 'To review', 'To translate', 'Rejected'];
@@ -700,6 +703,13 @@ export function TextUnitDetailPage() {
   const handleBack = () => {
     if (locationState?.from === '/workbench' && window.history.length > 1) {
       void navigate(-1);
+      return;
+    }
+
+    if (locationState?.workbenchReturn) {
+      void navigate(locationState.workbenchUrl ?? '/workbench', {
+        state: { workbenchReturn: locationState.workbenchReturn },
+      });
       return;
     }
 

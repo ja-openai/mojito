@@ -63,6 +63,14 @@ export type WorkbenchResultSortField =
 
 export type WorkbenchResultSortDirection = 'default' | 'asc' | 'desc';
 
+export type WorkbenchReturnState = {
+  searchRequest: TextUnitSearchRequest | null;
+  resultSortField: WorkbenchResultSortField;
+  resultSortDirection: WorkbenchResultSortDirection;
+  rowId: string;
+  scrollTop: number;
+};
+
 export type WorkbenchDiffModalData = {
   rowId: string;
   textUnitName: string;

@@ -27,9 +27,16 @@ Stateful dashboard navigation
   the `ws` and `rps` query tokens respectively.
 - The shared header retains the latest observed token for each dashboard while navigating among
   header routes, and Review Project subroutes propagate `rps` through their back links.
-- Workbench Details opens in a separate tab with `noopener`; its Back action navigates to Workbench
-  in that tab. The original tab's filters are not restored there because their `sessionStorage`
-  payload is tab-scoped. Filter-session tokens are not shareable links.
+- Workbench Details is a normal link: regular clicks open in the current tab; modified clicks and
+  middle-click retain the browser's native behavior. Leaving an unsaved translation uses the existing
+  discard confirmation.
+- Before opening Details in the current tab, Workbench records the applied search, result limit,
+  sort order, row identity, and scroll position on its history entry. Both browser Back and Details'
+  Back action restore that entry. Restoration waits for the originating virtual row to render, then
+  brings it into view and focuses its Details link. If it no longer matches the refreshed results,
+  the saved scroll position is used instead. History restoration does not change account defaults.
+- A Details link opened in another tab has no originating Workbench history entry. Its Back action
+  opens Workbench in that tab. Filter-session tokens are not shareable links.
 
 Open questions
 - Should navigation highlight active routes or adopt a design-system component?

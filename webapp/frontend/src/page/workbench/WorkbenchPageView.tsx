@@ -172,6 +172,7 @@ type Props = {
   restoreScrollTop: number | null;
   restoreRowId: string | null;
   onRestoreScrollConsumed: () => void;
+  onOpenDetails: (row: WorkbenchRow, scrollTop: number) => void;
 };
 
 function HydrationModal({
@@ -335,6 +336,7 @@ export function WorkbenchPageView({
   restoreScrollTop,
   restoreRowId,
   onRestoreScrollConsumed,
+  onOpenDetails,
 }: Props) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -489,6 +491,7 @@ export function WorkbenchPageView({
         restoreScrollTop={restoreScrollTop}
         restoreRowId={restoreRowId}
         onRestoreScrollConsumed={onRestoreScrollConsumed}
+        onOpenDetails={onOpenDetails}
         isVisibleTextEditorEnabled={isVisibleTextEditorEnabled}
         translationMarksMode={translationMarksMode}
         showProtectedTokens={showProtectedTokens}
@@ -540,7 +543,7 @@ export function WorkbenchPageView({
         open={showDiscardDialog}
         title="Unsaved translation"
         body="You have unsaved edits. Do you want to discard them?"
-        confirmLabel="Discard & switch"
+        confirmLabel="Discard & continue"
         cancelLabel="Keep editing"
         onConfirm={onConfirmDiscardEditing}
         onCancel={onDismissDiscardEditing}

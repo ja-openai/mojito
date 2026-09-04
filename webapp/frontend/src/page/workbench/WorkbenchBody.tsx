@@ -31,6 +31,7 @@ import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import { isPrimaryActionShortcut } from '../../utils/keyboardShortcuts';
 import { isRtlLocale } from '../../utils/localeDirection';
 import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
+import { buildTextUnitDetailPath } from './workbench-helpers';
 import { saveWorkbenchSessionSearch, WORKBENCH_SESSION_QUERY_KEY } from './workbench-session-state';
 import type { WorkbenchDiffModalData, WorkbenchRow } from './workbench-types';
 
@@ -69,6 +70,7 @@ type WorkbenchBodyProps = {
   restoreScrollTop: number | null;
   restoreRowId: string | null;
   onRestoreScrollConsumed: () => void;
+  onOpenDetails: (row: WorkbenchRow, scrollTop: number) => void;
   isVisibleTextEditorEnabled: boolean;
   translationMarksMode: VisibleTextMarksMode;
   showProtectedTokens: boolean;
@@ -86,12 +88,6 @@ const getGlossaryWorkbenchKey = (repositoryName: string, assetPath: string | nul
 
 const normalizeWorkbenchToken = (value: string | null | undefined) =>
   (value ?? '').trim().toLowerCase();
-
-const buildTextUnitDetailPath = (row: WorkbenchRow) => {
-  const params = new URLSearchParams();
-  params.set('locale', row.locale);
-  return `/text-units/${row.tmTextUnitId}?${params.toString()}`;
-};
 
 export function WorkbenchBody({
   rows,
@@ -128,6 +124,7 @@ export function WorkbenchBody({
   restoreScrollTop,
   restoreRowId,
   onRestoreScrollConsumed,
+  onOpenDetails,
   isVisibleTextEditorEnabled,
   translationMarksMode,
   showProtectedTokens,
@@ -349,10 +346,6 @@ export function WorkbenchBody({
     [getRepositoryScope, navigate],
   );
 
-  const openTextUnitDetailInNewWindow = useCallback((row: WorkbenchRow) => {
-    window.open(buildTextUnitDetailPath(row), '_blank', 'noopener,noreferrer');
-  }, []);
-
   const openGlossaryTerm = useCallback(
     (row: WorkbenchRow, glossaryTarget: GlossaryWorkbenchTarget) => {
       const params = new URLSearchParams();
@@ -363,39 +356,6 @@ export function WorkbenchBody({
   );
 
   const scrollElementRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (restoreScrollTop === null && restoreRowId === null) {
-      return;
-    }
-    if (isSearchLoading || rows.length === 0) {
-      return;
-    }
-    const frame = window.requestAnimationFrame(() => {
-      const element = scrollElementRef.current;
-      if (!element) {
-        return;
-      }
-
-      if (restoreScrollTop !== null) {
-        element.scrollTop = restoreScrollTop;
-      }
-
-      if (restoreRowId) {
-        const escapedRowId =
-          typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
-            ? CSS.escape(restoreRowId)
-            : restoreRowId.replace(/"/g, '\\"');
-        const rowElement = element.querySelector('[data-workbench-row-id="' + escapedRowId + '"]');
-        if (rowElement instanceof HTMLElement) {
-          rowElement.scrollIntoView({ block: 'nearest' });
-        }
-      }
-
-      onRestoreScrollConsumed();
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [isSearchLoading, onRestoreScrollConsumed, restoreRowId, restoreScrollTop, rows.length]);
 
   const estimateSize = useCallback(
     () =>
@@ -412,6 +372,7 @@ export function WorkbenchBody({
     items: virtualItems,
     totalSize,
     measureElement,
+    scrollToIndex,
   } = useVirtualRows<HTMLDivElement>({
     count: rows.length,
     getItemKey,
@@ -419,6 +380,46 @@ export function WorkbenchBody({
     getScrollElement: () => scrollElementRef.current,
     overscan: 6,
   });
+
+  useEffect(() => {
+    if ((restoreScrollTop === null && restoreRowId === null) || !hasSearched || isSearchLoading) {
+      return;
+    }
+    const element = scrollElementRef.current;
+    const rowIndex = rows.findIndex((row) => row.id === restoreRowId);
+    const rowElement = element
+      ? Array.from(element.querySelectorAll<HTMLElement>('[data-workbench-row-id]')).find(
+          (row) => row.dataset.workbenchRowId === restoreRowId,
+        )
+      : undefined;
+    if (rowIndex >= 0 && !rowElement) {
+      // The originating row may be outside the currently rendered virtual window.
+      scrollToIndex(rowIndex, { align: 'center' });
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      if (element && restoreScrollTop !== null) {
+        element.scrollTop = restoreScrollTop;
+      }
+      if (rowElement) {
+        rowElement.scrollIntoView({ block: 'nearest' });
+        rowElement
+          .querySelector<HTMLAnchorElement>('[data-workbench-details]')
+          ?.focus({ preventScroll: true });
+      }
+      onRestoreScrollConsumed();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    hasSearched,
+    isSearchLoading,
+    onRestoreScrollConsumed,
+    restoreRowId,
+    restoreScrollTop,
+    rows,
+    scrollToIndex,
+    virtualItems,
+  ]);
 
   const { getRowRef } = useMeasuredRowRefs<string, HTMLDivElement>({
     measureElement,
@@ -850,16 +851,27 @@ export function WorkbenchBody({
                               </button>
                             </>
                           ) : null}
-                          <button
-                            type="button"
+                          <a
+                            href={buildTextUnitDetailPath(row)}
+                            data-workbench-details
                             className="workbench-page__translation-button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              openTextUnitDetailInNewWindow(row);
+                              if (
+                                event.button !== 0 ||
+                                event.metaKey ||
+                                event.ctrlKey ||
+                                event.shiftKey ||
+                                event.altKey
+                              ) {
+                                return;
+                              }
+                              event.preventDefault();
+                              onOpenDetails(row, scrollElementRef.current?.scrollTop ?? 0);
                             }}
                           >
                             Details
-                          </button>
+                          </a>
                         </div>
                       </div>
                     </div>
