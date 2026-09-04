@@ -4,17 +4,17 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchRepositories } from '../../api/repositories';
-import type * as TextUnitsApi from '../../api/text-units';
-import { type ApiTextUnit, searchTextUnits } from '../../api/text-units';
-import { REPOSITORIES_QUERY_KEY } from '../../hooks/useRepositories';
-import { ReviewProjectSearchPanel } from './ReviewProjectSearchPanel';
+import { fetchRepositories } from '../api/repositories';
+import type * as TextUnitsApi from '../api/text-units';
+import { type ApiTextUnit, searchTextUnits } from '../api/text-units';
+import { REPOSITORIES_QUERY_KEY } from '../hooks/useRepositories';
+import { TranslationSearchPanel } from './TranslationSearchPanel';
 
-vi.mock('../../api/text-units', async (importOriginal) => ({
+vi.mock('../api/text-units', async (importOriginal) => ({
   ...(await importOriginal<typeof TextUnitsApi>()),
   searchTextUnits: vi.fn(),
 }));
-vi.mock('../../api/repositories', () => ({ fetchRepositories: vi.fn() }));
+vi.mock('../api/repositories', () => ({ fetchRepositories: vi.fn() }));
 
 const searchMock = vi.mocked(searchTextUnits);
 const repositoriesMock = vi.mocked(fetchRepositories);
@@ -65,7 +65,7 @@ function renderPanel(localeTag = 'fr-FR', seedRepositories = true) {
   return render(
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
-        <ReviewProjectSearchPanel localeTag={localeTag} active />
+        <TranslationSearchPanel localeTag={localeTag} active />
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -103,7 +103,7 @@ beforeEach(() => {
   repositoriesMock.mockResolvedValue(repositories);
 });
 
-describe('ReviewProjectSearchPanel', () => {
+describe('TranslationSearchPanel', () => {
   it('defaults to Workbench Contains search for translations in the active locale and all repositories', async () => {
     searchMock.mockResolvedValue([row(1, 'Coffee is ready')]);
     renderPanel();

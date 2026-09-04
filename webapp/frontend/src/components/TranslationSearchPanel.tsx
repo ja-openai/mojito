@@ -1,28 +1,25 @@
-import './review-project-search-panel.css';
+import './translation-search-panel.css';
 
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 
-import { fetchRepositories } from '../../api/repositories';
+import { fetchRepositories } from '../api/repositories';
 import {
   normalizeTextSearch,
   searchTextUnits,
   type TextSearchOperator,
   type TextUnitSearchRequest,
-} from '../../api/text-units';
-import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
-import { LocalePill } from '../../components/LocalePill';
-import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
-import {
-  type TextSearchCondition,
-  TextUnitSearchControl,
-} from '../../components/TextUnitSearchControl';
-import { REPOSITORIES_QUERY_KEY } from '../../hooks/useRepositories';
-import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
-import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
-import { toHtmlLangTag } from '../../utils/localeTag';
-import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
-import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
+} from '../api/text-units';
+import { REPOSITORIES_QUERY_KEY } from '../hooks/useRepositories';
+import { useLocaleDisplayNameResolver } from '../utils/localeDisplayNames';
+import { useLocaleOptionsWithDisplayNames } from '../utils/localeSelection';
+import { toHtmlLangTag } from '../utils/localeTag';
+import { useRepositorySelectionOptions } from '../utils/repositorySelection';
+import { buildTextUnitDetailUrl } from '../utils/textUnitDetailUrl';
+import { LocaleMultiSelect } from './LocaleMultiSelect';
+import { LocalePill } from './LocalePill';
+import { RepositoryMultiSelect } from './RepositoryMultiSelect';
+import { type TextSearchCondition, TextUnitSearchControl } from './TextUnitSearchControl';
 
 const PAGE_SIZE = 50;
 const createCondition = (id: string): TextSearchCondition => ({
@@ -32,7 +29,7 @@ const createCondition = (id: string): TextSearchCondition => ({
   value: '',
 });
 
-export function ReviewProjectSearchPanel({
+export function TranslationSearchPanel({
   localeTag,
   active = true,
 }: {
@@ -59,7 +56,7 @@ export function ReviewProjectSearchPanel({
       ? repositoryOptions.map(({ id }) => id)
       : repositorySelection.filter((id) => repositoryOptions.some((option) => option.id === id));
   const results = useQuery({
-    queryKey: ['review-project-search', request],
+    queryKey: ['translation-search', request],
     queryFn: async () => {
       const textUnits = await searchTextUnits(request!);
       return { textUnits: textUnits.slice(0, PAGE_SIZE), hasMore: textUnits.length > PAGE_SIZE };
@@ -99,7 +96,7 @@ export function ReviewProjectSearchPanel({
 
   return (
     <section
-      className="review-project-search"
+      className="translation-search"
       aria-label="Translation search"
       onKeyDown={(event) => {
         // Search keyboard actions must not trigger the review editor's save shortcuts.
@@ -112,7 +109,7 @@ export function ReviewProjectSearchPanel({
         }
       }}
     >
-      <div className="review-project-search__controls">
+      <div className="translation-search__controls">
         <RepositoryMultiSelect
           options={repositoryOptions}
           selectedIds={repositoryIds}
@@ -176,7 +173,7 @@ export function ReviewProjectSearchPanel({
         }}
         onSubmitSearch={submit}
       />
-      <div className="review-project-search__submit">
+      <div className="translation-search__submit">
         <button
           type="button"
           className="review-project-detail__actions-button review-project-detail__actions-button--primary"
@@ -187,10 +184,10 @@ export function ReviewProjectSearchPanel({
         </button>
       </div>
       {!localeTags.length ? (
-        <div className="review-project-search__hint">Select at least one locale.</div>
+        <div className="translation-search__hint">Select at least one locale.</div>
       ) : null}
       {!repositoryIds.length && repositories.isSuccess ? (
-        <div className="review-project-search__hint">
+        <div className="translation-search__hint">
           {repositoryOptions.length
             ? 'Select at least one repository.'
             : 'No repositories available to search.'}
@@ -210,7 +207,7 @@ export function ReviewProjectSearchPanel({
       ) : null}
       <div aria-live="polite" aria-busy={request != null && results.isFetching}>
         {request && results.isFetching ? (
-          <div className="review-project-search__hint">Searching…</div>
+          <div className="translation-search__hint">Searching…</div>
         ) : null}
         {request && results.isError ? (
           <div role="alert">
@@ -221,18 +218,18 @@ export function ReviewProjectSearchPanel({
         ) : null}
         {request && results.data && !results.isFetching && !results.isError ? (
           <>
-            <div className="review-project-search__summary">
+            <div className="translation-search__summary">
               {!results.data.textUnits.length
                 ? 'No matches found.'
                 : `Matches ${(request.offset ?? 0) + 1}–${(request.offset ?? 0) + results.data.textUnits.length}`}
             </div>
-            <ul className="review-project-search__results">
+            <ul className="translation-search__results">
               {results.data.textUnits.map((textUnit) => (
                 <li
                   key={`${textUnit.tmTextUnitId}:${textUnit.targetLocale}:${textUnit.assetTextUnitId ?? ''}`}
-                  className="review-project-search__result"
+                  className="translation-search__result"
                 >
-                  <div className="review-project-search__result-meta">
+                  <div className="translation-search__result-meta">
                     <span>{textUnit.repositoryName}</span>
                     <LocalePill bcp47Tag={textUnit.targetLocale} />
                     <a
@@ -243,24 +240,21 @@ export function ReviewProjectSearchPanel({
                       Open string
                     </a>
                   </div>
-                  <div
-                    className="review-project-search__name"
-                    title={textUnit.assetPath ?? undefined}
-                  >
+                  <div className="translation-search__name" title={textUnit.assetPath ?? undefined}>
                     {textUnit.name}
                   </div>
-                  <div className="review-project-search__text">
+                  <div className="translation-search__text">
                     <span>Source</span>
                     <div dir="auto">{textUnit.source}</div>
                   </div>
-                  <div className="review-project-search__text">
+                  <div className="translation-search__text">
                     <span>Translation</span>
                     <div dir="auto" lang={toHtmlLangTag(textUnit.targetLocale)}>
                       {textUnit.target ?? 'No translation'}
                     </div>
                   </div>
                   {textUnit.target != null ? (
-                    <div className="review-project-search__author">
+                    <div className="translation-search__author">
                       Saved by {textUnit.translationCreatedByUsername?.trim() || 'unknown'}
                     </div>
                   ) : null}
@@ -268,7 +262,7 @@ export function ReviewProjectSearchPanel({
               ))}
             </ul>
             {(request.offset ?? 0) > 0 || results.data.hasMore ? (
-              <div className="review-project-search__pagination">
+              <div className="translation-search__pagination">
                 <button
                   type="button"
                   className="review-project-detail__actions-button"
@@ -297,7 +291,7 @@ export function ReviewProjectSearchPanel({
           </>
         ) : null}
         {!request && !textSearch ? (
-          <div className="review-project-search__hint">
+          <div className="translation-search__hint">
             Enter a word or phrase to see how it is translated elsewhere.
           </div>
         ) : null}

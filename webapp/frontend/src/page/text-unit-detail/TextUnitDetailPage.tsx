@@ -36,6 +36,7 @@ import {
 } from '../../components/mf2/translationValidation';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
+import { useReviewProjectSearchEnabled } from '../../hooks/useReviewProjectSearchEnabled';
 import { useUser } from '../../hooks/useUser';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
@@ -99,6 +100,7 @@ export function TextUnitDetailPage() {
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
   const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
+  const isSearchEnabled = useReviewProjectSearchEnabled();
   const [translationMarksMode, setTranslationMarksMode] = useState<VisibleTextMarksMode>('auto');
 
   const [draftTarget, setDraftTarget] = useState('');
@@ -1146,7 +1148,9 @@ export function TextUnitDetailPage() {
 
   return (
     <TextUnitDetailPageView
+      key={currentUser.username}
       tmTextUnitId={tmTextUnitId}
+      isSearchEnabled={isSearchEnabled}
       onBack={handleBack}
       editorInfo={{
         target: draftTarget,

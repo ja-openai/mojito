@@ -85,6 +85,7 @@ import {
   type TextUnitHistoryTimelineEntry,
 } from '../../components/TextUnitHistoryTimeline';
 import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
+import { TranslationSearchPanel } from '../../components/TranslationSearchPanel';
 import {
   TranslationTextEditor,
   type TranslationTextEditorKeyDownEvent,
@@ -143,7 +144,6 @@ import {
   REVIEW_PROJECT_SHORTCUT_HELP_KEY,
   saveReviewProjectShortcutHelpPreference,
 } from './review-project-preferences';
-import { ReviewProjectSearchPanel } from './ReviewProjectSearchPanel';
 import {
   type ReviewProjectDecisionSnapshot as DecisionSnapshot,
   type ReviewProjectDraftStatus as StatusChoice,
@@ -4526,7 +4526,7 @@ function DetailPane({
             <div className="review-project-detail__context-body">
               {canSearchTranslations && hasOpenedSearch ? (
                 <div hidden={activeContextTab !== 'search'}>
-                  <ReviewProjectSearchPanel
+                  <TranslationSearchPanel
                     key={localeTag}
                     localeTag={localeTag}
                     active={activeContextTab === 'search'}

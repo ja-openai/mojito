@@ -1,18 +1,30 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as TextUnitsApi from '../../api/text-units';
 import { TextUnitDetailPageView } from './TextUnitDetailPageView';
 
 type TextUnitDetailPageViewProps = ComponentProps<typeof TextUnitDetailPageView>;
 
 const noop = vi.fn();
+const fetchRepositoriesMock = vi.hoisted(() => vi.fn());
+const searchTextUnitsMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../../api/repositories', () => ({ fetchRepositories: fetchRepositoriesMock }));
+vi.mock('../../api/text-units', async (importActual) => ({
+  ...(await importActual<typeof TextUnitsApi>()),
+  searchTextUnits: searchTextUnitsMock,
+}));
 
 function buildProps(
   overrides: Partial<TextUnitDetailPageViewProps> = {},
 ): TextUnitDetailPageViewProps {
   return {
     tmTextUnitId: 3,
+    isSearchEnabled: false,
     onBack: noop,
     editorInfo: {
       target: 'Pay {price} now',
@@ -124,6 +136,12 @@ function buildProps(
 }
 
 describe('TextUnitDetailPageView', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchRepositoriesMock.mockResolvedValue([{ id: 1, name: 'web' }]);
+    searchTextUnitsMock.mockResolvedValue([]);
+  });
+
   it('uses the assisted protected editor for translation details', async () => {
     const { container } = render(<TextUnitDetailPageView {...buildProps()} />);
 
@@ -141,5 +159,68 @@ describe('TextUnitDetailPageView', () => {
       expect(protectedToken).toHaveTextContent('price');
       expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
     });
+  });
+
+  it('omits Search in source-only details even when the preference is enabled', () => {
+    const props = buildProps({ isSearchEnabled: true });
+    render(
+      <TextUnitDetailPageView
+        {...props}
+        editorInfo={{ ...props.editorInfo, isSourceOnly: true }}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
+    expect(fetchRepositoriesMock).not.toHaveBeenCalled();
+    expect(searchTextUnitsMock).not.toHaveBeenCalled();
+  });
+
+  it.each(['locale', 'string'] as const)('resets Search when the %s changes', async (change) => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (props: TextUnitDetailPageViewProps) => (
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TextUnitDetailPageView {...props} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    const props = buildProps({ isSearchEnabled: true });
+    const { rerender } = render(view(props));
+    fireEvent.click(screen.getByRole('button', { name: 'Search', expanded: false }));
+    await waitFor(() => expect(fetchRepositoriesMock).toHaveBeenCalledTimes(1));
+    const input = screen.getByRole('searchbox', { name: 'Search translation' });
+    fireEvent.change(input, { target: { value: 'previous query' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(await screen.findByText('No matches found.')).toBeVisible();
+
+    const nextLocale = change === 'locale' ? 'fr-FR' : 'pt-PT';
+    rerender(
+      view({
+        ...props,
+        tmTextUnitId: change === 'string' ? 4 : 3,
+        keyInfo: { ...props.keyInfo, locale: nextLocale },
+      }),
+    );
+    expect(screen.getByRole('button', { name: 'Search', expanded: false })).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox', { name: 'Search translation' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search', expanded: false }));
+    const nextInput = screen.getByRole('searchbox', { name: 'Search translation' });
+    expect(nextInput).not.toBe(input);
+    expect(nextInput).toHaveValue('');
+    expect(screen.queryByText('No matches found.')).not.toBeInTheDocument();
+    fireEvent.change(nextInput, { target: { value: 'new query' } });
+    fireEvent.submit(nextInput.closest('form')!);
+    await waitFor(() =>
+      expect(searchTextUnitsMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          localeTags: [nextLocale],
+          textSearch: {
+            operator: 'AND',
+            predicates: [{ field: 'target', searchType: 'contains', value: 'new query' }],
+          },
+        }),
+      ),
+    );
   });
 });

@@ -23,6 +23,7 @@ import {
   type TextUnitHistoryTimelineComment as TextUnitDetailHistoryComment,
   type TextUnitHistoryTimelineEntry as TextUnitDetailHistoryRow,
 } from '../../components/TextUnitHistoryTimeline';
+import { TranslationSearchPanel } from '../../components/TranslationSearchPanel';
 import { TranslationTextEditor } from '../../components/TranslationTextEditor';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { getGlossaryTermScreenshotEvidence } from '../../utils/glossaryTermEvidence';
@@ -67,6 +68,7 @@ const formatGlossaryMetadataValue = (value?: string | null) =>
 
 type TextUnitDetailPageViewProps = {
   tmTextUnitId: number;
+  isSearchEnabled: boolean;
   onBack: () => void;
   editorInfo: {
     target: string;
@@ -167,6 +169,7 @@ type TextUnitDetailPageViewProps = {
 
 export function TextUnitDetailPageView({
   tmTextUnitId,
+  isSearchEnabled,
   onBack,
   editorInfo,
   visibleTextEditor,
@@ -592,6 +595,13 @@ export function TextUnitDetailPageView({
               ) : null}
             </section>
 
+            {isSearchEnabled && !editorInfo.isSourceOnly ? (
+              <TextUnitSearchSection
+                key={`${tmTextUnitId}:${keyInfo.locale}`}
+                localeTag={keyInfo.locale}
+              />
+            ) : null}
+
             <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
               <SectionHeader
                 title={historyTitle}
@@ -689,6 +699,29 @@ export function TextUnitDetailPageView({
         onCancel={onDismissDeleteDialog}
       />
     </div>
+  );
+}
+
+function TextUnitSearchSection({ localeTag }: { localeTag: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [hasOpened, setHasOpened] = useState(false);
+
+  return (
+    <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+      <SectionHeader
+        title="Search"
+        expanded={expanded}
+        onToggle={() => {
+          setExpanded((current) => !current);
+          setHasOpened(true);
+        }}
+      />
+      {hasOpened ? (
+        <div hidden={!expanded}>
+          <TranslationSearchPanel localeTag={localeTag} active={expanded} />
+        </div>
+      ) : null}
+    </section>
   );
 }
 

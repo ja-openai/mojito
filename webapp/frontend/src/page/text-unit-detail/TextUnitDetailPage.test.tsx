@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as AiReviewApi from '../../api/ai-review';
 import type * as GlossariesApi from '../../api/glossaries';
 import type * as TextUnitsApi from '../../api/text-units';
+import { saveReviewProjectSearchEnabled } from '../../utils/reviewProjectSearchPreference';
 import { TextUnitDetailPage } from './TextUnitDetailPage';
 
 const searchTextUnitsMock = vi.hoisted(() => vi.fn());
@@ -19,6 +20,9 @@ const requestAiReviewMock = vi.hoisted(() => vi.fn());
 const saveTextUnitMock = vi.hoisted(() => vi.fn());
 const checkTextUnitIntegrityMock = vi.hoisted(() => vi.fn());
 const editorPreference = vi.hoisted(() => ({ enabled: true }));
+const fetchRepositoriesMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../../api/repositories', () => ({ fetchRepositories: fetchRepositoriesMock }));
 
 vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({
@@ -121,7 +125,12 @@ function mockMf2TextUnit(messageFormat: string | null | undefined) {
 describe('TextUnitDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     editorPreference.enabled = true;
+    fetchRepositoriesMock.mockResolvedValue([
+      { id: 1, name: 'mobile' },
+      { id: 2, name: 'web' },
+    ]);
     checkTextUnitIntegrityMock.mockResolvedValue({ checkResult: true });
     saveTextUnitMock.mockImplementation((request: TextUnitsApi.SaveTextUnitRequest) =>
       Promise.resolve(request),
@@ -183,6 +192,87 @@ describe('TextUnitDetailPage', () => {
         searchType: 'exact',
       }),
     );
+  });
+
+  it('lazily enables shared Search and preserves the translation draft through collapse and disable', async () => {
+    editorPreference.enabled = false;
+    renderTextUnitDetailPage();
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
+    expect(fetchRepositoriesMock).not.toHaveBeenCalled();
+
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    act(() => saveReviewProjectSearchEnabled(true, 'translator'));
+    const searchToggle = await screen.findByRole('button', { name: 'Search', expanded: false });
+    expect(screen.queryByRole('searchbox', { name: 'Search translation' })).not.toBeInTheDocument();
+    expect(fetchRepositoriesMock).not.toHaveBeenCalled();
+
+    fireEvent.click(searchToggle);
+    expect(searchToggle).toHaveAttribute('aria-expanded', 'true');
+    const searchRegion = screen.getByRole('region', { name: 'Translation search' });
+    const searchPanel = within(searchRegion);
+    const repositorySelect = searchPanel.getByRole('button', { name: 'Select repositories' });
+    await waitFor(() => expect(fetchRepositoriesMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(repositorySelect).toHaveTextContent('All repositories'));
+    expect(searchPanel.getByRole('button', { name: 'Select search options' })).toHaveTextContent(
+      'Translation · Contains',
+    );
+    const searchInput = searchPanel.getByLabelText('Search translation');
+    expect(searchInput).toBeVisible();
+    fireEvent.change(searchInput, { target: { value: '  pagamento  ' } });
+    fireEvent.click(searchPanel.getByRole('button', { name: 'Add search condition' }));
+    const compoundSearchInput = searchPanel.getAllByLabelText('Search translation')[0];
+    expect(searchPanel.getAllByLabelText('Search translation')).toHaveLength(2);
+    searchTextUnitsMock.mockResolvedValueOnce([
+      {
+        tmTextUnitId: 7,
+        name: 'checkout.payment',
+        source: 'Payment ready',
+        target: 'Pagamento pronto',
+        targetLocale: 'pt-PT',
+        repositoryName: 'mobile',
+        used: true,
+        translationCreatedByUsername: 'reviewer.alice',
+      },
+    ]);
+    fireEvent.submit(compoundSearchInput.closest('form')!);
+
+    expect(await searchPanel.findByText('Saved by reviewer.alice')).toBeVisible();
+    expect(searchTextUnitsMock).toHaveBeenLastCalledWith({
+      repositoryIds: [1, 2],
+      localeTags: ['pt-PT'],
+      textSearch: {
+        operator: 'AND',
+        predicates: [{ field: 'target', searchType: 'contains', value: 'pagamento' }],
+      },
+      usedFilter: 'USED',
+      limit: 51,
+      offset: 0,
+      orderedByTextUnitId: true,
+    });
+    fireEvent.click(searchToggle);
+    expect(searchToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(searchRegion).toBeInTheDocument();
+    expect(searchRegion).not.toBeVisible();
+    expect(editor).toHaveValue('Pague {price} agora');
+    fireEvent.click(searchToggle);
+    expect(searchToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(searchRegion).toBeVisible();
+    expect(searchPanel.getAllByLabelText('Search translation')[0]).toBe(compoundSearchInput);
+    expect(compoundSearchInput).toBeVisible();
+    expect(compoundSearchInput).toHaveValue('  pagamento  ');
+    expect(searchPanel.getByText('Saved by reviewer.alice')).toBeVisible();
+    expect(searchTextUnitsMock).toHaveBeenCalledTimes(2);
+
+    act(() => saveReviewProjectSearchEnabled(false, 'translator'));
+    await waitFor(() => expect(searchToggle).not.toBeInTheDocument());
+    expect(searchRegion).not.toBeInTheDocument();
+    expect(editor).toBeInTheDocument();
+    expect(editor).toBeVisible();
+    expect(editor).toHaveValue('Pague {price} agora');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    expect(saveTextUnitMock).not.toHaveBeenCalled();
   });
 
   it.each(['MF2', undefined])(

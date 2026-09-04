@@ -511,7 +511,7 @@ export function SettingsPage() {
         aria-labelledby="settings-review-project-search"
       >
         <div className="settings-card__header">
-          <h2 id="settings-review-project-search">Review Project search</h2>
+          <h2 id="settings-review-project-search">Translation search</h2>
         </div>
         <div className="settings-field">
           <label className="settings-radio-option">
@@ -522,7 +522,7 @@ export function SettingsPage() {
             />
             <span className="settings-radio-option__body">
               <span className="settings-radio-option__label">
-                Show the Search tab in Review Project (preview)
+                Show Search in Review Project and text-unit details (preview)
               </span>
               <span className="settings-hint">
                 Search current translations across repositories. Off by default; enable it to try

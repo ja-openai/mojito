@@ -1,19 +1,19 @@
-.review-project-search {
+.translation-search {
   display: grid;
   gap: var(--space-3);
   min-width: 0;
   font-size: var(--font-size-sm);
 }
 
-.review-project-search__hint,
-.review-project-search__summary,
-.review-project-search__name {
+.translation-search__hint,
+.translation-search__summary,
+.translation-search__name {
   color: var(--color-text-muted);
 }
 
-.review-project-search__controls,
-.review-project-search__result-meta,
-.review-project-search__pagination {
+.translation-search__controls,
+.translation-search__result-meta,
+.translation-search__pagination {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -21,12 +21,12 @@
   min-width: 0;
 }
 
-.review-project-search__submit {
+.translation-search__submit {
   display: flex;
   justify-content: flex-end;
 }
 
-.review-project-search__results {
+.translation-search__results {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -34,7 +34,7 @@
   overflow-y: auto;
 }
 
-.review-project-search__result {
+.translation-search__result {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3) 0;
@@ -42,40 +42,40 @@
   overflow-wrap: anywhere;
 }
 
-.review-project-search__result-meta {
+.translation-search__result-meta {
   font-weight: var(--font-weight-medium);
 }
 
-.review-project-search__result-meta a {
+.translation-search__result-meta a {
   margin-left: auto;
 }
 
-.review-project-search__name {
+.translation-search__name {
   font-size: var(--font-size-xs);
 }
 
-.review-project-search__text {
+.translation-search__text {
   display: grid;
   grid-template-columns: 5.5rem minmax(0, 1fr);
   gap: var(--space-2);
   line-height: 1.5;
 }
 
-.review-project-search__text > span {
+.translation-search__text > span {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }
 
-.review-project-search__text > div {
+.translation-search__text > div {
   white-space: pre-wrap;
 }
 
-.review-project-search__pagination {
+.translation-search__pagination {
   justify-content: flex-end;
   margin-top: var(--space-3);
 }
 
-.review-project-search__author {
+.translation-search__author {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }

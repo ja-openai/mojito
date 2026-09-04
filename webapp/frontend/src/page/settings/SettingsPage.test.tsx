@@ -116,8 +116,10 @@ describe('SettingsPage', () => {
   it('stages Search opt-in and opt-out until Save and preserves the saved setting on reload', async () => {
     const user = userEvent.setup();
     const view = renderSettingsPage();
-    const section = within(screen.getByRole('region', { name: 'Review Project search' }));
-    const toggle = section.getByRole('checkbox', { name: /Show the Search tab in Review Project/ });
+    const section = within(screen.getByRole('region', { name: 'Translation search' }));
+    const toggle = section.getByRole('checkbox', {
+      name: /Show Search in Review Project and text-unit details/,
+    });
     const save = section.getByRole('button', { name: 'Save' });
 
     expect(toggle).not.toBeChecked();
@@ -138,9 +140,9 @@ describe('SettingsPage', () => {
 
     view.unmount();
     renderSettingsPage();
-    const reloaded = within(screen.getByRole('region', { name: 'Review Project search' }));
+    const reloaded = within(screen.getByRole('region', { name: 'Translation search' }));
     const reloadedToggle = reloaded.getByRole('checkbox', {
-      name: /Show the Search tab in Review Project/,
+      name: /Show Search in Review Project and text-unit details/,
     });
     expect(reloadedToggle).toBeChecked();
     await user.click(reloadedToggle);
@@ -154,41 +156,38 @@ describe('SettingsPage', () => {
     const user = userEvent.setup();
     saveReviewProjectSearchEnabled(true, TEST_USERNAME);
     const view = renderSettingsPage();
-    const section = within(screen.getByRole('region', { name: 'Review Project search' }));
+    const section = within(screen.getByRole('region', { name: 'Translation search' }));
 
     await user.click(section.getByRole('button', { name: 'Reset' }));
-    expect(section.getByRole('checkbox', { name: /Show the Search tab/ })).not.toBeChecked();
+    expect(section.getByRole('checkbox', { name: /Show Search/ })).not.toBeChecked();
     expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
     expect(section.getByRole('button', { name: 'Save' })).toBeEnabled();
 
     view.unmount();
     renderSettingsPage();
-    expect(screen.getByRole('checkbox', { name: /Show the Search tab/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /Show Search/ })).toBeChecked();
   });
 
   it('switches Search saved state and drafts with the signed-in account', async () => {
     const user = userEvent.setup();
     saveReviewProjectSearchEnabled(true, TEST_USERNAME);
     const view = renderSettingsPage();
-    const searchSection = () =>
-      within(screen.getByRole('region', { name: 'Review Project search' }));
-    expect(searchSection().getByRole('checkbox', { name: /Show the Search tab/ })).toBeChecked();
-    await user.click(searchSection().getByRole('checkbox', { name: /Show the Search tab/ }));
+    const searchSection = () => within(screen.getByRole('region', { name: 'Translation search' }));
+    expect(searchSection().getByRole('checkbox', { name: /Show Search/ })).toBeChecked();
+    await user.click(searchSection().getByRole('checkbox', { name: /Show Search/ }));
 
     currentUsername = 'other-user';
     view.rerender(<SettingsPage />);
-    expect(
-      searchSection().getByRole('checkbox', { name: /Show the Search tab/ }),
-    ).not.toBeChecked();
+    expect(searchSection().getByRole('checkbox', { name: /Show Search/ })).not.toBeChecked();
     expect(searchSection().getByRole('button', { name: 'Save' })).toBeDisabled();
-    await user.click(searchSection().getByRole('checkbox', { name: /Show the Search tab/ }));
+    await user.click(searchSection().getByRole('checkbox', { name: /Show Search/ }));
     await user.click(searchSection().getByRole('button', { name: 'Save' }));
     expect(loadReviewProjectSearchEnabled('other-user')).toBe(true);
     expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
 
     currentUsername = TEST_USERNAME;
     view.rerender(<SettingsPage />);
-    expect(searchSection().getByRole('checkbox', { name: /Show the Search tab/ })).toBeChecked();
+    expect(searchSection().getByRole('checkbox', { name: /Show Search/ })).toBeChecked();
     expect(searchSection().getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 });

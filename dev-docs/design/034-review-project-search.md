@@ -1,25 +1,30 @@
-# Review Project search
+# Translation search in review and detail pages
 
-Review Project's context panel includes an **opt-in Search tab** for looking
-up current translations across repositories. The tab reuses Workbench's text
+Review Project's context panel includes an **opt-in Search tab**, and the Workbench
+text-unit detail page includes a **collapsible Search section below Glossary**, for
+looking up current translations across repositories. Both use the shared
+`components/TranslationSearchPanel.tsx`, which reuses Workbench's text
 search component, including search attributes, match types, Add/remove conditions,
 and Match all/any. It starts with Translation + Contains, all repositories, and
-the active project locale. Repository and locale selectors use the same controls
+the active page locale. Repository and locale selectors use the same controls
 and presets as Workbench; reviewers can narrow repositories, choose other
 configured locales, or return to the active locale.
 
 ## Preview opt-in
 
-The tab starts hidden for everyone, including admins. Enable it in **My Settings >
-Review Project search** (`/settings/me#review-project-search`) by checking **Show
-the Search tab in Review Project (preview)** and selecting Save. Uncheck it and
-Save to disable; Reset stages the default off state. This personal preference is
+Both entry points start hidden for everyone, including admins. Enable them in
+**My Settings > Translation search** (`/settings/me#review-project-search`) by
+checking **Show Search in Review Project and text-unit details (preview)** and
+selecting Save. Uncheck it and Save to disable; Reset stages the default off state.
+This personal preference is
 saved separately for each Mojito username in the current browser, like the
 assisted-editor opt-in. Switching accounts does not carry it to another user.
+The existing preference key and settings anchor are retained, so prior opt-ins
+and links continue to work.
 
-Changes apply to open review pages in the same browser. Disabling closes Search,
-clears its local query state, and returns an active Search panel to Glossary while
-preserving the translation draft. Any authenticated reviewer can opt in; this
+Changes apply to open review and detail pages in the same browser. Disabling closes
+Search, clears its local query state, and returns an active Review Project Search
+tab to Glossary while preserving the translation draft. Any authenticated reviewer can opt in; this
 controls preview visibility and uses the existing Workbench search permissions.
 
 ## Interaction
@@ -29,6 +34,13 @@ until the next search. Blank conditions are ignored, and at least one condition,
 repository, and locale is required. The tab keeps its state when switching context
 tabs on the same row; switching review rows or projects resets it. Keyboard events
 are isolated from review save/navigation shortcuts, including IME Enter handling.
+
+On text-unit detail pages, Search starts collapsed and mounts on first expansion.
+Collapsing retains the query and results and disables automatic refetching.
+A search already in progress may finish while hidden.
+Changing the string, locale, or account resets the section and query. Search does
+not change the translation draft or Workbench workset. Source-only detail pages
+have no active translation locale and do not show the section.
 
 ## Shared search behavior
 
@@ -64,5 +76,7 @@ Frontend tests cover shared controls, default and edited scopes, compound querie
 pagination, author display, stale-request isolation, errors, and keyboard handling.
 Preference tests cover default-off behavior, staged Save/Reset, account isolation,
 and disabling an active panel from the same or another browser tab.
+Detail-page tests cover lazy expansion, shared search defaults and results,
+collapse/reopen state, resets, and draft preservation when Search is disabled.
 Backend tests verify current-variant creator attribution and unknown creators with
 real MySQL, and stable pagination. These checks do not establish deployment.
