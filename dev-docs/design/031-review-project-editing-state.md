@@ -59,6 +59,13 @@ not recovery after a crash or a confirmed browser reload. Detail row state is
 remounted by user/project/row; this also resets detail context-tab/hero preferences
 on row changes while preserving the main list layout and filters.
 
+The list's State filter is derived directly from the `state` URL parameter.
+Keeping a second local copy allowed an immediate filter change to select a new
+row before the router committed the new filter. The row's `tu` URL update could
+then restore the old State filter, making the menu and results flicker back.
+Filter changes and automatic row selection now use the same router snapshot;
+regressions exercise the real page/router when a selected row leaves the filter.
+
 `useReviewProjectMutations` uses one discriminated action state: `idle`, `pending`,
 `validation`, `conflict`, `failed`, or `succeeded`. Existing display controls are
 derived from that state. A stopped request, dismissed validation dialog, exhausted

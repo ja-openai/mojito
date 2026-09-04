@@ -908,9 +908,7 @@ export function ReviewProjectPageView({
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [stateFilter, setStateFilter] = useState<DecisionStateFilter>(() =>
-    parseDecisionStateFilter(searchParams.get('state')),
-  );
+  const stateFilter = parseDecisionStateFilter(searchParams.get('state'));
   const [editedFilter, setEditedFilter] = useState<EditedFilter>('all');
   const [sortByFilter, setSortByFilter] = useState<SortByFilter>('none');
   const [sortOrderFilter, setSortOrderFilter] = useState<SortOrderFilter>('asc');
@@ -1341,7 +1339,6 @@ export function ReviewProjectPageView({
 
   const setDecisionStateFilter = useCallback(
     (next: DecisionStateFilter) => {
-      setStateFilter(next);
       const nextParams = new URLSearchParams(searchParams);
       if (next === 'all') {
         nextParams.delete('state');
@@ -1354,11 +1351,6 @@ export function ReviewProjectPageView({
     },
     [searchParams, setSearchParams],
   );
-
-  useEffect(() => {
-    const next = parseDecisionStateFilter(searchParams.get('state'));
-    setStateFilter((current) => (current === next ? current : next));
-  }, [searchParams]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyNav);
