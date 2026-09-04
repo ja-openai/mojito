@@ -110,6 +110,9 @@ export function WorkbenchPage() {
   const [pendingRestoreRowId, setPendingRestoreRowId] = useState<string | null>(
     returnState?.rowId ?? stateRowId,
   );
+  const [pendingRestoreRowOffset, setPendingRestoreRowOffset] = useState<number | null>(
+    returnState?.rowOffset ?? null,
+  );
   const userLocales = currentUser.userLocales ?? [];
   const isLimitedTranslator = !currentUser.canTranslateAllLocales && userLocales.length > 0;
   const canEditLocale = useCallback(
@@ -354,7 +357,7 @@ export function WorkbenchPage() {
   const { clearWorksetEdits } = edits;
   const { refetchSearch, resetSearch } = search;
 
-  const handleOpenDetails = (row: WorkbenchRow, scrollTop: number) => {
+  const handleOpenDetails = (row: WorkbenchRow, scrollTop: number, rowOffset: number) => {
     edits.requestNavigate(() => {
       const workbenchReturn: WorkbenchReturnState = {
         searchRequest: search.activeSearchRequest,
@@ -362,6 +365,7 @@ export function WorkbenchPage() {
         resultSortDirection: search.resultSortDirection,
         rowId: row.id,
         scrollTop,
+        rowOffset,
       };
       const workbenchUrl = location.pathname + location.search;
       // Save on the originating entry so browser Back and Forward restore it too.
@@ -815,9 +819,11 @@ export function WorkbenchPage() {
         onPrepareShareOverrides={(overrides) => setShareOverrides(overrides)}
         restoreScrollTop={pendingRestoreScrollTop}
         restoreRowId={pendingRestoreRowId}
+        restoreRowOffset={pendingRestoreRowOffset}
         onRestoreScrollConsumed={() => {
           setPendingRestoreScrollTop(null);
           setPendingRestoreRowId(null);
+          setPendingRestoreRowOffset(null);
         }}
       />
     </>

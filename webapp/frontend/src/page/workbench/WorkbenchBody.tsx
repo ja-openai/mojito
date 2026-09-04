@@ -69,8 +69,9 @@ type WorkbenchBodyProps = {
   glossaryContext: GlossaryWorkbenchContext | null;
   restoreScrollTop: number | null;
   restoreRowId: string | null;
+  restoreRowOffset: number | null;
   onRestoreScrollConsumed: () => void;
-  onOpenDetails: (row: WorkbenchRow, scrollTop: number) => void;
+  onOpenDetails: (row: WorkbenchRow, scrollTop: number, rowOffset: number) => void;
   isVisibleTextEditorEnabled: boolean;
   translationMarksMode: VisibleTextMarksMode;
   showProtectedTokens: boolean;
@@ -123,6 +124,7 @@ export function WorkbenchBody({
   glossaryContext,
   restoreScrollTop,
   restoreRowId,
+  restoreRowOffset,
   onRestoreScrollConsumed,
   onOpenDetails,
   isVisibleTextEditorEnabled,
@@ -356,6 +358,13 @@ export function WorkbenchBody({
   );
 
   const scrollElementRef = useRef<HTMLDivElement>(null);
+  const [highlightedReturnRowId, setHighlightedReturnRowId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!highlightedReturnRowId) return;
+    const timeout = window.setTimeout(() => setHighlightedReturnRowId(null), 2500);
+    return () => window.clearTimeout(timeout);
+  }, [highlightedReturnRowId]);
 
   const estimateSize = useCallback(
     () =>
@@ -373,6 +382,7 @@ export function WorkbenchBody({
     totalSize,
     measureElement,
     scrollToIndex,
+    virtualizer,
   } = useVirtualRows<HTMLDivElement>({
     count: rows.length,
     getItemKey,
@@ -397,28 +407,52 @@ export function WorkbenchBody({
       scrollToIndex(rowIndex, { align: 'center' });
       return;
     }
-    const frame = window.requestAnimationFrame(() => {
-      if (element && restoreScrollTop !== null) {
-        element.scrollTop = restoreScrollTop;
+    let frame: number;
+    let corrections = 0;
+    const restorePosition = () => {
+      if (element && rowElement && restoreRowOffset !== null) {
+        const actualOffset =
+          rowElement.getBoundingClientRect().top - element.getBoundingClientRect().top;
+        const target = Math.max(
+          0,
+          Math.min(
+            element.scrollTop + actualOffset - restoreRowOffset,
+            element.scrollHeight - element.clientHeight,
+          ),
+        );
+        // Replace the virtualizer's index target, then allow row measurements to settle.
+        if (corrections === 0 || (Math.abs(target - element.scrollTop) > 1 && corrections < 3)) {
+          virtualizer.scrollToOffset(target);
+          corrections++;
+          frame = window.requestAnimationFrame(restorePosition);
+          return;
+        }
+      } else if (rowIndex >= 0) {
+        scrollToIndex(rowIndex, { align: 'auto' });
+      } else if (restoreScrollTop !== null) {
+        virtualizer.scrollToOffset(restoreScrollTop);
       }
       if (rowElement) {
-        rowElement.scrollIntoView({ block: 'nearest' });
+        setHighlightedReturnRowId(restoreRowId);
         rowElement
           .querySelector<HTMLAnchorElement>('[data-workbench-details]')
           ?.focus({ preventScroll: true });
       }
       onRestoreScrollConsumed();
-    });
+    };
+    frame = window.requestAnimationFrame(restorePosition);
     return () => window.cancelAnimationFrame(frame);
   }, [
     hasSearched,
     isSearchLoading,
     onRestoreScrollConsumed,
     restoreRowId,
+    restoreRowOffset,
     restoreScrollTop,
     rows,
     scrollToIndex,
     virtualItems,
+    virtualizer,
   ]);
 
   const { getRowRef } = useMeasuredRowRefs<string, HTMLDivElement>({
@@ -595,6 +629,7 @@ export function WorkbenchBody({
                 props: {
                   'data-index': virtualRow.index,
                   'data-workbench-row-id': row.id,
+                  'data-returned': row.id === highlightedReturnRowId ? 'true' : undefined,
                   'data-status-open': isStatusOpen ? 'true' : undefined,
                   ref: getRowRef(row.id),
                 },
@@ -867,7 +902,15 @@ export function WorkbenchBody({
                                 return;
                               }
                               event.preventDefault();
-                              onOpenDetails(row, scrollElementRef.current?.scrollTop ?? 0);
+                              const scroller = scrollElementRef.current;
+                              const rowElement =
+                                event.currentTarget.closest('[data-workbench-row-id]');
+                              const rowOffset =
+                                scroller && rowElement
+                                  ? rowElement.getBoundingClientRect().top -
+                                    scroller.getBoundingClientRect().top
+                                  : 0;
+                              onOpenDetails(row, scroller?.scrollTop ?? 0, rowOffset);
                             }}
                           >
                             Details

@@ -31,10 +31,12 @@ Stateful dashboard navigation
   middle-click retain the browser's native behavior. Leaving an unsaved translation uses the existing
   discard confirmation.
 - Before opening Details in the current tab, Workbench records the applied search, result limit,
-  sort order, row identity, and scroll position on its history entry. Both browser Back and Details'
-  Back action restore that entry. Restoration waits for the originating virtual row to render, then
-  brings it into view and focuses its Details link. If it no longer matches the refreshed results,
-  the saved scroll position is used instead. History restoration does not change account defaults.
+  sort order, row identity, and the row's viewport offset on its history entry. Both browser Back and
+  Details' Back action restore that entry. Restoration waits for the originating virtual row to render, then
+  restores its viewport position, focuses its Details link, and briefly highlights the row. This uses
+  the row's measured position so variable row heights do not shift the return target. If it no longer
+  matches the refreshed results, the saved scroll position is used instead. History restoration does
+  not change account defaults.
 - A Details link opened in another tab has no originating Workbench history entry. Its Back action
   opens Workbench in that tab. Filter-session tokens are not shareable links.
 

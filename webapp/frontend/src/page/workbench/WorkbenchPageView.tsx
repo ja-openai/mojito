@@ -171,8 +171,9 @@ type Props = {
   onPrepareShareOverrides: (overrides: WorkbenchShareOverrides | null) => void;
   restoreScrollTop: number | null;
   restoreRowId: string | null;
+  restoreRowOffset: number | null;
   onRestoreScrollConsumed: () => void;
-  onOpenDetails: (row: WorkbenchRow, scrollTop: number) => void;
+  onOpenDetails: (row: WorkbenchRow, scrollTop: number, rowOffset: number) => void;
 };
 
 function HydrationModal({
@@ -335,6 +336,7 @@ export function WorkbenchPageView({
   onPrepareShareOverrides,
   restoreScrollTop,
   restoreRowId,
+  restoreRowOffset,
   onRestoreScrollConsumed,
   onOpenDetails,
 }: Props) {
@@ -490,6 +492,7 @@ export function WorkbenchPageView({
         glossaryContext={glossaryContext}
         restoreScrollTop={restoreScrollTop}
         restoreRowId={restoreRowId}
+        restoreRowOffset={restoreRowOffset}
         onRestoreScrollConsumed={onRestoreScrollConsumed}
         onOpenDetails={onOpenDetails}
         isVisibleTextEditorEnabled={isVisibleTextEditorEnabled}

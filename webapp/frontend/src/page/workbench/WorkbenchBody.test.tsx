@@ -21,6 +21,7 @@ vi.mock('../../components/virtual/useMeasuredRowRefs', () => ({
 
 const virtualRowsMock = vi.hoisted(() => ({
   visibleIndices: null as number[] | null,
+  virtualizer: { scrollToOffset: vi.fn() },
   scrollToIndex: vi.fn(),
   measureElement: vi.fn(),
 }));
@@ -28,7 +29,7 @@ const virtualRowsMock = vi.hoisted(() => ({
 vi.mock('../../components/virtual/useVirtualRows', () => ({
   useVirtualRows: ({ count }: { count: number }) => ({
     scrollRef: { current: null },
-    virtualizer: {},
+    virtualizer: virtualRowsMock.virtualizer,
     items: Array.from({ length: count }, (_, index) => index)
       .filter((index) => virtualRowsMock.visibleIndices?.includes(index) ?? true)
       .map((index) => ({
@@ -112,6 +113,7 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
     glossaryContext: null,
     restoreScrollTop: null,
     restoreRowId: null,
+    restoreRowOffset: null,
     onRestoreScrollConsumed: noop,
     onOpenDetails: noop,
     isVisibleTextEditorEnabled: true,
@@ -141,10 +143,27 @@ function getDetailsLink() {
   return screen.getByRole('link', { name: 'Details' });
 }
 
+function mockAnimationFrames() {
+  const frames = new Map<number, FrameRequestCallback>();
+  let nextFrame = 0;
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+    frames.set(++nextFrame, callback);
+    return nextFrame;
+  });
+  vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => frames.delete(id));
+  return () =>
+    act(() => {
+      const callbacks = [...frames.values()];
+      frames.clear();
+      callbacks.forEach((callback) => callback(0));
+    });
+}
+
 describe('WorkbenchBody', () => {
   beforeEach(() => {
     noop.mockClear();
     virtualRowsMock.visibleIndices = null;
+    virtualRowsMock.virtualizer.scrollToOffset.mockReset();
     virtualRowsMock.scrollToIndex.mockReset();
     virtualRowsMock.measureElement.mockReset();
     vi.spyOn(window, 'open').mockImplementation(() => null);
@@ -824,6 +843,9 @@ paused {{En pause}}
     });
     const scrollElement = container.querySelector('.virtual-scroll') as HTMLElement;
     scrollElement.scrollTop = 425;
+    vi.spyOn(scrollElement, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100, 500, 400));
+    const rowElement = container.querySelector('[data-workbench-row-id]') as HTMLElement;
+    vi.spyOn(rowElement, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 75, 500, 100));
     const link = getDetailsLink();
     const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
 
@@ -832,7 +854,7 @@ paused {{En pause}}
     fireEvent(link, click);
 
     expect(click.defaultPrevented).toBe(true);
-    expect(onOpenDetails).toHaveBeenCalledExactlyOnceWith(editingRow, 425);
+    expect(onOpenDetails).toHaveBeenCalledExactlyOnceWith(editingRow, 425, -25);
     expect(window.open).not.toHaveBeenCalled();
   });
 
@@ -866,19 +888,7 @@ paused {{En pause}}
     const targetRow = { ...editingRow, id: 'row-2', tmTextUnitId: 4 };
     const onRestoreScrollConsumed = vi.fn();
     const onStartEditing = vi.fn();
-    const frames = new Map<number, FrameRequestCallback>();
-    let nextFrame = 0;
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-      frames.set(++nextFrame, callback);
-      return nextFrame;
-    });
-    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => frames.delete(id));
-    const flushFrames = () =>
-      act(() => {
-        const callbacks = [...frames.values()];
-        frames.clear();
-        callbacks.forEach((callback) => callback(0));
-      });
+    const flushFrames = mockAnimationFrames();
     virtualRowsMock.visibleIndices = [0];
     virtualRowsMock.scrollToIndex.mockImplementation((index: number) => {
       virtualRowsMock.visibleIndices = [index];
@@ -891,6 +901,9 @@ paused {{En pause}}
       onRestoreScrollConsumed,
       onStartEditing,
     });
+    onRestoreScrollConsumed.mockImplementation(() =>
+      updateProps({ restoreRowId: null, restoreScrollTop: null }),
+    );
 
     expect(virtualRowsMock.scrollToIndex).toHaveBeenCalledWith(1, { align: 'center' });
     expect(container.querySelector('[data-workbench-row-id="row-2"]')).toBeNull();
@@ -904,17 +917,91 @@ paused {{En pause}}
     expect(onRestoreScrollConsumed).not.toHaveBeenCalled();
     flushFrames();
 
-    expect((container.querySelector('.virtual-scroll') as HTMLElement).scrollTop).toBe(625);
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    expect(virtualRowsMock.scrollToIndex).toHaveBeenLastCalledWith(1, { align: 'auto' });
+    expect(virtualRowsMock.virtualizer.scrollToOffset).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
     expect(within(target).getByRole('link', { name: 'Details' })).toHaveFocus();
     expect(onStartEditing).not.toHaveBeenCalled();
     expect(onRestoreScrollConsumed).toHaveBeenCalledOnce();
   });
 
-  it('restores the saved scroll position when the return row is no longer in the results', async () => {
+  it('restores a signed row offset after measurements settle and briefly highlights only that row', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const flushFrames = mockAnimationFrames();
+    const targetRow = { ...editingRow, id: 'row-2', tmTextUnitId: 4 };
     const onRestoreScrollConsumed = vi.fn();
     const onStartEditing = vi.fn();
     const { container, updateProps } = renderWorkbenchBody({
+      rows: [editingRow, targetRow],
+      editingRowId: null,
+      restoreRowId: targetRow.id,
+      restoreScrollTop: 625,
+      restoreRowOffset: -25,
+      onRestoreScrollConsumed,
+      onStartEditing,
+    });
+    const scrollElement = container.querySelector('.virtual-scroll') as HTMLElement;
+    const target = container.querySelector('[data-workbench-row-id="row-2"]') as HTMLElement;
+    const details = within(target).getByRole('link', { name: 'Details' });
+    scrollElement.scrollTop = 625;
+    Object.defineProperties(scrollElement, {
+      scrollHeight: { value: 2000 },
+      clientHeight: { value: 400 },
+    });
+    vi.spyOn(scrollElement, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100, 500, 400));
+    let measuredRowStart = 800;
+    vi.spyOn(target, 'getBoundingClientRect').mockImplementation(
+      () => new DOMRect(0, 100 + measuredRowStart - scrollElement.scrollTop, 500, 100),
+    );
+    virtualRowsMock.virtualizer.scrollToOffset.mockImplementation((offset: number) => {
+      scrollElement.scrollTop = offset;
+    });
+    onRestoreScrollConsumed.mockImplementation(() => {
+      expect(target.getBoundingClientRect().top - scrollElement.getBoundingClientRect().top).toBe(
+        -25,
+      );
+      expect(details).toHaveFocus();
+      updateProps({ restoreRowId: null, restoreScrollTop: null, restoreRowOffset: null });
+    });
+
+    flushFrames();
+    expect(scrollElement.scrollTop).toBe(825);
+    expect(onRestoreScrollConsumed).not.toHaveBeenCalled();
+    expect(details).not.toHaveFocus();
+    expect(container.querySelector('[data-returned]')).toBeNull();
+
+    // Row measurements can shift after the virtualizer's first scroll correction.
+    measuredRowStart += 50;
+    flushFrames();
+    expect(scrollElement.scrollTop).toBe(875);
+    expect(onRestoreScrollConsumed).not.toHaveBeenCalled();
+    expect(details).not.toHaveFocus();
+    expect(container.querySelector('[data-returned]')).toBeNull();
+
+    flushFrames();
+    expect(onRestoreScrollConsumed).toHaveBeenCalledOnce();
+    expect(virtualRowsMock.virtualizer.scrollToOffset.mock.calls).toEqual([[825], [875]]);
+    expect(virtualRowsMock.scrollToIndex).not.toHaveBeenCalled();
+    expect(onStartEditing).not.toHaveBeenCalled();
+    expect(container.querySelectorAll('[data-returned="true"]')).toHaveLength(1);
+    expect(target).toHaveAttribute('data-returned', 'true');
+
+    act(() => {
+      vi.advanceTimersByTime(2499);
+    });
+    expect(target).toHaveAttribute('data-returned', 'true');
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(container.querySelector('[data-returned]')).toBeNull();
+    expect(details).toHaveFocus();
+    vi.clearAllTimers();
+  });
+
+  it('restores the saved scroll position when the return row is no longer in the results', async () => {
+    const onRestoreScrollConsumed = vi.fn();
+    const onStartEditing = vi.fn();
+    const { updateProps } = renderWorkbenchBody({
       editingRowId: null,
       restoreRowId: 'removed-row',
       restoreScrollTop: 425,
@@ -927,7 +1014,7 @@ paused {{En pause}}
 
     await waitFor(() => expect(onRestoreScrollConsumed).toHaveBeenCalledOnce());
 
-    expect((container.querySelector('.virtual-scroll') as HTMLElement).scrollTop).toBe(425);
+    expect(virtualRowsMock.virtualizer.scrollToOffset).toHaveBeenCalledExactlyOnceWith(425);
     expect(virtualRowsMock.scrollToIndex).not.toHaveBeenCalled();
     expect(getDetailsLink()).not.toHaveFocus();
     expect(onStartEditing).not.toHaveBeenCalled();

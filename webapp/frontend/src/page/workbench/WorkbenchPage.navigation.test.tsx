@@ -81,6 +81,7 @@ vi.mock('./WorkbenchPageView', () => ({
           rowIds: props.rows.map((row) => row.id),
           restoreRowId: props.restoreRowId,
           restoreScrollTop: props.restoreScrollTop,
+          restoreRowOffset: props.restoreRowOffset,
         })}
       </output>
       <button
@@ -102,7 +103,12 @@ vi.mock('./WorkbenchPageView', () => ({
       </button>
       <button onClick={props.onRestoreScrollConsumed}>Finish restoring position</button>
       {props.rows.map((row) => (
-        <button key={row.id} onClick={() => props.onOpenDetails(row, row.tmTextUnitId * 10)}>
+        <button
+          key={row.id}
+          onClick={() =>
+            props.onOpenDetails(row, row.tmTextUnitId * 10, row.tmTextUnitId === 112 ? -25 : 120)
+          }
+        >
           Details {row.tmTextUnitId}
         </button>
       ))}
@@ -244,6 +250,7 @@ async function prepareSortedWorkbench() {
   const viewBefore = readView();
   delete viewBefore.restoreRowId;
   delete viewBefore.restoreScrollTop;
+  delete viewBefore.restoreRowOffset;
   return { ...context, viewBefore };
 }
 
@@ -252,13 +259,19 @@ async function expectRestored(
   viewBefore: Record<string, unknown>,
   rowId: string,
   scrollTop: number,
+  rowOffset: number,
 ) {
   await waitFor(() =>
-    expect(readView()).toEqual({ ...viewBefore, restoreRowId: rowId, restoreScrollTop: scrollTop }),
+    expect(readView()).toEqual({
+      ...viewBefore,
+      restoreRowId: rowId,
+      restoreScrollTop: scrollTop,
+      restoreRowOffset: rowOffset,
+    }),
   );
   expect(readLocation()).toMatchObject({
     url: workbenchUrl,
-    state: { unrelatedContext: 'kept', workbenchReturn: { rowId, scrollTop } },
+    state: { unrelatedContext: 'kept', workbenchReturn: { rowId, scrollTop, rowOffset } },
   });
 }
 
@@ -318,6 +331,7 @@ describe('Workbench Details navigation', () => {
       worksetSize: 10,
       restoreRowId: '103:fr',
       restoreScrollTop: 1030,
+      restoreRowOffset: 120,
     });
     expect(readLocation().url).toBe(workbenchUrl);
   });
@@ -339,39 +353,41 @@ describe('Workbench Details navigation', () => {
           resultSortDirection: 'desc',
           rowId: '112:fr',
           scrollTop: 1120,
+          rowOffset: -25,
         },
       },
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Browser Back' }));
-    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120);
+    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120, -25);
     fireEvent.click(screen.getByRole('button', { name: 'Finish restoring position' }));
     expect(readView().restoreRowId).toBeNull();
+    expect(readView().restoreRowOffset).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Browser Forward' }));
     expect(screen.getByText('Text unit details')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Browser Back' }));
-    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120);
+    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120, -25);
   });
 
   it('replaces the saved origin when opening another row after returning', async () => {
     const { workbenchUrl, viewBefore } = await prepareSortedWorkbench();
     fireEvent.click(screen.getByRole('button', { name: 'Details 112' }));
     fireEvent.click(screen.getByRole('button', { name: 'Browser Back' }));
-    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120);
+    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120, -25);
     fireEvent.click(screen.getByRole('button', { name: 'Finish restoring position' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Details 103' }));
     expect(readLocation().url).toBe('/text-units/103?locale=fr');
     fireEvent.click(screen.getByRole('button', { name: 'Browser Back' }));
-    await expectRestored(workbenchUrl, viewBefore, '103:fr', 1030);
+    await expectRestored(workbenchUrl, viewBefore, '103:fr', 1030, 120);
   });
 
   it('keeps newly applied filters and sorting after revisiting Details with Forward then Back', async () => {
     const { workbenchUrl, viewBefore } = await prepareSortedWorkbench();
     fireEvent.click(screen.getByRole('button', { name: 'Details 112' }));
     fireEvent.click(screen.getByRole('button', { name: 'Browser Back' }));
-    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120);
+    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120, -25);
     fireEvent.click(screen.getByRole('button', { name: 'Finish restoring position' }));
 
     fireEvent.click(
@@ -387,14 +403,19 @@ describe('Workbench Details navigation', () => {
       rowIds: resultRows.map((row) => `${row.tmTextUnitId}:fr`),
     };
     await waitFor(() =>
-      expect(readView()).toEqual({ ...changedView, restoreRowId: null, restoreScrollTop: null }),
+      expect(readView()).toEqual({
+        ...changedView,
+        restoreRowId: null,
+        restoreScrollTop: null,
+        restoreRowOffset: null,
+      }),
     );
     expect(searchTextUnitsMock).toHaveBeenCalledWith({ ...changedSearch, limit: 1001 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Browser Forward' }));
     expect(readLocation().url).toBe('/text-units/112?locale=fr');
     fireEvent.click(screen.getByRole('button', { name: 'Browser Back' }));
-    await expectRestored(workbenchUrl, changedView, '112:fr', 1120);
+    await expectRestored(workbenchUrl, changedView, '112:fr', 1120, -25);
   });
 
   it('uses the history snapshot when its session token has changed and query results were evicted', async () => {
@@ -408,7 +429,7 @@ describe('Workbench Details navigation', () => {
     searchTextUnitsMock.mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: 'Browser Back' }));
-    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120);
+    await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120, -25);
     expect(searchTextUnitsMock).toHaveBeenCalledWith({ ...originalSearch, limit: 1001 });
     for (const [request] of searchTextUnitsMock.mock.calls) {
       expect(request).toEqual({ ...originalSearch, limit: 1001 });

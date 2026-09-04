@@ -69,6 +69,7 @@ export type WorkbenchReturnState = {
   resultSortDirection: WorkbenchResultSortDirection;
   rowId: string;
   scrollTop: number;
+  rowOffset?: number;
 };
 
 export type WorkbenchDiffModalData = {

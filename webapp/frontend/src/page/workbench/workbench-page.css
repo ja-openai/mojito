@@ -825,6 +825,10 @@
   z-index: 3;
 }
 
+.workbench-page__row[data-returned='true'] {
+  background: var(--color-surface-selected);
+}
+
 .workbench-page__row--mf2-editing > .workbench-page__cell--translation-mf2 {
   min-width: 0;
 }
