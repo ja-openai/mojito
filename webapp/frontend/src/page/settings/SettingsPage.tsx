@@ -383,6 +383,58 @@ export function SettingsPage() {
         </div>
       </section>
 
+      <section
+        id="review-project-search"
+        className="settings-card"
+        aria-labelledby="settings-review-project-search"
+      >
+        <div className="settings-card__header">
+          <h2 id="settings-review-project-search">Translation search</h2>
+        </div>
+        <div className="settings-field">
+          <label className="settings-radio-option">
+            <input
+              type="checkbox"
+              checked={reviewProjectSearchDraft}
+              onChange={(event) => setReviewProjectSearchDraft(event.target.checked)}
+            />
+            <span className="settings-radio-option__body">
+              <span className="settings-radio-option__label">
+                Show Search in Review Project and text-unit details (preview)
+              </span>
+              <span className="settings-hint">
+                Search current translations across repositories. Off by default; enable it to try
+                the preview.
+              </span>
+            </span>
+          </label>
+          <p className="settings-hint">
+            Select Save to apply this setting for your Mojito account in this browser. Uncheck and
+            Save to turn it off again.
+          </p>
+        </div>
+        <div className="settings-card__footer">
+          <div className="settings-actions">
+            <button
+              type="button"
+              className="settings-button settings-button--primary"
+              onClick={handleSaveReviewProjectSearchPreference}
+              disabled={!isReviewProjectSearchDirty}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className="settings-button settings-button--ghost"
+              onClick={() => setReviewProjectSearchDraft(false)}
+              disabled={!reviewProjectSearchDraft}
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section className="settings-card" aria-labelledby="settings-review-projects">
         <div className="settings-card__header">
           <h2 id="settings-review-projects">Review projects</h2>
@@ -501,57 +553,6 @@ export function SettingsPage() {
               disabled={!isPreferredLocalesDirty}
             >
               Save
-            </button>
-          </div>
-        </div>
-      </section>
-      <section
-        id="review-project-search"
-        className="settings-card"
-        aria-labelledby="settings-review-project-search"
-      >
-        <div className="settings-card__header">
-          <h2 id="settings-review-project-search">Translation search</h2>
-        </div>
-        <div className="settings-field">
-          <label className="settings-radio-option">
-            <input
-              type="checkbox"
-              checked={reviewProjectSearchDraft}
-              onChange={(event) => setReviewProjectSearchDraft(event.target.checked)}
-            />
-            <span className="settings-radio-option__body">
-              <span className="settings-radio-option__label">
-                Show Search in Review Project and text-unit details (preview)
-              </span>
-              <span className="settings-hint">
-                Search current translations across repositories. Off by default; enable it to try
-                the preview.
-              </span>
-            </span>
-          </label>
-          <p className="settings-hint">
-            Select Save to apply this setting for your Mojito account in this browser. Uncheck and
-            Save to turn it off again.
-          </p>
-        </div>
-        <div className="settings-card__footer">
-          <div className="settings-actions">
-            <button
-              type="button"
-              className="settings-button settings-button--primary"
-              onClick={handleSaveReviewProjectSearchPreference}
-              disabled={!isReviewProjectSearchDirty}
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              className="settings-button settings-button--ghost"
-              onClick={() => setReviewProjectSearchDraft(false)}
-              disabled={!reviewProjectSearchDraft}
-            >
-              Reset
             </button>
           </div>
         </div>
