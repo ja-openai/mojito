@@ -32,7 +32,8 @@
 }
 
 .visible-text-editor,
-.mf2-prose {
+.mf2-prose,
+.visible-text-renderer {
   --visible-text-editor-hidden-mark-background: color-mix(
     in srgb,
     var(--color-text-muted) 12%,
