@@ -44,7 +44,8 @@ const searchTypeOptions: SearchTypeOption[] = [
   {
     value: 'regex',
     label: 'Regex',
-    helper: 'Advanced: use a regular expression, e.g. \\x{FFFF}, ^/$, .*, (?i)insensitive',
+    helper:
+      'Whole word: \\bword\\b. Ignore case: (?i)\\bword\\b; match case: (?-i)\\bword\\b. Also: ^/$, .*, \\x{FFFF}. Use single backslashes, without /…/ delimiters.',
   },
 ];
 

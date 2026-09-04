@@ -56,6 +56,27 @@ Search reads current variants for used strings. Pages contain 50 matches, with a
 ID, locale ID, and asset-text-unit ID makes offset pagination stable without a full
 count scan. The existing authenticated text-unit search access rules apply.
 
+### Whole-word search with Regex
+
+Choose **Regex** in the search options and put `\b` before and after the word.
+For example, `\bcat\b` finds `cat` within a sentence but does not match `catalog`.
+Enter single backslashes directly in the search box, without `/…/` delimiters.
+The shared dropdown documents these boundary and case-control patterns in
+Workbench, Review Project, and text-unit details.
+
+| Pattern | Meaning |
+| --- | --- |
+| `\bsanté\b` | Whole word, using the database's default case behavior |
+| `(?i)\bsanté\b` | Whole word, ignoring case: matches both `santé` and `Santé` |
+| `(?-i)\bSanté\b` | Whole word, matching case: matches `Santé`, not `santé` |
+
+Word boundaries do not choose case sensitivity. Regex uses MySQL's ICU engine;
+without an explicit flag, case behavior follows the database collation and can
+differ between environments. Use `(?i)` or `(?-i)` when case matters. A result
+matches if the pattern occurs anywhere in its selected field, even if another
+part of that text contains a longer word. Regex word boundaries follow character
+rules; they are not a language-specific word tokenizer.
+
 ## Result attribution
 
 Each result shows the repository, locale, string ID, source, current translation,
