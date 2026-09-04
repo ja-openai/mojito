@@ -113,6 +113,55 @@ public class AiTranslateQualityTest {
   }
 
   @Test
+  public void pluralGuidanceOnlyGroupsPluralStringsSharingTheSameScreenshot() {
+    Fixture fixture =
+        new Fixture(
+            "ar",
+            textUnit(1L, "{count, plural, one {# item} other {# items}}"),
+            textUnit(2L, "Cancel"),
+            textUnit(3L, "{count, plural, one {# file} other {# files}}"));
+    fixture.respondWithSourcesAsTargets();
+
+    fixture.run(AiTranslateType.TARGET_ONLY_NEW);
+
+    assertThat(fixture.requests).hasSize(2);
+    ResponsesRequest pluralRequest = fixture.requests.getFirst();
+    assertThat(fixture.input(pluralRequest).get("textUnitsToTranslate"))
+        .extracting(unit -> unit.get("tmTextUnitId").asLong())
+        .containsExactly(1L, 3L);
+    assertThat(pluralRequest.instructions())
+        .contains(
+            "Plural requirements for target locale ar:",
+            "cardinal plural rules have 6 categories: zero, one, two, few, many, other");
+    ResponsesRequest plainRequest = fixture.requests.getLast();
+    assertThat(fixture.input(plainRequest).at("/textUnitsToTranslate/0/source").asText())
+        .isEqualTo("Cancel");
+    assertThat(plainRequest.instructions()).isEqualTo(AiTranslateType.TARGET_ONLY_NEW.getPrompt());
+    assertThat(fixture.imported).hasSize(3);
+  }
+
+  @Test
+  public void cardinalAndOrdinalStringsReceiveSeparateLocalePluralGuidance() {
+    Fixture fixture =
+        new Fixture(
+            "en-US",
+            textUnit(1L, "{count, plural, one {# item} other {# items}}"),
+            textUnit(2L, "{rank, selectordinal, one {#st} other {#th}}"));
+    fixture.respondWithSourcesAsTargets();
+
+    fixture.run(AiTranslateType.TARGET_ONLY_NEW);
+
+    assertThat(fixture.requests).hasSize(2);
+    assertThat(fixture.requests.getFirst().instructions())
+        .contains("cardinal plural rules have 2 categories: one, other")
+        .doesNotContain("ordinal plural rules");
+    assertThat(fixture.requests.getLast().instructions())
+        .contains("ordinal plural rules have 4 categories: one, two, few, other")
+        .doesNotContain("cardinal plural rules");
+    assertThat(fixture.imported).hasSize(2);
+  }
+
+  @Test
   public void invalidGroupNeverImportsOrMutatesAnyTarget() {
     for (String output :
         List.of(
@@ -278,19 +327,24 @@ public class AiTranslateQualityTest {
     final OpenAIClient provider = mock(OpenAIClient.class);
     final OpenAIClientPool pool = mock(OpenAIClientPool.class);
     final AiTranslateTextUnitAttemptService lineage = mock(AiTranslateTextUnitAttemptService.class);
-    final List<TextUnitDTO> textUnits = List.of(textUnit(1L, "Save"), textUnit(2L, "Cancel"));
+    final List<TextUnitDTO> textUnits;
     final List<ResponsesRequest> requests = new ArrayList<>();
     List<TextUnitDTOWithVariantComment> imported = List.of();
     final AiTranslateService service;
 
     Fixture() {
+      this("fr-FR", textUnit(1L, "Save"), textUnit(2L, "Cancel"));
+    }
+
+    Fixture(String localeTag, TextUnitDTO... textUnits) {
+      this.textUnits = List.of(textUnits);
       AiTranslateService.configureObjectMapper(mapper);
       Repository repository = new Repository();
       repository.setId(10L);
       repository.setName("test");
       Locale locale = new Locale();
       locale.setId(20L);
-      locale.setBcp47Tag("fr-FR");
+      locale.setBcp47Tag(localeTag);
       RepositoryLocale repositoryLocale = new RepositoryLocale();
       repositoryLocale.setLocale(locale);
       repositoryLocale.setRepository(repository);
@@ -300,7 +354,7 @@ public class AiTranslateQualityTest {
       when(repositoryService.getRepositoryLocalesWithoutRootLocale(repository))
           .thenReturn(Set.of(repositoryLocale));
       TextUnitSearcher searcher = mock(TextUnitSearcher.class);
-      when(searcher.search(any())).thenReturn(textUnits);
+      when(searcher.search(any())).thenReturn(this.textUnits);
       TextUnitBatchImporterService importer = mock(TextUnitBatchImporterService.class);
       when(importer.importTextUnitsWithVariantComment(
               anyList(), any(), any(), (ImportContext) any()))
@@ -353,6 +407,26 @@ public class AiTranslateQualityTest {
                 requests.add(request);
                 return CompletableFuture.completedFuture(response.apply(request));
               });
+    }
+
+    void respondWithSourcesAsTargets() {
+      respondWith(
+          request -> {
+            AiTranslateType.CompletionMultiTextUnitInput input =
+                mapper.convertValue(
+                    input(request), AiTranslateType.CompletionMultiTextUnitInput.class);
+            return response(
+                "completed",
+                mapper.writeValueAsStringUnchecked(
+                    new AiTranslateType.CompletionMultiTextUnitOutput(
+                        input.textUnitsToTranslate().stream()
+                            .map(
+                                unit ->
+                                    new AiTranslateType.CompletionMultiTextUnitOutput.Target(
+                                        unit.tmTextUnitId(), unit.source()))
+                            .toList(),
+                        null)));
+          });
     }
 
     JsonNode input(ResponsesRequest request) {

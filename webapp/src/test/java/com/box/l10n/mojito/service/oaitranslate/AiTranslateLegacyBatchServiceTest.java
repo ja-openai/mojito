@@ -31,7 +31,7 @@ import org.mockito.ArgumentCaptor;
 public class AiTranslateLegacyBatchServiceTest {
 
   @Test
-  public void multiTargetBatchRequestCarriesIdentityAndExplicitGlossaryProtection() {
+  public void batchRequestsCarryIdentityGlossaryProtectionAndPerStringPluralGuidance() {
     TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
     RepositoryRepository repositoryRepository = mock(RepositoryRepository.class);
     RepositoryService repositoryService = mock(RepositoryService.class);
@@ -63,10 +63,15 @@ public class AiTranslateLegacyBatchServiceTest {
     textUnit.setTmTextUnitId(42L);
     textUnit.setSource("Open ChatGPT");
     textUnit.setTargetLocale("fr-FR");
+    TextUnitDTO pluralTextUnit = new TextUnitDTO();
+    pluralTextUnit.setTmTextUnitId(43L);
+    pluralTextUnit.setSource(
+        "{count, plural, one {# ChatGPT workspace} other {# ChatGPT workspaces}}");
+    pluralTextUnit.setTargetLocale("fr-FR");
     when(repositoryRepository.findByName("product")).thenReturn(repository);
     when(repositoryService.getRepositoryLocalesWithoutRootLocale(repository))
         .thenReturn(Set.of(repositoryLocale));
-    when(textUnitSearcher.search(any())).thenReturn(List.of(textUnit));
+    when(textUnitSearcher.search(any())).thenReturn(List.of(textUnit, pluralTextUnit));
     when(openAIClient.uploadFile(any()))
         .thenReturn(
             new OpenAIClient.UploadFileResponse(
@@ -105,8 +110,16 @@ public class AiTranslateLegacyBatchServiceTest {
         ArgumentCaptor.forClass(OpenAIClient.UploadFileRequest.class);
     verify(openAIClient).uploadFile(upload.capture());
     JsonNode uploadJson = mapper.valueToTree(upload.getValue());
-    JsonNode batchLine =
-        mapper.readValueUnchecked(uploadJson.at("/fileContent/value").asText(), JsonNode.class);
+    List<JsonNode> batchLines = batchLines(mapper, uploadJson);
+    assertThat(batchLines).hasSize(2);
+    JsonNode batchLine = batchLines.getFirst();
+    assertThat(batchLine.at("/body/messages/0/content").asText())
+        .isEqualTo(AiTranslateType.TARGET_ONLY_NEW.getPrompt());
+    assertThat(batchLines.getLast().get("custom_id").asText()).isEqualTo("43");
+    assertThat(batchLines.getLast().at("/body/messages/0/content").asText())
+        .contains(
+            "Plural requirements for target locale fr-FR:",
+            "cardinal plural rules have 3 categories: one, many, other");
     assertThat(batchLine.get("custom_id").asText()).isEqualTo("42");
     assertThat(batchLine.at("/body/service_tier").isMissingNode()).isTrue();
     assertThat(batchLine.at("/body/reasoning_effort").asText()).isEqualTo("max");
@@ -149,14 +162,30 @@ public class AiTranslateLegacyBatchServiceTest {
 
     verify(openAIClient, times(2)).uploadFile(upload.capture());
     JsonNode legacyUpload = mapper.valueToTree(upload.getValue());
-    JsonNode legacyBatchLine =
-        mapper.readValueUnchecked(legacyUpload.at("/fileContent/value").asText(), JsonNode.class);
+    List<JsonNode> legacyBatchLines = batchLines(mapper, legacyUpload);
+    assertThat(legacyBatchLines).hasSize(2);
+    JsonNode legacyBatchLine = legacyBatchLines.getFirst();
+    assertThat(legacyBatchLine.at("/body/messages/0/content").asText())
+        .isEqualTo(AiTranslateType.TARGET_ONLY.getPrompt());
+    assertThat(legacyBatchLines.getLast().at("/body/messages/0/content").asText())
+        .contains(
+            "Plural requirements for target locale fr-FR:",
+            "cardinal plural rules have 3 categories: one, many, other");
     assertThat(legacyBatchLine.at("/body/reasoning_effort").isMissingNode()).isTrue();
     JsonNode legacyInput =
         mapper.readValueUnchecked(
             legacyBatchLine.at("/body/messages/1/content").asText(), JsonNode.class);
     assertThat(legacyInput.get("source").asText()).isEqualTo("Open ChatGPT");
     assertThat(legacyInput.has("textUnitsToTranslate")).isFalse();
+  }
+
+  private static List<JsonNode> batchLines(ObjectMapper mapper, JsonNode uploadJson) {
+    return uploadJson
+        .at("/fileContent/value")
+        .asText()
+        .lines()
+        .map(line -> mapper.readValueUnchecked(line, JsonNode.class))
+        .toList();
   }
 
   @Test

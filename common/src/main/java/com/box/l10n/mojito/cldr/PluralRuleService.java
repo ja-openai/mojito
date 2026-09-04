@@ -48,6 +48,24 @@ public class PluralRuleService {
     return getKeywords(ULocale.forLanguageTag(bcp47Tag));
   }
 
+  /** Current ICU categories for embedded messages, independent of the legacy PO keyword policy. */
+  public static Set<String> getMessageFormatKeywordsForLanguageTag(
+      String bcp47Tag, PluralRules.PluralType pluralType) {
+    if (bcp47Tag == null || bcp47Tag.isBlank()) {
+      return Set.of();
+    }
+    ULocale locale = ULocale.forLanguageTag(bcp47Tag.trim().replace('_', '-'));
+    if (locale.getLanguage().isEmpty()) {
+      return Set.of();
+    }
+    boolean[] available = {false};
+    PluralRules.getFunctionalEquivalent(new ULocale(locale.getLanguage()), available);
+    if (!available[0]) {
+      return Set.of();
+    }
+    return Set.copyOf(PluralRules.forLocale(locale, pluralType).getKeywords());
+  }
+
   private static Optional<Set<String>> getKeywordOverride(String bcp47Tag) {
     ULocale locale = ULocale.forLanguageTag(bcp47Tag);
     Set<String> keywords = KEYWORDS_BY_LANGUAGE_OVERRIDE.get(locale.getLanguage());

@@ -20,6 +20,9 @@ Implementation Status
 - Rules are global, ordered by priority, testable in the UI, and composed between locale prompt suffixes and ad hoc request suffixes.
 - No-batch requests are partitioned by matched source-rule id set within each screenshot group, so source-rule prompt suffixes do not leak to unmatched strings.
 - Legacy batch mode is intentionally not split yet; track that separately after no-batch production usage.
+- Built-in ICU/MF2 plural guidance is generated from parsed source structure and current target-locale
+  ICU categories, independently of admin regex rules. It also participates in no-batch grouping and
+  applies per request line in legacy Batch. See `032-ai-translation-quality.md`.
 
 Goals
 
@@ -124,7 +127,8 @@ Source prompt rules add a third suffix layer:
 1. Base prompt.
 2. Locale prompt suffix.
 3. Source-rule prompt suffixes.
-4. Request prompt suffix.
+4. Parsed source plural guidance for the target locale, when applicable.
+5. Request prompt suffix.
 
 Source-rule suffixes should be combined with the same whitespace-normalizing behavior used by locale prompt suffixes.
 
@@ -134,7 +138,9 @@ No-batch AI Translate sends one shared `instructions` string for each grouped pr
 
 - Continue grouping by screenshot first.
 - Within each screenshot group, partition text units by their matched source-rule id set.
-- Build one provider request per `(screenshotUUID, matchedRuleIds)` bucket.
+- Also partition by generated plural guidance so unrelated strings do not inherit plural instructions.
+- Build one provider request per `(screenshotUUID, matchedRuleIds, pluralGuidance)` bucket; translation
+  modes that return a single target retain their one-source-per-request constraint.
 - Use the rule bucket's combined source-rule suffixes when building `instructions`.
 - Preserve existing glossary filtering, related strings, lineage, timeout, and import behavior inside each bucket.
 

@@ -8,9 +8,9 @@ and unresolved ambiguity, while preserving good translations and existing human 
 
 ## Generation and validation
 
-1. Compose the translation prompt with locale guidance, matched source rules, source descriptions,
-   related strings, screenshots where available, and matched glossary terms. Glossary payloads
-   explicitly retain the do-not-translate flag.
+1. Compose the translation prompt with locale guidance, matched source rules, parsed plural guidance,
+   source descriptions, related strings, screenshots where available, and matched glossary terms.
+   Glossary payloads explicitly retain the do-not-translate flag.
 2. Ask for meaning-preserving, idiomatic wording. Source length is not an implicit character limit;
    negation, conditions, quantities, names, and units take priority over brevity. Input context must
    not become invented claims or persuasive additions. Protected ICU/MF2 and markup structure remain
@@ -28,6 +28,25 @@ and unresolved ambiguity, while preserving good translations and existing human 
 
 The separate OpenAI MT engine also uses configured reasoning/verbosity/speed, checks completion,
 rejects unexpected membership and empty output, and preserves its placeholder-encoding path.
+
+### Locale-specific plural guidance
+
+AI Translate parses source messages before requesting translations. For embedded ICU `plural` and
+`selectordinal` arguments and supported MF2 numeric selectors, the prompt names the target locale's
+ICU plural categories and their count, separately for cardinal and ordinal selection. For example,
+Arabic cardinal guidance lists `zero, one, two, few, many, other`. The model must cover all listed
+categories while preserving variables, exact-number branches, offsets, and branch conditions.
+MF2 keeps its `*` fallback; adding plural categories must preserve the other selector dimensions.
+
+Plain text, string selection, and messages that cannot be parsed do not receive guessed plural
+instructions. No-batch requests group only strings with the same plural guidance as well as the
+same source-rule matches and screenshot. Legacy Batch adds this guidance to each individual
+request line. No-batch generated instructions remain visible in the existing request lineage.
+
+Embedded-message guidance uses the installed ICU data, including current French `many`, through
+an explicit message-format lookup. The older database/gettext keyword policy in
+`014-icu-cldr-plural-policy.md` remains separate. This change guides generation; it does not add a
+plural-completeness save gate or establish linguistic quality. Existing importer checks still run.
 
 ## Reasoning and speed
 
@@ -109,7 +128,8 @@ and cache provenance. These tests do not establish better linguistic quality or 
 can be removed.
 
 Before rollout claims, select a fixed set of human-reviewed examples covering ambiguous UI strings,
-negation/conditions, quantities, glossary and do-not-translate terms, regional wording, ICU/MF2,
+negation/conditions, quantities, glossary and do-not-translate terms, regional wording, ICU/MF2
+plural coverage (including cardinal/ordinal rules, exact-number cases, and MF2 selector combinations),
 markup/placeholders, and legitimate source expansion. Compare old/new prompts at the same effort,
 then compare medium/high/max using the selected prompt. Blind the candidate order for human review.
 Track meaning errors, terminology/structure errors, unnecessary rewrites, unresolved ambiguity,

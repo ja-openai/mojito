@@ -3,6 +3,7 @@ package com.box.l10n.mojito.cldr;
 import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableSet;
+import com.ibm.icu.text.PluralRules;
 import java.util.Set;
 import org.junit.Test;
 
@@ -31,5 +32,31 @@ public class PluralRuleServiceTest {
     assertEquals(
         ImmutableSet.of("many", "one", "two", "other"),
         PluralRuleService.getKeywordsForLanguageTag("iw"));
+  }
+
+  @Test
+  public void messageFormatsUseCurrentIcuCategoriesAndPluralType() {
+    assertEquals(
+        Set.of("one", "many", "other"),
+        PluralRuleService.getMessageFormatKeywordsForLanguageTag(
+            "fr_FR", PluralRules.PluralType.CARDINAL));
+    assertEquals(
+        Set.of("one", "two", "other"),
+        PluralRuleService.getMessageFormatKeywordsForLanguageTag(
+            "he", PluralRules.PluralType.CARDINAL));
+    assertEquals(
+        Set.of("one", "two", "few", "other"),
+        PluralRuleService.getMessageFormatKeywordsForLanguageTag(
+            "en-US", PluralRules.PluralType.ORDINAL));
+  }
+
+  @Test
+  public void messageFormatsDoNotInventCategoriesForUnknownLocales() {
+    for (String locale : new String[] {null, "", "und", "zz-ZZ"}) {
+      assertEquals(
+          Set.of(),
+          PluralRuleService.getMessageFormatKeywordsForLanguageTag(
+              locale, PluralRules.PluralType.CARDINAL));
+    }
   }
 }

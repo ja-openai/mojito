@@ -25,6 +25,14 @@ upgraded behind this boundary while Mojito pins the keyword sets that changed be
 and 78.3. This keeps the dependency update separate from any product decision to expose new CLDR
 forms in the database, PO import/export, or statistics.
 
+### Embedded message formats
+
+AI Translate uses a separate message-format lookup in `PluralRuleService` for the installed ICU's
+cardinal or ordinal categories. Embedded ICU/MF2 messages can represent these categories directly,
+so their prompts must not inherit the older gettext/database keyword overrides. Existing
+`getKeywords` callers keep their pinned compatibility behavior. See
+`032-ai-translation-quality.md` for source detection and prompt composition.
+
 ## Tradeoffs
 
 Following ICU exactly keeps Mojito aligned with current CLDR and avoids maintaining overrides.

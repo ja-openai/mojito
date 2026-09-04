@@ -321,7 +321,12 @@ class AiTranslateLegacyBatchService {
                   getChatCompletionsRequest(
                       model,
                       reasoningEffort,
-                      AiTranslateService.getPrompt(aiTranslateType.getPrompt(), promptPrefix),
+                      AiTranslateService.getPrompt(
+                          aiTranslateType.getPrompt(),
+                          AiTranslateLocalePromptSuffixService.combinePromptSuffixes(
+                              AiTranslatePluralPrompt.getPromptSuffix(
+                                  textUnitDTO, completionInput.locale()),
+                              promptPrefix)),
                       aiTranslateType.supportsMultipleTextUnits()
                           ? AiTranslateType.CompletionMultiTextUnitInput.from(
                               textUnitDTO.getTmTextUnitId(), completionInput)

@@ -288,7 +288,11 @@ public class AiTranslateService {
       List<TextUnitDTOWithVariantComments> textUnitDTOWithVariantCommentsList) {}
 
   record SourcePromptRuleBucket(
-      List<Long> ruleIds, List<String> ruleNames, String promptSuffix, Long singleTextUnitId) {}
+      List<Long> ruleIds,
+      List<String> ruleNames,
+      String promptSuffix,
+      String pluralPromptSuffix,
+      Long singleTextUnitId) {}
 
   record PreparedNoBatchTextUnit(
       TextUnitDTOWithVariantComments textUnitDTOWithVariantComments, TextUnit textUnit) {}
@@ -474,6 +478,7 @@ public class AiTranslateService {
                     matchedPromptSuffixes.ruleIds(),
                     matchedPromptSuffixes.ruleNames(),
                     matchedPromptSuffixes.promptSuffix(),
+                    AiTranslatePluralPrompt.getPromptSuffix(textUnitDTO, bcp47Tag),
                     aiTranslateType.supportsMultipleTextUnits()
                         ? null
                         : textUnitDTO.getTmTextUnitId());
@@ -544,6 +549,7 @@ public class AiTranslateService {
                     AiTranslateLocalePromptSuffixService.combinePromptSuffixes(
                         localePromptSuffix,
                         sourcePromptRuleBucket.promptSuffix(),
+                        sourcePromptRuleBucket.pluralPromptSuffix(),
                         aiTranslateInput.promptSuffix()));
 
             ResponsesRequest.Builder requestBuilder =
