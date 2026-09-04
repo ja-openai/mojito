@@ -187,7 +187,7 @@ describe('TextUnitDetailPage', () => {
     const { container } = renderTextUnitDetailPage();
 
     expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveClass('ProseMirror');
-    expect(screen.getByRole('button', { name: 'Insert special' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Characters' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Hidden characters: Auto' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', {
@@ -216,7 +216,7 @@ describe('TextUnitDetailPage', () => {
     const { queryClient } = renderTextUnitDetailPage();
     const editor = await screen.findByRole('textbox', { name: 'Translation' });
     await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
-    expect(screen.getByRole('button', { name: 'Insert special' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Characters' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
     expect(fetchRepositoriesMock).not.toHaveBeenCalled();
 
@@ -311,7 +311,7 @@ describe('TextUnitDetailPage', () => {
         await screen.findByRole('textbox', { name: 'Target status: active / count: 0' }),
       ).toHaveTextContent('La file est vide.');
       expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
-      expect(screen.getByText('Insert special')).toBeVisible();
+      expect(screen.getByText('Characters')).toBeVisible();
       expect(container.querySelector('.mf2-document-preview')).toHaveTextContent('.match');
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     },

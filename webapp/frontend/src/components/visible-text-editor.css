@@ -932,10 +932,6 @@
   position: relative;
 }
 
-.visible-text-editor__special-button {
-  color: var(--color-accent);
-}
-
 .visible-text-editor__special-menu[hidden],
 .visible-text-editor__special-menu [hidden] {
   display: none;

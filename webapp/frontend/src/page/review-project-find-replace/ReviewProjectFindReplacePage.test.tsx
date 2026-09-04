@@ -166,7 +166,7 @@ describe('ReviewProjectFindReplacePage', () => {
       container.querySelector('.review-find-replace-row__diff-part.is-added')?.textContent,
     ).toBe('putsomethingweirdfortesting');
     expect(screen.getByText('From find/replace')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Insert special' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Characters' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Replace all' })).toHaveAttribute(
       'title',
       'No matches left in the working target. Undo or reset to search the original project targets again.',

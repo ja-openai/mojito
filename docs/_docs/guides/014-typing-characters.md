@@ -6,7 +6,7 @@ categories: guides
 permalink: /docs/guides/typing-characters/
 ---
 
-Use Mojito's **Insert special** menu for common spaces, punctuation, and direction
+Use Mojito's **Characters** menu for common spaces, punctuation, and direction
 marks. For more characters, use your computer's character picker. To type in
 another language, select a keyboard layout or input method in your system settings.
 An input method editor (IME) helps compose text in languages such as Japanese or

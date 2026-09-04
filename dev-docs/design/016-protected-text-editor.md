@@ -251,7 +251,7 @@ documents do not show a passive success diagnostic; form badges, inline
 diagnostics, and a collapsible issue summary appear only when there is something
 actionable.
 
-**Insert special** is shared by MF2, assisted, and plain-text translation editors
+**Characters** is shared by MF2, assisted, and plain-text translation editors
 in Workbench, Review Project, Find/Replace working targets, and text-unit details.
 It inserts at the caret or replaces selected text; phrase-direction actions wrap
 the selection. The menu groups spaces and punctuation, direction marks, and phrase

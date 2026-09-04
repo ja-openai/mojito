@@ -342,7 +342,7 @@ export function SpecialTextTools({
       <button
         aria-controls={menuId}
         aria-expanded={open}
-        className="visible-text-editor__control-button visible-text-editor__special-button"
+        className="visible-text-editor__control-button"
         data-translation-editor-control
         disabled={disabled}
         onClick={() => {
@@ -350,9 +350,10 @@ export function SpecialTextTools({
           onOpenChange(!open);
         }}
         onMouseDown={(event) => event.preventDefault()}
+        title="Insert a character or view system keyboard help"
         type="button"
       >
-        Insert special
+        Characters
         <span className="visible-text-editor__marks-chevron" aria-hidden="true" />
       </button>
       <div className="visible-text-editor__special-menu" hidden={!open} id={menuId} ref={panelRef}>

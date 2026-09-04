@@ -194,7 +194,7 @@ describe('TranslationTextEditor', () => {
         }
         act(() => ref.current?.setSelection({ start: 7, end: 7 }));
 
-        await user.click(screen.getByRole('button', { name: 'Insert special' }));
+        await user.click(screen.getByRole('button', { name: 'Characters' }));
         await user.click(screen.getByRole('button', { name: /^No-break space/ }));
 
         expect(handleChange).toHaveBeenLastCalledWith('Bonjour\u00a0 monde');
@@ -227,7 +227,7 @@ describe('TranslationTextEditor', () => {
         const editor = await screen.findByRole('textbox', { name: 'Text editor' });
         act(() => ref.current?.setSelection({ start: 8, end: 13 }));
 
-        await user.click(screen.getByRole('button', { name: 'Insert special' }));
+        await user.click(screen.getByRole('button', { name: 'Characters' }));
         await user.click(screen.getByRole('button', { name: /^Keep LTR phrase/ }));
 
         expect(handleChange).toHaveBeenLastCalledWith('Bonjour \u2066monde\u2069');
@@ -262,7 +262,7 @@ describe('TranslationTextEditor', () => {
       );
       const editor = await screen.findByRole('textbox', { name: 'Text editor' });
       act(() => ref.current?.setSelection({ start: 3, end: 3 }));
-      await user.click(screen.getByRole('button', { name: 'Insert special' }));
+      await user.click(screen.getByRole('button', { name: 'Characters' }));
       expect(editor).toHaveFocus();
 
       await user.keyboard('{Escape}');
@@ -293,7 +293,7 @@ describe('TranslationTextEditor', () => {
         );
         const editor = await screen.findByRole('textbox', { name: 'Text editor' });
         act(() => ref.current?.setSelection({ start: 8, end: 13 }));
-        await user.click(screen.getByRole('button', { name: 'Insert special' }));
+        await user.click(screen.getByRole('button', { name: 'Characters' }));
         const helpButton = screen.getByRole('button', { name: 'System keyboard help' });
         helpButton.focus();
         await user.keyboard('{Enter}');
@@ -311,7 +311,7 @@ describe('TranslationTextEditor', () => {
 
         expect(editor).toHaveFocus();
         expect(ref.current?.getSelection()).toEqual({ start: 8, end: 13 });
-        await user.click(screen.getByRole('button', { name: 'Insert special' }));
+        await user.click(screen.getByRole('button', { name: 'Characters' }));
         expect(screen.getByText('macOS')).not.toBeVisible();
         await user.click(screen.getByRole('button', { name: 'Curly apostrophe' }));
         expect(handleChange).toHaveBeenLastCalledWith('Bonjour \u2019');
@@ -330,13 +330,13 @@ describe('TranslationTextEditor', () => {
       const props = { assisted, controlBar: {}, value: 'Bonjour', onChange: handleChange };
       const { rerender } = render(<TranslationTextEditor {...props} disabled />);
 
-      expect(screen.getByRole('button', { name: 'Insert special' })).toBeDisabled();
-      await user.click(screen.getByRole('button', { name: 'Insert special' }));
+      expect(screen.getByRole('button', { name: 'Characters' })).toBeDisabled();
+      await user.click(screen.getByRole('button', { name: 'Characters' }));
       expect(screen.getByText('No-break space')).not.toBeVisible();
 
       rerender(<TranslationTextEditor {...props} readOnly />);
-      expect(screen.getByRole('button', { name: 'Insert special' })).toBeDisabled();
-      await user.click(screen.getByRole('button', { name: 'Insert special' }));
+      expect(screen.getByRole('button', { name: 'Characters' })).toBeDisabled();
+      await user.click(screen.getByRole('button', { name: 'Characters' }));
       expect(handleChange).not.toHaveBeenCalled();
     },
   );

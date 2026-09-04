@@ -120,7 +120,7 @@ describe('Mf2TranslationEditor', () => {
     expect(screen.queryByText('Variables')).not.toBeInTheDocument();
     expect(screen.queryByText('Source contract')).not.toBeInTheDocument();
     expect(screen.queryByText('No parser or contract issues.')).not.toBeInTheDocument();
-    expect(screen.getByText('Insert special')).toBeVisible();
+    expect(screen.getByText('Characters')).toBeVisible();
     expect(screen.getByText('placeholder menu')).not.toBeVisible();
 
     await user.click(screen.getByText('Shortcuts'));
@@ -130,7 +130,7 @@ describe('Mf2TranslationEditor', () => {
       'mf2-inline-editor--menu-open',
     );
 
-    await user.click(screen.getByText('Insert special'));
+    await user.click(screen.getByText('Characters'));
 
     expect(screen.getByText('placeholder menu')).not.toBeVisible();
     expect(screen.getByText('No-break space')).toBeVisible();
