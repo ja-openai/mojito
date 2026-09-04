@@ -174,6 +174,7 @@ type Props = {
   restoreRowOffset: number | null;
   onRestoreScrollConsumed: () => void;
   onOpenDetails: (row: WorkbenchRow, scrollTop: number, rowOffset: number) => void;
+  detailLinkHash: string;
 };
 
 function HydrationModal({
@@ -339,6 +340,7 @@ export function WorkbenchPageView({
   restoreRowOffset,
   onRestoreScrollConsumed,
   onOpenDetails,
+  detailLinkHash,
 }: Props) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -495,6 +497,7 @@ export function WorkbenchPageView({
         restoreRowOffset={restoreRowOffset}
         onRestoreScrollConsumed={onRestoreScrollConsumed}
         onOpenDetails={onOpenDetails}
+        detailLinkHash={detailLinkHash}
         isVisibleTextEditorEnabled={isVisibleTextEditorEnabled}
         translationMarksMode={translationMarksMode}
         showProtectedTokens={showProtectedTokens}

@@ -59,6 +59,7 @@ import {
 import { isRtlLocale } from '../../utils/localeDirection';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
 import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
+import { readWorkbenchDetailContext } from '../workbench/workbench-detail-link';
 import { formatStatus, mapUiStatusToApi } from '../workbench/workbench-helpers';
 import type { WorkbenchReturnState } from '../workbench/workbench-types';
 import {
@@ -135,6 +136,13 @@ export function TextUnitDetailPage() {
 
   const localeTag = useMemo(() => searchParams.get('locale')?.trim() ?? null, [searchParams]);
   const isSourceOnly = !localeTag;
+  const workbenchDetailContext = useMemo(
+    () =>
+      locationState?.from !== '/workbench' && localeTag
+        ? readWorkbenchDetailContext(location.hash)
+        : null,
+    [location.hash, locationState?.from, localeTag],
+  );
 
   const textUnitQuery = useQuery({
     queryKey: ['text-unit-detail', tmTextUnitId, localeTag ?? 'source'],
@@ -701,6 +709,19 @@ export function TextUnitDetailPage() {
   }, [activeTextUnit?.targetLocale, aiTranslateTimelineData, localeTag, sortedHistoryItems]);
 
   const handleBack = () => {
+    if (workbenchDetailContext) {
+      void navigate('/workbench', {
+        state: {
+          workbenchReturn: {
+            ...workbenchDetailContext,
+            rowId: `${tmTextUnitId}:${localeTag}`,
+            scrollTop: 0,
+          },
+        },
+      });
+      return;
+    }
+
     if (locationState?.from === '/workbench' && window.history.length > 1) {
       void navigate(-1);
       return;
@@ -1162,6 +1183,7 @@ export function TextUnitDetailPage() {
       tmTextUnitId={tmTextUnitId}
       isSearchEnabled={isSearchEnabled}
       onBack={handleBack}
+      openInWorkbench={workbenchDetailContext !== null}
       editorInfo={{
         target: draftTarget,
         status: draftStatus,

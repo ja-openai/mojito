@@ -2,6 +2,13 @@
   background: var(--color-surface);
 }
 
+.text-unit-detail-page__open-workbench {
+  width: auto;
+  padding-inline: var(--space-4);
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
 .text-unit-detail-page__content {
   flex: 1;
   min-height: 0;

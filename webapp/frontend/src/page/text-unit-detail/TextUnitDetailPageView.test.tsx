@@ -142,6 +142,17 @@ describe('TextUnitDetailPageView', () => {
     searchTextUnitsMock.mockResolvedValue([]);
   });
 
+  it('shows a visible Open in Workbench action for Details opened in a new tab', () => {
+    const onBack = vi.fn();
+    render(<TextUnitDetailPageView {...buildProps({ openInWorkbench: true, onBack })} />);
+
+    const button = screen.getByRole('button', { name: 'Open in Workbench' });
+    expect(button).toHaveTextContent('Open in Workbench');
+    expect(button).toHaveAttribute('title', 'Open in Workbench');
+    fireEvent.click(button);
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+
   it('uses the assisted protected editor for translation details', async () => {
     const { container } = render(<TextUnitDetailPageView {...buildProps()} />);
 

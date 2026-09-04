@@ -72,6 +72,7 @@ type WorkbenchBodyProps = {
   restoreRowOffset: number | null;
   onRestoreScrollConsumed: () => void;
   onOpenDetails: (row: WorkbenchRow, scrollTop: number, rowOffset: number) => void;
+  detailLinkHash: string;
   isVisibleTextEditorEnabled: boolean;
   translationMarksMode: VisibleTextMarksMode;
   showProtectedTokens: boolean;
@@ -127,6 +128,7 @@ export function WorkbenchBody({
   restoreRowOffset,
   onRestoreScrollConsumed,
   onOpenDetails,
+  detailLinkHash,
   isVisibleTextEditorEnabled,
   translationMarksMode,
   showProtectedTokens,
@@ -887,7 +889,7 @@ export function WorkbenchBody({
                             </>
                           ) : null}
                           <a
-                            href={buildTextUnitDetailPath(row)}
+                            href={buildTextUnitDetailPath(row) + detailLinkHash}
                             data-workbench-details
                             className="workbench-page__translation-button"
                             onClick={(event) => {

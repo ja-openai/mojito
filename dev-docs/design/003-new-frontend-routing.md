@@ -37,8 +37,11 @@ Stateful dashboard navigation
   the row's measured position so variable row heights do not shift the return target. If it no longer
   matches the refreshed results, the saved scroll position is used instead. History restoration does
   not change account defaults.
-- A Details link opened in another tab has no originating Workbench history entry. Its Back action
-  opens Workbench in that tab. Filter-session tokens are not shareable links.
+- Details links include the applied search and sort order in a URL fragment. Opening one in another
+  tab offers “Open in Workbench”: it runs the original search in that tab and highlights the text unit.
+  It does not depend on the original tab or its session storage. Same-tab navigation continues to use
+  its history entry for Back. Links without search context retain the basic Workbench destination.
+  Filter-session tokens themselves are not shareable links.
 
 Open questions
 - Should navigation highlight active routes or adopt a design-system component?

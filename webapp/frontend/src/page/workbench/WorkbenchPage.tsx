@@ -9,6 +9,7 @@ import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
 import { useWorkbenchCollections } from './useWorkbenchCollections';
 import { useWorkbenchEdits } from './useWorkbenchEdits';
 import { useWorkbenchSearch } from './useWorkbenchSearch';
+import { buildWorkbenchDetailHash } from './workbench-detail-link';
 import {
   buildTextUnitDetailPath,
   clampWorksetSize,
@@ -357,6 +358,16 @@ export function WorkbenchPage() {
   const { clearWorksetEdits } = edits;
   const { refetchSearch, resetSearch } = search;
 
+  const detailLinkHash = useMemo(
+    () =>
+      buildWorkbenchDetailHash(
+        search.activeSearchRequest,
+        search.resultSortField,
+        search.resultSortDirection,
+      ),
+    [search.activeSearchRequest, search.resultSortField, search.resultSortDirection],
+  );
+
   const handleOpenDetails = (row: WorkbenchRow, scrollTop: number, rowOffset: number) => {
     edits.requestNavigate(() => {
       const workbenchReturn: WorkbenchReturnState = {
@@ -701,6 +712,7 @@ export function WorkbenchPage() {
         onConfirmDiscardEditing={edits.confirmDiscardEditing}
         onDismissDiscardEditing={edits.dismissDiscardEditing}
         onOpenDetails={handleOpenDetails}
+        detailLinkHash={detailLinkHash}
         translationInputRef={edits.translationInputRef}
         registerRowRef={edits.registerRowRef}
         searchAttribute={search.searchAttribute}

@@ -116,6 +116,7 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
     restoreRowOffset: null,
     onRestoreScrollConsumed: noop,
     onOpenDetails: noop,
+    detailLinkHash: '',
     isVisibleTextEditorEnabled: true,
     translationMarksMode: 'auto',
     showProtectedTokens: true,
@@ -879,6 +880,34 @@ paused {{En pause}}
     fireEvent(getDetailsLink(), click);
 
     expect(click.defaultPrevented).toBe(false);
+    expect(onOpenDetails).not.toHaveBeenCalled();
+    expect(window.open).not.toHaveBeenCalled();
+    vi.clearAllTimers();
+  });
+
+  it('keeps return context in the native Details URL for modified clicks and copying', () => {
+    const detailLinkHash = '#workbench=encoded-search-and-sort-snapshot';
+    const onOpenDetails = vi.fn();
+    renderWorkbenchBody({ editingRowId: null, detailLinkHash, onOpenDetails });
+    const link = getDetailsLink();
+    const href = `/text-units/3?locale=pt-PT${detailLinkHash}`;
+    const contextMenu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+
+    fireEvent(link, contextMenu);
+
+    expect(contextMenu.defaultPrevented).toBe(false);
+    expect(link).toHaveAttribute('href', href);
+
+    vi.useFakeTimers();
+    const modifiedClick = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+    });
+    fireEvent(link, modifiedClick);
+
+    expect(modifiedClick.defaultPrevented).toBe(false);
+    expect(link).toHaveAttribute('href', href);
     expect(onOpenDetails).not.toHaveBeenCalled();
     expect(window.open).not.toHaveBeenCalled();
     vi.clearAllTimers();

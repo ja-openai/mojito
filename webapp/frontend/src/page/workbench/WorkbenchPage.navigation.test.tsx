@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as TextUnitsApi from '../../api/text-units';
 import type { ApiTextUnit, TextUnitSearchRequest } from '../../api/text-units';
 import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
+import { readWorkbenchDetailContext } from './workbench-detail-link';
 import { saveWorkbenchSessionSearch } from './workbench-session-state';
 import { WorkbenchPage } from './WorkbenchPage';
 import type { WorkbenchPageView } from './WorkbenchPageView';
@@ -84,6 +85,16 @@ vi.mock('./WorkbenchPageView', () => ({
           restoreRowOffset: props.restoreRowOffset,
         })}
       </output>
+      {props.rows[0] ? (
+        <a
+          href={
+            `/text-units/${props.rows[0].tmTextUnitId}?locale=${props.rows[0].locale}` +
+            props.detailLinkHash
+          }
+        >
+          Native Details link
+        </a>
+      ) : null}
       <button
         onClick={() => {
           props.onChangeResultSortField('tmTextUnitId');
@@ -368,6 +379,39 @@ describe('Workbench Details navigation', () => {
     expect(screen.getByText('Text unit details')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Browser Back' }));
     await expectRestored(workbenchUrl, viewBefore, '112:fr', 1120, -25);
+  });
+
+  it('embeds applied filters and current sorting in a native link snapshot', async () => {
+    await prepareSortedWorkbench();
+    const link = screen.getByRole('link', { name: 'Native Details link' });
+    const capturedHref = link.getAttribute('href') ?? '';
+    const capturedUrl = new URL(capturedHref, window.location.href);
+    const originalContext = {
+      searchRequest: originalSearch,
+      resultSortField: 'tmTextUnitId',
+      resultSortDirection: 'desc',
+    };
+
+    expect(capturedUrl.pathname).toBe('/text-units/112');
+    expect(capturedUrl.search).toBe('?locale=fr');
+    expect(readWorkbenchDetailContext(capturedUrl.hash)).toEqual(originalContext);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Show translated strings sorted by source' }),
+    );
+    const changedSearch = { ...originalSearch, statusFilter: 'TRANSLATED' };
+    await waitFor(() => expect(readView().searchRequest).toEqual(changedSearch));
+    const updatedUrl = new URL(link.getAttribute('href') ?? '', window.location.href);
+
+    expect(updatedUrl.hash).not.toBe(capturedUrl.hash);
+    expect(readWorkbenchDetailContext(updatedUrl.hash)).toEqual({
+      searchRequest: changedSearch,
+      resultSortField: 'source',
+      resultSortDirection: 'asc',
+    });
+    expect(readWorkbenchDetailContext(new URL(capturedHref, window.location.href).hash)).toEqual(
+      originalContext,
+    );
   });
 
   it('replaces the saved origin when opening another row after returning', async () => {

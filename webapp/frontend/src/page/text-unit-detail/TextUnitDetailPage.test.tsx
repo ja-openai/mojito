@@ -8,6 +8,8 @@ import type * as GlossariesApi from '../../api/glossaries';
 import type * as TextUnitsApi from '../../api/text-units';
 import type { ApiUserPreferences } from '../../api/userPreferences';
 import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
+import { buildWorkbenchDetailHash } from '../workbench/workbench-detail-link';
+import type { WorkbenchReturnState } from '../workbench/workbench-types';
 import { TextUnitDetailPage } from './TextUnitDetailPage';
 
 const searchTextUnitsMock = vi.hoisted(() => vi.fn());
@@ -103,7 +105,13 @@ function WorkbenchDestination() {
 function renderTextUnitDetailPage(
   path:
     | string
-    | { pathname: string; search?: string; state?: unknown } = '/text-units/3?locale=pt-PT',
+    | {
+        pathname: string;
+        search?: string;
+        hash?: string;
+        state?: unknown;
+      } = '/text-units/3?locale=pt-PT',
+  previousPath?: string,
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -118,7 +126,7 @@ function renderTextUnitDetailPage(
     queryClient,
     ...render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[path]}>
+        <MemoryRouter initialEntries={previousPath ? [previousPath, path] : [path]}>
           <Routes>
             <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
             <Route path="/workbench" element={<WorkbenchDestination />} />
@@ -435,6 +443,115 @@ describe('TextUnitDetailPage', () => {
       state: { workbenchReturn },
     });
   });
+
+  it('opens a Workbench with the linked filters, sort, and text unit from a new-tab URL', async () => {
+    window.sessionStorage.clear();
+    const searchRequest: TextUnitsApi.TextUnitSearchRequest = {
+      repositoryIds: [7, 8],
+      localeTags: ['pt-PT', 'fr'],
+      textSearch: {
+        operator: 'OR',
+        predicates: [
+          { field: 'source', searchType: 'contains', value: 'Pay & save + café #1' },
+          { field: 'comment', searchType: 'exact', value: 'Checkout' },
+        ],
+      },
+      statusFilter: 'REVIEW_NEEDED',
+      glossaryStatusFilter: 'CANDIDATE',
+      usedFilter: 'UNUSED',
+      doNotTranslateFilter: true,
+      tmTextUnitCreatedBefore: '2026-09-01T23:59:00Z',
+      tmTextUnitCreatedAfter: '2026-08-01T00:00:00Z',
+      tmTextUnitVariantCreatedBefore: '2026-09-02T23:59:00Z',
+      tmTextUnitVariantCreatedAfter: '2026-08-02T00:00:00Z',
+      limit: 1000,
+      offset: 0,
+    };
+    const hash = buildWorkbenchDetailHash(searchRequest, 'translation', 'desc');
+    renderTextUnitDetailPage(`/text-units/3?locale=pt-PT${hash}`);
+
+    const openButton = screen.getByRole('button', { name: 'Open in Workbench' });
+    expect(openButton).toHaveTextContent('Open in Workbench');
+    fireEvent.click(openButton);
+
+    expect(await screen.findByRole('heading', { name: 'Workbench dashboard' })).toBeVisible();
+    expect(JSON.parse(screen.getByTestId('workbench-destination').textContent!)).toEqual({
+      pathname: '/workbench',
+      search: '',
+      state: {
+        workbenchReturn: {
+          searchRequest,
+          resultSortField: 'translation',
+          resultSortDirection: 'desc',
+          rowId: '3:pt-PT',
+          scrollTop: 0,
+        },
+      },
+    });
+  });
+
+  it.each(['#workbench=%7Bbroken', '#workbench=%7B%22searchRequest%22%3Anull%7D'])(
+    'keeps the standalone fallback for malformed Workbench context %s',
+    async (hash) => {
+      renderTextUnitDetailPage(`/text-units/3?locale=pt-PT${hash}`);
+
+      expect(screen.queryByRole('button', { name: 'Open in Workbench' })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Back to workbench' }));
+
+      expect(await screen.findByRole('heading', { name: 'Workbench dashboard' })).toBeVisible();
+      expect(JSON.parse(screen.getByTestId('workbench-destination').textContent!)).toEqual({
+        pathname: '/workbench',
+        search: '',
+        state: null,
+      });
+    },
+  );
+
+  it.each([false, true])(
+    'prefers the same-tab origin to URL context when originating history is available: %s',
+    async (hasOriginHistory) => {
+      const historyLength = vi
+        .spyOn(window.history, 'length', 'get')
+        .mockReturnValue(hasOriginHistory ? 2 : 1);
+      const workbenchReturn: WorkbenchReturnState = {
+        searchRequest: { repositoryIds: [7], localeTags: ['pt-PT'], limit: 200 },
+        resultSortField: 'source',
+        resultSortDirection: 'asc',
+        rowId: '3:pt-PT',
+        scrollTop: 1200,
+        rowOffset: -25,
+      };
+      const workbenchUrl = '/workbench?ws=origin-session';
+
+      try {
+        renderTextUnitDetailPage(
+          {
+            pathname: '/text-units/3',
+            search: '?locale=pt-PT',
+            hash: buildWorkbenchDetailHash(
+              { repositoryIds: [99], localeTags: ['fr'], limit: 10 },
+              'translation',
+              'desc',
+            ),
+            state: { from: '/workbench', workbenchUrl, workbenchReturn },
+          },
+          hasOriginHistory ? workbenchUrl : undefined,
+        );
+
+        expect(screen.queryByRole('button', { name: 'Open in Workbench' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Back to workbench' }));
+
+        expect(await screen.findByRole('heading', { name: 'Workbench dashboard' })).toBeVisible();
+        expect(JSON.parse(screen.getByTestId('workbench-destination').textContent!)).toEqual({
+          pathname: '/workbench',
+          search: '?ws=origin-session',
+          state: hasOriginHistory ? null : { workbenchReturn },
+        });
+      } finally {
+        historyLength.mockRestore();
+      }
+    },
+  );
 
   it.each(['/text-units/3?locale=pt-PT', '/text-units/3?locale=pt-PT&from=workbench'])(
     'returns to Workbench in the current tab from %s',

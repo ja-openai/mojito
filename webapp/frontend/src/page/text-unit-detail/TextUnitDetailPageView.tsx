@@ -70,6 +70,7 @@ type TextUnitDetailPageViewProps = {
   tmTextUnitId: number;
   isSearchEnabled: boolean;
   onBack: () => void;
+  openInWorkbench?: boolean;
   editorInfo: {
     target: string;
     status: string;
@@ -171,6 +172,7 @@ export function TextUnitDetailPageView({
   tmTextUnitId,
   isSearchEnabled,
   onBack,
+  openInWorkbench = false,
   editorInfo,
   visibleTextEditor,
   keyInfo,
@@ -272,10 +274,10 @@ export function TextUnitDetailPageView({
           <div className="review-project-page__header-group review-project-page__header-group--left">
             <button
               type="button"
-              className="review-project-page__header-back-link"
+              className={`review-project-page__header-back-link${openInWorkbench ? ' text-unit-detail-page__open-workbench' : ''}`}
               onClick={onBack}
-              aria-label="Back to workbench"
-              title="Back to workbench"
+              aria-label={openInWorkbench ? 'Open in Workbench' : 'Back to workbench'}
+              title={openInWorkbench ? 'Open in Workbench' : 'Back to workbench'}
             >
               <svg
                 className="review-project-page__header-back-icon"
@@ -292,6 +294,7 @@ export function TextUnitDetailPageView({
                   strokeLinejoin="round"
                 />
               </svg>
+              {openInWorkbench ? <span>Open in Workbench</span> : null}
             </button>
             <span className="review-project-page__header-name">Text unit #{tmTextUnitId}</span>
             <div className="text-unit-detail-page__header-context">
