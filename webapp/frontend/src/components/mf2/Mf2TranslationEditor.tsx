@@ -14,7 +14,12 @@ import {
   useState,
 } from 'react';
 
-import { HiddenCharactersMenu, TranslationEditorControlBar } from '../TranslationEditorControls';
+import {
+  HiddenCharactersMenu,
+  type SpecialTextTool,
+  SpecialTextTools,
+  TranslationEditorControlBar,
+} from '../TranslationEditorControls';
 import type { TranslationEditorHandle } from '../TranslationEditorHandle';
 import type { VisibleTextMarksMode } from '../visibleTextFormatting';
 import {
@@ -59,7 +64,6 @@ import {
   type RawDocumentCommand,
   RawMf2CodeMirror,
   type RawMf2CodeMirrorHandle,
-  type RawTextTool,
   type RawTextToolCommand,
 } from './RawMf2CodeMirror';
 
@@ -115,13 +119,6 @@ type LastValidTargetModel = {
   source: string;
 };
 
-type TextTool = RawTextTool & {
-  code: string;
-  label: string;
-  shortcut?: string;
-  title: string;
-};
-
 const DEFAULT_LOCALE_OPTIONS: Array<Mf2LocaleOption> = [
   { label: 'English', value: 'en' },
   { label: 'French', value: 'fr' },
@@ -132,57 +129,6 @@ const DEFAULT_LOCALE_OPTIONS: Array<Mf2LocaleOption> = [
 ];
 
 const EMPTY_ARGS: Record<string, unknown> = {};
-const TEXT_TOOLS: Array<TextTool> = [
-  {
-    code: 'NBSP',
-    label: 'No-break space',
-    text: '\u00A0',
-    title: 'Insert a space that keeps adjacent words together.',
-  },
-  {
-    code: 'NNBSP',
-    label: 'Narrow no-break',
-    text: '\u202F',
-    title: 'Insert a narrow non-breaking space.',
-  },
-  {
-    code: 'LRM',
-    label: 'LTR mark',
-    text: '\u200E',
-    title: 'Insert a left-to-right mark for nearby punctuation.',
-  },
-  {
-    code: 'RLM',
-    label: 'RTL mark',
-    text: '\u200F',
-    title: 'Insert a right-to-left mark for nearby punctuation.',
-  },
-  {
-    code: 'LRI/PDI',
-    label: 'Keep LTR phrase',
-    title: 'Wrap the selection as an isolated left-to-right phrase.',
-    wrap: ['\u2066', '\u2069'],
-  },
-  {
-    code: 'RLI/PDI',
-    label: 'Keep RTL phrase',
-    title: 'Wrap the selection as an isolated right-to-left phrase.',
-    wrap: ['\u2067', '\u2069'],
-  },
-  {
-    code: 'FSI/PDI',
-    label: 'Auto-direction phrase',
-    title: 'Wrap the selection and let its first strong character choose direction.',
-    wrap: ['\u2068', '\u2069'],
-  },
-  {
-    code: '\u2019',
-    label: 'Curly apostrophe',
-    shortcut: 'Mac US: \u2325\u21E7]',
-    text: '\u2019',
-    title: 'Insert a typographic apostrophe. OS shortcuts depend on keyboard layout and IME.',
-  },
-];
 
 export const Mf2TranslationEditor = forwardRef<
   Mf2TranslationEditorHandle,
@@ -468,13 +414,13 @@ export const Mf2TranslationEditor = forwardRef<
     [activeSourcePlaceholderSources, sourcePlaceholderSources],
   );
 
-  function applyTextTool(tool: TextTool) {
+  function applyTextTool(tool: SpecialTextTool) {
     if (!richEditorCanMutate) return;
     proseMirrorRef.current?.applyTextTool(tool);
     proseMirrorRef.current?.focus();
   }
 
-  function applyRawTextTool(tool: TextTool) {
+  function applyRawTextTool(tool: SpecialTextTool) {
     if (readOnly) return;
     rawTextToolCommandIdRef.current += 1;
     setRawTextToolCommand({ id: rawTextToolCommandIdRef.current, tool });
@@ -1253,47 +1199,6 @@ function RestoreMissingButton({
     >
       Restore {placeholderRestoreLabel(missing)}
     </button>
-  );
-}
-
-function SpecialTextTools({
-  onApplyTextTool,
-  onOpenChange,
-  onRestoreFocus,
-  open,
-}: {
-  onApplyTextTool: (tool: TextTool) => void;
-  onOpenChange: (open: boolean) => void;
-  onRestoreFocus: () => void;
-  open: boolean;
-}) {
-  return (
-    <EditorControlDisclosure
-      className="mf2-shortcut-special"
-      label="Insert special"
-      onOpenChange={onOpenChange}
-      onRestoreFocus={onRestoreFocus}
-      open={open}
-    >
-      <div className="mf2-text-tool-menu">
-        {TEXT_TOOLS.map((tool) => (
-          <button
-            data-translation-editor-control
-            key={tool.code}
-            onClick={() => {
-              onApplyTextTool(tool);
-              onOpenChange(false);
-            }}
-            onMouseDown={(event) => event.preventDefault()}
-            title={tool.shortcut ? `${tool.title} ${tool.shortcut}` : tool.title}
-            type="button"
-          >
-            <span>{tool.label}</span>
-            <small>{tool.code}</small>
-          </button>
-        ))}
-      </div>
-    </EditorControlDisclosure>
   );
 }
 

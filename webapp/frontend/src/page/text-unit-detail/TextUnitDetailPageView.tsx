@@ -340,15 +340,11 @@ export function TextUnitDetailPageView({
                   className="text-unit-detail-page__editor-textarea"
                   value={editorInfo.target}
                   onChange={onChangeTarget}
-                  controlBar={
-                    visibleTextEditor.enabled && !isMf2
-                      ? {
-                          marksMode: visibleTextEditor.marksMode,
-                          onChangeMarksMode: visibleTextEditor.onChangeMarksMode,
-                          protectedTokenCount: visibleTextEditor.protectedTokens.length,
-                        }
-                      : undefined
-                  }
+                  controlBar={{
+                    marksMode: visibleTextEditor.marksMode,
+                    onChangeMarksMode: visibleTextEditor.onChangeMarksMode,
+                    protectedTokenCount: visibleTextEditor.protectedTokens.length,
+                  }}
                   dir={visibleTextEditor.dir}
                   disabled={!editorInfo.canEdit || editorInfo.isSaving}
                   lang={previewLocale}

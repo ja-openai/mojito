@@ -146,6 +146,7 @@ describe('WorkbenchBody', () => {
     const { container } = renderWorkbenchBody();
 
     expect(await screen.findByRole('textbox', { name: 'Text editor' })).toHaveClass('ProseMirror');
+    expect(screen.getByRole('button', { name: 'Insert special' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Hidden characters: Auto' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', {
@@ -494,6 +495,7 @@ paused {{En pause}}
     const editor = screen.getByRole('textbox', { name: 'Text editor' });
     expect(editor.tagName).toBe('TEXTAREA');
     expect(editor).toHaveValue(mf2Row.translation);
+    expect(screen.getByRole('button', { name: 'Insert special' })).toBeVisible();
     expect(
       screen.queryByRole('button', {
         name: 'Placeholder editing is off. Edit placeholders',

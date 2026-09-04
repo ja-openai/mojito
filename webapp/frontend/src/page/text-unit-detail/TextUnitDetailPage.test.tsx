@@ -187,6 +187,7 @@ describe('TextUnitDetailPage', () => {
     const { container } = renderTextUnitDetailPage();
 
     expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveClass('ProseMirror');
+    expect(screen.getByRole('button', { name: 'Insert special' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Hidden characters: Auto' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', {
@@ -215,6 +216,7 @@ describe('TextUnitDetailPage', () => {
     const { queryClient } = renderTextUnitDetailPage();
     const editor = await screen.findByRole('textbox', { name: 'Translation' });
     await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    expect(screen.getByRole('button', { name: 'Insert special' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
     expect(fetchRepositoriesMock).not.toHaveBeenCalled();
 

@@ -785,7 +785,7 @@ export function WorkbenchBody({
                           }}
                           onKeyDown={isEditing ? handleTranslationKeyDown : undefined}
                           controlBar={
-                            useAssistedTranslationEditor
+                            isEditing
                               ? {
                                   marksMode: editingMarksMode,
                                   onChangeMarksMode: setEditingMarksMode,

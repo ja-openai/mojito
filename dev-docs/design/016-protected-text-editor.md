@@ -251,8 +251,12 @@ documents do not show a passive success diagnostic; form badges, inline
 diagnostics, and a collapsible issue summary appear only when there is something
 actionable.
 
-**Insert special** uses a compact single-column menu with normal-weight action
-labels and aligned character hints. Keyboard-specific shortcuts stay in tooltips.
+**Insert special** is shared by MF2, assisted, and plain-text translation editors
+in Workbench, Review Project, Find/Replace working targets, and text-unit details.
+It inserts at the caret or replaces selected text; phrase-direction actions wrap
+the selection. The compact single-column menu uses normal-weight action labels
+and aligned character hints. Keyboard-specific shortcuts stay in tooltips.
+Read-only and disabled editors cannot insert characters.
 
 The guided editor uses one outer border and focus ring around the text and controls.
 Variant rows meet that frame directly, with separators between forms. Messages

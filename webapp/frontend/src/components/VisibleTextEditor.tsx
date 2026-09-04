@@ -18,6 +18,7 @@ import { Decoration, DecorationSet } from 'prosemirror-view';
 import {
   type CSSProperties,
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -41,7 +42,11 @@ import {
   type VisibleTextIcuMessage,
   visibleTextIcuMessageKey,
 } from '../utils/visibleTextIcuDisplay';
-import { HiddenCharactersMenu, TranslationEditorControlBar } from './TranslationEditorControls';
+import {
+  HiddenCharactersMenu,
+  SpecialTextTools,
+  TranslationEditorControlBar,
+} from './TranslationEditorControls';
 import {
   resolveVisibleTextMarksMode,
   shouldRenderVisibleTextWidget,
@@ -1985,7 +1990,9 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     const [icuFormMenuPosition, setIcuFormMenuPosition] = useState<IcuFormMenuPosition | null>(
       null,
     );
-    const [isMarksMenuOpen, setIsMarksMenuOpen] = useState(false);
+    const [openControlMenu, setOpenControlMenu] = useState<
+      'hidden-characters' | 'insert-special' | null
+    >(null);
     const icuFormMenuRef = useRef<HTMLDivElement | null>(null);
     onChangeRef.current = onChange;
     onFocusRef.current = onFocus;
@@ -2018,7 +2025,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         left: Math.max(0, elementRect.left - rootRect.left),
         top: Math.max(0, elementRect.bottom - rootRect.top + 4),
       });
-      setIsMarksMenuOpen(false);
+      setOpenControlMenu(null);
     };
     domAttributesRef.current = {
       ariaLabel,
@@ -2038,7 +2045,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         }${disabled ? ' visible-text-editor--disabled' : ''}${
           readOnly ? ' visible-text-editor--read-only' : ''
         }${
-          activeIcuFormGroupKey || isMarksMenuOpen || (completion?.options.length ?? 0) > 0
+          activeIcuFormGroupKey || openControlMenu || (completion?.options.length ?? 0) > 0
             ? ' visible-text-editor--menu-open'
             : ''
         }${className ? ` ${className}` : ''}`,
@@ -2048,7 +2055,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         completion?.options.length,
         controlBar,
         disabled,
-        isMarksMenuOpen,
+        openControlMenu,
         readOnly,
       ],
     );
@@ -2307,6 +2314,35 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       updateCompletionPosition();
     }, [completion?.options]);
 
+    const insertText = useCallback((text: string) => {
+      const view = viewRef.current;
+      if (!view || disabledRef.current || readOnlyRef.current) {
+        return;
+      }
+      replaceSelectionWithRawText(view, text);
+      view.focus();
+    }, []);
+
+    const wrapSelection = useCallback((open: string, close: string) => {
+      const view = viewRef.current;
+      if (!view || disabledRef.current || readOnlyRef.current) {
+        return;
+      }
+
+      const { from, to } = view.state.selection;
+      let transaction = view.state.tr.insertText(open, from, from);
+      const closePosition = to + open.length;
+      transaction = transaction.insertText(close, closePosition, closePosition);
+
+      const nextSelectionStart = from + open.length;
+      const nextSelectionEnd = closePosition;
+      transaction = transaction.setSelection(
+        TextSelection.create(transaction.doc, nextSelectionStart, nextSelectionEnd),
+      );
+      view.dispatch(transaction);
+      view.focus();
+    }, []);
+
     useImperativeHandle(
       forwardedRef,
       () => ({
@@ -2330,14 +2366,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
                 : valueRef.current.length,
           };
         },
-        insertText(text: string) {
-          const view = viewRef.current;
-          if (!view || disabledRef.current || readOnlyRef.current) {
-            return;
-          }
-          replaceSelectionWithRawText(view, text);
-          view.focus();
-        },
+        insertText,
         redo() {
           const view = viewRef.current;
           if (!view || disabledRef.current || readOnlyRef.current) {
@@ -2372,27 +2401,9 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           }
           return didUndo;
         },
-        wrapSelection(open: string, close: string) {
-          const view = viewRef.current;
-          if (!view || disabledRef.current || readOnlyRef.current) {
-            return;
-          }
-
-          const { from, to } = view.state.selection;
-          let transaction = view.state.tr.insertText(open, from, from);
-          const closePosition = to + open.length;
-          transaction = transaction.insertText(close, closePosition, closePosition);
-
-          const nextSelectionStart = from + open.length;
-          const nextSelectionEnd = closePosition;
-          transaction = transaction.setSelection(
-            TextSelection.create(transaction.doc, nextSelectionStart, nextSelectionEnd),
-          );
-          view.dispatch(transaction);
-          view.focus();
-        },
+        wrapSelection,
       }),
-      [],
+      [insertText, wrapSelection],
     );
 
     const controlStatus = blockedEditMessage;
@@ -2453,7 +2464,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         setExactValueInsertionId(null);
         setExactValueDraft('');
         setExactValueError(null);
-        setIsMarksMenuOpen(false);
+        setOpenControlMenu(null);
       }
     }, [controlBarDisabled]);
     useEffect(() => {
@@ -2537,9 +2548,9 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             disabled={controlBarDisabled}
             mode={controlMarksMode}
             onChange={controlBar.onChangeMarksMode}
-            onOpenChange={setIsMarksMenuOpen}
+            onOpenChange={(open) => setOpenControlMenu(open ? 'hidden-characters' : null)}
             onRestoreFocus={() => viewRef.current?.focus()}
-            open={isMarksMenuOpen}
+            open={openControlMenu === 'hidden-characters'}
           />
         ) : null}
         {controlBar.onToggleRawMode ? (
@@ -2564,6 +2575,16 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             {controlBar.rawMode ? 'Lock placeholders' : 'Edit placeholders'}
           </button>
         ) : null}
+        <SpecialTextTools
+          disabled={controlBarDisabled}
+          onApplyTextTool={(tool) => {
+            if (tool.wrap) wrapSelection(...tool.wrap);
+            else if (tool.text) insertText(tool.text);
+          }}
+          onOpenChange={(open) => setOpenControlMenu(open ? 'insert-special' : null)}
+          onRestoreFocus={() => viewRef.current?.focus()}
+          open={openControlMenu === 'insert-special'}
+        />
         {shouldShowControlStatus ? (
           <span
             className={`visible-text-editor__control-status${

@@ -540,6 +540,7 @@ describe('ReviewProjectPageView', () => {
 
     const editor = await screen.findByRole('textbox', { name: 'Translation' });
     expect(editor).toBeInstanceOf(HTMLTextAreaElement);
+    expect(screen.getByRole('button', { name: 'Insert special' })).toBeVisible();
     editor.focus();
     expect(editor).toHaveFocus();
 
@@ -1000,6 +1001,7 @@ describe('ReviewProjectPageView', () => {
     const { container } = renderReviewProjectPageView();
 
     expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveClass('ProseMirror');
+    expect(screen.getByRole('button', { name: 'Insert special' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Hidden characters: Auto' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', {

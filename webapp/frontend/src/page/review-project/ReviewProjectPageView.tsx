@@ -4216,15 +4216,11 @@ function DetailPane({
                     value={draftTarget}
                     onChange={setDraftTarget}
                     ariaLabel="Translation"
-                    controlBar={
-                      isVisibleTextEditorEnabled
-                        ? {
-                            marksMode: translationMarksMode,
-                            onChangeMarksMode: setTranslationMarksMode,
-                            protectedTokenCount: draftTargetProtectedTokens.length,
-                          }
-                        : undefined
-                    }
+                    controlBar={{
+                      marksMode: translationMarksMode,
+                      onChangeMarksMode: setTranslationMarksMode,
+                      protectedTokenCount: draftTargetProtectedTokens.length,
+                    }}
                     spellCheck={true}
                     lang={translationLang}
                     disabled={isSavingGlobal}

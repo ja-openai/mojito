@@ -1084,15 +1084,11 @@ function WorkingTargetEditor({
         className={`review-find-replace-row__editor${
           integrityIssue ? ' review-find-replace-row__editor--invalid' : ''
         }`}
-        controlBar={
-          isVisibleTextEditorEnabled
-            ? {
-                marksMode,
-                onChangeMarksMode: setMarksMode,
-                protectedTokenCount: tokenGuard.protectedTokens.length,
-              }
-            : undefined
-        }
+        controlBar={{
+          marksMode,
+          onChangeMarksMode: setMarksMode,
+          protectedTokenCount: tokenGuard.protectedTokens.length,
+        }}
         lang={toHtmlLangTag(row.locale)}
         marksMode={marksMode}
         maxRows={8}

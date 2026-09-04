@@ -1,9 +1,13 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createRef, type Ref, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { useProtectedTextTokenGuard } from '../hooks/useProtectedTextTokenGuard';
-import { TranslationTextEditor } from './TranslationTextEditor';
+import {
+  TranslationTextEditor,
+  type TranslationTextEditorKeyDownEvent,
+} from './TranslationTextEditor';
 import type { VisibleTextEditorHandle } from './VisibleTextEditor';
 
 function queryIcuFormTrigger(text: RegExp | string) {
@@ -101,10 +105,12 @@ function installProseMirrorHistoryDomMock() {
 }
 
 function ControlledTranslationTextEditor({
+  assisted = true,
   editorRef,
   initialValue,
   onValueChange,
 }: {
+  assisted?: boolean;
   editorRef: Ref<VisibleTextEditorHandle>;
   initialValue: string;
   onValueChange: (value: string) => void;
@@ -114,7 +120,7 @@ function ControlledTranslationTextEditor({
   return (
     <TranslationTextEditor
       ref={editorRef}
-      assisted
+      assisted={assisted}
       value={value}
       onChange={(nextValue) => {
         onValueChange(nextValue);
@@ -157,6 +163,136 @@ function GuardedTranslationTextEditor({
 }
 
 describe('TranslationTextEditor', () => {
+  it.each([
+    { mode: 'assisted', assisted: true, rawMode: false },
+    { mode: 'unprotected', assisted: true, rawMode: true },
+    { mode: 'native', assisted: false, rawMode: false },
+  ])(
+    'inserts a special character at the caret in the $mode editor',
+    async ({ assisted, rawMode }) => {
+      const user = userEvent.setup();
+      const ref = createRef<VisibleTextEditorHandle>();
+      const handleChange = vi.fn();
+      const restoreDom = installProseMirrorHistoryDomMock();
+
+      try {
+        render(
+          <ControlledTranslationTextEditor
+            assisted={assisted}
+            editorRef={ref}
+            initialValue="Bonjour monde"
+            onValueChange={handleChange}
+          />,
+        );
+        const editor = await screen.findByRole('textbox', { name: 'Text editor' });
+        if (rawMode) {
+          await user.click(
+            screen.getByRole('button', {
+              name: 'Placeholder editing is off. Edit placeholders',
+            }),
+          );
+        }
+        act(() => ref.current?.setSelection({ start: 7, end: 7 }));
+
+        await user.click(screen.getByRole('button', { name: 'Insert special' }));
+        await user.click(screen.getByRole('button', { name: /^No-break space/ }));
+
+        expect(handleChange).toHaveBeenLastCalledWith('Bonjour\u00a0 monde');
+        await waitFor(() => expect(ref.current?.getSelection()).toEqual({ start: 8, end: 8 }));
+        expect(editor).toHaveFocus();
+        expect(screen.getByText('No-break space')).not.toBeVisible();
+      } finally {
+        restoreDom();
+      }
+    },
+  );
+
+  it.each([true, false])(
+    'wraps selected text with directional isolation and restores selection (assisted: %s)',
+    async (assisted) => {
+      const user = userEvent.setup();
+      const ref = createRef<VisibleTextEditorHandle>();
+      const handleChange = vi.fn();
+      const restoreDom = installProseMirrorHistoryDomMock();
+
+      try {
+        render(
+          <ControlledTranslationTextEditor
+            assisted={assisted}
+            editorRef={ref}
+            initialValue="Bonjour monde"
+            onValueChange={handleChange}
+          />,
+        );
+        const editor = await screen.findByRole('textbox', { name: 'Text editor' });
+        act(() => ref.current?.setSelection({ start: 8, end: 13 }));
+
+        await user.click(screen.getByRole('button', { name: 'Insert special' }));
+        await user.click(screen.getByRole('button', { name: /^Keep LTR phrase/ }));
+
+        expect(handleChange).toHaveBeenLastCalledWith('Bonjour \u2066monde\u2069');
+        await waitFor(() => expect(ref.current?.getSelection()).toEqual({ start: 9, end: 14 }));
+        expect(editor).toHaveFocus();
+      } finally {
+        restoreDom();
+      }
+    },
+  );
+
+  it.each([true, false])(
+    'closes the special-character menu before editor Escape handlers run (assisted: %s)',
+    async (assisted) => {
+      const user = userEvent.setup();
+      const ref = createRef<VisibleTextEditorHandle>();
+      const onKeyDown = vi.fn((event: TranslationTextEditorKeyDownEvent) => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          ref.current?.blur();
+        }
+      });
+      render(
+        <TranslationTextEditor
+          ref={ref}
+          assisted={assisted}
+          controlBar={{}}
+          value="Bonjour"
+          onChange={vi.fn()}
+          onKeyDown={onKeyDown}
+        />,
+      );
+      const editor = await screen.findByRole('textbox', { name: 'Text editor' });
+      act(() => ref.current?.setSelection({ start: 3, end: 3 }));
+      await user.click(screen.getByRole('button', { name: 'Insert special' }));
+      expect(editor).toHaveFocus();
+
+      await user.keyboard('{Escape}');
+
+      expect(onKeyDown).not.toHaveBeenCalled();
+      expect(screen.getByText('No-break space')).not.toBeVisible();
+      expect(editor).toHaveFocus();
+      expect(ref.current?.getSelection()).toEqual({ start: 3, end: 3 });
+    },
+  );
+
+  it.each([true, false])(
+    'prevents special-character insertion while disabled or read-only (assisted: %s)',
+    async (assisted) => {
+      const user = userEvent.setup();
+      const handleChange = vi.fn();
+      const props = { assisted, controlBar: {}, value: 'Bonjour', onChange: handleChange };
+      const { rerender } = render(<TranslationTextEditor {...props} disabled />);
+
+      expect(screen.getByRole('button', { name: 'Insert special' })).toBeDisabled();
+      await user.click(screen.getByRole('button', { name: 'Insert special' }));
+      expect(screen.getByText('No-break space')).not.toBeVisible();
+
+      rerender(<TranslationTextEditor {...props} readOnly />);
+      expect(screen.getByRole('button', { name: 'Insert special' })).toBeDisabled();
+      await user.click(screen.getByRole('button', { name: 'Insert special' }));
+      expect(handleChange).not.toHaveBeenCalled();
+    },
+  );
+
   it('scopes add-form actions to the innermost ICU plural at the caret', async () => {
     const ref = createRef<VisibleTextEditorHandle>();
     const value =

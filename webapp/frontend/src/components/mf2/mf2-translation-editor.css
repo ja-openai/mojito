@@ -521,16 +521,11 @@
   font-size: 11px;
 }
 
-.mf2-shortcut-special {
-  position: relative;
-}
-
 .mf2-shortcut-help {
   position: static;
 }
 
-.mf2-shortcut-help > summary,
-.mf2-shortcut-special > summary {
+.mf2-shortcut-help > summary {
   align-items: center;
   color: var(--color-accent);
   cursor: pointer;
@@ -543,8 +538,7 @@
   user-select: none;
 }
 
-.mf2-shortcut-help > summary::-webkit-details-marker,
-.mf2-shortcut-special > summary::-webkit-details-marker {
+.mf2-shortcut-help > summary::-webkit-details-marker {
   display: none;
 }
 
@@ -562,64 +556,6 @@
   position: absolute;
   top: 100%;
   z-index: 110;
-}
-
-.mf2-shortcut-special[open] .mf2-text-tool-menu {
-  inline-size: max-content;
-  max-inline-size: min(280px, calc(100cqw - 32px));
-  left: 0;
-  min-width: 0;
-  position: absolute;
-  top: 100%;
-  z-index: 110;
-}
-
-.mf2-text-tool-menu {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-text) 14%, transparent);
-  display: grid;
-  gap: 0;
-  grid-template-columns: minmax(0, 1fr);
-  margin-top: 4px;
-  padding: 4px;
-}
-
-.mf2-text-tool-menu button {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
-  color: var(--color-text);
-  cursor: pointer;
-  display: grid;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 400;
-  gap: 20px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  line-height: 1.35;
-  min-height: 26px;
-  padding: 4px 8px;
-  text-align: start;
-}
-
-.mf2-text-tool-menu button:hover,
-.mf2-text-tool-menu button:focus-visible {
-  background: var(--color-surface-muted);
-}
-
-.mf2-text-tool-menu button:focus-visible {
-  outline: 2px solid var(--color-focus-border);
-  outline-offset: -2px;
-}
-
-.mf2-text-tool-menu small {
-  color: var(--color-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  white-space: nowrap;
 }
 
 .mf2-prose:focus {

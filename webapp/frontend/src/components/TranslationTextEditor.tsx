@@ -2,6 +2,7 @@ import {
   type CSSProperties,
   forwardRef,
   type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -19,6 +20,11 @@ import {
   type ProtectedTextToken,
 } from '../utils/protectedTextTokens';
 import { AutoTextarea } from './AutoTextarea';
+import {
+  type SpecialTextTool,
+  SpecialTextTools,
+  TranslationEditorControlBar,
+} from './TranslationEditorControls';
 import {
   VisibleTextEditor,
   type VisibleTextEditorHandle,
@@ -121,6 +127,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     const valueRef = useRef(value);
     const onChangeRef = useRef(onChange);
     const [rawMode, setRawMode] = useState(false);
+    const [isSpecialMenuOpen, setIsSpecialMenuOpen] = useState(false);
     const [editorSelection, setEditorSelection] = useState<{ start: number; end: number } | null>(
       null,
     );
@@ -139,6 +146,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     readOnlyRef.current = readOnly;
 
     useEffect(() => {
+      setIsSpecialMenuOpen(false);
       if (!assisted || !hasControlBar) {
         setRawMode(false);
       }
@@ -239,6 +247,29 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       });
     };
 
+    const applyTextareaTextTool = useCallback((tool: Pick<SpecialTextTool, 'text' | 'wrap'>) => {
+      const element = textareaRef.current;
+      if (!element || disabledRef.current || readOnlyRef.current) {
+        return;
+      }
+      const start = element.selectionStart ?? valueRef.current.length;
+      const end = element.selectionEnd ?? valueRef.current.length;
+      const selectedText = valueRef.current.slice(start, end);
+      const replacement = tool.wrap
+        ? `${tool.wrap[0]}${selectedText}${tool.wrap[1]}`
+        : (tool.text ?? '');
+      const nextValue = `${valueRef.current.slice(0, start)}${replacement}${valueRef.current.slice(end)}`;
+      onChangeRef.current(nextValue);
+      window.requestAnimationFrame(() => {
+        const selectionStart = start + (tool.wrap ? tool.wrap[0].length : replacement.length);
+        element.setSelectionRange(
+          selectionStart,
+          tool.wrap ? selectionStart + selectedText.length : selectionStart,
+        );
+        element.focus();
+      });
+    }, []);
+
     useImperativeHandle(
       forwardedRef,
       () => ({
@@ -271,20 +302,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             visibleEditorRef.current?.insertText(text);
             return;
           }
-          const element = textareaRef.current;
-          if (!element || disabledRef.current || readOnlyRef.current) {
-            return;
-          }
-          const start = element.selectionStart ?? valueRef.current.length;
-          const end = element.selectionEnd ?? valueRef.current.length;
-          const nextValue = `${valueRef.current.slice(0, start)}${text}${valueRef.current.slice(
-            end,
-          )}`;
-          onChangeRef.current(nextValue);
-          window.requestAnimationFrame(() => {
-            element.setSelectionRange(start + text.length, start + text.length);
-            element.focus();
-          });
+          applyTextareaTextTool({ text });
         },
         redo() {
           return usesVisibleEditorRef.current ? (visibleEditorRef.current?.redo() ?? false) : false;
@@ -311,27 +329,10 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             visibleEditorRef.current?.wrapSelection(open, close);
             return;
           }
-          const element = textareaRef.current;
-          if (!element || disabledRef.current || readOnlyRef.current) {
-            return;
-          }
-          const start = element.selectionStart ?? valueRef.current.length;
-          const end = element.selectionEnd ?? valueRef.current.length;
-          const selectedText = valueRef.current.slice(start, end);
-          const nextValue = `${valueRef.current.slice(0, start)}${open}${selectedText}${close}${valueRef.current.slice(
-            end,
-          )}`;
-          onChangeRef.current(nextValue);
-          window.requestAnimationFrame(() => {
-            element.setSelectionRange(
-              start + open.length,
-              start + open.length + selectedText.length,
-            );
-            element.focus();
-          });
+          applyTextareaTextTool({ wrap: [open, close] });
         },
       }),
-      [],
+      [applyTextareaTextTool],
     );
 
     if (assisted && !controlBar) {
@@ -399,11 +400,11 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       );
     }
 
-    return (
+    const textareaElement = (
       <AutoTextarea
         ref={textareaRef}
         aria-label={ariaLabel}
-        className={className}
+        className={controlBar ? 'visible-text-editor__raw-textarea' : className}
         dir={dir}
         disabled={disabled}
         lang={lang}
@@ -418,6 +419,36 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         style={style}
         value={value}
       />
+    );
+
+    if (!controlBar) {
+      return textareaElement;
+    }
+
+    const controlBarElement = (
+      <TranslationEditorControlBar>
+        <SpecialTextTools
+          disabled={disabled || readOnly}
+          onApplyTextTool={applyTextareaTextTool}
+          onOpenChange={setIsSpecialMenuOpen}
+          onRestoreFocus={() => textareaRef.current?.focus()}
+          open={isSpecialMenuOpen}
+        />
+      </TranslationEditorControlBar>
+    );
+
+    return (
+      <div
+        className={`visible-text-editor visible-text-editor--native visible-text-editor--with-control-bar${
+          controlBar.position === 'top' ? ' visible-text-editor--control-bar-top' : ''
+        }${disabled ? ' visible-text-editor--disabled' : ''}${
+          isSpecialMenuOpen ? ' visible-text-editor--menu-open' : ''
+        }${className ? ` ${className}` : ''}`}
+      >
+        {controlBar.position === 'top' ? controlBarElement : null}
+        {textareaElement}
+        {controlBar.position !== 'top' ? controlBarElement : null}
+      </div>
     );
   },
 );
