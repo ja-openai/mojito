@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
+import { mapApiTextUnitToRow } from './workbench-helpers';
 import type { WorkbenchRow } from './workbench-types';
 import { WorkbenchBody } from './WorkbenchBody';
 
@@ -45,6 +46,7 @@ const editingRow: WorkbenchRow = {
   translation: 'Pay {price} now',
   sourceCreatedDate: '2026-05-01T10:15:00Z',
   translationCreatedDate: '2026-05-02T11:30:00Z',
+  translationCreatedByUsername: 'translator@example.com',
   status: 'TRANSLATED',
   comment: null,
   tmTextUnitId: 3,
@@ -101,6 +103,7 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
     onChangeTranslationMarksMode: noop,
     showProtectedTokens: true,
     showDateMetadata: true,
+    showSavedBy: false,
     ...overrides,
   };
 
@@ -484,6 +487,50 @@ paused {{En pause}}
     expect(screen.getByRole('checkbox', { name: 'one' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'other' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'other' })).toBeDisabled();
+  });
+
+  it('toggles saved-by metadata independently of dates and the assisted editor', () => {
+    const row = mapApiTextUnitToRow({
+      tmTextUnitId: 3,
+      name: 'checkout.pay',
+      targetLocale: 'pt-PT',
+      target: 'Pagar agora',
+      translationCreatedByUsername: ' translator@example.com ',
+      used: true,
+    });
+    const { updateProps } = renderWorkbenchBody({
+      rows: [row],
+      showDateMetadata: false,
+      isVisibleTextEditorEnabled: false,
+    });
+
+    expect(screen.queryByText('Saved by')).not.toBeInTheDocument();
+    updateProps({ showSavedBy: true });
+    expect(screen.getByText('Saved by')).toBeInTheDocument();
+    expect(screen.getByText('translator@example.com')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Text unit dates')).not.toBeInTheDocument();
+    updateProps({ showSavedBy: false });
+    expect(screen.queryByText('translator@example.com')).not.toBeInTheDocument();
+  });
+
+  it.each([null, '', '   '])('shows unknown for missing saver metadata (%j)', (username) => {
+    renderWorkbenchBody({
+      rows: [{ ...editingRow, translation: '', translationCreatedByUsername: username }],
+      showSavedBy: true,
+    });
+
+    expect(screen.getByText('Saved by')).toBeInTheDocument();
+    expect(screen.getByText('unknown')).toBeInTheDocument();
+  });
+
+  it('does not attribute untranslated rows', () => {
+    renderWorkbenchBody({
+      rows: [{ ...editingRow, translation: null }],
+      showSavedBy: true,
+    });
+
+    expect(screen.queryByText('Saved by')).not.toBeInTheDocument();
+    expect(screen.queryByText('translator@example.com')).not.toBeInTheDocument();
   });
 
   it('renders source and translation created dates in row metadata', () => {

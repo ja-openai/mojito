@@ -488,7 +488,12 @@ public class TextUnitWS {
             textUnitDTO.isIncludedInLocalizedFile());
 
     textUnitDTO.setTmTextUnitCurrentVariantId(addTMTextUnitCurrentVariant.getId());
-    textUnitDTO.setTmTextUnitVariantId(addTMTextUnitCurrentVariant.getTmTextUnitVariant().getId());
+    TMTextUnitVariant savedVariant = addTMTextUnitCurrentVariant.getTmTextUnitVariant();
+    textUnitDTO.setTmTextUnitVariantId(savedVariant.getId());
+    textUnitDTO.setTranslationCreatedByUsername(
+        savedVariant.getCreatedByUser() == null
+            ? null
+            : savedVariant.getCreatedByUser().getUsername());
     return textUnitDTO;
   }
 

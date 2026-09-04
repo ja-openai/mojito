@@ -234,6 +234,7 @@ export function useWorkbenchEdits({
             return {
               ...item,
               target: variables.target,
+              translationCreatedByUsername: null,
               targetComment: variables.targetComment ?? item.targetComment,
               status: variables.status ?? item.status,
               includedInLocalizedFile:
@@ -294,6 +295,7 @@ export function useWorkbenchEdits({
             return {
               ...item,
               target: saved.target ?? item.target,
+              translationCreatedByUsername: saved.translationCreatedByUsername ?? null,
               targetComment: saved.targetComment ?? item.targetComment,
               status: saved.status ?? item.status,
               includedInLocalizedFile:

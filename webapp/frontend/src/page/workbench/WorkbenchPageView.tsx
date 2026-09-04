@@ -343,6 +343,7 @@ export function WorkbenchPageView({
   const [translationMarksMode, setTranslationMarksMode] = useState<VisibleTextMarksMode>('auto');
   const [showProtectedTokens, setShowProtectedTokens] = useState(true);
   const [showDateMetadata, setShowDateMetadata] = useState(false);
+  const [showSavedBy, setShowSavedBy] = useState(false);
   const editedCount = editedRowIds.size;
   const rowCount = rows.length;
   return (
@@ -423,6 +424,8 @@ export function WorkbenchPageView({
         onChangeShowProtectedTokens={setShowProtectedTokens}
         showDateMetadata={showDateMetadata}
         onChangeShowDateMetadata={setShowDateMetadata}
+        showSavedBy={showSavedBy}
+        onChangeShowSavedBy={setShowSavedBy}
         onOpenExportModal={() => setIsExportModalOpen(true)}
         onOpenImportModal={() => setIsImportModalOpen(true)}
         collections={collections}
@@ -491,6 +494,7 @@ export function WorkbenchPageView({
         onChangeTranslationMarksMode={setTranslationMarksMode}
         showProtectedTokens={showProtectedTokens}
         showDateMetadata={showDateMetadata}
+        showSavedBy={showSavedBy}
       />
       <HydrationModal data={hydrationModal} onClose={onDismissHydrationModal} />
       <ConfirmModal

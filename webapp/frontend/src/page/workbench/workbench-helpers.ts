@@ -89,6 +89,7 @@ export function mapApiTextUnitToRow(
     translation,
     sourceCreatedDate: textUnit.tmTextUnitCreatedDate ?? null,
     translationCreatedDate: textUnit.createdDate ?? null,
+    translationCreatedByUsername: textUnit.translationCreatedByUsername ?? null,
     // Untranslated entries don't have a meaningful status yet (legacy workbench semantics).
     status:
       translation === null ? '' : formatStatus(textUnit.status, textUnit.includedInLocalizedFile),

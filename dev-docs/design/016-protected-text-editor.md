@@ -119,6 +119,12 @@ Workbench also has a view-level **Display** dropdown in the result subbar:
 - **Placeholder highlights: On / Off** controls placeholder, tag, and ICU marker
   highlighting in inactive result rows. It does not disable active-editor
   protection.
+- **Saved by: On / Off** shows the saved translation variant's creator, using the
+  same attribution as Review Project Search. Missing creators show as unknown;
+  untranslated rows have no attribution. Imports may name the importer, and a
+  save that reuses an existing variant retains that variant's creator.
+- Saved by defaults to Off and remains available for all users after a
+  search, independently of the assisted editor setting.
 - Malformed-placeholder diagnostics are rendered in inactive rows by the
   lightweight renderer as inline warning marks, not by mounting ProseMirror per
   row. The renderer shares the editor's marker ordering, including showing

@@ -19,6 +19,7 @@ export type WorkbenchRow = {
   translation: string | null;
   sourceCreatedDate: string | null;
   translationCreatedDate: string | null;
+  translationCreatedByUsername: string | null;
   status: string;
   comment: string | null;
   tmTextUnitId: number;

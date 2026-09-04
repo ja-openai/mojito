@@ -236,6 +236,43 @@ public class TextUnitWSSearchValidationTest {
   }
 
   @Test
+  public void addTextUnitReturnsStoredVariantCreatorInsteadOfRequestAttribution() {
+    for (String username : Arrays.asList("original-saver", null)) {
+      TMService tmService = mock(TMService.class);
+      TMTextUnitVariant variant = new TMTextUnitVariant();
+      variant.setId(456L);
+      if (username != null) {
+        User creator = new User();
+        creator.setUsername(username);
+        variant.setCreatedByUser(creator);
+      }
+      User markerCreator = new User();
+      markerCreator.setUsername("current-marker-creator");
+      TMTextUnitCurrentVariant currentVariant = new TMTextUnitCurrentVariant();
+      currentVariant.setId(789L);
+      currentVariant.setCreatedByUser(markerCreator);
+      currentVariant.setTmTextUnitVariant(variant);
+      when(tmService.addTMTextUnitCurrentVariant(
+              321L, 12L, "Bonjour", null, TMTextUnitVariant.Status.APPROVED, true))
+          .thenReturn(currentVariant);
+      textUnitWS.tmService = tmService;
+      textUnitWS.userService = userServiceWithRole(Role.ROLE_ADMIN, true);
+      TextUnitDTO textUnit = new TextUnitDTO();
+      textUnit.setTmTextUnitId(321L);
+      textUnit.setLocaleId(12L);
+      textUnit.setTarget("Bonjour");
+      textUnit.setStatus(TMTextUnitVariant.Status.APPROVED);
+      textUnit.setIncludedInLocalizedFile(true);
+      textUnit.setTranslationCreatedByUsername("client-supplied-creator");
+
+      TextUnitDTO saved = textUnitWS.addTextUnit(textUnit);
+
+      assertEquals(username, saved.getTranslationCreatedByUsername());
+      assertEquals(Long.valueOf(456L), saved.getTmTextUnitVariantId());
+    }
+  }
+
+  @Test
   public void addTextUnitIntegrityOverrideStillRequiresLocaleAccess() {
     textUnitWS.userService = userServiceWithRole(Role.ROLE_ADMIN, false);
     textUnitWS.tmTextUnitIntegrityCheckService = mock(TMTextUnitIntegrityCheckService.class);

@@ -74,6 +74,7 @@ type WorkbenchBodyProps = {
   onChangeTranslationMarksMode: (mode: VisibleTextMarksMode) => void;
   showProtectedTokens: boolean;
   showDateMetadata: boolean;
+  showSavedBy: boolean;
 };
 
 type GlossaryWorkbenchTarget = {
@@ -133,6 +134,7 @@ export function WorkbenchBody({
   onChangeTranslationMarksMode,
   showProtectedTokens,
   showDateMetadata,
+  showSavedBy,
 }: WorkbenchBodyProps) {
   const navigate = useNavigate();
   const editingRow = editingRowId ? rows.find((row) => row.id === editingRowId) : null;
@@ -668,6 +670,14 @@ export function WorkbenchBody({
                         ) : null}
                       </div>
                       {showDateMetadata ? <WorkbenchDateMetadata row={row} /> : null}
+                      {showSavedBy && row.translation !== null ? (
+                        <div className="workbench-page__saved-by">
+                          <span className="workbench-page__saved-by-label">Saved by</span>
+                          <span className="workbench-page__saved-by-value">
+                            {row.translationCreatedByUsername?.trim() || 'unknown'}
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--source">
                       {useAssistedMf2 ? (

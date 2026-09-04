@@ -13,6 +13,8 @@ function renderWorksetBar({
   onChangeShowProtectedTokens = noop,
   onChangeShowDateMetadata = noop,
   showDateMetadata = false,
+  showSavedBy = false,
+  onChangeShowSavedBy = noop,
   showEditorDisplayOptions = true,
 }: {
   canManageTranslations: boolean;
@@ -20,6 +22,8 @@ function renderWorksetBar({
   onChangeShowProtectedTokens?: (show: boolean) => void;
   onChangeShowDateMetadata?: (show: boolean) => void;
   showDateMetadata?: boolean;
+  showSavedBy?: boolean;
+  onChangeShowSavedBy?: (show: boolean) => void;
   showEditorDisplayOptions?: boolean;
 }) {
   const collections: WorkbenchCollection[] = [];
@@ -53,6 +57,8 @@ function renderWorksetBar({
       onChangeShowProtectedTokens={onChangeShowProtectedTokens}
       showDateMetadata={showDateMetadata}
       onChangeShowDateMetadata={onChangeShowDateMetadata}
+      showSavedBy={showSavedBy}
+      onChangeShowSavedBy={onChangeShowSavedBy}
       onOpenExportModal={noop}
       onOpenImportModal={noop}
       onOpenShareModal={noop}
@@ -168,6 +174,33 @@ describe('WorkbenchWorksetBar permissions', () => {
 
     expect(handleChangeShowDateMetadata).toHaveBeenCalledWith(true);
   });
+
+  it.each([false, true])(
+    'toggles saver display for translators with the assisted editor off (shown: %s)',
+    async (showSavedBy) => {
+      const user = userEvent.setup();
+      const handleChangeShowSavedBy = vi.fn();
+      renderWorksetBar({
+        canManageTranslations: false,
+        showEditorDisplayOptions: false,
+        showSavedBy,
+        onChangeShowSavedBy: handleChangeShowSavedBy,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Display options' }));
+
+      expect(screen.getByText('Saved by')).toBeInTheDocument();
+      expect(screen.getByText('Dates')).toBeInTheDocument();
+      await user.click(
+        within(screen.getByRole('menu')).getByRole('button', {
+          name: showSavedBy ? /Hide who saved the translation/ : /Show who saved the translation/,
+        }),
+      );
+
+      expect(handleChangeShowSavedBy).toHaveBeenCalledWith(!showSavedBy);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    },
+  );
 
   it('keeps date display available when the assisted editor is off', async () => {
     const user = userEvent.setup();

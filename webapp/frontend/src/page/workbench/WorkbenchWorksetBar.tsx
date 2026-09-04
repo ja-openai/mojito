@@ -49,6 +49,11 @@ const dateMetadataOptions = [
   { value: 'off' as const, label: 'Off', helper: 'Hide row date metadata.' },
 ];
 
+const savedByOptions = [
+  { value: 'on' as const, label: 'On', helper: 'Show who saved the translation.' },
+  { value: 'off' as const, label: 'Off', helper: 'Hide who saved the translation.' },
+];
+
 type WorkbenchWorksetBarProps = {
   disabled: boolean;
   isAdmin: boolean;
@@ -77,6 +82,8 @@ type WorkbenchWorksetBarProps = {
   onChangeShowProtectedTokens: (show: boolean) => void;
   showDateMetadata: boolean;
   onChangeShowDateMetadata: (show: boolean) => void;
+  showSavedBy: boolean;
+  onChangeShowSavedBy: (show: boolean) => void;
   onOpenExportModal: () => void;
   onOpenImportModal: () => void;
   onOpenShareModal: () => void;
@@ -125,6 +132,8 @@ export function WorkbenchWorksetBar({
   onChangeShowProtectedTokens,
   showDateMetadata,
   onChangeShowDateMetadata,
+  showSavedBy,
+  onChangeShowSavedBy,
   onOpenExportModal,
   onOpenImportModal,
   onOpenShareModal,
@@ -231,6 +240,8 @@ export function WorkbenchWorksetBar({
         onChangeShowProtectedTokens={onChangeShowProtectedTokens}
         showDateMetadata={showDateMetadata}
         onChangeShowDateMetadata={onChangeShowDateMetadata}
+        showSavedBy={showSavedBy}
+        onChangeShowSavedBy={onChangeShowSavedBy}
       />,
     );
   }
@@ -334,6 +345,8 @@ function DisplayDropdown({
   onChangeShowProtectedTokens,
   showDateMetadata,
   onChangeShowDateMetadata,
+  showSavedBy,
+  onChangeShowSavedBy,
 }: {
   disabled: boolean;
   showEditorOptions: boolean;
@@ -343,6 +356,8 @@ function DisplayDropdown({
   onChangeShowProtectedTokens: (show: boolean) => void;
   showDateMetadata: boolean;
   onChangeShowDateMetadata: (show: boolean) => void;
+  showSavedBy: boolean;
+  onChangeShowSavedBy: (show: boolean) => void;
 }) {
   const tokenDisplayValue = showProtectedTokens ? 'on' : 'off';
   const dateMetadataValue = showDateMetadata ? 'on' : 'off';
@@ -373,6 +388,13 @@ function DisplayDropdown({
     options: dateMetadataOptions,
     value: dateMetadataValue,
     onChange: (value) => onChangeShowDateMetadata(value === 'on'),
+  });
+  sections.push({
+    kind: 'radio',
+    label: 'Saved by',
+    options: savedByOptions,
+    value: showSavedBy ? 'on' : 'off',
+    onChange: (value) => onChangeShowSavedBy(value === 'on'),
   });
 
   return (
