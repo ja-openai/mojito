@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ApiUserProfile } from './api/users';
 import { App } from './App';
+import type * as UserPreferencesHooks from './hooks/useUserPreferences';
 import {
   normalizeReviewProjectsSessionState,
   saveReviewProjectsSessionState,
@@ -23,6 +24,23 @@ vi.mock('./hooks/useCurrentUser', () => ({
     data: mockUserState.currentUser,
     isLoading: false,
     isError: false,
+  }),
+}));
+
+vi.mock('./hooks/useUserPreferences', async (importActual) => ({
+  ...(await importActual<typeof UserPreferencesHooks>()),
+  useUserPreferences: () => ({
+    data: {
+      initialized: true,
+      worksetSize: null,
+      preferredLocales: [],
+      shortcutHelp: null,
+      visibleTextEditorEnabled: false,
+      reviewProjectSearchEnabled: false,
+      defaultReviewTeamIds: [],
+    },
+    isError: false,
+    isFetching: false,
   }),
 }));
 

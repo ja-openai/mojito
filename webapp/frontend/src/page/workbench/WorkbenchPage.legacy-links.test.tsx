@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type * as TextUnitsApi from '../../api/text-units';
+import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
 import { WorkbenchPage } from './WorkbenchPage';
 
 const searchTextUnitsMock = vi.hoisted(() => vi.fn(() => Promise.resolve([])));
@@ -91,6 +92,16 @@ function renderWorkbench(path: string) {
     },
   });
 
+  queryClient.setQueryData(userPreferencesQueryKey('admin'), {
+    initialized: true,
+    worksetSize: 100,
+    preferredLocales: ['fr'],
+    shortcutHelp: null,
+    visibleTextEditorEnabled: false,
+    reviewProjectSearchEnabled: false,
+    defaultReviewTeamIds: [],
+  });
+
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[path]}>
@@ -124,6 +135,7 @@ describe('WorkbenchPage legacy links', () => {
         expect.objectContaining({
           repositoryIds: [22],
           localeTags: ['fr'],
+          limit: 101,
           textSearch: {
             operator: 'AND',
             predicates: [

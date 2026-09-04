@@ -11,6 +11,7 @@ import type * as GlossariesApi from '../../api/glossaries';
 import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
 import type * as TextUnitsApi from '../../api/text-units';
+import type { ApiUserPreferences } from '../../api/userPreferences';
 import type { ApiUserProfile } from '../../api/users';
 import type * as Mf2TranslationEditorModule from '../../components/mf2/Mf2TranslationEditor';
 import type {
@@ -20,10 +21,7 @@ import type {
 import { REPOSITORIES_QUERY_KEY } from '../../hooks/useRepositories';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import { UserContext } from '../../hooks/useUser';
-import {
-  getReviewProjectSearchEnabledKey,
-  saveReviewProjectSearchEnabled,
-} from '../../utils/reviewProjectSearchPreference';
+import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
 import {
   type ReviewProjectMutationControls,
   useReviewProjectMutations,
@@ -37,6 +35,23 @@ const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
 const visibleTextEditorEnabledMock = vi.hoisted(() => vi.fn(() => true));
 const mf2TranslationEditorHostMock = vi.hoisted(() => ({ enabled: false, errorCount: 0 }));
 const searchTextUnitsMock = vi.hoisted(() => vi.fn());
+const fetchUserPreferencesMock = vi.hoisted(() => vi.fn());
+const saveUserPreferencesMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../../api/userPreferences', () => ({
+  fetchUserPreferences: fetchUserPreferencesMock,
+  saveUserPreferences: saveUserPreferencesMock,
+}));
+
+const preferences: ApiUserPreferences = {
+  initialized: true,
+  worksetSize: null,
+  preferredLocales: [],
+  shortcutHelp: null,
+  visibleTextEditorEnabled: false,
+  reviewProjectSearchEnabled: false,
+  defaultReviewTeamIds: [],
+};
 
 vi.mock('../../api/text-units', async (importActual) => ({
   ...(await importActual<typeof TextUnitsApi>()),
@@ -188,6 +203,9 @@ beforeAll(() => {
 
 beforeEach(() => {
   window.localStorage.clear();
+  fetchUserPreferencesMock.mockReset();
+  fetchUserPreferencesMock.mockResolvedValue(preferences);
+  saveUserPreferencesMock.mockReset();
   fetchPrecomputedAiReviewMock.mockReset();
   fetchPrecomputedAiReviewMock.mockResolvedValue(null);
   requestAiReviewMock.mockReset();
@@ -392,6 +410,34 @@ function renderReviewProjectPageViewNode(
 }
 
 describe('ReviewProjectPageView', () => {
+  it('keeps the saved shortcut preference on a failed save and allows retrying', async () => {
+    fetchUserPreferencesMock.mockResolvedValue({ ...preferences, shortcutHelp: 'header' });
+    saveUserPreferencesMock.mockRejectedValueOnce(new Error('Network unavailable'));
+    renderReviewProjectPageView();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keyboard shortcuts' }));
+    const shortcutBar = screen.getByRole('checkbox', { name: 'Show shortcut bar at the bottom' });
+    await waitFor(() => expect(shortcutBar).not.toBeChecked());
+    fireEvent.click(shortcutBar);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not save shortcut preference. Please try again.',
+    );
+    expect(shortcutBar).not.toBeChecked();
+    expect(shortcutBar).toBeEnabled();
+    expect(saveUserPreferencesMock).toHaveBeenCalledWith(
+      { shortcutHelp: 'bottom' },
+      expect.anything(),
+    );
+
+    saveUserPreferencesMock.mockResolvedValueOnce({ ...preferences, shortcutHelp: 'bottom' });
+    fireEvent.click(shortcutBar);
+
+    await waitFor(() => expect(shortcutBar).toBeChecked());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(saveUserPreferencesMock).toHaveBeenCalledTimes(2);
+  });
+
   it('links open translation projects to find and replace', () => {
     renderReviewProjectPageView();
 
@@ -550,12 +596,15 @@ describe('ReviewProjectPageView', () => {
   );
 
   it('lets opted-in translators use Search without changing or saving the translation draft', async () => {
-    saveReviewProjectSearchEnabled(true, user.username);
     visibleTextEditorEnabledMock.mockReturnValue(false);
     const onRequestSaveDecision = vi.fn();
     const onRequestDecisionState = vi.fn();
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(userPreferencesQueryKey(user.username), {
+      ...preferences,
+      reviewProjectSearchEnabled: true,
     });
     queryClient.setQueryData(REPOSITORIES_QUERY_KEY, [
       { id: 1, name: 'example-mobile' },
@@ -615,25 +664,39 @@ describe('ReviewProjectPageView', () => {
     expect(onRequestSaveDecision).not.toHaveBeenCalled();
     expect(onRequestDecisionState).not.toHaveBeenCalled();
 
-    act(() => saveReviewProjectSearchEnabled(false, user.username));
-    expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument();
+    act(() => {
+      queryClient.setQueryData(userPreferencesQueryKey(user.username), preferences);
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument(),
+    );
     expect(screen.queryByRole('region', { name: 'Translation search' })).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /^Glossary/ })).toHaveAttribute('aria-selected', 'true');
     expect(editor).toHaveValue('Pague {price} agora');
 
-    act(() => saveReviewProjectSearchEnabled(true, 'another-user'));
-    expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument();
-    act(() => saveReviewProjectSearchEnabled(true, user.username));
-    fireEvent.click(screen.getByRole('tab', { name: 'Search' }));
-    expect(screen.getByRole('searchbox', { name: 'Search translation' })).toHaveValue('');
-
-    // A saved preference in another browser tab updates an already-open review.
-    const storageKey = getReviewProjectSearchEnabledKey(user.username);
     act(() => {
-      window.localStorage.removeItem(storageKey);
-      window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: null }));
+      queryClient.setQueryData(userPreferencesQueryKey('another-user'), {
+        ...preferences,
+        reviewProjectSearchEnabled: true,
+      });
     });
     expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument();
+    act(() => {
+      queryClient.setQueryData(userPreferencesQueryKey(user.username), {
+        ...preferences,
+        reviewProjectSearchEnabled: true,
+      });
+    });
+    fireEvent.click(await screen.findByRole('tab', { name: 'Search' }));
+    expect(screen.getByRole('searchbox', { name: 'Search translation' })).toHaveValue('');
+
+    // A server refresh updates an already-open review without losing its draft.
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: userPreferencesQueryKey(user.username) });
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument(),
+    );
     expect(screen.getByRole('tab', { name: /^Glossary/ })).toHaveAttribute('aria-selected', 'true');
     expect(editor).toHaveValue('Pague {price} agora');
     expect(searchTextUnitsMock).toHaveBeenCalledTimes(1);

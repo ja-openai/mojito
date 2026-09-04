@@ -12,8 +12,10 @@ import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.entity.security.user.UserLocale;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.security.Role;
+import com.box.l10n.mojito.service.security.user.UserPreferencesService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -48,6 +50,18 @@ public class UserWS {
   @Autowired AuditorAwareImpl auditorAwareImpl;
 
   @Autowired UserProfileMapper userProfileMapper;
+
+  @Autowired UserPreferencesService userPreferencesService;
+
+  @RequestMapping(value = "/api/users/me/preferences", method = RequestMethod.GET)
+  public UserPreferences getCurrentUserPreferences() {
+    return userPreferencesService.getCurrentUserPreferences();
+  }
+
+  @RequestMapping(value = "/api/users/me/preferences", method = RequestMethod.PATCH)
+  public UserPreferences patchCurrentUserPreferences(@RequestBody JsonNode patch) {
+    return userPreferencesService.patchCurrentUserPreferences(patch);
+  }
 
   /**
    * Returns list of {@link User}

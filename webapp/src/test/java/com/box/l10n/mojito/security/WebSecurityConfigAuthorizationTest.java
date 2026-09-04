@@ -3,6 +3,7 @@ package com.box.l10n.mojito.security;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,6 +23,7 @@ import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,6 +41,7 @@ public class WebSecurityConfigAuthorizationTest {
   private static final String RECOMPUTE_RESULT_PATH = RECOMPUTE_PATH + "/results/test-result";
   private static final String TRANSLATION_CORRECTIONS_PATH =
       "/api/admin/translation-corrections/apply";
+  private static final String PREFERENCES_PATH = "/api/users/me/preferences";
 
   @Autowired WebApplicationContext applicationContext;
 
@@ -91,6 +94,32 @@ public class WebSecurityConfigAuthorizationTest {
         .andExpect(status().isOk());
   }
 
+  @Test
+  public void allAuthenticatedRolesCanReadAndSaveTheirPreferences() throws Exception {
+    for (String role : List.of("USER", "TRANSLATOR", "PM", "ADMIN")) {
+      mockMvc
+          .perform(get(PREFERENCES_PATH).with(user("test").roles(role)))
+          .andExpect(status().isOk());
+      mockMvc
+          .perform(patch(PREFERENCES_PATH).with(user("test").roles(role)))
+          .andExpect(status().isOk());
+    }
+  }
+
+  @Test
+  public void preferenceRouteDoesNotOpenUserManagementOrAnonymousAccess() throws Exception {
+    mockMvc.perform(get(PREFERENCES_PATH)).andExpect(status().isForbidden());
+    mockMvc.perform(patch(PREFERENCES_PATH)).andExpect(status().isForbidden());
+    for (String role : List.of("USER", "TRANSLATOR")) {
+      mockMvc
+          .perform(patch("/api/users/123").with(user("test").roles(role)))
+          .andExpect(status().isForbidden());
+      mockMvc
+          .perform(get("/api/users/123/preferences").with(user("test").roles(role)))
+          .andExpect(status().isForbidden());
+    }
+  }
+
   @Configuration
   @EnableWebMvc
   @EnableWebSecurity
@@ -111,6 +140,16 @@ public class WebSecurityConfigAuthorizationTest {
 
   @RestController
   static class LinguistTimeSpentStubController {
+
+    @GetMapping(PREFERENCES_PATH)
+    String getPreferences() {
+      return "ok";
+    }
+
+    @PatchMapping(PREFERENCES_PATH)
+    String patchPreferences() {
+      return "ok";
+    }
 
     @GetMapping(REPORT_PATH)
     String report() {

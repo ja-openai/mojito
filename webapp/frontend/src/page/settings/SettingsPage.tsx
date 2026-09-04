@@ -1,42 +1,28 @@
 import './settings-page.css';
 
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { fetchTeams } from '../../api/teams';
+import type { ApiUserPreferences, UserPreferencesPatch } from '../../api/userPreferences';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import { TeamMultiSelect, type TeamMultiSelectOption } from '../../components/TeamMultiSelect';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useUser } from '../../hooks/useUser';
+import { useSaveUserPreferences, useUserPreferences } from '../../hooks/useUserPreferences';
 import { hasSameSet } from '../../utils/arraySelection';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
-import {
-  loadReviewProjectSearchEnabled,
-  saveReviewProjectSearchEnabled,
-} from '../../utils/reviewProjectSearchPreference';
-import {
-  loadVisibleTextEditorEnabled,
-  saveVisibleTextEditorEnabled,
-} from '../../utils/visibleTextEditorPreference';
+import { loadReviewProjectSearchEnabled } from '../../utils/reviewProjectSearchPreference';
+import { loadVisibleTextEditorEnabled } from '../../utils/visibleTextEditorPreference';
 import {
   getDefaultReviewProjectShortcutHelpPreference,
   loadReviewProjectShortcutHelpPreference,
   type ReviewProjectShortcutHelpPreference,
-  saveReviewProjectShortcutHelpPreference,
 } from '../review-project/review-project-preferences';
-import {
-  loadDefaultReviewProjectTeamIds,
-  saveDefaultReviewProjectTeamIds,
-} from '../review-projects/review-projects-preferences';
+import { loadDefaultReviewProjectTeamIds } from '../review-projects/review-projects-preferences';
 import { WORKSET_SIZE_DEFAULT } from '../workbench/workbench-constants';
-import {
-  loadPreferredLocales,
-  loadPreferredWorksetSize,
-  PREFERRED_LOCALES_KEY,
-  savePreferredLocales,
-  savePreferredWorksetSize,
-} from '../workbench/workbench-preferences';
+import { loadPreferredLocales, loadPreferredWorksetSize } from '../workbench/workbench-preferences';
 
 function sameLocales(first: string[], second: string[]) {
   return (
@@ -45,51 +31,114 @@ function sameLocales(first: string[], second: string[]) {
   );
 }
 
+type SettingsDraft = Omit<ApiUserPreferences, 'initialized' | 'worksetSize' | 'shortcutHelp'> & {
+  worksetSize: string;
+  shortcutHelp: ReviewProjectShortcutHelpPreference;
+};
+
+function toDraft(
+  preferences: ApiUserPreferences,
+  defaultShortcut: ReviewProjectShortcutHelpPreference,
+): SettingsDraft {
+  return {
+    preferredLocales: preferences.preferredLocales,
+    defaultReviewTeamIds: preferences.defaultReviewTeamIds,
+    visibleTextEditorEnabled: preferences.visibleTextEditorEnabled,
+    reviewProjectSearchEnabled: preferences.reviewProjectSearchEnabled,
+    worksetSize: preferences.worksetSize == null ? '' : String(preferences.worksetSize),
+    shortcutHelp: preferences.shortcutHelp ?? defaultShortcut,
+  };
+}
+
+function sameDraft(a: SettingsDraft, b: SettingsDraft) {
+  return (
+    a.worksetSize === b.worksetSize &&
+    sameLocales(a.preferredLocales, b.preferredLocales) &&
+    a.shortcutHelp === b.shortcutHelp &&
+    a.visibleTextEditorEnabled === b.visibleTextEditorEnabled &&
+    a.reviewProjectSearchEnabled === b.reviewProjectSearchEnabled &&
+    hasSameSet(a.defaultReviewTeamIds, b.defaultReviewTeamIds)
+  );
+}
+
 export function SettingsPage() {
+  const user = useUser();
+  const preferencesQuery = useUserPreferences();
+  if (!preferencesQuery.data) {
+    return (
+      <div role={preferencesQuery.isError ? 'alert' : 'status'}>
+        {preferencesQuery.isError ? 'Could not load your settings.' : 'Loading settings…'}
+        {preferencesQuery.isError ? (
+          <button type="button" onClick={() => void preferencesQuery.refetch()}>
+            Try again
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+  return <SettingsForm key={user.username} preferences={preferencesQuery.data} />;
+}
+
+function SettingsForm({ preferences }: { preferences: ApiUserPreferences }) {
   const user = useUser();
   const username = user.username;
   const defaultShortcutHelpPreference = getDefaultReviewProjectShortcutHelpPreference(user.role);
   const canConfigureDefaultReviewTeams = user.role === 'ROLE_ADMIN' || user.role === 'ROLE_PM';
   const { data: repositories } = useRepositories();
   const teamsQuery = useQuery({
-    queryKey: ['teams', 'settings-default-review-teams'],
+    queryKey: ['teams', 'settings-default-review-teams', username],
     queryFn: fetchTeams,
     enabled: canConfigureDefaultReviewTeams,
   });
+  const savePreferences = useSaveUserPreferences();
   const resolveLocaleName = useLocaleDisplayNameResolver();
-  const [savedWorkset, setSavedWorkset] = useState<number | null>(() => loadPreferredWorksetSize());
-  const [savedPreferredLocales, setSavedPreferredLocales] = useState<string[]>(() =>
-    loadPreferredLocales(),
-  );
-  const [savedDefaultReviewTeamIds, setSavedDefaultReviewTeamIds] = useState<number[]>(() =>
-    loadDefaultReviewProjectTeamIds(username),
-  );
-  const [defaultReviewTeamDraft, setDefaultReviewTeamDraft] = useState<number[]>(() =>
-    loadDefaultReviewProjectTeamIds(username),
-  );
-  const [savedShortcutHelpPreference, setSavedShortcutHelpPreference] =
-    useState<ReviewProjectShortcutHelpPreference>(() =>
-      loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
-    );
-  const [shortcutHelpDraft, setShortcutHelpDraft] = useState(savedShortcutHelpPreference);
+  const [form, setForm] = useState(() => {
+    const saved = toDraft(preferences, defaultShortcutHelpPreference);
+    let draft = saved;
+    // Old browser values are only a draft. They become account settings on explicit Save.
+    if (!preferences.initialized) {
+      try {
+        const workset = loadPreferredWorksetSize();
+        draft = {
+          worksetSize: workset == null ? '' : String(workset),
+          preferredLocales: loadPreferredLocales(),
+          shortcutHelp: loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
+          visibleTextEditorEnabled: loadVisibleTextEditorEnabled(username),
+          reviewProjectSearchEnabled: loadReviewProjectSearchEnabled(username),
+          defaultReviewTeamIds: canConfigureDefaultReviewTeams
+            ? loadDefaultReviewProjectTeamIds(username)
+            : [],
+        };
+      } catch {
+        /* Browser storage may be unavailable; account settings still work. */
+      }
+    }
+    return { saved, draft };
+  });
+  const [hasBrowserPreferences] = useState(() => !sameDraft(form.saved, form.draft));
+  const [initializeOnSave, setInitializeOnSave] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
-  const [savedVisibleTextEditorEnabled, setSavedVisibleTextEditorEnabled] = useState(() =>
-    loadVisibleTextEditorEnabled(username),
-  );
-  const [visibleTextEditorDraft, setVisibleTextEditorDraft] = useState(() =>
-    loadVisibleTextEditorEnabled(username),
-  );
-  const [savedReviewProjectSearchEnabled, setSavedReviewProjectSearchEnabled] = useState(() =>
-    loadReviewProjectSearchEnabled(username),
-  );
-  const [reviewProjectSearchDraft, setReviewProjectSearchDraft] = useState(() =>
-    loadReviewProjectSearchEnabled(username),
-  );
-  const [worksetDraft, setWorksetDraft] = useState<string>(() =>
-    savedWorkset == null ? '' : String(savedWorkset),
-  );
-  const [preferredLocalesDraft, setPreferredLocalesDraft] =
-    useState<string[]>(savedPreferredLocales);
+  const { saved, draft } = form;
+  const setDraft = <K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) => {
+    setForm((current) => ({ ...current, draft: { ...current.draft, [key]: value } }));
+    setSaveStatus('idle');
+  };
+
+  const worksetDraft = draft.worksetSize;
+  const preferredLocalesDraft = draft.preferredLocales;
+  const defaultReviewTeamDraft = draft.defaultReviewTeamIds;
+  const shortcutHelpDraft = draft.shortcutHelp;
+  const visibleTextEditorDraft = draft.visibleTextEditorEnabled;
+  const reviewProjectSearchDraft = draft.reviewProjectSearchEnabled;
+  const savedPreferredLocales = saved.preferredLocales;
+  const setWorksetDraft = (value: string) => setDraft('worksetSize', value);
+  const setPreferredLocalesDraft = (value: string[]) => setDraft('preferredLocales', value);
+  const setDefaultReviewTeamDraft = (value: number[]) => setDraft('defaultReviewTeamIds', value);
+  const setShortcutHelpDraft = (value: ReviewProjectShortcutHelpPreference) =>
+    setDraft('shortcutHelp', value);
+  const setVisibleTextEditorDraft = (value: boolean) => setDraft('visibleTextEditorEnabled', value);
+  const setReviewProjectSearchDraft = (value: boolean) =>
+    setDraft('reviewProjectSearchEnabled', value);
 
   const localeOptions = useMemo(() => {
     const repositoryOptions = buildLocaleOptionsFromRepositories(
@@ -97,22 +146,14 @@ export function SettingsPage() {
       resolveLocaleName,
     );
     const seen = new Set(repositoryOptions.map((option) => option.tag.toLowerCase()));
-    const mergedSelections = [
-      ...savedPreferredLocales,
-      ...preferredLocalesDraft,
-      ...user.userLocales,
-    ];
-    const extraOptions = mergedSelections
+    const extraOptions = [...savedPreferredLocales, ...preferredLocalesDraft, ...user.userLocales]
       .filter((tag) => {
         const lower = tag.toLowerCase();
-        if (seen.has(lower)) {
-          return false;
-        }
+        if (seen.has(lower)) return false;
         seen.add(lower);
         return true;
       })
       .map((tag) => ({ tag, label: resolveLocaleName(tag) }));
-
     return [...repositoryOptions, ...extraOptions].sort((first, second) =>
       first.tag.localeCompare(second.tag, undefined, { sensitivity: 'base' }),
     );
@@ -126,14 +167,9 @@ export function SettingsPage() {
   const defaultReviewTeamOptions = useMemo<TeamMultiSelectOption[]>(() => {
     const seen = new Set<number>();
     return (teamsQuery.data ?? [])
-      .map((team) => ({
-        id: team.id,
-        name: team.name.trim() || `Team #${team.id}`,
-      }))
+      .map((team) => ({ id: team.id, name: team.name.trim() || `Team #${team.id}` }))
       .filter((option) => {
-        if (!Number.isInteger(option.id) || option.id <= 0 || seen.has(option.id)) {
-          return false;
-        }
+        if (!Number.isInteger(option.id) || option.id <= 0 || seen.has(option.id)) return false;
         seen.add(option.id);
         return true;
       })
@@ -141,94 +177,46 @@ export function SettingsPage() {
         first.name.localeCompare(second.name, undefined, { sensitivity: 'base' }),
       );
   }, [teamsQuery.data]);
-  const availableDefaultReviewTeamIdSet = useMemo(
-    () => new Set(defaultReviewTeamOptions.map((option) => option.id)),
-    [defaultReviewTeamOptions],
+  const normalizeDraft = useCallback(
+    (value: SettingsDraft): SettingsDraft => {
+      if (!teamsQuery.isSuccess) return value;
+      const available = new Set(defaultReviewTeamOptions.map((team) => team.id));
+      return {
+        ...value,
+        defaultReviewTeamIds: value.defaultReviewTeamIds.filter((id) => available.has(id)),
+      };
+    },
+    [defaultReviewTeamOptions, teamsQuery.isSuccess],
   );
 
+  // Apply refreshed account values when the form becomes clean, preserving edits in progress.
   useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key && event.key !== PREFERRED_LOCALES_KEY) {
-        return;
+    setForm((current) => {
+      const nextSaved = normalizeDraft(current.saved);
+      const nextDraft = normalizeDraft(current.draft);
+      if (!initializeOnSave && sameDraft(nextSaved, nextDraft)) {
+        const next = normalizeDraft(toDraft(preferences, defaultShortcutHelpPreference));
+        return sameDraft(current.saved, next) && sameDraft(current.draft, next)
+          ? current
+          : { saved: next, draft: next };
       }
-      const next = loadPreferredLocales();
-      setPreferredLocalesDraft((draft) =>
-        sameLocales(draft, savedPreferredLocales) ? next : draft,
-      );
-      setSavedPreferredLocales(next);
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [savedPreferredLocales]);
-
-  useEffect(() => {
-    const nextWorkset = loadPreferredWorksetSize();
-    setSavedWorkset(nextWorkset);
-    setWorksetDraft(nextWorkset == null ? '' : String(nextWorkset));
-    const nextLocales = loadPreferredLocales();
-    setSavedPreferredLocales(nextLocales);
-    setPreferredLocalesDraft(nextLocales);
-    const nextShortcutHelp = loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference);
-    setSavedShortcutHelpPreference(nextShortcutHelp);
-    setShortcutHelpDraft(nextShortcutHelp);
-    const nextVisibleTextEditorEnabled = loadVisibleTextEditorEnabled(username);
-    setSavedVisibleTextEditorEnabled(nextVisibleTextEditorEnabled);
-    setVisibleTextEditorDraft(nextVisibleTextEditorEnabled);
-    const nextSearchEnabled = loadReviewProjectSearchEnabled(username);
-    setSavedReviewProjectSearchEnabled(nextSearchEnabled);
-    setReviewProjectSearchDraft(nextSearchEnabled);
-    const nextDefaultReviewTeamIds = loadDefaultReviewProjectTeamIds(username);
-    setSavedDefaultReviewTeamIds(nextDefaultReviewTeamIds);
-    setDefaultReviewTeamDraft(nextDefaultReviewTeamIds);
-    setSaveStatus('idle');
-  }, [username, defaultShortcutHelpPreference]);
-
-  useEffect(() => {
-    if (!teamsQuery.isSuccess) {
-      return;
-    }
-    const pruneUnavailableTeamIds = (teamIds: number[]) =>
-      teamIds.filter((teamId) => availableDefaultReviewTeamIdSet.has(teamId));
-
-    setSavedDefaultReviewTeamIds((previous) => {
-      const next = pruneUnavailableTeamIds(previous);
-      return hasSameSet(previous, next) ? previous : next;
+      return sameDraft(current.saved, nextSaved) && sameDraft(current.draft, nextDraft)
+        ? current
+        : { saved: nextSaved, draft: nextDraft };
     });
-    setDefaultReviewTeamDraft((previous) => {
-      const next = pruneUnavailableTeamIds(previous);
-      return hasSameSet(previous, next) ? previous : next;
-    });
-  }, [availableDefaultReviewTeamIdSet, teamsQuery.isSuccess]);
+  }, [preferences, defaultShortcutHelpPreference, normalizeDraft, initializeOnSave, saved, draft]);
 
   const trimmedWorkset = worksetDraft.trim();
-  const parsedWorkset = useMemo(() => {
-    if (!trimmedWorkset) {
-      return { value: null as number | null, valid: true };
-    }
-    const parsed = Number(trimmedWorkset);
-    if (!Number.isSafeInteger(parsed) || parsed < 1) {
-      return { value: null as number | null, valid: false };
-    }
-    return { value: parsed, valid: true };
-  }, [trimmedWorkset]);
-
-  const worksetError = !parsedWorkset.valid ? 'Enter a positive whole number.' : null;
-  const isWorksetDirty = trimmedWorkset !== (savedWorkset == null ? '' : String(savedWorkset));
-  const isPreferredLocalesDirty = !sameLocales(preferredLocalesDraft, savedPreferredLocales);
-  const isDefaultReviewTeamsDirty = useMemo(
-    () => !hasSameSet(defaultReviewTeamDraft, savedDefaultReviewTeamIds),
-    [defaultReviewTeamDraft, savedDefaultReviewTeamIds],
-  );
-  const isShortcutHelpDirty = shortcutHelpDraft !== savedShortcutHelpPreference;
-  const isVisibleTextEditorDirty = visibleTextEditorDraft !== savedVisibleTextEditorEnabled;
-  const isReviewProjectSearchDirty = reviewProjectSearchDraft !== savedReviewProjectSearchEnabled;
-  const isDirty =
-    isWorksetDirty ||
-    isPreferredLocalesDirty ||
-    isShortcutHelpDirty ||
-    isVisibleTextEditorDirty ||
-    isReviewProjectSearchDirty ||
-    (canConfigureDefaultReviewTeams && isDefaultReviewTeamsDirty);
+  const parsedWorkset = {
+    value: trimmedWorkset ? Number(trimmedWorkset) : null,
+    valid:
+      !trimmedWorkset ||
+      (Number.isInteger(Number(trimmedWorkset)) &&
+        Number(trimmedWorkset) >= 1 &&
+        Number(trimmedWorkset) <= 2147483647),
+  };
+  const worksetError = !parsedWorkset.valid ? 'Enter a whole number from 1 to 2147483647.' : null;
+  const isDirty = initializeOnSave || !sameDraft(draft, saved);
   const canRestoreDefaults =
     trimmedWorkset !== '' ||
     preferredLocalesDraft.length > 0 ||
@@ -236,76 +224,57 @@ export function SettingsPage() {
     visibleTextEditorDraft ||
     reviewProjectSearchDraft ||
     (canConfigureDefaultReviewTeams && defaultReviewTeamDraft.length > 0);
+  const isSaving = savePreferences.isPending;
 
-  const handleSave = () => {
-    if (!parsedWorkset.valid || !isDirty) {
-      return;
-    }
+  const handleSave = async () => {
+    if (!parsedWorkset.valid || !isDirty || isSaving) return;
+    const patch: UserPreferencesPatch = {};
+    if (draft.worksetSize !== saved.worksetSize) patch.worksetSize = parsedWorkset.value;
+    if (!sameLocales(draft.preferredLocales, saved.preferredLocales))
+      patch.preferredLocales = draft.preferredLocales;
+    if (draft.shortcutHelp !== saved.shortcutHelp)
+      patch.shortcutHelp =
+        draft.shortcutHelp === defaultShortcutHelpPreference ? null : draft.shortcutHelp;
+    if (draft.visibleTextEditorEnabled !== saved.visibleTextEditorEnabled)
+      patch.visibleTextEditorEnabled = draft.visibleTextEditorEnabled;
+    if (draft.reviewProjectSearchEnabled !== saved.reviewProjectSearchEnabled)
+      patch.reviewProjectSearchEnabled = draft.reviewProjectSearchEnabled;
+    if (
+      canConfigureDefaultReviewTeams &&
+      !hasSameSet(draft.defaultReviewTeamIds, saved.defaultReviewTeamIds)
+    )
+      patch.defaultReviewTeamIds = draft.defaultReviewTeamIds;
     try {
-      // Only write changed preferences so unrelated updates in another tab are preserved.
-      if (isWorksetDirty) {
-        savePreferredWorksetSize(parsedWorkset.value);
-        const saved = loadPreferredWorksetSize();
-        if (saved !== parsedWorkset.value) throw new Error('Workset preference was not saved');
-        setSavedWorkset(saved);
-        setWorksetDraft(saved == null ? '' : String(saved));
-      }
-      if (isPreferredLocalesDirty) {
-        savePreferredLocales(preferredLocalesDraft);
-        const saved = loadPreferredLocales();
-        if (!sameLocales(saved, preferredLocalesDraft)) throw new Error('Locales were not saved');
-        setSavedPreferredLocales(saved);
-        setPreferredLocalesDraft(saved);
-      }
-      if (isShortcutHelpDirty) {
-        saveReviewProjectShortcutHelpPreference(shortcutHelpDraft, defaultShortcutHelpPreference);
-        const saved = loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference);
-        if (saved !== shortcutHelpDraft) throw new Error('Shortcut preference was not saved');
-        setSavedShortcutHelpPreference(saved);
-      }
-      if (isVisibleTextEditorDirty) {
-        saveVisibleTextEditorEnabled(visibleTextEditorDraft, username);
-        const saved = loadVisibleTextEditorEnabled(username);
-        if (saved !== visibleTextEditorDraft) throw new Error('Editor preference was not saved');
-        setSavedVisibleTextEditorEnabled(saved);
-      }
-      if (isReviewProjectSearchDirty) {
-        saveReviewProjectSearchEnabled(reviewProjectSearchDraft, username);
-        const saved = loadReviewProjectSearchEnabled(username);
-        if (saved !== reviewProjectSearchDraft) throw new Error('Search preference was not saved');
-        setSavedReviewProjectSearchEnabled(saved);
-      }
-      if (canConfigureDefaultReviewTeams && isDefaultReviewTeamsDirty) {
-        saveDefaultReviewProjectTeamIds(defaultReviewTeamDraft, username);
-        const saved = loadDefaultReviewProjectTeamIds(username);
-        if (!hasSameSet(saved, defaultReviewTeamDraft))
-          throw new Error('Default teams were not saved');
-        setSavedDefaultReviewTeamIds(saved);
-        setDefaultReviewTeamDraft(saved);
-      }
+      const response = await savePreferences.mutateAsync(patch);
+      const next = normalizeDraft(toDraft(response, defaultShortcutHelpPreference));
+      setInitializeOnSave(false);
+      setForm({ saved: next, draft: next });
       setSaveStatus('saved');
     } catch {
       setSaveStatus('error');
     }
   };
-
   const handleDiscard = () => {
-    setWorksetDraft(savedWorkset == null ? '' : String(savedWorkset));
-    setPreferredLocalesDraft(savedPreferredLocales);
-    setShortcutHelpDraft(savedShortcutHelpPreference);
-    setVisibleTextEditorDraft(savedVisibleTextEditorEnabled);
-    setReviewProjectSearchDraft(savedReviewProjectSearchEnabled);
-    setDefaultReviewTeamDraft(savedDefaultReviewTeamIds);
+    const next = normalizeDraft(toDraft(preferences, defaultShortcutHelpPreference));
+    setInitializeOnSave(false);
+    setForm({ saved: next, draft: next });
     setSaveStatus('idle');
   };
-
   const handleRestoreDefaults = () => {
-    setWorksetDraft('');
-    setPreferredLocalesDraft([]);
-    setShortcutHelpDraft(defaultShortcutHelpPreference);
-    setVisibleTextEditorDraft(false);
-    setReviewProjectSearchDraft(false);
-    if (canConfigureDefaultReviewTeams) setDefaultReviewTeamDraft([]);
+    setInitializeOnSave(!preferences.initialized);
+    setForm((current) => ({
+      saved: normalizeDraft(toDraft(preferences, defaultShortcutHelpPreference)),
+      draft: {
+        worksetSize: '',
+        preferredLocales: [],
+        shortcutHelp: defaultShortcutHelpPreference,
+        visibleTextEditorEnabled: false,
+        reviewProjectSearchEnabled: false,
+        defaultReviewTeamIds: canConfigureDefaultReviewTeams
+          ? []
+          : current.draft.defaultReviewTeamIds,
+      },
+    }));
     setSaveStatus('idle');
   };
 
@@ -315,9 +284,17 @@ export function SettingsPage() {
         <div className="settings-page settings-page--personal">
           <div className="settings-page__header">
             <h1>My Settings</h1>
-            <p className="settings-page__lead">Customize your experience in this browser.</p>
+            <p className="settings-page__lead">
+              Customize your experience across browsers and devices.
+            </p>
           </div>
 
+          {!preferences.initialized && hasBrowserPreferences && isDirty ? (
+            <p className="settings-note">
+              Save to keep these settings with your account. Existing browser settings are included
+              in this draft.
+            </p>
+          ) : null}
           <section className="settings-card" aria-labelledby="settings-workbench">
             <div className="settings-card__header">
               <h2 id="settings-workbench">Workbench</h2>
@@ -333,6 +310,8 @@ export function SettingsPage() {
                 <input
                   id="workset-size-input"
                   type="number"
+                  disabled={isSaving}
+                  max={2147483647}
                   min={1}
                   step={1}
                   aria-invalid={!parsedWorkset.valid}
@@ -363,6 +342,7 @@ export function SettingsPage() {
               <label className="settings-radio-option">
                 <input
                   type="checkbox"
+                  disabled={isSaving}
                   checked={visibleTextEditorDraft}
                   onChange={(event) => setVisibleTextEditorDraft(event.target.checked)}
                 />
@@ -372,8 +352,7 @@ export function SettingsPage() {
                     details
                   </span>
                   <span className="settings-hint">
-                    Adds issue highlights and protected placeholder chips. Saved for your account in
-                    this browser.
+                    Adds issue highlights and protected placeholder chips.
                   </span>
                 </span>
               </label>
@@ -392,6 +371,7 @@ export function SettingsPage() {
               <label className="settings-radio-option">
                 <input
                   type="checkbox"
+                  disabled={isSaving}
                   checked={reviewProjectSearchDraft}
                   onChange={(event) => setReviewProjectSearchDraft(event.target.checked)}
                 />
@@ -400,8 +380,7 @@ export function SettingsPage() {
                     Show Search in Review Project and text-unit details (preview)
                   </span>
                   <span className="settings-hint">
-                    Search current translations across repositories. Saved for your account in this
-                    browser.
+                    Search current translations across repositories.
                   </span>
                 </span>
               </label>
@@ -417,6 +396,7 @@ export function SettingsPage() {
               <label className="settings-radio-option">
                 <input
                   type="checkbox"
+                  disabled={isSaving}
                   checked={shortcutHelpDraft === 'bottom'}
                   onChange={(event) =>
                     setShortcutHelpDraft(event.target.checked ? 'bottom' : 'header')
@@ -446,7 +426,7 @@ export function SettingsPage() {
                   selectedIds={defaultReviewTeamDraft}
                   onChange={setDefaultReviewTeamDraft}
                   className="settings-repository-select"
-                  disabled={teamsQuery.isLoading}
+                  disabled={isSaving || teamsQuery.isLoading || teamsQuery.isError}
                   buttonAriaLabel="Select default review teams"
                   placeholder="No default teams"
                   emptyOptionsLabel={teamsQuery.isLoading ? 'Loading teams' : 'No teams'}
@@ -483,6 +463,7 @@ export function SettingsPage() {
               </div>
               <LocaleMultiSelect
                 label="Preferred locales"
+                disabled={isSaving}
                 options={localeOptions}
                 selectedTags={preferredLocalesDraft}
                 onChange={setPreferredLocalesDraft}
@@ -500,7 +481,7 @@ export function SettingsPage() {
               type="button"
               className="settings-button settings-button--ghost"
               onClick={handleRestoreDefaults}
-              disabled={!canRestoreDefaults}
+              disabled={isSaving || !canRestoreDefaults}
             >
               Restore defaults
             </button>
@@ -514,28 +495,30 @@ export function SettingsPage() {
             className={`personal-settings-page__status${saveStatus === 'error' && isDirty ? ' is-error' : ''}`}
             role="status"
           >
-            {saveStatus === 'error' && isDirty
-              ? 'Could not save all changes. Please try again.'
-              : isDirty
-                ? 'Unsaved changes'
-                : saveStatus === 'saved'
-                  ? 'Changes saved'
-                  : 'No unsaved changes'}
+            {isSaving
+              ? 'Saving changes…'
+              : saveStatus === 'error' && isDirty
+                ? 'Could not save changes. Please try again.'
+                : isDirty
+                  ? 'Unsaved changes'
+                  : saveStatus === 'saved'
+                    ? 'Changes saved'
+                    : 'No unsaved changes'}
           </p>
           <div className="settings-actions">
             <button
               type="button"
               className="settings-button settings-button--ghost"
               onClick={handleDiscard}
-              disabled={!isDirty}
+              disabled={isSaving || !isDirty}
             >
               Discard changes
             </button>
             <button
               type="button"
               className="settings-button settings-button--primary"
-              onClick={handleSave}
-              disabled={!isDirty || !parsedWorkset.valid}
+              onClick={() => void handleSave()}
+              disabled={isSaving || !isDirty || !parsedWorkset.valid}
             >
               Save changes
             </button>

@@ -1,67 +1,34 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  loadReviewProjectSearchEnabled,
-  saveReviewProjectSearchEnabled,
-} from '../../utils/reviewProjectSearchPreference';
-import {
-  getVisibleTextEditorEnabledKey,
-  loadVisibleTextEditorEnabled,
-  saveVisibleTextEditorEnabled,
-  VISIBLE_TEXT_EDITOR_ENABLED_KEY,
-} from '../../utils/visibleTextEditorPreference';
-import {
-  loadReviewProjectShortcutHelpPreference,
-  saveReviewProjectShortcutHelpPreference,
-} from '../review-project/review-project-preferences';
-import {
-  loadPreferredLocales,
-  loadPreferredWorksetSize,
-  PREFERRED_LOCALES_KEY,
-  savePreferredLocales,
-  savePreferredWorksetSize,
-} from '../workbench/workbench-preferences';
+  type ApiUserPreferences,
+  fetchUserPreferences,
+  saveUserPreferences,
+} from '../../api/userPreferences';
+import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
+import { saveVisibleTextEditorEnabled } from '../../utils/visibleTextEditorPreference';
+import { savePreferredLocales, savePreferredWorksetSize } from '../workbench/workbench-preferences';
 import { SettingsPage } from './SettingsPage';
 
-const TEST_USERNAME = 'translator';
-let currentUsername = TEST_USERNAME;
-
-function renderSettingsPage() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(<SettingsPage />, {
-    wrapper: ({ children }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    ),
-  });
-}
-
-function editorToggle() {
-  return screen.getByRole('checkbox', {
-    name: /Use the assisted rich text editor in Workbench, Review Project, and text unit details/,
-  });
-}
-
-function searchToggle() {
-  return screen.getByRole('checkbox', {
-    name: /Show Search in Review Project and text-unit details/,
-  });
-}
-
-function shortcutToggle() {
-  return screen.getByRole('checkbox', {
-    name: /Show shortcut bar at the bottom of review projects/,
-  });
-}
-
-vi.mock('../../hooks/useRepositories', () => ({
-  useRepositories: () => ({ data: [], isLoading: false, isError: false }),
+let currentUsername = 'translator';
+let accounts: Record<string, ApiUserPreferences>;
+const defaults = (): ApiUserPreferences => ({
+  initialized: true,
+  worksetSize: null,
+  preferredLocales: [],
+  shortcutHelp: null,
+  visibleTextEditorEnabled: false,
+  reviewProjectSearchEnabled: false,
+  defaultReviewTeamIds: [],
+});
+vi.mock('../../api/userPreferences', () => ({
+  fetchUserPreferences: vi.fn(),
+  saveUserPreferences: vi.fn(),
 }));
-
+vi.mock('../../hooks/useRepositories', () => ({ useRepositories: () => ({ data: [] }) }));
 vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({
     username: currentUsername,
@@ -71,291 +38,316 @@ vi.mock('../../hooks/useUser', () => ({
   }),
 }));
 
-describe('SettingsPage', () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-    currentUsername = TEST_USERNAME;
+function renderSettingsPage(seed = true) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
+  if (seed)
+    Object.entries(accounts).forEach(([username, preferences]) =>
+      queryClient.setQueryData(userPreferencesQueryKey(username), preferences),
+    );
+  const view = render(<SettingsPage />, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    ),
   });
+  return { ...view, queryClient };
+}
+const editorToggle = () =>
+  screen.getByRole('checkbox', { name: /Use the assisted rich text editor/ });
+const searchToggle = () => screen.getByRole('checkbox', { name: /Show Search in Review Project/ });
+const shortcutToggle = () =>
+  screen.getByRole('checkbox', { name: /Show shortcut bar at the bottom/ });
+const saveButton = () => screen.getByRole('button', { name: 'Save changes' });
+const discardButton = () => screen.getByRole('button', { name: 'Discard changes' });
+const worksetInput = () => screen.getByRole('spinbutton', { name: 'Result size limit' });
 
-  it('stages changes across sections and persists them with one Save changes button', async () => {
+beforeEach(() => {
+  window.localStorage.clear();
+  currentUsername = 'translator';
+  accounts = { translator: defaults(), 'other-user': defaults() };
+  vi.mocked(fetchUserPreferences).mockImplementation(() =>
+    Promise.resolve(accounts[currentUsername]),
+  );
+  vi.mocked(saveUserPreferences).mockReset();
+  vi.mocked(saveUserPreferences).mockImplementation((patch) => {
+    accounts[currentUsername] = { ...accounts[currentUsername], ...patch, initialized: true };
+    return Promise.resolve(accounts[currentUsername]);
+  });
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe('SettingsPage account preferences', () => {
+  it('stages all sections and sends one patch only after Save changes', async () => {
     const user = userEvent.setup();
-    window.localStorage.setItem(VISIBLE_TEXT_EDITOR_ENABLED_KEY, 'true');
     renderSettingsPage();
-
-    const save = screen.getByRole('button', { name: 'Save changes' });
-    expect(screen.getAllByRole('button', { name: 'Save changes' })).toHaveLength(1);
-    expect(save).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeDisabled();
-    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
-    expect(editorToggle()).not.toBeChecked();
+    expect(saveButton()).toBeDisabled();
     expect(shortcutToggle()).toBeChecked();
-
-    await user.type(screen.getByRole('spinbutton', { name: 'Result size limit' }), '25');
+    await user.type(worksetInput(), '25');
     await user.click(editorToggle());
     await user.click(searchToggle());
     await user.click(shortcutToggle());
     await user.click(screen.getByRole('button', { name: 'Select preferred locales' }));
     await user.click(screen.getByRole('button', { name: 'Select your locales' }));
-
-    expect(loadPreferredWorksetSize()).toBeNull();
-    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(false);
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
-    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('bottom');
-    expect(loadPreferredLocales()).toEqual([]);
-    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
-    expect(save).toBeEnabled();
-
-    await user.click(save);
-
-    expect(loadPreferredWorksetSize()).toBe(25);
-    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(true);
-    expect(loadVisibleTextEditorEnabled('admin')).toBe(false);
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
-    expect(loadReviewProjectSearchEnabled('admin')).toBe(false);
-    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('header');
-    expect(loadPreferredLocales()).toEqual(['fr']);
-    expect(save).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeDisabled();
-    expect(screen.getByText('Changes saved')).toBeInTheDocument();
+    expect(saveUserPreferences).not.toHaveBeenCalled();
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    expect(saveUserPreferences).toHaveBeenCalledExactlyOnceWith(
+      {
+        worksetSize: 25,
+        preferredLocales: ['fr'],
+        shortcutHelp: 'header',
+        visibleTextEditorEnabled: true,
+        reviewProjectSearchEnabled: true,
+      },
+      expect.anything(),
+    );
+    expect(saveButton()).toBeDisabled();
+    expect(window.localStorage.length).toBe(0);
   });
 
-  it('stages Restore defaults across sections and lets Discard changes restore saved values', async () => {
+  it('uses account settings even when browser storage contains different values', () => {
+    savePreferredWorksetSize(99);
+    saveVisibleTextEditorEnabled(true, 'translator');
+    accounts.translator = { ...defaults(), worksetSize: 50 };
+    renderSettingsPage();
+    expect(worksetInput()).toHaveValue(50);
+    expect(editorToggle()).not.toBeChecked();
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('stages legacy browser preferences for explicit import and leaves other users opt-ins behind', async () => {
     const user = userEvent.setup();
+    accounts.translator = { ...defaults(), initialized: false };
     savePreferredWorksetSize(25);
     savePreferredLocales(['fr']);
-    saveVisibleTextEditorEnabled(true, TEST_USERNAME);
-    saveReviewProjectSearchEnabled(true, TEST_USERNAME);
-    saveReviewProjectShortcutHelpPreference('header', 'bottom');
+    saveVisibleTextEditorEnabled(true, 'other-user');
     renderSettingsPage();
-
-    const restoreDefaults = screen.getByRole('button', { name: 'Restore defaults' });
-    const workset = screen.getByRole('spinbutton', { name: 'Result size limit' });
-    await user.click(restoreDefaults);
-
-    expect(workset).toHaveValue(null);
+    expect(worksetInput()).toHaveValue(25);
     expect(editorToggle()).not.toBeChecked();
-    expect(searchToggle()).not.toBeChecked();
-    expect(shortcutToggle()).toBeChecked();
-    expect(screen.getByText('No preferred locales set.')).toBeInTheDocument();
-    expect(loadPreferredWorksetSize()).toBe(25);
-    expect(loadPreferredLocales()).toEqual(['fr']);
-    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(true);
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
-    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('header');
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
-
-    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
-
-    expect(workset).toHaveValue(25);
-    expect(editorToggle()).toBeChecked();
-    expect(searchToggle()).toBeChecked();
-    expect(shortcutToggle()).not.toBeChecked();
-    expect(screen.queryByText('No preferred locales set.')).not.toBeInTheDocument();
-    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-
-    await user.click(restoreDefaults);
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
-
-    expect(loadPreferredWorksetSize()).toBeNull();
-    expect(loadPreferredLocales()).toEqual([]);
-    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(false);
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
-    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('bottom');
+    expect(
+      screen.getByText(/Existing browser settings are included in this draft/),
+    ).toBeInTheDocument();
+    expect(saveUserPreferences).not.toHaveBeenCalled();
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    expect(accounts.translator).toMatchObject({
+      initialized: true,
+      worksetSize: 25,
+      preferredLocales: ['fr'],
+      visibleTextEditorEnabled: false,
+    });
+    expect(window.localStorage.getItem('workbench.worksetSize.v1')).toBe('25');
   });
 
-  it('discards unsaved editor, Search, and shortcut changes on navigation', async () => {
+  it('restores defaults as a draft, discards it, then saves the reset atomically', async () => {
+    const user = userEvent.setup();
+    accounts.translator = {
+      ...defaults(),
+      worksetSize: 25,
+      preferredLocales: ['fr'],
+      shortcutHelp: 'header',
+      visibleTextEditorEnabled: true,
+      reviewProjectSearchEnabled: true,
+    };
+    renderSettingsPage();
+    await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
+    expect(worksetInput()).toHaveValue(null);
+    expect(editorToggle()).not.toBeChecked();
+    expect(shortcutToggle()).toBeChecked();
+    expect(saveUserPreferences).not.toHaveBeenCalled();
+    await user.click(discardButton());
+    expect(worksetInput()).toHaveValue(25);
+    expect(editorToggle()).toBeChecked();
+    expect(saveButton()).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    expect(accounts.translator).toEqual(defaults());
+  });
+
+  it('can save defaults instead of importing old browser values', async () => {
+    const user = userEvent.setup();
+    accounts.translator = { ...defaults(), initialized: false };
+    savePreferredWorksetSize(25);
+    const view = renderSettingsPage();
+    await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
+    expect(saveButton()).toBeEnabled();
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    expect(accounts.translator).toEqual(defaults());
+    view.unmount();
+    renderSettingsPage();
+    expect(worksetInput()).toHaveValue(null);
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('restores defaults against the latest account settings after a deferred refresh', async () => {
+    const user = userEvent.setup();
+    const { queryClient } = renderSettingsPage();
+    await user.click(editorToggle());
+    accounts.translator = { ...defaults(), worksetSize: 100 };
+    await act(() =>
+      queryClient.setQueryData(userPreferencesQueryKey('translator'), accounts.translator),
+    );
+    await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
+    expect(saveButton()).toBeEnabled();
+    expect(worksetInput()).toHaveValue(null);
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    expect(accounts.translator).toEqual(defaults());
+  });
+
+  it('applies a deferred refresh when the last draft change is reverted', async () => {
+    const user = userEvent.setup();
+    const { queryClient } = renderSettingsPage();
+    await user.click(editorToggle());
+    await act(() =>
+      queryClient.setQueryData(userPreferencesQueryKey('translator'), {
+        ...defaults(),
+        worksetSize: 100,
+      }),
+    );
+    await user.click(editorToggle());
+    await waitFor(() => expect(worksetInput()).toHaveValue(100));
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('discards unsaved changes on navigation and loads saved values in a fresh query cache', async () => {
     const user = userEvent.setup();
     const view = renderSettingsPage();
     await user.click(editorToggle());
-    await user.click(searchToggle());
-    await user.click(shortcutToggle());
-
     view.unmount();
-    renderSettingsPage();
-
+    const next = renderSettingsPage(false);
+    await screen.findByRole('heading', { name: 'My Settings' });
     expect(editorToggle()).not.toBeChecked();
-    expect(searchToggle()).not.toBeChecked();
-    expect(shortcutToggle()).toBeChecked();
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    await user.click(searchToggle());
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    next.unmount();
+    renderSettingsPage(false);
+    await screen.findByRole('heading', { name: 'My Settings' });
+    expect(searchToggle()).toBeChecked();
   });
 
-  it('preserves saved Search on reload and stages opting out until Save changes', async () => {
+  it('discards a draft when switching accounts', async () => {
     const user = userEvent.setup();
+    accounts.translator = { ...defaults(), visibleTextEditorEnabled: true };
     const view = renderSettingsPage();
-    expect(searchToggle()).not.toBeChecked();
-    await user.click(searchToggle());
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
-
-    view.unmount();
-    renderSettingsPage();
-    expect(searchToggle()).toBeChecked();
-    await user.click(searchToggle());
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-  });
-
-  it('switches account preferences and discards their drafts when the signed-in account changes', async () => {
-    const user = userEvent.setup();
-    saveVisibleTextEditorEnabled(true, TEST_USERNAME);
-    saveReviewProjectSearchEnabled(true, TEST_USERNAME);
-    const view = renderSettingsPage();
-    expect(editorToggle()).toBeChecked();
-    expect(searchToggle()).toBeChecked();
     await user.click(editorToggle());
     await user.click(searchToggle());
-
     currentUsername = 'other-user';
     view.rerender(<SettingsPage />);
     expect(editorToggle()).not.toBeChecked();
     expect(searchToggle()).not.toBeChecked();
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-    await user.click(editorToggle());
-    await user.click(searchToggle());
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(loadVisibleTextEditorEnabled('other-user')).toBe(true);
-    expect(loadReviewProjectSearchEnabled('other-user')).toBe(true);
-    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(true);
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
-
-    currentUsername = TEST_USERNAME;
+    expect(saveButton()).toBeDisabled();
+    currentUsername = 'translator';
     view.rerender(<SettingsPage />);
     expect(editorToggle()).toBeChecked();
-    expect(searchToggle()).toBeChecked();
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    expect(searchToggle()).not.toBeChecked();
   });
 
-  it('blocks Save changes for an invalid result limit while allowing drafts to be discarded', async () => {
+  it.each(['0', '1.5', '2147483648'])(
+    'blocks invalid result size %s while allowing discard',
+    async (value) => {
+      const user = userEvent.setup();
+      renderSettingsPage();
+      await user.type(worksetInput(), value);
+      expect(saveButton()).toBeDisabled();
+      expect(screen.getByText('Enter a whole number from 1 to 2147483647.')).toBeInTheDocument();
+      await user.click(discardButton());
+      expect(worksetInput()).toHaveValue(null);
+    },
+  );
+
+  it('sends only dirty fields and uses the server response for unrelated concurrent changes', async () => {
     const user = userEvent.setup();
-    renderSettingsPage();
-    const workset = screen.getByRole('spinbutton', { name: 'Result size limit' });
-
-    await user.type(workset, '0');
-
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeEnabled();
-    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
-    expect(screen.getByText('Enter a positive whole number.')).toBeInTheDocument();
-    await user.click(editorToggle());
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(false);
-
-    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
-
-    expect(workset).toHaveValue(null);
-    expect(editorToggle()).not.toBeChecked();
-    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeDisabled();
-    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
-  });
-
-  it('saves only changed preferences and preserves current stored values for unchanged settings', async () => {
-    const user = userEvent.setup();
-    saveReviewProjectShortcutHelpPreference('hidden', 'bottom');
+    accounts.translator = { ...defaults(), shortcutHelp: 'hidden' };
     renderSettingsPage();
     await user.click(editorToggle());
-
-    // Simulate another view changing a preference that this page has not edited.
-    savePreferredWorksetSize(75);
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
-
-    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(true);
-    expect(loadPreferredWorksetSize()).toBe(75);
-    expect(loadReviewProjectShortcutHelpPreference('bottom')).toBe('hidden');
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    accounts.translator = { ...accounts.translator, worksetSize: 75 };
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    expect(saveUserPreferences).toHaveBeenCalledExactlyOnceWith(
+      { visibleTextEditorEnabled: true },
+      expect.anything(),
+    );
+    expect(worksetInput()).toHaveValue(75);
+    expect(accounts.translator.shortcutHelp).toBe('hidden');
   });
 
-  it('preserves a locale draft when another tab updates the saved locales', async () => {
+  it('refreshes clean forms but preserves drafts when saved settings refresh', async () => {
     const user = userEvent.setup();
-    savePreferredLocales(['de']);
-    renderSettingsPage();
-    const localeSelector = screen.getByRole('button', { name: 'Select preferred locales' });
-    await user.click(localeSelector);
-    await user.click(screen.getByRole('button', { name: 'Select your locales' }));
-
-    act(() => {
-      savePreferredLocales(['es']);
-      window.dispatchEvent(new StorageEvent('storage', { key: PREFERRED_LOCALES_KEY }));
-    });
-
-    expect(localeSelector).toHaveTextContent('My locales');
-    expect(loadPreferredLocales()).toEqual(['es']);
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(loadPreferredLocales()).toEqual(['fr']);
-  });
-
-  it('keeps a failed Search save as a draft and allows retrying when storage recovers', async () => {
-    const user = userEvent.setup();
-    renderSettingsPage();
-    await user.click(searchToggle());
-    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('Storage unavailable');
-    });
-
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
-
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
-    expect(searchToggle()).toBeChecked();
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeEnabled();
-    expect(screen.getByText('Could not save all changes. Please try again.')).toBeInTheDocument();
-    expect(screen.queryByText('Changes saved')).not.toBeInTheDocument();
-
-    await user.click(searchToggle());
-
-    expect(screen.getByRole('status')).toHaveTextContent('No unsaved changes');
-    expect(screen.getByRole('status')).not.toHaveClass('is-error');
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeDisabled();
-    expect(
-      screen.queryByText('Could not save all changes. Please try again.'),
-    ).not.toBeInTheDocument();
-
-    setItem.mockRestore();
-    await user.click(searchToggle());
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
-
-    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
-    expect(screen.getByText('Changes saved')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-    expect(
-      screen.queryByText('Could not save all changes. Please try again.'),
-    ).not.toBeInTheDocument();
-  });
-
-  it('retains successfully saved values when a later preference write throws', async () => {
-    const user = userEvent.setup();
-    renderSettingsPage();
-    const workset = screen.getByRole('spinbutton', { name: 'Result size limit' });
-    await user.type(workset, '25');
+    const { queryClient } = renderSettingsPage();
+    await act(() =>
+      queryClient.setQueryData(userPreferencesQueryKey('translator'), {
+        ...defaults(),
+        worksetSize: 75,
+      }),
+    );
+    await waitFor(() => expect(worksetInput()).toHaveValue(75));
     await user.click(editorToggle());
-    const originalSetItem = Storage.prototype.setItem.bind(window.localStorage);
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
-      if (key === getVisibleTextEditorEnabledKey(TEST_USERNAME)) {
-        throw new Error('Storage unavailable');
-      }
-      originalSetItem(key, value);
-    });
-
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
-
-    expect(loadPreferredWorksetSize()).toBe(25);
-    expect(loadVisibleTextEditorEnabled(TEST_USERNAME)).toBe(false);
+    await act(() =>
+      queryClient.setQueryData(userPreferencesQueryKey('translator'), {
+        ...defaults(),
+        worksetSize: 100,
+      }),
+    );
     expect(editorToggle()).toBeChecked();
-    expect(screen.getByText('Could not save all changes. Please try again.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
-
-    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
-
-    expect(workset).toHaveValue(25);
+    expect(worksetInput()).toHaveValue(75);
+    await user.click(discardButton());
+    expect(worksetInput()).toHaveValue(100);
     expect(editorToggle()).not.toBeChecked();
-    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  });
+
+  it('keeps every failed change as a draft and retries without partial success', async () => {
+    const user = userEvent.setup();
+    vi.mocked(saveUserPreferences).mockRejectedValueOnce(new Error('Offline'));
+    renderSettingsPage();
+    await user.type(worksetInput(), '25');
+    await user.click(searchToggle());
+    await user.click(saveButton());
+    await screen.findByText('Could not save changes. Please try again.');
+    expect(accounts.translator).toEqual(defaults());
+    expect(searchToggle()).toBeChecked();
+    expect(worksetInput()).toHaveValue(25);
+    expect(saveButton()).toBeEnabled();
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    expect(accounts.translator).toMatchObject({
+      worksetSize: 25,
+      reviewProjectSearchEnabled: true,
+    });
+  });
+
+  it('disables edits and actions while a save is pending', async () => {
+    const user = userEvent.setup();
+    let finish!: (value: ApiUserPreferences) => void;
+    vi.mocked(saveUserPreferences).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    renderSettingsPage();
+    await user.click(editorToggle());
+    await user.click(saveButton());
+    expect(screen.getByText('Saving changes…')).toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+    expect(discardButton()).toBeDisabled();
+    expect(editorToggle()).toBeDisabled();
+    expect(worksetInput()).toBeDisabled();
+    act(() => finish({ ...defaults(), visibleTextEditorEnabled: true }));
+    await screen.findByText('Changes saved');
+  });
+
+  it('does not fall back to browser settings when loading the account fails', async () => {
+    vi.mocked(fetchUserPreferences).mockRejectedValueOnce(new Error('Offline'));
+    savePreferredWorksetSize(25);
+    renderSettingsPage(false);
+    await screen.findByText('Could not load your settings.');
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(worksetInput()).toHaveValue(null));
   });
 });

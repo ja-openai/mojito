@@ -18,13 +18,13 @@ checking **Show Search in Review Project and text-unit details (preview)** and
 selecting **Save changes** in the shared sticky footer. Uncheck it and save to disable.
 **Discard changes** restores all saved settings; **Restore defaults** stages their
 defaults, including the default off state for Search, until Save changes is selected.
-This personal preference is
-saved separately for each Mojito username in the current browser, like the
+This personal preference is saved to the signed-in Mojito account, like the
 assisted-editor opt-in. Switching accounts does not carry it to another user.
-The existing preference key and settings anchor are retained, so prior opt-ins
-and links continue to work.
+Existing browser opt-ins are available as a draft for the first Save in My Settings.
+The settings anchor is retained. See [account preferences](035-account-preferences.md).
 
-Changes apply to open review and detail pages in the same browser. Disabling closes
+Changes apply immediately to mounted review and detail pages after a successful save.
+Other browser tabs and devices refresh account settings when refocused. Disabling closes
 Search, clears its local query state, and returns an active Review Project Search
 tab to Glossary while preserving the translation draft. Any authenticated reviewer can opt in; this
 controls preview visibility and uses the existing Workbench search permissions.
@@ -98,7 +98,7 @@ the translation author.
 Frontend tests cover shared controls, default and edited scopes, compound queries,
 pagination, author display, stale-request isolation, errors, and keyboard handling.
 Preference tests cover default-off behavior, staged saving and restoring defaults, account isolation,
-and disabling an active panel from the same or another browser tab.
+and disabling an active panel when the account preference refreshes.
 Detail-page tests cover lazy expansion, shared search defaults and results,
 collapse/reopen state, resets, and draft preservation when Search is disabled.
 Backend tests verify current-variant creator attribution and unknown creators with

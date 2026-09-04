@@ -29,10 +29,10 @@ import {
   useReviewProjects,
 } from '../../hooks/useReviewProjects';
 import { useUser } from '../../hooks/useUser';
+import { useUserPreferences } from '../../hooks/useUserPreferences';
 import { containsLikePattern } from '../../utils/likeSearch';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';
-import { loadPreferredLocales } from '../workbench/workbench-preferences';
 import {
   COMPLETION_FILTERS,
   type CompletionFilter,
@@ -42,7 +42,6 @@ import {
   REQUEST_STATUS_FILTERS,
   type RequestStatusFilter,
 } from './review-projects-filters';
-import { loadDefaultReviewProjectTeamIds } from './review-projects-preferences';
 import {
   loadReviewProjectsSessionState,
   REVIEW_PROJECTS_SESSION_QUERY_KEY,
@@ -258,6 +257,8 @@ const toReviewProjectRequestGroupRow = (
 };
 
 export function ReviewProjectsPage() {
+  const { data: preferences } = useUserPreferences();
+  const preferredLocales = useMemo(() => preferences?.preferredLocales ?? [], [preferences]);
   const user = useUser();
   const { data: repositoryData } = useRepositories();
   const location = useLocation();
@@ -313,7 +314,7 @@ export function ReviewProjectsPage() {
   const pendingSessionHydrationSignatureRef = useRef<string | null>(null);
   const lastPersistedSessionSignatureRef = useRef<string | null>(null);
   const teamsQuery = useQuery({
-    queryKey: ['review-projects-team-filter'],
+    queryKey: ['review-projects-team-filter', user.username],
     queryFn: fetchTeams,
     enabled: canUseTeamFilter,
     staleTime: 60_000,
@@ -329,8 +330,8 @@ export function ReviewProjectsPage() {
     [teamsQuery.data],
   );
   const defaultReviewProjectTeamIds = useMemo(
-    () => (canUseTeamFilter ? loadDefaultReviewProjectTeamIds(user.username) : []),
-    [canUseTeamFilter, user.username],
+    () => (canUseTeamFilter ? (preferences?.defaultReviewTeamIds ?? []) : []),
+    [canUseTeamFilter, preferences],
   );
   const isTeamFilterActive = canUseTeamFilter && assignedScope === 'TO_TEAM';
   useEffect(() => {
@@ -731,7 +732,6 @@ export function ReviewProjectsPage() {
 
   const projects = useMemo(() => listProjectsData ?? [], [listProjectsData]);
   const requestGroups = useMemo(() => requestGroupsData ?? [], [requestGroupsData]);
-  const preferredLocales = useMemo(() => loadPreferredLocales(), []);
   const myLocaleSelections = useMemo(
     () =>
       filterMyLocales({

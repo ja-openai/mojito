@@ -6,7 +6,8 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as AiReviewApi from '../../api/ai-review';
 import type * as GlossariesApi from '../../api/glossaries';
 import type * as TextUnitsApi from '../../api/text-units';
-import { saveReviewProjectSearchEnabled } from '../../utils/reviewProjectSearchPreference';
+import type { ApiUserPreferences } from '../../api/userPreferences';
+import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
 import { TextUnitDetailPage } from './TextUnitDetailPage';
 
 const searchTextUnitsMock = vi.hoisted(() => vi.fn());
@@ -75,6 +76,16 @@ beforeAll(() => {
   });
 });
 
+const preferences: ApiUserPreferences = {
+  initialized: true,
+  worksetSize: null,
+  preferredLocales: [],
+  shortcutHelp: null,
+  visibleTextEditorEnabled: false,
+  reviewProjectSearchEnabled: false,
+  defaultReviewTeamIds: [],
+};
+
 function renderTextUnitDetailPage(path = '/text-units/3?locale=pt-PT') {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -83,16 +94,21 @@ function renderTextUnitDetailPage(path = '/text-units/3?locale=pt-PT') {
     },
   });
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
-          <Route path="/workbench" element={<h1>Workbench dashboard</h1>} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  queryClient.setQueryData(userPreferencesQueryKey('translator'), preferences);
+
+  return {
+    queryClient,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
+            <Route path="/workbench" element={<h1>Workbench dashboard</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    ),
+  };
 }
 
 const mf2Source = `.input {$status :string}
@@ -196,14 +212,19 @@ describe('TextUnitDetailPage', () => {
 
   it('lazily enables shared Search and preserves the translation draft through collapse and disable', async () => {
     editorPreference.enabled = false;
-    renderTextUnitDetailPage();
+    const { queryClient } = renderTextUnitDetailPage();
     const editor = await screen.findByRole('textbox', { name: 'Translation' });
     await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
     expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
     expect(fetchRepositoriesMock).not.toHaveBeenCalled();
 
     fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
-    act(() => saveReviewProjectSearchEnabled(true, 'translator'));
+    act(() => {
+      queryClient.setQueryData(userPreferencesQueryKey('translator'), {
+        ...preferences,
+        reviewProjectSearchEnabled: true,
+      });
+    });
     const searchToggle = await screen.findByRole('button', { name: 'Search', expanded: false });
     expect(screen.queryByRole('searchbox', { name: 'Search translation' })).not.toBeInTheDocument();
     expect(fetchRepositoriesMock).not.toHaveBeenCalled();
@@ -265,7 +286,9 @@ describe('TextUnitDetailPage', () => {
     expect(searchPanel.getByText('Saved by reviewer.alice')).toBeVisible();
     expect(searchTextUnitsMock).toHaveBeenCalledTimes(2);
 
-    act(() => saveReviewProjectSearchEnabled(false, 'translator'));
+    act(() => {
+      queryClient.setQueryData(userPreferencesQueryKey('translator'), preferences);
+    });
     await waitFor(() => expect(searchToggle).not.toBeInTheDocument());
     expect(searchRegion).not.toBeInTheDocument();
     expect(editor).toBeInTheDocument();

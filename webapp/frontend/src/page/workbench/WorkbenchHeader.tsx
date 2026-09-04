@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import type { SearchAttribute, SearchType } from '../../api/text-units';
 import {
@@ -11,11 +11,11 @@ import {
   type RepositoryMultiSelectOption,
 } from '../../components/RepositoryMultiSelect';
 import { TextUnitSearchControl } from '../../components/TextUnitSearchControl';
+import { useUserPreferences } from '../../hooks/useUserPreferences';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';
 import { resultSizePresets, WORKSET_SIZE_DEFAULT, WORKSET_SIZE_MIN } from './workbench-constants';
-import { loadPreferredLocales, PREFERRED_LOCALES_KEY } from './workbench-preferences';
 import type {
   GlossaryStatusFilterValue,
   StatusFilterValue,
@@ -145,18 +145,8 @@ export function WorkbenchHeader({
   onChangeTranslationCreatedBefore,
   onChangeTranslationCreatedAfter,
 }: WorkbenchHeaderProps) {
-  const [preferredLocales, setPreferredLocales] = useState<string[]>(() => loadPreferredLocales());
-
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key && event.key !== PREFERRED_LOCALES_KEY) {
-        return;
-      }
-      setPreferredLocales(loadPreferredLocales());
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+  const { data: preferences } = useUserPreferences();
+  const preferredLocales = useMemo(() => preferences?.preferredLocales ?? [], [preferences]);
 
   const myLocaleSelections = useMemo(
     () =>

@@ -4,14 +4,21 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fetchTeams } from '../../api/teams';
-import type { ApiUserProfile } from '../../api/users';
 import {
-  loadDefaultReviewProjectTeamIds,
-  saveDefaultReviewProjectTeamIds,
-} from '../review-projects/review-projects-preferences';
+  type ApiUserPreferences,
+  fetchUserPreferences,
+  saveUserPreferences,
+} from '../../api/userPreferences';
+import type { ApiUserProfile } from '../../api/users';
+import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
 import { SettingsPage } from './SettingsPage';
 
 let mockUser: ApiUserProfile;
+let preferences: ApiUserPreferences;
+vi.mock('../../api/userPreferences', () => ({
+  fetchUserPreferences: vi.fn(),
+  saveUserPreferences: vi.fn(),
+}));
 
 vi.mock('../../hooks/useRepositories', () => ({
   useRepositories: () => ({ data: [], isLoading: false, isError: false }),
@@ -29,6 +36,7 @@ function renderSettingsPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  queryClient.setQueryData(userPreferencesQueryKey(mockUser.username), preferences);
   return render(
     <QueryClientProvider client={queryClient}>
       <SettingsPage />
@@ -39,6 +47,20 @@ function renderSettingsPage() {
 describe('SettingsPage default review teams', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    preferences = {
+      initialized: true,
+      worksetSize: null,
+      preferredLocales: [],
+      shortcutHelp: null,
+      visibleTextEditorEnabled: false,
+      reviewProjectSearchEnabled: false,
+      defaultReviewTeamIds: [],
+    };
+    vi.mocked(fetchUserPreferences).mockImplementation(() => Promise.resolve(preferences));
+    vi.mocked(saveUserPreferences).mockImplementation((patch) => {
+      preferences = { ...preferences, ...patch };
+      return Promise.resolve(preferences);
+    });
     vi.mocked(fetchTeams).mockResolvedValue([
       { id: 2, name: 'Glossary', enabled: true },
       { id: 1, name: 'OpenAI', enabled: true },
@@ -66,12 +88,12 @@ describe('SettingsPage default review teams', () => {
     await user.click(teamSelector);
     expect(screen.queryByRole('button', { name: 'Select my teams' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: /OpenAI/ }));
-    expect(loadDefaultReviewProjectTeamIds('admin')).toEqual([]);
+    expect(preferences.defaultReviewTeamIds).toEqual([]);
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await screen.findByText('Changes saved');
 
-    expect(loadDefaultReviewProjectTeamIds('admin')).toEqual([1]);
-    expect(loadDefaultReviewProjectTeamIds('other-user')).toEqual([]);
+    expect(preferences.defaultReviewTeamIds).toEqual([1]);
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   });
 
@@ -105,15 +127,16 @@ describe('SettingsPage default review teams', () => {
       'false',
     );
 
-    expect(loadDefaultReviewProjectTeamIds('pm')).toEqual([]);
+    expect(preferences.defaultReviewTeamIds).toEqual([]);
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await screen.findByText('Changes saved');
 
-    expect(loadDefaultReviewProjectTeamIds('pm')).toEqual([2, 1]);
+    expect(preferences.defaultReviewTeamIds).toEqual([2, 1]);
   });
 
   it('discards team edits and stages restoring the default team filter until Save changes', async () => {
     const user = userEvent.setup();
-    saveDefaultReviewProjectTeamIds([1], 'admin');
+    preferences.defaultReviewTeamIds = [1];
     renderSettingsPage();
 
     const teamSelector = screen.getByRole('button', { name: 'Select default review teams' });
@@ -121,7 +144,7 @@ describe('SettingsPage default review teams', () => {
     await user.click(teamSelector);
     expect(screen.getByRole('checkbox', { name: /OpenAI/ })).toBeChecked();
     await user.click(screen.getByRole('checkbox', { name: /Glossary/ }));
-    expect(loadDefaultReviewProjectTeamIds('admin')).toEqual([1]);
+    expect(preferences.defaultReviewTeamIds).toEqual([1]);
 
     await user.click(screen.getByRole('button', { name: 'Discard changes' }));
     await user.click(teamSelector);
@@ -131,9 +154,10 @@ describe('SettingsPage default review teams', () => {
 
     await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
     expect(teamSelector).toHaveTextContent('No default teams');
-    expect(loadDefaultReviewProjectTeamIds('admin')).toEqual([1]);
+    expect(preferences.defaultReviewTeamIds).toEqual([1]);
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(loadDefaultReviewProjectTeamIds('admin')).toEqual([]);
+    await screen.findByText('Changes saved');
+    expect(preferences.defaultReviewTeamIds).toEqual([]);
   });
 });

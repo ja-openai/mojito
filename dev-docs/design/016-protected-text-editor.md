@@ -400,8 +400,9 @@ Initial rollout is user opt-in through **My Settings > Translation editor**.
 All personal settings are edited as drafts and applied together with **Save changes**
 in the shared sticky footer. **Discard changes** restores saved values;
 **Restore defaults** stages the defaults until Save changes is selected.
-The local preference is scoped to the signed-in Mojito username in the current
-browser so account switching does not carry the opt-in across roles. The default
+The preference is saved to the signed-in Mojito account in the backend and follows
+the user across browsers and devices. Existing browser values can be carried over
+with an explicit first Save in My Settings; see [account preferences](035-account-preferences.md). The default
 path remains the native textarea. This lets admins and early testers validate the
 ProseMirror editor in Workbench and Review Project without adding runtime cost
 or editor behavior changes for everyone else.

@@ -97,6 +97,7 @@ import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { useReviewProjectSearchEnabled } from '../../hooks/useReviewProjectSearchEnabled';
 import { useUser } from '../../hooks/useUser';
+import { useSaveUserPreferences, useUserPreferences } from '../../hooks/useUserPreferences';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
 import { buildAiTranslationContextMessage } from '../../utils/aiTranslationContext';
@@ -138,12 +139,7 @@ import {
 } from '../../utils/textUnitDetailUrl';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
-import {
-  getDefaultReviewProjectShortcutHelpPreference,
-  loadReviewProjectShortcutHelpPreference,
-  REVIEW_PROJECT_SHORTCUT_HELP_KEY,
-  saveReviewProjectShortcutHelpPreference,
-} from './review-project-preferences';
+import { getDefaultReviewProjectShortcutHelpPreference } from './review-project-preferences';
 import {
   type ReviewProjectDecisionSnapshot as DecisionSnapshot,
   type ReviewProjectDraftStatus as StatusChoice,
@@ -872,6 +868,9 @@ export function ReviewProjectPageView({
   const user = useUser();
   const canEditRequest = user.role === 'ROLE_ADMIN';
   const defaultShortcutHelpPreference = getDefaultReviewProjectShortcutHelpPreference(user.role);
+  const { data: preferences } = useUserPreferences();
+  const savePreferences = useSaveUserPreferences();
+  const { mutate: savePreference } = savePreferences;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const reviewProjectsSessionKey = searchParams.get(REVIEW_PROJECTS_SESSION_QUERY_KEY);
@@ -920,9 +919,7 @@ export function ReviewProjectPageView({
   const detailGuardRef = useRef<DetailNavigationGuard | null>(null);
   const [focusTranslationKey, setFocusTranslationKey] = useState(0);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
-  const [shortcutHelpPreference, setShortcutHelpPreference] = useState(() =>
-    loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
-  );
+  const shortcutHelpPreference = preferences?.shortcutHelp ?? defaultShortcutHelpPreference;
   const isShortcutBarVisible = shortcutHelpPreference === 'bottom';
   const [pendingSelection, setPendingSelection] = useState<{
     id: number;
@@ -1373,26 +1370,11 @@ export function ReviewProjectPageView({
     return () => window.removeEventListener('keydown', handleFindReplaceShortcut);
   }, [handleFindReplaceShortcut]);
 
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key && event.key !== REVIEW_PROJECT_SHORTCUT_HELP_KEY) {
-        return;
-      }
-      setShortcutHelpPreference(
-        loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
-      );
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [defaultShortcutHelpPreference]);
-
   const handleShortcutBarVisibilityChange = useCallback(
     (visible: boolean) => {
-      const nextPreference = visible ? 'bottom' : 'header';
-      saveReviewProjectShortcutHelpPreference(nextPreference, defaultShortcutHelpPreference);
-      setShortcutHelpPreference(nextPreference);
+      savePreference({ shortcutHelp: visible ? 'bottom' : 'header' });
     },
-    [defaultShortcutHelpPreference],
+    [savePreference],
   );
 
   const collapseList = useCallback(() => {
@@ -1805,10 +1787,14 @@ export function ReviewProjectPageView({
             <input
               type="checkbox"
               checked={isShortcutBarVisible}
+              disabled={savePreferences.isPending}
               onChange={(event) => handleShortcutBarVisibilityChange(event.target.checked)}
             />
             <span>Show shortcut bar at the bottom</span>
           </label>
+          {savePreferences.isError ? (
+            <p role="alert">Could not save shortcut preference. Please try again.</p>
+          ) : null}
         </div>
         <div className="modal__actions">
           <button type="button" className="modal__button" onClick={() => setIsShortcutsOpen(false)}>

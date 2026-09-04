@@ -7,6 +7,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiReviewProjectDetail } from '../../api/review-projects';
 import type { ApiUserProfile } from '../../api/users';
 import { UserContext } from '../../hooks/useUser';
+import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
 import { buildCarryoverProject, carryoverFixtures } from './review-project-carryover.fixtures';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
 import { ReviewProjectPageView } from './ReviewProjectPageView';
@@ -100,6 +101,15 @@ beforeEach(() => {
 function renderProject(project: ApiReviewProjectDetail) {
   const onRequestSaveDecision = vi.fn();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(userPreferencesQueryKey(user.username), {
+    initialized: true,
+    worksetSize: null,
+    preferredLocales: [],
+    shortcutHelp: null,
+    visibleTextEditorEnabled: false,
+    reviewProjectSearchEnabled: false,
+    defaultReviewTeamIds: [],
+  });
   render(
     <QueryClientProvider client={queryClient}>
       <UserContext.Provider value={user}>

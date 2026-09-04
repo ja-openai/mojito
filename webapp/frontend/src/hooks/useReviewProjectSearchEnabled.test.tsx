@@ -1,72 +1,77 @@
-import { act, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
-import {
-  getReviewProjectSearchEnabledKey,
-  saveReviewProjectSearchEnabled,
-} from '../utils/reviewProjectSearchPreference';
+import type { ApiUserPreferences } from '../api/userPreferences';
 import { useReviewProjectSearchEnabled } from './useReviewProjectSearchEnabled';
 import { UserContext } from './useUser';
+import { userPreferencesQueryKey } from './useUserPreferences';
+
+const preferences: ApiUserPreferences = {
+  initialized: true,
+  worksetSize: null,
+  preferredLocales: [],
+  shortcutHelp: null,
+  visibleTextEditorEnabled: false,
+  reviewProjectSearchEnabled: false,
+  defaultReviewTeamIds: [],
+};
 
 function SearchPreference() {
   return <output>{useReviewProjectSearchEnabled() ? 'Enabled' : 'Disabled'}</output>;
 }
 
-function signedInAs(username: string) {
+function signedInAs(username: string, queryClient: QueryClient) {
   return (
-    <UserContext.Provider
-      value={{ username, role: 'ROLE_TRANSLATOR', canTranslateAllLocales: true, userLocales: [] }}
-    >
-      <SearchPreference />
-    </UserContext.Provider>
+    <QueryClientProvider client={queryClient}>
+      <UserContext.Provider
+        value={{ username, role: 'ROLE_TRANSLATOR', canTranslateAllLocales: true, userLocales: [] }}
+      >
+        <SearchPreference />
+      </UserContext.Provider>
+    </QueryClientProvider>
   );
 }
 
-beforeEach(() => window.localStorage.clear());
-afterEach(() => vi.restoreAllMocks());
-
 describe('useReviewProjectSearchEnabled', () => {
   it('immediately uses the signed-in account preference and restores it when switching back', () => {
-    saveReviewProjectSearchEnabled(true, 'alice');
-    const { rerender } = render(signedInAs('alice'));
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(userPreferencesQueryKey('alice'), {
+      ...preferences,
+      reviewProjectSearchEnabled: true,
+    });
+    queryClient.setQueryData(userPreferencesQueryKey('bob'), preferences);
+    const { rerender } = render(signedInAs('alice', queryClient));
     expect(screen.getByRole('status')).toHaveTextContent('Enabled');
 
-    rerender(signedInAs('bob'));
+    rerender(signedInAs('bob', queryClient));
     expect(screen.getByRole('status')).toHaveTextContent('Disabled');
 
-    rerender(signedInAs('alice'));
+    rerender(signedInAs('alice', queryClient));
     expect(screen.getByRole('status')).toHaveTextContent('Enabled');
   });
 
-  it('replaces the storage subscription on account changes and releases it on unmount', () => {
-    const addListener = vi.spyOn(window, 'addEventListener');
-    const removeListener = vi.spyOn(window, 'removeEventListener');
-    const { rerender, unmount } = render(signedInAs('alice'));
-    const aliceListener = addListener.mock.calls.find(([event]) => event === 'storage')?.[1];
-    expect(aliceListener).toBeDefined();
-
-    rerender(signedInAs('bob'));
-    expect(removeListener).toHaveBeenCalledWith('storage', aliceListener);
-    const storageSubscriptions = addListener.mock.calls.filter(([event]) => event === 'storage');
-    const bobListener = storageSubscriptions[storageSubscriptions.length - 1]?.[1];
-    expect(bobListener).toBeDefined();
-    expect(bobListener).not.toBe(aliceListener);
+  it('uses saved account updates without subscribing to another account after switching', async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(userPreferencesQueryKey('alice'), preferences);
+    queryClient.setQueryData(userPreferencesQueryKey('bob'), preferences);
+    const { rerender } = render(signedInAs('alice', queryClient));
+    rerender(signedInAs('bob', queryClient));
 
     act(() => {
-      const key = getReviewProjectSearchEnabledKey('alice');
-      window.localStorage.setItem(key, 'true');
-      window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'true' }));
+      queryClient.setQueryData(userPreferencesQueryKey('alice'), {
+        ...preferences,
+        reviewProjectSearchEnabled: true,
+      });
     });
     expect(screen.getByRole('status')).toHaveTextContent('Disabled');
 
     act(() => {
-      const key = getReviewProjectSearchEnabledKey('bob');
-      window.localStorage.setItem(key, 'true');
-      window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'true' }));
+      queryClient.setQueryData(userPreferencesQueryKey('bob'), {
+        ...preferences,
+        reviewProjectSearchEnabled: true,
+      });
     });
-    expect(screen.getByRole('status')).toHaveTextContent('Enabled');
-
-    unmount();
-    expect(removeListener).toHaveBeenCalledWith('storage', bobListener);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Enabled'));
   });
 });

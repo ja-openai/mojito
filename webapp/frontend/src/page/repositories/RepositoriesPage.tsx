@@ -15,6 +15,7 @@ import {
 import type { TextUnitSearchRequest } from '../../api/text-units';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useUser } from '../../hooks/useUser';
+import { useUserPreferences } from '../../hooks/useUserPreferences';
 import type { LocaleSelectionOption as LocaleOption } from '../../utils/localeSelection';
 import {
   filterMyLocales,
@@ -29,11 +30,6 @@ import {
 } from '../../utils/repositorySelection';
 import { WORKSET_SIZE_DEFAULT } from '../workbench/workbench-constants';
 import { clampWorksetSize } from '../workbench/workbench-helpers';
-import {
-  loadPreferredLocales,
-  loadPreferredWorksetSize,
-  PREFERRED_LOCALES_KEY,
-} from '../workbench/workbench-preferences';
 import {
   loadRepositoriesSessionState,
   REPOSITORIES_SESSION_QUERY_KEY,
@@ -229,6 +225,9 @@ const buildLocalesForRepository = (
 
 export function RepositoriesPage() {
   const user = useUser();
+  const { data: preferences } = useUserPreferences();
+  const preferredLocales = useMemo(() => preferences?.preferredLocales ?? [], [preferences]);
+  const preferredWorksetSize = preferences?.worksetSize ?? WORKSET_SIZE_DEFAULT;
   const [searchParams, setSearchParams] = useSearchParams();
   const rsId = searchParams.get(REPOSITORIES_SESSION_QUERY_KEY);
   const [selectedRepositoryId, setSelectedRepositoryId] = useState<number | null>(null);
@@ -236,7 +235,6 @@ export function RepositoriesPage() {
   const [reviewCoverageFilter, setReviewCoverageFilter] =
     useState<RepositoryReviewCoverageFilter>('all');
   const [metric, setMetric] = useState<RepositoryMetric>('textUnits');
-  const [preferredLocales, setPreferredLocales] = useState<string[]>(() => loadPreferredLocales());
   const [hydratedSession, setHydratedSession] = useState<{
     key: string;
     state: RepositoriesSessionState;
@@ -453,17 +451,6 @@ export function RepositoriesPage() {
     nextParams.set(REPOSITORIES_SESSION_QUERY_KEY, nextRsId);
     setSearchParams(nextParams, { replace: true });
   }, [hydrationPhase, repositoriesSessionState, searchParams, setSearchParams]);
-
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key && event.key !== PREFERRED_LOCALES_KEY) {
-        return;
-      }
-      setPreferredLocales(loadPreferredLocales());
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
   const myLocaleSelections = useMemo(() => {
     const userLocales = user.userLocales ?? [];
@@ -689,8 +676,7 @@ export function RepositoriesPage() {
       };
 
       if (typeof count === 'number' && count > 0) {
-        const preferred = loadPreferredWorksetSize() ?? WORKSET_SIZE_DEFAULT;
-        searchRequest.limit = clampWorksetSize(Math.max(count, preferred));
+        searchRequest.limit = clampWorksetSize(Math.max(count, preferredWorksetSize));
       }
 
       void navigate('/workbench', {
@@ -700,7 +686,7 @@ export function RepositoriesPage() {
         },
       });
     },
-    [allowedLocaleTagSet, navigate, repositories],
+    [allowedLocaleTagSet, navigate, preferredWorksetSize, repositories],
   );
 
   const handleOpenAiTranslate = useCallback(

@@ -9,6 +9,7 @@ import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectTextUnit } from '../../api/review-projects';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import { UserContext } from '../../hooks/useUser';
+import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
 import {
   buildCarryoverProject,
   type CarryoverFixture,
@@ -94,6 +95,15 @@ function mountProject(fixture: CarryoverFixture, { deferSaves = false } = {}) {
   const queryKey = [...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id];
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  queryClient.setQueryData(userPreferencesQueryKey('fixture-reviewer'), {
+    initialized: true,
+    worksetSize: null,
+    preferredLocales: [],
+    shortcutHelp: null,
+    visibleTextEditorEnabled: false,
+    reviewProjectSearchEnabled: false,
+    defaultReviewTeamIds: [],
   });
   queryClient.setQueryData(queryKey, project);
   const pending: Array<() => void> = [];

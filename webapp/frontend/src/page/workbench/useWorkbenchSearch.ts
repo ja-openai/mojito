@@ -13,6 +13,7 @@ import {
 } from '../../api/text-units';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUserPreferences } from '../../hooks/useUserPreferences';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import { useLocaleOptionsWithDisplayNames, useLocaleSelection } from '../../utils/localeSelection';
 import type { RepositorySelectionOption } from '../../utils/repositorySelection';
@@ -22,7 +23,6 @@ import {
 } from '../../utils/repositorySelection';
 import { WORKSET_SIZE_DEFAULT } from './workbench-constants';
 import { clampWorksetSize, mapApiTextUnitToRow, serializeSearchRequest } from './workbench-helpers';
-import { loadPreferredWorksetSize } from './workbench-preferences';
 import type {
   GlossaryStatusFilterValue,
   StatusFilterValue,
@@ -291,6 +291,8 @@ function buildSearchRequestFromInputs({
 }
 
 export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Params): SearchState {
+  const { data: preferences } = useUserPreferences();
+  const preferredWorksetSize = preferences?.worksetSize ?? WORKSET_SIZE_DEFAULT;
   const [activeSearchRequest, setActiveSearchRequest] = useState<TextUnitSearchRequest | null>(
     null,
   );
@@ -337,9 +339,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   const [createdAfter, setCreatedAfter] = useState<string | null>(null);
   const [translationCreatedBefore, setTranslationCreatedBefore] = useState<string | null>(null);
   const [translationCreatedAfter, setTranslationCreatedAfter] = useState<string | null>(null);
-  const [worksetSize, setWorksetSize] = useState<number>(
-    () => loadPreferredWorksetSize() ?? WORKSET_SIZE_DEFAULT,
-  );
+  const [worksetSize, setWorksetSize] = useState<number>(preferredWorksetSize);
   const [resultSortField, setResultSortField] = useState<WorkbenchResultSortField>('source');
   const [resultSortDirection, setResultSortDirection] =
     useState<WorkbenchResultSortDirection>('default');
@@ -462,9 +462,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     setCreatedAfter(initialSearchRequest.tmTextUnitCreatedAfter ?? null);
     setTranslationCreatedBefore(initialSearchRequest.tmTextUnitVariantCreatedBefore ?? null);
     setTranslationCreatedAfter(initialSearchRequest.tmTextUnitVariantCreatedAfter ?? null);
-    const initialLimit = clampWorksetSize(
-      initialSearchRequest.limit ?? loadPreferredWorksetSize() ?? WORKSET_SIZE_DEFAULT,
-    );
+    const initialLimit = clampWorksetSize(initialSearchRequest.limit ?? preferredWorksetSize);
     setWorksetSize(initialLimit);
 
     if (initialLocales.length > 0) {
@@ -502,6 +500,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   }, [
     initialSearchRequest,
     initialSearchSignature,
+    preferredWorksetSize,
     setActiveSearchRequestIfChanged,
     setLocaleSelection,
     setRepositorySelection,
@@ -607,8 +606,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   }, [pendingSearchRequest]);
 
   const resetSearch = useCallback(() => {
-    const preferredWorkset = loadPreferredWorksetSize() ?? WORKSET_SIZE_DEFAULT;
-    const nextWorksetSize = clampWorksetSize(preferredWorkset);
+    const nextWorksetSize = clampWorksetSize(preferredWorksetSize);
 
     setRepositorySelection([], { markTouched: false });
     setLocaleSelection([], { markTouched: false });
@@ -631,7 +629,12 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     setActiveSearchRequestIfChanged(null);
     lastAppliedNonTextSignatureRef.current = null;
     lastSuccessfulSearchDataRef.current = undefined;
-  }, [setActiveSearchRequestIfChanged, setLocaleSelection, setRepositorySelection]);
+  }, [
+    preferredWorksetSize,
+    setActiveSearchRequestIfChanged,
+    setLocaleSelection,
+    setRepositorySelection,
+  ]);
 
   useEffect(() => {
     if (!pendingSearchRequest || !canSearch) {
