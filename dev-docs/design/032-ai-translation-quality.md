@@ -45,8 +45,57 @@ request line. No-batch generated instructions remain visible in the existing req
 
 Embedded-message guidance uses the installed ICU data, including current French `many`, through
 an explicit message-format lookup. The older database/gettext keyword policy in
-`014-icu-cldr-plural-policy.md` remains separate. This change guides generation; it does not add a
-plural-completeness save gate or establish linguistic quality. Existing importer checks still run.
+`014-icu-cldr-plural-policy.md` remains separate. Both online and legacy Batch requests include
+managed locale suffixes (exact locale-tag lookup, without new parent-locale inheritance).
+
+### Candidate validation and one repair attempt
+
+Before changing candidate DTOs or importing them, AI Translate evaluates recognized ICU/MF2 source
+and target messages with the existing normalized translation-integrity diagnostic types. This is a
+generation policy; repository-specific save/import checks remain in place, and human save rules are
+unchanged. Plain text and unrecognized formats do not acquire guessed ICU syntax requirements.
+
+- Definite target syntax, input/selector contract, fallback, exact-case, and supported locale plural
+  coverage errors reject the candidate and qualify for one model repair request.
+- Source errors reject the candidate without retry. Unsupported/custom/dynamic selection semantics,
+  unavailable locale data, and bounded analysis limits produce explicit review findings instead of
+  invented coverage claims.
+- Missing rendered information is a review warning. A count may be expressed naturally in words in
+  a fixed-quantity form, while retaining its selector. Category names alone do not prove a fixed
+  quantity; the evaluator uses locale rules and understood numeric semantics. Names, dates, amounts,
+  links, and other information do not receive a blanket locale-based exemption.
+- Findings on accepted candidates are retained in an AI Translate warning comment. Existing
+  repository integrity settings still run during import and may impose further requirements.
+
+Online repair requests contain only the failed string, its previous candidate, and target error
+codes/details. They preserve the original source description, glossary, related strings, screenshot,
+locale/source-rule/ad hoc instructions, model settings, output schema, and timeout. They have separate
+request/response lineage, failure status, and token usage; successful peers are not retranslated.
+The repaired response repeats completion, identity, nonempty-target, and MessageFormat checks. A
+second failure leaves the existing target, status, comments, and attribution untouched and appears
+in the run report. Warnings alone never cause a repair call.
+
+Legacy Batch uses the same preflight and creates one follow-up provider Batch containing only failed
+strings. Repair request lines retain their original uploaded request bodies plus diagnostic feedback;
+managed settings are not reread during repair. The existing poll job carries the follow-up batch and
+its attempt marker. Errors after repair are terminal. Original input IDs also bound response
+membership: duplicate or unexpected IDs reject the output before mutation, and missing results are
+reported. No synchronous online fallback is introduced into Batch processing.
+
+A permanent blob marker records the repair submission as pending before contacting the provider,
+then stores the created batch response. Replaying the original import reuses that response. An
+unresolved pending marker stops automatic resubmission and reports the uncertain outcome. The
+helper serializes callers in one process; the blob interface has no atomic create operation, so
+simultaneous first submissions from separate processes are not guaranteed to run exactly once.
+The repair copies the original DTO snapshot into a separate permanent blob and carries its new
+key, keeping it available throughout the provider's 24-hour window and later import replay.
+Database temporary-blob expiry uses creation time; overwriting the old snapshot would not extend
+it, and the default temporary retention can expire before the full Batch processing window ends.
+
+Complete category coverage does not require distinct wording in every branch. Translation-memory
+and exported message compression are unchanged; any later optimization must preserve runtime
+selection semantics and should be justified by measured file size. Deterministic acceptance does
+not establish linguistic quality.
 
 ## Reasoning and speed
 
@@ -79,7 +128,8 @@ promises about model latency. The client extracts only message text, safely skip
 items that have no message content.
 
 The API has no `reasoning.effort=ultra`. Application Ultra mode adds automatic subagents to maximum
-reasoning. This pipeline uses one model request per generation/review step and does not claim to
+reasoning. Generation can make one bounded structural repair request; review remains a single model step.
+This does not claim to
 reproduce that orchestration. See the official [model guidance](https://developers.openai.com/api/docs/guides/latest-model)
 and [Fast mode contract](https://developers.openai.com/api/docs/guides/fast-mode).
 

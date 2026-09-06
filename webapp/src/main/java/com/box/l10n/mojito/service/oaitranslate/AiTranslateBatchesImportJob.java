@@ -29,6 +29,8 @@ public class AiTranslateBatchesImportJob
 
   @Autowired AiTranslateService aiTranslateService;
 
+  @Autowired AiTranslateBatchRepairService batchRepairService;
+
   @Qualifier("AiTranslate")
   @Autowired
   private OpenAIClient openAIClient;
@@ -56,6 +58,8 @@ public class AiTranslateBatchesImportJob
       AiTranslateBatchesImportInput aiTranslateBatchesImportInput) throws Exception {
 
     List<RetrieveBatchResponse> retrieveBatchResponses = new ArrayList<>();
+    List<CreateBatchResponse> batches =
+        new ArrayList<>(aiTranslateBatchesImportInput.createBatchResponses());
     Set<String> processed = new HashSet<>(aiTranslateBatchesImportInput.processed());
     Map<String, String> failedImport = new HashMap<>(aiTranslateBatchesImportInput.failedImport());
 
@@ -87,13 +91,31 @@ public class AiTranslateBatchesImportJob
             logger.info("[task id: {}] Completed batch: {}", parentTaskId, retrieveBatchResponse);
 
             try {
-              List<String> errors =
-                  aiTranslateService.importBatch(
+              AiTranslateService.BatchImportResult result =
+                  aiTranslateService.importBatchForRepair(
                       retrieveBatchResponse,
                       AiTranslateType.fromString(aiTranslateBatchesImportInput.translateType()),
                       Status.valueOf(aiTranslateBatchesImportInput.importStatus()),
                       getCurrentPollableTask());
 
+              List<String> errors = new ArrayList<>(result.errors());
+              if (!result.repairs().isEmpty()) {
+                try {
+                  CreateBatchResponse repairBatch =
+                      batchRepairService.createRepairBatch(retrieveBatchResponse, result.repairs());
+                  if (batches.stream().noneMatch(batch -> batch.id().equals(repairBatch.id()))) {
+                    batches.add(repairBatch);
+                  }
+                } catch (RuntimeException e) {
+                  for (AiTranslateService.BatchRepairCandidate candidate : result.repairs()) {
+                    errors.add(
+                        "Could not schedule translation repair for text unit "
+                            + candidate.tmTextUnitId()
+                            + ": "
+                            + e.getMessage());
+                  }
+                }
+              }
               if (!errors.isEmpty()) {
                 failedImport.put(createBatchResponse.id(), String.join("\n", errors));
               }
@@ -136,6 +158,9 @@ public class AiTranslateBatchesImportJob
                 parentTaskId,
                 retrieveBatchResponse.status(),
                 retrieveBatchResponse);
+            failedImport.put(
+                createBatchResponse.id(),
+                "Batch ended with status: " + retrieveBatchResponse.status());
             processed.add(createBatchResponse.id());
           }
           case null, default ->
@@ -150,12 +175,12 @@ public class AiTranslateBatchesImportJob
 
     PollableFuture<AiTranslateBatchesImportOutput> pollableFuture = null;
 
-    if (processed.size() >= aiTranslateBatchesImportInput.createBatchResponses().size()) {
+    if (batches.stream().allMatch(batch -> processed.contains(batch.id()))) {
       logger.info(
           "[task id: {}]  Everything has been processed ({}/{}), don't reschedule",
           parentTaskId,
           processed.size(),
-          aiTranslateBatchesImportInput.createBatchResponses().size());
+          batches.size());
     } else {
       logger.info(
           "[task id: {}] Schedule new job to process remaining batches, processed: {}",
@@ -164,7 +189,7 @@ public class AiTranslateBatchesImportJob
       pollableFuture =
           aiTranslateService.aiTranslateBatchesImportAsync(
               new AiTranslateBatchesImportInput(
-                  aiTranslateBatchesImportInput.createBatchResponses(),
+                  batches,
                   aiTranslateBatchesImportInput.skippedLocales(),
                   aiTranslateBatchesImportInput.batchCreationErrors(),
                   processed.stream().toList(),

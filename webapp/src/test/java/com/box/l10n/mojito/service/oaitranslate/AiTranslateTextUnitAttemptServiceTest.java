@@ -24,6 +24,38 @@ import org.junit.Test;
 public class AiTranslateTextUnitAttemptServiceTest {
 
   @Test
+  public void validationFailureOnlyMarksTheFailedMemberOfAGroupedRequest() {
+    AiTranslateTextUnitAttemptRepository repository =
+        mock(AiTranslateTextUnitAttemptRepository.class);
+    AiTranslateTextUnitAttempt first = new AiTranslateTextUnitAttempt();
+    AiTranslateTextUnitAttempt second = new AiTranslateTextUnitAttempt();
+    com.box.l10n.mojito.entity.TMTextUnit firstUnit = new com.box.l10n.mojito.entity.TMTextUnit();
+    firstUnit.setId(1L);
+    com.box.l10n.mojito.entity.TMTextUnit secondUnit = new com.box.l10n.mojito.entity.TMTextUnit();
+    secondUnit.setId(2L);
+    first.setTmTextUnit(firstUnit);
+    second.setTmTextUnit(secondUnit);
+    first.setStatus(AiTranslateTextUnitAttempt.STATUS_RESPONDED);
+    second.setStatus(AiTranslateTextUnitAttempt.STATUS_RESPONDED);
+    when(repository.findByPollableTask_IdAndRequestGroupId(3L, "group"))
+        .thenReturn(List.of(first, second));
+    AiTranslateTextUnitAttemptService service =
+        new AiTranslateTextUnitAttemptService(
+            repository,
+            mock(AiTranslateRunRepository.class),
+            mock(StructuredBlobStorage.class),
+            new AiTranslateConfigurationProperties(),
+            new ObjectMapper());
+
+    service.markNoBatchTextUnitFailed(3L, "group", 1L, "missing plural category");
+
+    assertEquals(AiTranslateTextUnitAttempt.STATUS_FAILED, first.getStatus());
+    assertEquals("missing plural category", first.getErrorMessage());
+    assertEquals(AiTranslateTextUnitAttempt.STATUS_RESPONDED, second.getStatus());
+    assertNull(second.getErrorMessage());
+  }
+
+  @Test
   public void redactImageDataUrlsRedactsDataUrlsButKeepsRegularUrls() {
     String jsonl =
         """

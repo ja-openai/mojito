@@ -59,6 +59,8 @@ import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
+import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic;
+import com.box.l10n.mojito.translationintegrity.TranslationIntegrityEvaluation;
 import com.box.l10n.mojito.util.ImageBytes;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -91,6 +93,8 @@ import reactor.util.retry.RetryBackoffSpec;
 
 @Service
 public class AiTranslateService {
+
+  @Autowired AiTranslateBatchRepairService batchRepairService;
 
   static final String METADATA__TEXT_UNIT_DTOS__BLOB_ID = "textUnitDTOs";
   static final Integer MAX_COMPLETION_TOKENS = null;
@@ -646,6 +650,7 @@ public class AiTranslateService {
           }
         }
 
+        List<CompletableFuture<ResponsesResponse>> repairResponses = new ArrayList<>();
         List<TextUnitDTOWithVariantCommentOrError> textUnitDTOWithVariantCommentOrErrors =
             textUnitsByScreenshotWithResponsesResponseList.stream()
                 .flatMap(
@@ -779,13 +784,18 @@ public class AiTranslateService {
                           .stream()
                           .map(
                               textUnitDTOWithVariantComments ->
-                                  prepareForTextUnitDTOForImport(
-                                      responsesResponse.id(),
+                                  prepareWithIntegrityRepair(
+                                      responsesResponse,
+                                      textUnitsByScreenshotWithResponsesResponse,
                                       aiTranslateType,
                                       importStatus,
                                       textUnitDTOWithVariantComments.textUnitDTO(),
                                       completionOutput,
-                                      lineageRequestGroupId));
+                                      currentTask,
+                                      repositoryLocale.getLocale().getId(),
+                                      bcp47Tag,
+                                      requestTags,
+                                      repairResponses));
                     })
                 .toList();
 
@@ -845,10 +855,12 @@ public class AiTranslateService {
         long importedTextUnitCount = importResultByTmTextUnitId.size();
         ResponsesUsageTotals responsesUsageTotals =
             sumResponsesUsage(
-                textUnitsByScreenshotWithResponsesResponseList.stream()
-                    .map(
-                        TextUnitsByScreenshotWithResponsesResponse
-                            ::responsesResponseCompletableFuture)
+                java.util.stream.Stream.concat(
+                        textUnitsByScreenshotWithResponsesResponseList.stream()
+                            .map(
+                                TextUnitsByScreenshotWithResponsesResponse
+                                    ::responsesResponseCompletableFuture),
+                        repairResponses.stream())
                     .toList());
         runInputTokens += responsesUsageTotals.inputTokens();
         runCachedInputTokens += responsesUsageTotals.cachedInputTokens();
@@ -1328,6 +1340,190 @@ public class AiTranslateService {
       String error,
       String lineageRequestGroupId) {}
 
+  private TextUnitDTOWithVariantCommentOrError prepareWithIntegrityRepair(
+      ResponsesResponse response,
+      TextUnitsByScreenshotWithResponsesResponse original,
+      AiTranslateType type,
+      Status status,
+      TextUnitDTO unit,
+      Object output,
+      PollableTask task,
+      Long localeId,
+      String locale,
+      Tags requestTags,
+      List<CompletableFuture<ResponsesResponse>> repairResponses) {
+    String target =
+        AiTranslateTargetAutoFix.fixTarget(
+            unit.getSource(), type.getTargetWithMetadata(unit.getTmTextUnitId(), output).target());
+    TranslationIntegrityEvaluation evaluation;
+    try {
+      evaluation = AiTranslateCandidateValidation.evaluate(unit, target, locale);
+    } catch (RuntimeException e) {
+      String error =
+          "Could not validate AI translation for tmTextUnitId "
+              + unit.getTmTextUnitId()
+              + ": "
+              + e.getMessage();
+      markTextUnitValidationFailed(task.getId(), original.lineageRequestGroupId(), unit, error);
+      return validationFailure(response.id(), unit, original.lineageRequestGroupId(), error);
+    }
+    if (!AiTranslateCandidateValidation.rejected(evaluation)) {
+      return prepareForTextUnitDTOForImport(
+          response.id(), type, status, unit, output, original.lineageRequestGroupId(), locale);
+    }
+    String failure =
+        "AI translation integrity: " + AiTranslateCandidateValidation.describe(evaluation);
+    markTextUnitValidationFailed(task.getId(), original.lineageRequestGroupId(), unit, failure);
+    if (!AiTranslateCandidateValidation.repairable(evaluation)) {
+      return validationFailure(response.id(), unit, original.lineageRequestGroupId(), failure);
+    }
+
+    // One additional request for this string. The repaired output goes through the same gates.
+    ResponsesRequest repairRequest =
+        buildRepairRequest(original.responsesRequest(), type, unit, target, evaluation);
+    String repairGroupId =
+        createNoBatchLineageAttempts(
+            task.getId(),
+            localeId,
+            type.name(),
+            repairRequest.model(),
+            repairRequest,
+            List.of(unit));
+    String repairResponseBlob = null;
+    ResponsesResponse repairResponse = null;
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    incrementCounter(metricName("integrityRepairRequests"), requestTags);
+    noBatchRequestsInFlight.incrementAndGet();
+    try {
+      CompletableFuture<ResponsesResponse> future =
+          openAIClientPool.submit(
+              client ->
+                  client.getResponses(
+                      repairRequest, Duration.ofSeconds(original.timeoutSeconds())));
+      repairResponses.add(future);
+      repairResponse = future.join();
+      repairResponseBlob =
+          putNoBatchResponseLineageBlob(task.getId(), repairGroupId, repairResponse);
+      validateResponseCompleted(repairResponse);
+      Object repairedOutput =
+          objectMapper.readValueUnchecked(
+              repairResponse.outputText(), type.getOutputJsonSchemaClass());
+      validateCompletionOutput(type, List.of(unit), repairedOutput);
+      TextUnitDTOWithVariantCommentOrError prepared =
+          prepareForTextUnitDTOForImport(
+              repairResponse.id(), type, status, unit, repairedOutput, repairGroupId, locale);
+      if (prepared.error() != null) {
+        markNoBatchLineageFailed(
+            task.getId(), repairGroupId, repairResponse.id(), repairResponseBlob, prepared.error());
+        incrementCounter(
+            metricName("integrityRepairResults"), requestTags.and("result", "rejected"));
+      } else {
+        markNoBatchLineageResponded(
+            task.getId(), repairGroupId, repairResponse.id(), repairResponseBlob);
+        incrementCounter(
+            metricName("integrityRepairResults"), requestTags.and("result", "accepted"));
+      }
+      return prepared;
+    } catch (RuntimeException e) {
+      String error =
+          "AI translation repair failed for tmTextUnitId "
+              + unit.getTmTextUnitId()
+              + ": "
+              + e.getMessage();
+      markNoBatchLineageFailed(
+          task.getId(),
+          repairGroupId,
+          repairResponse == null ? null : repairResponse.id(),
+          repairResponseBlob,
+          error);
+      incrementProviderFailureCounter(requestTags, e);
+      incrementCounter(metricName("integrityRepairResults"), requestTags.and("result", "failed"));
+      return validationFailure(
+          repairResponse == null ? response.id() : repairResponse.id(), unit, repairGroupId, error);
+    } finally {
+      noBatchRequestsInFlight.decrementAndGet();
+      meterRegistry
+          .timer(metricName("integrityRepairDuration"), requestTags)
+          .record(stopwatch.elapsed());
+    }
+  }
+
+  ResponsesRequest buildRepairRequest(
+      ResponsesRequest original,
+      AiTranslateType type,
+      TextUnitDTO unit,
+      String target,
+      TranslationIntegrityEvaluation evaluation) {
+    List<ResponsesRequest.InputMessage> inputs = new ArrayList<>(original.input());
+    if (type.supportsMultipleTextUnits()) {
+      CompletionMultiTextUnitInput input =
+          objectMapper.readValueUnchecked(
+              ((ResponsesRequest.InputMessage.Text) inputs.getFirst().content().getFirst()).text(),
+              CompletionMultiTextUnitInput.class);
+      List<TextUnit> requested =
+          input.textUnitsToTranslate().stream()
+              .filter(t -> t.tmTextUnitId().equals(unit.getTmTextUnitId()))
+              .toList();
+      if (requested.size() != 1) {
+        throw new IllegalArgumentException("Repair requires exactly one original text unit");
+      }
+      inputs.set(
+          0,
+          new ResponsesRequest.InputMessage(
+              "user",
+              List.of(
+                  new ResponsesRequest.InputMessage.Text(
+                      objectMapper.writeValueAsStringUnchecked(
+                          new CompletionMultiTextUnitInput(input.locale(), requested))))));
+    }
+    inputs.add(
+        new ResponsesRequest.InputMessage(
+            "user",
+            List.of(
+                new ResponsesRequest.InputMessage.Text(
+                    objectMapper.writeValueAsStringUnchecked(
+                        new BatchRepairCandidate(
+                            unit.getTmTextUnitId(),
+                            target,
+                            AiTranslateCandidateValidation.targetErrors(evaluation)))))));
+    return new ResponsesRequest(
+        original.model(),
+        original.instructions() + "\n\n" + AiTranslateCandidateValidation.REPAIR_INSTRUCTION,
+        inputs,
+        original.reasoning(),
+        original.text(),
+        original.metadata(),
+        original.serviceTier());
+  }
+
+  private void markTextUnitValidationFailed(
+      Long taskId, String groupId, TextUnitDTO unit, String error) {
+    try {
+      aiTranslateTextUnitAttemptService.markNoBatchTextUnitFailed(
+          taskId, groupId, unit.getTmTextUnitId(), error);
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to store AI translation validation failure for text unit {}",
+          unit.getTmTextUnitId(),
+          e);
+    }
+  }
+
+  private static TextUnitDTOWithVariantCommentOrError validationFailure(
+      String completionId, TextUnitDTO unit, String groupId, String error) {
+    return new TextUnitDTOWithVariantCommentOrError(
+        completionId,
+        new TextUnitDTOWithVariantComment(unit, null),
+        unit.getTarget(),
+        error,
+        groupId);
+  }
+
+  record BatchRepairCandidate(
+      long tmTextUnitId, String target, List<TranslationIntegrityDiagnostic> diagnostics) {}
+
+  record BatchImportResult(List<String> errors, List<BatchRepairCandidate> repairs) {}
+
   static void validateResponseCompleted(ResponsesResponse response) {
     if (!"completed".equals(response.status())
         || response.error() != null
@@ -1359,12 +1555,11 @@ public class AiTranslateService {
     }
   }
 
-  List<String> importBatch(
+  BatchImportResult importBatchForRepair(
       RetrieveBatchResponse retrieveBatchResponse,
       AiTranslateType aiTranslateType,
       Status importStatus,
       PollableTask currentTask) {
-
     logger.info("Importing batch: {}", retrieveBatchResponse.id());
 
     String textUnitDTOsBlobId =
@@ -1392,17 +1587,35 @@ public class AiTranslateService {
             .downloadFileContent(
                 new DownloadFileContentRequest(retrieveBatchResponse.outputFileId()));
 
-    List<TextUnitDTOWithVariantCommentOrError> forImport =
+    Set<Long> requestedIds = batchRepairService.getRequestedTextUnitIds(retrieveBatchResponse);
+    if (!tmTextUnitIdToTextUnitDTOs.keySet().containsAll(requestedIds)) {
+      throw new IllegalArgumentException("Batch request does not match its source snapshot");
+    }
+    List<ChatCompletionResponseBatchFileLine> responseLines =
         downloadFileContentResponse
             .content()
             .lines()
+            .filter(line -> !line.isBlank())
             .map(
-                line -> {
-                  ChatCompletionResponseBatchFileLine chatCompletionResponseBatchFileLine =
-                      objectMapper.readValueUnchecked(
-                          line, ChatCompletionResponseBatchFileLine.class);
-
-                  if (chatCompletionResponseBatchFileLine.response().statusCode() != 200) {
+                line ->
+                    objectMapper.readValueUnchecked(
+                        line, ChatCompletionResponseBatchFileLine.class))
+            .toList();
+    Set<Long> seenIds = new HashSet<>();
+    for (ChatCompletionResponseBatchFileLine line : responseLines) {
+      Long id = Long.valueOf(line.customId());
+      if (!requestedIds.contains(id) || !seenIds.add(id)) {
+        throw new IllegalArgumentException(
+            "Batch response has an unrequested or duplicate text unit id: " + id);
+      }
+    }
+    List<BatchRepairCandidate> repairs = new ArrayList<>();
+    List<TextUnitDTOWithVariantCommentOrError> forImport =
+        responseLines.stream()
+            .map(
+                chatCompletionResponseBatchFileLine -> {
+                  if (chatCompletionResponseBatchFileLine.response() == null
+                      || chatCompletionResponseBatchFileLine.response().statusCode() != 200) {
                     String errorMessage =
                         "Response batch file line failed: " + chatCompletionResponseBatchFileLine;
                     logger.debug(errorMessage);
@@ -1440,6 +1653,34 @@ public class AiTranslateService {
                             choice.message().content(), aiTranslateType.getOutputJsonSchemaClass());
                     validateCompletionOutput(
                         aiTranslateType, List.of(textUnitDTO), completionOutput);
+                    String target =
+                        AiTranslateTargetAutoFix.fixTarget(
+                            textUnitDTO.getSource(),
+                            aiTranslateType
+                                .getTargetWithMetadata(
+                                    textUnitDTO.getTmTextUnitId(), completionOutput)
+                                .target());
+                    TranslationIntegrityEvaluation evaluation =
+                        AiTranslateCandidateValidation.evaluate(
+                            textUnitDTO, target, textUnitDTO.getTargetLocale());
+                    if (AiTranslateCandidateValidation.rejected(evaluation)) {
+                      if (AiTranslateCandidateValidation.repairable(evaluation)
+                          && !AiTranslateBatchRepairService.isRepairBatch(retrieveBatchResponse)) {
+                        repairs.add(
+                            new BatchRepairCandidate(
+                                textUnitDTO.getTmTextUnitId(),
+                                target,
+                                AiTranslateCandidateValidation.targetErrors(evaluation)));
+                      }
+                      return validationFailure(
+                          chatCompletionResponseBatchFileLine.id(),
+                          textUnitDTO,
+                          null,
+                          "AI translation integrity for tmTextUnitId "
+                              + textUnitDTO.getTmTextUnitId()
+                              + ": "
+                              + AiTranslateCandidateValidation.describe(evaluation));
+                    }
                   } catch (RuntimeException e) {
                     String errorMessage =
                         "Invalid AI translation response: %s".formatted(e.getMessage());
@@ -1475,10 +1716,23 @@ public class AiTranslateService {
             BulkImportLineageService.SOURCE_AI_TRANSLATE,
             BulkImportLineageService.AI_TRANSLATE_IDENTITY));
 
-    return forImport.stream()
-        .filter(t -> t.error() != null)
-        .map(TextUnitDTOWithVariantCommentOrError::error)
-        .toList();
+    Set<Long> repairIds =
+        repairs.stream().map(BatchRepairCandidate::tmTextUnitId).collect(Collectors.toSet());
+    List<String> errors =
+        new ArrayList<>(
+            forImport.stream()
+                .filter(t -> t.error() != null)
+                .filter(
+                    t ->
+                        t.textUnitDTOWithVariantComment() == null
+                            || !repairIds.contains(
+                                t.textUnitDTOWithVariantComment().textUnitDTO().getTmTextUnitId()))
+                .map(TextUnitDTOWithVariantCommentOrError::error)
+                .toList());
+    requestedIds.stream()
+        .filter(id -> !seenIds.contains(id))
+        .forEach(id -> errors.add("Batch response missing tmTextUnitId: " + id));
+    return new BatchImportResult(List.copyOf(errors), List.copyOf(repairs));
   }
 
   static TextUnitDTOWithVariantCommentOrError prepareForTextUnitDTOForImport(
@@ -1488,6 +1742,24 @@ public class AiTranslateService {
       TextUnitDTO textUnitDTO,
       Object completionOutput,
       String lineageRequestGroupId) {
+    return prepareForTextUnitDTOForImport(
+        completionId,
+        aiTranslateType,
+        importStatus,
+        textUnitDTO,
+        completionOutput,
+        lineageRequestGroupId,
+        textUnitDTO.getTargetLocale());
+  }
+
+  private static TextUnitDTOWithVariantCommentOrError prepareForTextUnitDTOForImport(
+      String completionId,
+      AiTranslateType aiTranslateType,
+      Status importStatus,
+      TextUnitDTO textUnitDTO,
+      Object completionOutput,
+      String lineageRequestGroupId,
+      String targetLocale) {
 
     String oldTarget = textUnitDTO.getTarget();
 
@@ -1520,6 +1792,16 @@ public class AiTranslateService {
           lineageRequestGroupId);
     }
 
+    TranslationIntegrityEvaluation evaluation =
+        AiTranslateCandidateValidation.evaluate(textUnitDTO, newTarget, targetLocale);
+    if (AiTranslateCandidateValidation.rejected(evaluation)) {
+      return validationFailure(
+          completionId,
+          textUnitDTO,
+          lineageRequestGroupId,
+          "AI translation integrity: " + AiTranslateCandidateValidation.describe(evaluation));
+    }
+
     textUnitDTO.setStatus(importStatus);
     textUnitDTO.setTarget(newTarget);
     textUnitDTO.setTranslatorIdentity(BulkImportLineageService.AI_TRANSLATE_IDENTITY);
@@ -1531,7 +1813,15 @@ public class AiTranslateService {
     TMTextUnitVariantComment tmTextUnitVariantComment = new TMTextUnitVariantComment();
     tmTextUnitVariantComment.setType(TMTextUnitVariantComment.Type.AI_TRANSLATE);
     tmTextUnitVariantComment.setSeverity(TMTextUnitVariantComment.Severity.INFO);
-    tmTextUnitVariantComment.setContent(targetWithMetadata.targetComment());
+    String comment = targetWithMetadata.targetComment();
+    if (!evaluation.diagnostics().isEmpty()) {
+      tmTextUnitVariantComment.setSeverity(TMTextUnitVariantComment.Severity.WARNING);
+      comment =
+          (comment == null || comment.isBlank() ? "" : comment + "\n\n")
+              + "MessageFormat review findings:\n"
+              + AiTranslateCandidateValidation.describe(evaluation);
+    }
+    tmTextUnitVariantComment.setContent(comment);
 
     return new TextUnitDTOWithVariantCommentOrError(
         completionId,

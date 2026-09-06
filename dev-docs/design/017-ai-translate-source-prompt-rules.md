@@ -156,7 +156,8 @@ This may increase request count when repositories mix source formats heavily. Th
 
 Legacy Batch Mode
 
-The legacy batch path also uses one prompt per batch file. There are two viable options:
+Legacy Batch composes managed locale, parsed plural, and ad hoc guidance per request line.
+A repair reuses that original request context. Source-regex rules remain separate; there are two viable options:
 
 - MVP: Do not apply source prompt rules to legacy batch mode. Document this in the settings page and API response.
 - Later: Split batch request lines into separate batch files by matched rule set, mirroring no-batch partitioning.

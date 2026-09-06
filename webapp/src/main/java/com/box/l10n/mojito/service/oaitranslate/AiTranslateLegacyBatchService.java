@@ -66,6 +66,7 @@ class AiTranslateLegacyBatchService {
   private final AssetTextUnitRepository assetTextUnitRepository;
   private final TMTextUnitVariantRepository tmTextUnitVariantRepository;
   private final GlossaryService glossaryService;
+  private final AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService;
 
   AiTranslateLegacyBatchService(
       TextUnitSearcher textUnitSearcher,
@@ -77,7 +78,8 @@ class AiTranslateLegacyBatchService {
       @Qualifier("AiTranslate") ObjectMapper objectMapper,
       AssetTextUnitRepository assetTextUnitRepository,
       TMTextUnitVariantRepository tmTextUnitVariantRepository,
-      GlossaryService glossaryService) {
+      GlossaryService glossaryService,
+      AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService) {
     this.textUnitSearcher = textUnitSearcher;
     this.repositoryRepository = repositoryRepository;
     this.repositoryService = repositoryService;
@@ -88,6 +90,7 @@ class AiTranslateLegacyBatchService {
     this.assetTextUnitRepository = assetTextUnitRepository;
     this.tmTextUnitVariantRepository = tmTextUnitVariantRepository;
     this.glossaryService = glossaryService;
+    this.aiTranslateLocalePromptSuffixService = aiTranslateLocalePromptSuffixService;
   }
 
   record LegacyBatchCreationResult(
@@ -212,6 +215,8 @@ class AiTranslateLegacyBatchService {
             textUnitDTOWithVariantCommentsList,
             model,
             reasoningEffort,
+            aiTranslateLocalePromptSuffixService.getLocalePromptSuffix(
+                repositoryLocale.getLocale().getBcp47Tag()),
             promptSuffix,
             aiTranslateType,
             relatedStringsProvider,
@@ -292,7 +297,8 @@ class AiTranslateLegacyBatchService {
           textUnitDTOSUnitDTOWithVariantComments,
       String model,
       String reasoningEffort,
-      String promptPrefix,
+      String localePromptSuffix,
+      String promptSuffix,
       AiTranslateType aiTranslateType,
       AiTranslateRelatedStringsProvider relatedStringsProvider,
       GlossaryTrie glossaryTrie,
@@ -324,9 +330,10 @@ class AiTranslateLegacyBatchService {
                       AiTranslateService.getPrompt(
                           aiTranslateType.getPrompt(),
                           AiTranslateLocalePromptSuffixService.combinePromptSuffixes(
+                              localePromptSuffix,
                               AiTranslatePluralPrompt.getPromptSuffix(
                                   textUnitDTO, completionInput.locale()),
-                              promptPrefix)),
+                              promptSuffix)),
                       aiTranslateType.supportsMultipleTextUnits()
                           ? AiTranslateType.CompletionMultiTextUnitInput.from(
                               textUnitDTO.getTmTextUnitId(), completionInput)

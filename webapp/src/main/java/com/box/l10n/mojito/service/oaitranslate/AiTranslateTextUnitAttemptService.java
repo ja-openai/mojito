@@ -217,6 +217,20 @@ public class AiTranslateTextUnitAttemptService {
   }
 
   @Transactional
+  public void markNoBatchTextUnitFailed(
+      Long pollableTaskId, String requestGroupId, Long tmTextUnitId, String errorMessage) {
+    updateRequestGroup(
+        pollableTaskId,
+        requestGroupId,
+        attempt -> {
+          if (attempt.getTmTextUnit().getId().equals(tmTextUnitId)) {
+            attempt.setStatus(STATUS_FAILED);
+            attempt.setErrorMessage(errorMessage);
+          }
+        });
+  }
+
+  @Transactional
   public void markNoBatchImported(
       Long pollableTaskId, List<NoBatchImportedVariant> importedVariants) {
     if (importedVariants == null || importedVariants.isEmpty()) {

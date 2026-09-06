@@ -69,8 +69,17 @@ public final class AiTranslatePluralPrompt {
               + " Cover plural categories in each relevant selector context."
               + " Do not change selectors with select=exact or runtime-dependent select options.");
     } else {
-      requirements.append(" Keep ICU other branches and # placeholders.");
+      requirements.append(" Keep ICU other branches and the meaning of # with any offset.");
     }
+    requirements.append(
+        "\nA printed count may be omitted in a branch when its wording fully expresses the fixed"
+            + " quantity selected by that branch. Category names such as one or two do not by"
+            + " themselves mean a fixed quantity in every locale. Account for exact-number"
+            + " conditions, offsets, and number formatting. Keep the count selector and its inputs."
+            + " Where a branch covers multiple quantities, retain the count when the source"
+            + " communicates it. Preserve unrelated placeholders and information such as names,"
+            + " amounts, dates, and links. Do not copy placeholder occurrence counts mechanically"
+            + " across plural branches.");
     return "Plural requirements for target locale " + targetLocale + ":" + requirements;
   }
 

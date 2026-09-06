@@ -20,7 +20,23 @@ class AiTranslatePluralPromptTest {
             "cardinal plural rules have 6 categories: zero, one, two, few, many, other"));
     assertTrue(prompt.contains("even when absent from the source"));
     assertTrue(prompt.contains("exact-number branches, offsets"));
-    assertTrue(prompt.contains("ICU other branches and # placeholders"));
+    assertTrue(prompt.contains("ICU other branches and the meaning of # with any offset"));
+    assertTrue(prompt.contains("Keep the count selector and its inputs"));
+    assertTrue(prompt.contains("Preserve unrelated placeholders"));
+  }
+
+  @Test
+  void countOmissionGuidanceDependsOnBranchMeaningRatherThanLocaleOrCategoryName() {
+    for (String locale : new String[] {"ar", "ru", "fr-FR"}) {
+      String prompt = prompt("{n, plural, one {# item} other {# items}}", locale);
+
+      assertTrue(prompt.contains("wording fully expresses the fixed quantity"), locale);
+      assertTrue(prompt.contains("do not by themselves mean a fixed quantity"), locale);
+      assertTrue(
+          prompt.contains("Where a branch covers multiple quantities, retain the count"), locale);
+      assertTrue(prompt.contains("Do not copy placeholder occurrence counts mechanically"), locale);
+      assertFalse(prompt.contains("Keep ICU other branches and # placeholders"), locale);
+    }
   }
 
   @Test
@@ -85,6 +101,8 @@ class AiTranslatePluralPromptTest {
     assertTrue(prompt.contains("* fallback, which covers the other category"));
     assertTrue(prompt.contains("each relevant selector context"));
     assertFalse(prompt.contains("ICU other branches"));
+    assertTrue(prompt.contains("wording fully expresses the fixed quantity"));
+    assertTrue(prompt.contains("Preserve unrelated placeholders"));
   }
 
   @Test

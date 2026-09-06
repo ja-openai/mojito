@@ -36,6 +36,9 @@ public class AiTranslateLegacyBatchServiceTest {
     RepositoryRepository repositoryRepository = mock(RepositoryRepository.class);
     RepositoryService repositoryService = mock(RepositoryService.class);
     OpenAIClient openAIClient = mock(OpenAIClient.class);
+    AiTranslateLocalePromptSuffixService localePromptSuffixService =
+        mock(AiTranslateLocalePromptSuffixService.class);
+    when(localePromptSuffixService.getLocalePromptSuffix("fr-FR")).thenReturn("Use formal French.");
     ObjectMapper mapper = new ObjectMapper();
     AiTranslateService.configureObjectMapper(mapper);
     AiTranslateLegacyBatchService service =
@@ -49,7 +52,8 @@ public class AiTranslateLegacyBatchServiceTest {
             mapper,
             mock(AssetTextUnitRepository.class),
             mock(TMTextUnitVariantRepository.class),
-            mock(GlossaryService.class));
+            mock(GlossaryService.class),
+            localePromptSuffixService);
     Repository repository = new Repository();
     repository.setId(77L);
     repository.setName("product");
@@ -87,7 +91,7 @@ public class AiTranslateLegacyBatchServiceTest {
                 null,
                 true,
                 null,
-                null,
+                "Keep sentences concise.",
                 null,
                 AiTranslateType.TARGET_ONLY_NEW.name(),
                 StatusFilter.FOR_TRANSLATION.name(),
@@ -114,12 +118,20 @@ public class AiTranslateLegacyBatchServiceTest {
     assertThat(batchLines).hasSize(2);
     JsonNode batchLine = batchLines.getFirst();
     assertThat(batchLine.at("/body/messages/0/content").asText())
-        .isEqualTo(AiTranslateType.TARGET_ONLY_NEW.getPrompt());
+        .isEqualTo(
+            AiTranslateType.TARGET_ONLY_NEW.getPrompt()
+                + " Use formal French. Keep sentences concise.");
     assertThat(batchLines.getLast().get("custom_id").asText()).isEqualTo("43");
     assertThat(batchLines.getLast().at("/body/messages/0/content").asText())
         .contains(
             "Plural requirements for target locale fr-FR:",
             "cardinal plural rules have 3 categories: one, many, other");
+    String pluralPrompt = batchLines.getLast().at("/body/messages/0/content").asText();
+    assertThat(pluralPrompt.indexOf("Use formal French."))
+        .isLessThan(pluralPrompt.indexOf("Plural requirements for target locale fr-FR:"));
+    assertThat(pluralPrompt.indexOf("Plural requirements for target locale fr-FR:"))
+        .isLessThan(pluralPrompt.indexOf("Keep sentences concise."));
+    verify(localePromptSuffixService).getLocalePromptSuffix("fr-FR");
     assertThat(batchLine.get("custom_id").asText()).isEqualTo("42");
     assertThat(batchLine.at("/body/service_tier").isMissingNode()).isTrue();
     assertThat(batchLine.at("/body/reasoning_effort").asText()).isEqualTo("max");
@@ -134,6 +146,7 @@ public class AiTranslateLegacyBatchServiceTest {
     assertThat(input.at("/textUnitsToTranslate/0/glossaryTerms/0/termTarget").asText())
         .isEqualTo("ChatGPT");
 
+    when(localePromptSuffixService.getLocalePromptSuffix("fr-FR")).thenReturn(null);
     service.createBatches(
         new AiTranslateService.AiTranslateInput(
             "product",
@@ -196,6 +209,8 @@ public class AiTranslateLegacyBatchServiceTest {
     StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
     OpenAIClient openAIClient = mock(OpenAIClient.class);
     GlossaryService glossaryService = mock(GlossaryService.class);
+    AiTranslateLocalePromptSuffixService localePromptSuffixService =
+        mock(AiTranslateLocalePromptSuffixService.class);
     AiTranslateLegacyBatchService legacyBatchService =
         new AiTranslateLegacyBatchService(
             textUnitSearcher,
@@ -207,7 +222,8 @@ public class AiTranslateLegacyBatchServiceTest {
             mock(ObjectMapper.class),
             mock(AssetTextUnitRepository.class),
             mock(TMTextUnitVariantRepository.class),
-            glossaryService);
+            glossaryService,
+            localePromptSuffixService);
 
     Repository repository = new Repository();
     repository.setId(77L);
@@ -254,6 +270,7 @@ public class AiTranslateLegacyBatchServiceTest {
     assertEquals(List.of(), result.createdBatches());
     assertEquals(List.of("fr-FR"), result.skippedLocales());
     assertEquals(List.of(), result.batchCreationErrors());
-    verifyNoInteractions(glossaryService, structuredBlobStorage, openAIClient);
+    verifyNoInteractions(
+        glossaryService, localePromptSuffixService, structuredBlobStorage, openAIClient);
   }
 }

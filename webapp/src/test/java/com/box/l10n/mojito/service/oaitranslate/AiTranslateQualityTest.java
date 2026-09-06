@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +15,7 @@ import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.entity.TMTextUnitVariant.Status;
+import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.openai.OpenAIClient;
 import com.box.l10n.mojito.openai.OpenAIClient.ResponsesRequest;
@@ -294,6 +296,312 @@ public class AiTranslateQualityTest {
         .hasMessageContaining("requested source");
   }
 
+  @Test
+  public void batchQueuesOnlyInvalidCandidatesAndSecondFailureIsTerminal() {
+    for (boolean repair : List.of(false, true)) {
+      TextUnitDTO first = textUnit(1L, "{count, plural, one {# item} other {# items}}");
+      first.setTarget("Human translation");
+      first.setStatus(Status.APPROVED);
+      Fixture fixture =
+          new Fixture("ar", first, textUnit(2L, "{count, plural, one {# file} other {# files}}"));
+      var result =
+          fixture.importBatch(
+              batchLine(fixture, 1L, first.getSource())
+                  + "\n"
+                  + batchLine(fixture, 2L, arabicTarget("count")),
+              repair);
+      assertThat(fixture.imported)
+          .extracting(t -> t.textUnitDTO().getTmTextUnitId())
+          .containsExactly(2L);
+      assertThat(first.getTarget()).isEqualTo("Human translation");
+      assertThat(first.getStatus()).isEqualTo(Status.APPROVED);
+      if (repair) {
+        assertThat(result.repairs()).isEmpty();
+        assertThat(result.errors()).hasSize(1);
+        assertThat(result.errors().getFirst()).contains("tmTextUnitId 1");
+      } else {
+        assertThat(result.repairs())
+            .extracting(AiTranslateService.BatchRepairCandidate::tmTextUnitId)
+            .containsExactly(1L);
+        assertThat(result.errors()).isEmpty();
+      }
+    }
+  }
+
+  @Test
+  public void batchRejectsDuplicateAndUnexpectedIdsBeforeMutation() {
+    for (long id : List.of(1L, 3L)) {
+      Fixture fixture = new Fixture();
+      String output = batchLine(fixture, 1L, "Save") + "\n" + batchLine(fixture, id, "Cancel");
+      assertThatThrownBy(() -> fixture.importBatch(output, false))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("unrequested or duplicate");
+      assertThat(fixture.imported).isEmpty();
+      assertThat(fixture.textUnits).allSatisfy(t -> assertThat(t.getTarget()).isNull());
+    }
+  }
+
+  private static String batchLine(Fixture fixture, long id, String target) {
+    String output =
+        fixture.mapper.writeValueAsStringUnchecked(
+            new AiTranslateType.SimpleCompletionOutput(target));
+    return fixture.mapper.writeValueAsStringUnchecked(
+        java.util.Map.of(
+            "id",
+            "response-" + id,
+            "custom_id",
+            Long.toString(id),
+            "response",
+            java.util.Map.of(
+                "status_code",
+                200,
+                "body",
+                java.util.Map.of(
+                    "choices",
+                    List.of(
+                        java.util.Map.of(
+                            "finish_reason",
+                            "stop",
+                            "message",
+                            java.util.Map.of("role", "assistant", "content", output)))))));
+  }
+
+  private static String arabicTarget(String name) {
+    return "{"
+        + name
+        + ", plural, zero {No items} one {One item} two {Two items}"
+        + " few {# items} many {# items} other {# items}}";
+  }
+
+  @Test
+  public void repairsOnlyTheFailedStringAndKeepsTheOriginalContext() {
+    Fixture fixture =
+        new Fixture(
+            "ar",
+            textUnit(1L, "{count, plural, one {# item} other {# items}}"),
+            textUnit(2L, "{count, plural, one {# file} other {# files}}"));
+    fixture.respondWith(
+        request -> {
+          var input =
+              fixture.mapper.convertValue(
+                  fixture.input(request), AiTranslateType.CompletionMultiTextUnitInput.class);
+          boolean repair = fixture.requests.size() == 2;
+          if (repair) {
+            assertThat(input.textUnitsToTranslate())
+                .extracting(AiTranslateType.CompletionMultiTextUnitInput.TextUnit::tmTextUnitId)
+                .containsExactly(1L);
+            assertThat(input.textUnitsToTranslate().getFirst().sourceDescription()).isNotBlank();
+            assertThat(request.instructions())
+                .contains(
+                    "Plural requirements for target locale ar",
+                    AiTranslateCandidateValidation.REPAIR_INSTRUCTION);
+            assertThat(request.input().getLast().content().getFirst())
+                .isInstanceOf(OpenAIClient.ResponsesRequest.InputMessage.Text.class);
+            String feedback =
+                ((OpenAIClient.ResponsesRequest.InputMessage.Text)
+                        request.input().getLast().content().getFirst())
+                    .text();
+            assertThat(feedback).contains("diagnostics", "target", "count");
+          }
+          return response(
+              "completed",
+              fixture.mapper.writeValueAsStringUnchecked(
+                  new AiTranslateType.CompletionMultiTextUnitOutput(
+                      input.textUnitsToTranslate().stream()
+                          .map(
+                              unit ->
+                                  new AiTranslateType.CompletionMultiTextUnitOutput.Target(
+                                      unit.tmTextUnitId(),
+                                      repair || unit.tmTextUnitId() == 2L
+                                          ? arabicTarget("count")
+                                          : unit.source()))
+                          .toList(),
+                      null)));
+        });
+
+    fixture.run(AiTranslateType.TARGET_ONLY_NEW);
+
+    assertThat(fixture.requests).hasSize(2);
+    assertThat(fixture.imported).hasSize(2);
+    verify(fixture.lineage)
+        .markNoBatchTextUnitFailed(
+            any(), anyString(), org.mockito.ArgumentMatchers.eq(1L), anyString());
+    verify(fixture.lineage, never())
+        .markNoBatchTextUnitFailed(
+            any(), anyString(), org.mockito.ArgumentMatchers.eq(2L), anyString());
+  }
+
+  @Test
+  public void unresolvedRepairPreservesHumanTargetStatusAndAttribution() {
+    TextUnitDTO unit = textUnit(1L, "{count, plural, one {# item} other {# items}}");
+    unit.setTarget("Human translation");
+    unit.setTargetComment("Human context");
+    unit.setStatus(Status.APPROVED);
+    unit.setTranslatorIdentity("translator");
+    unit.setReviewerIdentity("reviewer");
+    Fixture fixture = new Fixture("ar", unit);
+    fixture.respondWith(
+        request ->
+            response(
+                "completed",
+                fixture.mapper.writeValueAsStringUnchecked(
+                    new AiTranslateType.SimpleCompletionOutput(unit.getSource()))));
+
+    fixture.run(AiTranslateType.TARGET_ONLY);
+
+    assertThat(fixture.requests).hasSize(2);
+    assertThat(fixture.imported).isEmpty();
+    assertThat(unit.getTarget()).isEqualTo("Human translation");
+    assertThat(unit.getTargetComment()).isEqualTo("Human context");
+    assertThat(unit.getStatus()).isEqualTo(Status.APPROVED);
+    assertThat(unit.getTranslatorIdentity()).isEqualTo("translator");
+    assertThat(unit.getReviewerIdentity()).isEqualTo("reviewer");
+  }
+
+  @Test
+  public void warningsAreImportedAsReviewFindingsWithoutRetry() {
+    Fixture fixture = new Fixture("fr", textUnit(1L, "Hello {name}"));
+    fixture.respondWith(
+        request ->
+            response(
+                "completed",
+                fixture.mapper.writeValueAsStringUnchecked(
+                    new AiTranslateType.SimpleCompletionOutput("Bonjour"))));
+
+    fixture.run(AiTranslateType.TARGET_ONLY);
+
+    assertThat(fixture.requests).hasSize(1);
+    assertThat(fixture.imported).hasSize(1);
+    assertThat(fixture.imported.getFirst().tmTextUnitVariantComment().getSeverity())
+        .isEqualTo(TMTextUnitVariantComment.Severity.WARNING);
+    assertThat(fixture.imported.getFirst().tmTextUnitVariantComment().getContent())
+        .contains("name");
+  }
+
+  @Test
+  public void sourceDefectDoesNotCauseRepairOrImport() {
+    Fixture fixture = new Fixture("ar", textUnit(1L, "{count, plural, one {item}"));
+    fixture.respondWith(
+        request ->
+            response(
+                "completed",
+                fixture.mapper.writeValueAsStringUnchecked(
+                    new AiTranslateType.SimpleCompletionOutput("Item"))));
+
+    fixture.run(AiTranslateType.TARGET_ONLY);
+
+    assertThat(fixture.requests).hasSize(1);
+    assertThat(fixture.imported).isEmpty();
+    assertThat(fixture.textUnits.getFirst().getTarget()).isNull();
+  }
+
+  @Test
+  public void invalidRepairResponseCannotMutateTheCandidate() {
+    for (String failure : List.of("incomplete", "wrong-id", "empty")) {
+      TextUnitDTO unit = textUnit(1L, "{count, plural, one {# item} other {# items}}");
+      unit.setTarget("Human translation");
+      Fixture fixture = new Fixture("ar", unit);
+      fixture.respondWith(
+          request -> {
+            if (fixture.requests.size() == 1) {
+              return response(
+                  "completed",
+                  fixture.mapper.writeValueAsStringUnchecked(
+                      new AiTranslateType.CompletionMultiTextUnitOutput(
+                          List.of(
+                              new AiTranslateType.CompletionMultiTextUnitOutput.Target(
+                                  1L, unit.getSource())),
+                          null)));
+            }
+            return response(
+                failure.equals("incomplete") ? "incomplete" : "completed",
+                fixture.mapper.writeValueAsStringUnchecked(
+                    new AiTranslateType.CompletionMultiTextUnitOutput(
+                        List.of(
+                            new AiTranslateType.CompletionMultiTextUnitOutput.Target(
+                                failure.equals("wrong-id") ? 2L : 1L,
+                                failure.equals("empty") ? "" : arabicTarget("count"))),
+                        null)));
+          });
+
+      fixture.run(AiTranslateType.TARGET_ONLY_NEW);
+
+      assertThat(fixture.requests).hasSize(2);
+      assertThat(fixture.imported).isEmpty();
+      assertThat(unit.getTarget()).isEqualTo("Human translation");
+    }
+  }
+
+  @Test
+  public void repairRequestRetainsScreenshotAndProviderSettings() {
+    TextUnitDTO unit = textUnit(1L, "{count, plural, one {# item} other {# items}}");
+    Fixture fixture = new Fixture("ar", unit);
+    String payload =
+        fixture.mapper.writeValueAsStringUnchecked(
+            new AiTranslateType.CompletionMultiTextUnitInput(
+                "ar",
+                List.of(
+                    new AiTranslateType.CompletionMultiTextUnitInput.TextUnit(
+                        1L, unit.getSource(), "Description", null, List.of(), List.of()),
+                    new AiTranslateType.CompletionMultiTextUnitInput.TextUnit(
+                        2L, "Peer", "Peer description", null, List.of(), List.of()))));
+    ResponsesRequest original =
+        ResponsesRequest.builder()
+            .model("model")
+            .reasoningEffort("high")
+            .textVerbosity("low")
+            .serviceTier("default")
+            .instructions("Locale and source instructions")
+            .addJsonSchema(AiTranslateType.CompletionMultiTextUnitOutput.class)
+            .addUserText(payload)
+            .addUserImageUrl("https://example.com/screenshot.png")
+            .addMetadata("request", "original")
+            .build();
+
+    ResponsesRequest repair =
+        fixture.service.buildRepairRequest(
+            original,
+            AiTranslateType.TARGET_ONLY_NEW,
+            unit,
+            unit.getSource(),
+            AiTranslateCandidateValidation.evaluate(unit, unit.getSource(), "ar"));
+
+    assertThat(repair.input().get(1)).isEqualTo(original.input().get(1));
+    assertThat(repair.model()).isEqualTo(original.model());
+    assertThat(repair.reasoning()).isEqualTo(original.reasoning());
+    assertThat(repair.text()).isEqualTo(original.text());
+    assertThat(repair.serviceTier()).isEqualTo(original.serviceTier());
+    assertThat(repair.metadata()).isEqualTo(original.metadata());
+    assertThat(fixture.input(repair).get("textUnitsToTranslate")).hasSize(1);
+    assertThat(fixture.input(repair).at("/textUnitsToTranslate/0/sourceDescription").asText())
+        .isEqualTo("Description");
+  }
+
+  @Test
+  public void mf2MissingFormsAreRepairedBeforeImport() {
+    TextUnitDTO unit =
+        textUnit(
+            1L, ".input {$count :integer}\n.match $count\none {{One item}}\n* {{{$count} items}}");
+    unit.setMessageFormat("MF2");
+    Fixture fixture = new Fixture("ar", unit);
+    String target =
+        ".input {$count :integer}\n.match $count\nzero {{No items}}\none {{One item}}"
+            + "\ntwo {{Two items}}\nfew {{{$count} items}}\nmany {{{$count} items}}\n* {{{$count} items}}";
+    fixture.respondWith(
+        request ->
+            response(
+                "completed",
+                fixture.mapper.writeValueAsStringUnchecked(
+                    new AiTranslateType.SimpleCompletionOutput(
+                        fixture.requests.size() == 1 ? unit.getSource() : target))));
+
+    fixture.run(AiTranslateType.TARGET_ONLY);
+
+    assertThat(fixture.requests).hasSize(2);
+    assertThat(fixture.imported).hasSize(1);
+    assertThat(unit.getTarget()).isEqualTo(target);
+  }
+
   private static TextUnitDTO textUnit(long id, String source) {
     TextUnitDTO textUnit = new TextUnitDTO();
     textUnit.setTmTextUnitId(id);
@@ -329,6 +637,8 @@ public class AiTranslateQualityTest {
     final AiTranslateTextUnitAttemptService lineage = mock(AiTranslateTextUnitAttemptService.class);
     final List<TextUnitDTO> textUnits;
     final List<ResponsesRequest> requests = new ArrayList<>();
+    final StructuredBlobStorage blobs = mock(StructuredBlobStorage.class);
+    final AiTranslateBatchRepairService batchRepairs = mock(AiTranslateBatchRepairService.class);
     List<TextUnitDTOWithVariantComment> imported = List.of();
     final AiTranslateService service;
 
@@ -338,6 +648,7 @@ public class AiTranslateQualityTest {
 
     Fixture(String localeTag, TextUnitDTO... textUnits) {
       this.textUnits = List.of(textUnits);
+      this.textUnits.forEach(unit -> unit.setTargetLocale(localeTag));
       AiTranslateService.configureObjectMapper(mapper);
       Repository repository = new Repository();
       repository.setId(10L);
@@ -355,6 +666,19 @@ public class AiTranslateQualityTest {
           .thenReturn(Set.of(repositoryLocale));
       TextUnitSearcher searcher = mock(TextUnitSearcher.class);
       when(searcher.search(any())).thenReturn(this.textUnits);
+      TMTextUnitVariantRepository variants = mock(TMTextUnitVariantRepository.class);
+      when(variants.findAllByIdIn(anyList()))
+          .thenReturn(
+              this.textUnits.stream()
+                  .map(
+                      unit -> {
+                        unit.setTmTextUnitVariantId(unit.getTmTextUnitId() + 1000);
+                        var variant = new com.box.l10n.mojito.entity.TMTextUnitVariant();
+                        variant.setId(unit.getTmTextUnitVariantId());
+                        variant.setTmTextUnitVariantComments(Set.of());
+                        return variant;
+                      })
+                  .toList());
       TextUnitBatchImporterService importer = mock(TextUnitBatchImporterService.class);
       when(importer.importTextUnitsWithVariantComment(
               anyList(), any(), any(), (ImportContext) any()))
@@ -376,7 +700,7 @@ public class AiTranslateQualityTest {
               repositories,
               repositoryService,
               importer,
-              mock(StructuredBlobStorage.class),
+              blobs,
               new AiTranslateConfigurationProperties(),
               provider,
               pool,
@@ -387,7 +711,7 @@ public class AiTranslateQualityTest {
               mock(PollableTaskService.class),
               mock(TextUnitDTOsCacheService.class),
               mock(AssetTextUnitRepository.class),
-              mock(TMTextUnitVariantRepository.class),
+              variants,
               mock(GlossaryService.class),
               new SimpleMeterRegistry(),
               mock(ScreenshotService.class),
@@ -397,6 +721,7 @@ public class AiTranslateQualityTest {
               new AiTranslateSourcePromptRuleService(
                   mock(AiTranslateSourcePromptRuleRepository.class)),
               lineage);
+      service.batchRepairService = batchRepairs;
     }
 
     void respondWith(Function<ResponsesRequest, ResponsesResponse> response) {
@@ -423,7 +748,13 @@ public class AiTranslateQualityTest {
                             .map(
                                 unit ->
                                     new AiTranslateType.CompletionMultiTextUnitOutput.Target(
-                                        unit.tmTextUnitId(), unit.source()))
+                                        unit.tmTextUnitId(),
+                                        input.locale().equals("ar")
+                                                && unit.source().contains(", plural,")
+                                            ? arabicTarget("count")
+                                            : unit.source().contains("selectordinal")
+                                                ? "{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}"
+                                                : unit.source()))
                             .toList(),
                         null)));
           });
@@ -434,6 +765,37 @@ public class AiTranslateQualityTest {
           ((ResponsesRequest.InputMessage.Text) request.input().getFirst().content().getFirst())
               .text(),
           JsonNode.class);
+    }
+
+    AiTranslateService.BatchImportResult importBatch(String output, boolean repair) {
+      var batch =
+          mapper.readValueUnchecked(
+              "{\"id\":\"batch\",\"input_file_id\":\"input\",\"output_file_id\":\"output\",\"metadata\":{\"textUnitDTOs\":\"snapshot\""
+                  + (repair ? ",\"repairAttempt\":\"1\"" : "")
+                  + "}}",
+              OpenAIClient.RetrieveBatchResponse.class);
+      when(batchRepairs.getRequestedTextUnitIds(any()))
+          .thenReturn(
+              textUnits.stream()
+                  .map(TextUnitDTO::getTmTextUnitId)
+                  .collect(java.util.stream.Collectors.toSet()));
+      when(blobs.getString(StructuredBlobStorage.Prefix.AI_TRANSLATE_WS, "snapshot"))
+          .thenReturn(
+              java.util.Optional.of(
+                  mapper.writeValueAsStringUnchecked(
+                      new AiTranslateService.AiTranslateBlobStorage(
+                          textUnits.stream()
+                              .map(
+                                  unit ->
+                                      new AiTranslateService.TextUnitDTOWithVariantComments(
+                                          unit, Set.of()))
+                              .toList()))));
+      when(provider.downloadFileContent(any()))
+          .thenReturn(new OpenAIClient.DownloadFileContentResponse(output));
+      PollableTask task = new PollableTask();
+      task.setId(30L);
+      return service.importBatchForRepair(
+          batch, AiTranslateType.TARGET_ONLY, Status.REVIEW_NEEDED, task);
     }
 
     void run(AiTranslateType type) {
