@@ -16,9 +16,10 @@ feature shape was still moving.
 
 ### Product surfaces
 
-- `/glossaries` is the shared glossary directory.
+- `/glossaries` is the shared glossary directory, where admins can create glossaries.
 - `/glossaries/:glossaryId` is the daily term workspace.
-- `/settings/system/glossaries` remains the admin lifecycle surface.
+- `/settings/admin/glossaries` and `/settings/system/glossaries` redirect to
+  `/glossaries`, preserving query parameters.
 - `/glossaries/:glossaryId/settings` owns name, description, enabled state,
   locales, and applicability.
 

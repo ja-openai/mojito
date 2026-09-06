@@ -183,13 +183,6 @@
   color: color-mix(in srgb, var(--color-accent) 84%, var(--color-text));
 }
 
-.glossary-admin-page__row-action-button {
-  border: none;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-}
-
 .glossary-admin-page__row:hover .glossary-admin-page__row-action-link,
 .glossary-admin-page__row:focus-within .glossary-admin-page__row-action-link {
   opacity: 1;
