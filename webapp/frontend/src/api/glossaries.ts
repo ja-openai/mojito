@@ -92,21 +92,6 @@ export type ApiGlossaryTermsResponse = {
 
 export type ApiGlossaryTermSearchField = 'SOURCE' | 'DEFINITION' | 'TARGET' | 'REFERENCES' | 'ALL';
 
-export type ApiGlossaryWorkspaceSummary = {
-  totalTerms: number;
-  approvedTermCount: number;
-  candidateTermCount: number;
-  deprecatedTermCount: number;
-  rejectedTermCount: number;
-  doNotTranslateTermCount: number;
-  termsWithEvidenceCount: number;
-  termsMissingAnyTranslationCount: number;
-  missingTranslationCount: number;
-  fullyTranslatedTermCount: number;
-  publishReadyTermCount: number;
-  truncated: boolean;
-};
-
 export type ApiGlossariesResponse = {
   glossaries: ApiGlossarySummary[];
   totalCount: number;
@@ -446,11 +431,6 @@ export type ApiGlossaryTranslationProposal = {
   reviewerNote?: string | null;
 };
 
-export type ApiGlossaryTranslationProposalsResponse = {
-  proposals: ApiGlossaryTranslationProposal[];
-  totalCount: number;
-};
-
 export type ApiMatchGlossaryTermsRequest = {
   repositoryId?: number | null;
   repositoryName?: string | null;
@@ -578,22 +558,6 @@ export async function fetchGlossaryTerm(
   }
 
   return (await response.json()) as ApiGlossaryTerm;
-}
-
-export async function fetchGlossaryWorkspaceSummary(
-  glossaryId: number,
-): Promise<ApiGlossaryWorkspaceSummary> {
-  const response = await fetch(`/api/glossaries/${glossaryId}/workspace-summary`, {
-    credentials: 'same-origin',
-    headers: { Accept: 'application/json' },
-  });
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load glossary workspace summary');
-  }
-
-  return (await response.json()) as ApiGlossaryWorkspaceSummary;
 }
 
 export async function fetchGlossaryTermIndexSuggestions(
@@ -1221,34 +1185,6 @@ export async function submitGlossaryTranslationProposal(
   }
 
   return (await response.json()) as ApiGlossaryTranslationProposal;
-}
-
-export async function fetchGlossaryTranslationProposals(
-  glossaryId: number,
-  options?: { status?: string; limit?: number },
-): Promise<ApiGlossaryTranslationProposalsResponse> {
-  const params = new URLSearchParams();
-  if (options?.status?.trim()) {
-    params.set('status', options.status.trim());
-  }
-  if (typeof options?.limit === 'number') {
-    params.set('limit', String(options.limit));
-  }
-
-  const response = await fetch(
-    `/api/glossaries/${glossaryId}/proposals${params.size ? `?${params.toString()}` : ''}`,
-    {
-      credentials: 'same-origin',
-      headers: { Accept: 'application/json' },
-    },
-  );
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load glossary proposals');
-  }
-
-  return (await response.json()) as ApiGlossaryTranslationProposalsResponse;
 }
 
 export async function decideGlossaryTranslationProposal(

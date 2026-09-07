@@ -172,92 +172,6 @@
   pointer-events: auto;
 }
 
-.glossary-sync-card {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.glossary-sync-card__lead {
-  max-width: 60rem;
-}
-
-.glossary-sync-card__stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-3);
-}
-
-.glossary-sync-card__stat {
-  display: grid;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  background: color-mix(
-    in srgb,
-    var(--color-surface-elevated, var(--color-surface)) 70%,
-    transparent
-  );
-  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
-  border-radius: var(--radius-3);
-}
-
-.glossary-sync-card__stat-value {
-  font-size: clamp(1.35rem, 2vw, 1.8rem);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
-}
-
-.glossary-sync-card__stat-label {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-}
-
-.glossary-sync-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-}
-
-.glossary-sync-card__lanes {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: var(--space-3);
-}
-
-.glossary-sync-card__lane {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-left: 0.25rem solid color-mix(in srgb, var(--color-border) 85%, transparent);
-  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-background));
-}
-
-.glossary-sync-card__lane-label {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text-subtle);
-  font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-semibold);
-}
-
-.glossary-sync-card__lane h3 {
-  margin: 0;
-  font-size: var(--font-size-md);
-}
-
-.glossary-sync-card__lane--ready {
-  border-left-color: color-mix(in srgb, var(--color-success, var(--color-accent)) 72%, transparent);
-}
-
-.glossary-sync-card__lane--next {
-  border-left-color: color-mix(in srgb, var(--color-warning, var(--color-accent)) 72%, transparent);
-}
-
-.glossary-sync-card__lane--idea {
-  border-left-color: color-mix(in srgb, var(--color-accent) 72%, transparent);
-}
-
 .glossaries-page__empty {
   margin: var(--space-4) 0;
   text-align: center;
@@ -281,11 +195,6 @@
 
   .glossaries-page__row-actions {
     width: 100%;
-  }
-
-  .glossary-sync-card__meta {
-    flex-direction: column;
-    gap: var(--space-1);
   }
 
   .glossaries-page__table th:nth-child(3),
