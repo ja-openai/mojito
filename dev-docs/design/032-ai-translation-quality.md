@@ -50,10 +50,19 @@ managed locale suffixes (exact locale-tag lookup, without new parent-locale inhe
 
 ### Candidate validation and one repair attempt
 
-Before changing candidate DTOs or importing them, AI Translate evaluates recognized ICU/MF2 source
-and target messages with the existing normalized translation-integrity diagnostic types. This is a
-generation policy; repository-specific save/import checks remain in place, and human save rules are
-unchanged. Plain text and unrecognized formats do not acquire guessed ICU syntax requirements.
+`l10n.ai-translate.message-format-validation-enabled` defaults to `false`. Set it to `true` in
+deployment configuration and restart the application to enable the candidate policy below. This is
+normal Spring configuration, not a live toggle. With the default, AI Translate skips these ICU/MF2
+candidate checks, their warning comments, and online/Batch candidate repair requests. Locale/plural
+prompts, response completion/identity/nonempty checks, and existing importer integrity checks remain
+active. Already submitted repair batches continue polling and import through the ordinary importer;
+disabling the policy does not abandon them or create another repair attempt.
+
+When enabled, AI Translate evaluates recognized ICU/MF2 source and target messages before changing
+candidate DTOs or importing them, using the existing normalized translation-integrity diagnostic
+types. This is a generation policy; repository-specific save/import checks remain in place, and human
+save rules are unchanged. Plain text and unrecognized formats do not acquire guessed ICU syntax
+requirements.
 
 - Definite target syntax, input/selector contract, fallback, exact-case, and supported locale plural
   coverage errors reject the candidate and qualify for one model repair request.
@@ -72,8 +81,8 @@ codes/details. They preserve the original source description, glossary, related 
 locale/source-rule/ad hoc instructions, model settings, output schema, and timeout. They have separate
 request/response lineage, failure status, and token usage; successful peers are not retranslated.
 The repaired response repeats completion, identity, nonempty-target, and MessageFormat checks. A
-second failure leaves the existing target, status, comments, and attribution untouched and appears
-in the run report. Warnings alone never cause a repair call.
+second candidate-validation failure leaves the existing target, status, comments, and attribution
+untouched and appears in the run report. Warnings alone never cause a repair call.
 
 Legacy Batch uses the same preflight and creates one follow-up provider Batch containing only failed
 strings. Repair request lines retain their original uploaded request bodies plus diagnostic feedback;
@@ -96,6 +105,11 @@ Complete category coverage does not require distinct wording in every branch. Tr
 and exported message compression are unchanged; any later optimization must preserve runtime
 selection semantics and should be justified by measured file size. Deterministic acceptance does
 not establish linguistic quality.
+
+Before rollout, consolidate shared read-only integrity checking separately from AI generation
+requirements such as complete locale category coverage. Extend the existing attempt/lineage tracking
+to distinguish provider transport retries, candidate repairs, and import failures, including their
+budgets and outcomes. The release flag leaves this refactor as separate work.
 
 ## Reasoning and speed
 
@@ -128,7 +142,8 @@ promises about model latency. The client extracts only message text, safely skip
 items that have no message content.
 
 The API has no `reasoning.effort=ultra`. Application Ultra mode adds automatic subagents to maximum
-reasoning. Generation can make one bounded structural repair request; review remains a single model step.
+reasoning. With candidate validation enabled, generation can make one bounded structural repair
+request; review remains a single model step.
 This does not claim to
 reproduce that orchestration. See the official [model guidance](https://developers.openai.com/api/docs/guides/latest-model)
 and [Fast mode contract](https://developers.openai.com/api/docs/guides/fast-mode).

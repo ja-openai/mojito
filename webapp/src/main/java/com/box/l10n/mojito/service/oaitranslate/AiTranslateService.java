@@ -1352,12 +1352,14 @@ public class AiTranslateService {
       String locale,
       Tags requestTags,
       List<CompletableFuture<ResponsesResponse>> repairResponses) {
+    boolean messageFormatValidationEnabled =
+        aiTranslateConfigurationProperties.isMessageFormatValidationEnabled();
     String target =
         AiTranslateTargetAutoFix.fixTarget(
             unit.getSource(), type.getTargetWithMetadata(unit.getTmTextUnitId(), output).target());
     TranslationIntegrityEvaluation evaluation;
     try {
-      evaluation = AiTranslateCandidateValidation.evaluate(unit, target, locale);
+      evaluation = evaluateMessageFormat(unit, target, locale, messageFormatValidationEnabled);
     } catch (RuntimeException e) {
       String error =
           "Could not validate AI translation for tmTextUnitId "
@@ -1369,7 +1371,14 @@ public class AiTranslateService {
     }
     if (!AiTranslateCandidateValidation.rejected(evaluation)) {
       return prepareForTextUnitDTOForImport(
-          response.id(), type, status, unit, output, original.lineageRequestGroupId(), locale);
+          response.id(),
+          type,
+          status,
+          unit,
+          output,
+          original.lineageRequestGroupId(),
+          locale,
+          messageFormatValidationEnabled);
     }
     String failure =
         "AI translation integrity: " + AiTranslateCandidateValidation.describe(evaluation);
@@ -1411,7 +1420,14 @@ public class AiTranslateService {
       validateCompletionOutput(type, List.of(unit), repairedOutput);
       TextUnitDTOWithVariantCommentOrError prepared =
           prepareForTextUnitDTOForImport(
-              repairResponse.id(), type, status, unit, repairedOutput, repairGroupId, locale);
+              repairResponse.id(),
+              type,
+              status,
+              unit,
+              repairedOutput,
+              repairGroupId,
+              locale,
+              messageFormatValidationEnabled);
       if (prepared.error() != null) {
         markNoBatchLineageFailed(
             task.getId(), repairGroupId, repairResponse.id(), repairResponseBlob, prepared.error());
@@ -1561,6 +1577,8 @@ public class AiTranslateService {
       Status importStatus,
       PollableTask currentTask) {
     logger.info("Importing batch: {}", retrieveBatchResponse.id());
+    boolean messageFormatValidationEnabled =
+        aiTranslateConfigurationProperties.isMessageFormatValidationEnabled();
 
     String textUnitDTOsBlobId =
         retrieveBatchResponse.metadata().get(METADATA__TEXT_UNIT_DTOS__BLOB_ID);
@@ -1661,8 +1679,11 @@ public class AiTranslateService {
                                     textUnitDTO.getTmTextUnitId(), completionOutput)
                                 .target());
                     TranslationIntegrityEvaluation evaluation =
-                        AiTranslateCandidateValidation.evaluate(
-                            textUnitDTO, target, textUnitDTO.getTargetLocale());
+                        evaluateMessageFormat(
+                            textUnitDTO,
+                            target,
+                            textUnitDTO.getTargetLocale(),
+                            messageFormatValidationEnabled);
                     if (AiTranslateCandidateValidation.rejected(evaluation)) {
                       if (AiTranslateCandidateValidation.repairable(evaluation)
                           && !AiTranslateBatchRepairService.isRepairBatch(retrieveBatchResponse)) {
@@ -1699,7 +1720,8 @@ public class AiTranslateService {
                       importStatus,
                       textUnitDTO,
                       completionOutput,
-                      null);
+                      null,
+                      messageFormatValidationEnabled);
                 })
             .toList();
 
@@ -1741,7 +1763,8 @@ public class AiTranslateService {
       Status importStatus,
       TextUnitDTO textUnitDTO,
       Object completionOutput,
-      String lineageRequestGroupId) {
+      String lineageRequestGroupId,
+      boolean messageFormatValidationEnabled) {
     return prepareForTextUnitDTOForImport(
         completionId,
         aiTranslateType,
@@ -1749,7 +1772,8 @@ public class AiTranslateService {
         textUnitDTO,
         completionOutput,
         lineageRequestGroupId,
-        textUnitDTO.getTargetLocale());
+        textUnitDTO.getTargetLocale(),
+        messageFormatValidationEnabled);
   }
 
   private static TextUnitDTOWithVariantCommentOrError prepareForTextUnitDTOForImport(
@@ -1759,7 +1783,8 @@ public class AiTranslateService {
       TextUnitDTO textUnitDTO,
       Object completionOutput,
       String lineageRequestGroupId,
-      String targetLocale) {
+      String targetLocale,
+      boolean messageFormatValidationEnabled) {
 
     String oldTarget = textUnitDTO.getTarget();
 
@@ -1793,7 +1818,7 @@ public class AiTranslateService {
     }
 
     TranslationIntegrityEvaluation evaluation =
-        AiTranslateCandidateValidation.evaluate(textUnitDTO, newTarget, targetLocale);
+        evaluateMessageFormat(textUnitDTO, newTarget, targetLocale, messageFormatValidationEnabled);
     if (AiTranslateCandidateValidation.rejected(evaluation)) {
       return validationFailure(
           completionId,
@@ -1829,6 +1854,13 @@ public class AiTranslateService {
         oldTarget,
         null,
         lineageRequestGroupId);
+  }
+
+  private static TranslationIntegrityEvaluation evaluateMessageFormat(
+      TextUnitDTO textUnit, String target, String locale, boolean enabled) {
+    return enabled
+        ? AiTranslateCandidateValidation.evaluate(textUnit, target, locale)
+        : TranslationIntegrityEvaluation.pass();
   }
 
   private static boolean isBlankTranslation(String value) {

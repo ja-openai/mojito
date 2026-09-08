@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.util.Map;
 import org.junit.Test;
@@ -9,6 +10,27 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
 public class AiTranslateConfigurationPropertiesTest {
+
+  @Test
+  public void messageFormatValidationIsDisabledByDefault() {
+    assertFalse(new AiTranslateConfigurationProperties().isMessageFormatValidationEnabled());
+  }
+
+  @Test
+  public void deploymentCanEnableAndDisableMessageFormatValidation() {
+    for (boolean enabled : new boolean[] {true, false}) {
+      AiTranslateConfigurationProperties properties =
+          new Binder(
+                  new MapConfigurationPropertySource(
+                      Map.of(
+                          "l10n.ai-translate.message-format-validation-enabled",
+                          Boolean.toString(enabled))))
+              .bind("l10n.ai-translate", Bindable.of(AiTranslateConfigurationProperties.class))
+              .get();
+
+      assertEquals(enabled, properties.isMessageFormatValidationEnabled());
+    }
+  }
 
   @Test
   public void defaultsUseMaximumReasoningAndStandardProcessing() {

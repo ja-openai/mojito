@@ -220,7 +220,8 @@ public class AiTranslateQualityTest {
               Status.REVIEW_NEEDED,
               textUnit,
               new AiTranslateType.SimpleCompletionOutput(target),
-              "request");
+              "request",
+              false);
 
       assertThat(prepared.error()).contains("empty target");
       assertThat(textUnit.getTarget()).isEqualTo("Previous translation");
@@ -242,7 +243,8 @@ public class AiTranslateQualityTest {
               Status.REVIEW_NEEDED,
               textUnit,
               new AiTranslateType.SimpleCompletionOutput(source),
-              "request");
+              "request",
+              false);
       assertThat(prepared.error()).isNull();
     }
   }
@@ -297,6 +299,106 @@ public class AiTranslateQualityTest {
   }
 
   @Test
+  public void messageFormatValidationIsDisabledByDefaultForOnlineTranslations() {
+    for (TextUnitDTO unit : pluralTextUnitsMissingArabicForms()) {
+      Fixture fixture = new Fixture("ar", unit);
+      fixture.respondWith(
+          request ->
+              response(
+                  "completed",
+                  fixture.mapper.writeValueAsStringUnchecked(
+                      new AiTranslateType.SimpleCompletionOutput(unit.getSource()))));
+
+      fixture.run(AiTranslateType.TARGET_ONLY);
+
+      assertThat(fixture.configuration.isMessageFormatValidationEnabled()).isFalse();
+      assertThat(fixture.requests).hasSize(1);
+      assertThat(fixture.imported).hasSize(1);
+      assertThat(unit.getTarget()).isEqualTo(unit.getSource());
+      assertThat(fixture.imported.getFirst().tmTextUnitVariantComment().getSeverity())
+          .isEqualTo(TMTextUnitVariantComment.Severity.INFO);
+      assertThat(fixture.imported.getFirst().tmTextUnitVariantComment().getContent())
+          .doesNotContain("MessageFormat review findings");
+      verify(fixture.lineage, never())
+          .markNoBatchTextUnitFailed(any(), anyString(), any(), anyString());
+    }
+  }
+
+  @Test
+  public void disabledMessageFormatValidationImportsOriginalAndExistingRepairBatches() {
+    for (boolean repair : List.of(false, true)) {
+      for (TextUnitDTO unit : pluralTextUnitsMissingArabicForms()) {
+        Fixture fixture = new Fixture("ar", unit);
+
+        var result =
+            fixture.importBatch(
+                batchLine(fixture, unit.getTmTextUnitId(), unit.getSource()), repair);
+
+        assertThat(result.repairs()).isEmpty();
+        assertThat(result.errors()).isEmpty();
+        assertThat(fixture.imported).hasSize(1);
+        assertThat(fixture.imported.getFirst().textUnitDTO().getTarget())
+            .isEqualTo(unit.getSource());
+        assertThat(fixture.imported.getFirst().tmTextUnitVariantComment().getSeverity())
+            .isEqualTo(TMTextUnitVariantComment.Severity.INFO);
+        assertThat(fixture.imported.getFirst().tmTextUnitVariantComment().getContent())
+            .doesNotContain("MessageFormat review findings");
+      }
+    }
+  }
+
+  @Test
+  public void disabledMessageFormatValidationStillRejectsInvalidBatchResponses() {
+    for (boolean repair : List.of(false, true)) {
+      for (boolean empty : List.of(false, true)) {
+        Fixture fixture = new Fixture("fr", textUnit(1L, "Save"));
+        String output = batchLine(fixture, 1L, empty ? "" : "Enregistrer");
+        if (!empty) {
+          output = output.replace("\"finish_reason\":\"stop\"", "\"finish_reason\":\"length\"");
+        }
+
+        var result = fixture.importBatch(output, repair);
+
+        assertThat(fixture.imported).isEmpty();
+        assertThat(result.repairs()).isEmpty();
+        assertThat(result.errors()).hasSize(1);
+        assertThat(result.errors().getFirst())
+            .contains(empty ? "empty target" : "did not complete successfully");
+      }
+    }
+  }
+
+  @Test
+  public void disabledMessageFormatValidationDoesNotAddPlaceholderWarnings() {
+    Fixture fixture = new Fixture("fr", textUnit(1L, "Hello {name}"));
+    fixture.respondWith(
+        request ->
+            response(
+                "completed",
+                fixture.mapper.writeValueAsStringUnchecked(
+                    new AiTranslateType.SimpleCompletionOutput("Bonjour"))));
+
+    fixture.run(AiTranslateType.TARGET_ONLY);
+
+    assertThat(fixture.requests).hasSize(1);
+    assertThat(fixture.imported).hasSize(1);
+    assertThat(fixture.imported.getFirst().textUnitDTO().getTarget()).isEqualTo("Bonjour");
+    assertThat(fixture.imported.getFirst().tmTextUnitVariantComment().getSeverity())
+        .isEqualTo(TMTextUnitVariantComment.Severity.INFO);
+    assertThat(fixture.imported.getFirst().tmTextUnitVariantComment().getContent())
+        .doesNotContain("MessageFormat review findings", "name");
+  }
+
+  private static List<TextUnitDTO> pluralTextUnitsMissingArabicForms() {
+    TextUnitDTO icu = textUnit(1L, "{count, plural, one {# item} other {# items}}");
+    TextUnitDTO mf2 =
+        textUnit(
+            2L, ".input {$count :integer}\n.match $count\none {{One item}}\n* {{{$count} items}}");
+    mf2.setMessageFormat("MF2");
+    return List.of(icu, mf2);
+  }
+
+  @Test
   public void batchQueuesOnlyInvalidCandidatesAndSecondFailureIsTerminal() {
     for (boolean repair : List.of(false, true)) {
       TextUnitDTO first = textUnit(1L, "{count, plural, one {# item} other {# items}}");
@@ -304,6 +406,7 @@ public class AiTranslateQualityTest {
       first.setStatus(Status.APPROVED);
       Fixture fixture =
           new Fixture("ar", first, textUnit(2L, "{count, plural, one {# file} other {# files}}"));
+      fixture.configuration.setMessageFormatValidationEnabled(true);
       var result =
           fixture.importBatch(
               batchLine(fixture, 1L, first.getSource())
@@ -380,6 +483,7 @@ public class AiTranslateQualityTest {
             "ar",
             textUnit(1L, "{count, plural, one {# item} other {# items}}"),
             textUnit(2L, "{count, plural, one {# file} other {# files}}"));
+    fixture.configuration.setMessageFormatValidationEnabled(true);
     fixture.respondWith(
         request -> {
           var input =
@@ -440,6 +544,7 @@ public class AiTranslateQualityTest {
     unit.setTranslatorIdentity("translator");
     unit.setReviewerIdentity("reviewer");
     Fixture fixture = new Fixture("ar", unit);
+    fixture.configuration.setMessageFormatValidationEnabled(true);
     fixture.respondWith(
         request ->
             response(
@@ -461,6 +566,7 @@ public class AiTranslateQualityTest {
   @Test
   public void warningsAreImportedAsReviewFindingsWithoutRetry() {
     Fixture fixture = new Fixture("fr", textUnit(1L, "Hello {name}"));
+    fixture.configuration.setMessageFormatValidationEnabled(true);
     fixture.respondWith(
         request ->
             response(
@@ -481,6 +587,7 @@ public class AiTranslateQualityTest {
   @Test
   public void sourceDefectDoesNotCauseRepairOrImport() {
     Fixture fixture = new Fixture("ar", textUnit(1L, "{count, plural, one {item}"));
+    fixture.configuration.setMessageFormatValidationEnabled(true);
     fixture.respondWith(
         request ->
             response(
@@ -501,6 +608,7 @@ public class AiTranslateQualityTest {
       TextUnitDTO unit = textUnit(1L, "{count, plural, one {# item} other {# items}}");
       unit.setTarget("Human translation");
       Fixture fixture = new Fixture("ar", unit);
+      fixture.configuration.setMessageFormatValidationEnabled(true);
       fixture.respondWith(
           request -> {
             if (fixture.requests.size() == 1) {
@@ -584,6 +692,7 @@ public class AiTranslateQualityTest {
             1L, ".input {$count :integer}\n.match $count\none {{One item}}\n* {{{$count} items}}");
     unit.setMessageFormat("MF2");
     Fixture fixture = new Fixture("ar", unit);
+    fixture.configuration.setMessageFormatValidationEnabled(true);
     String target =
         ".input {$count :integer}\n.match $count\nzero {{No items}}\none {{One item}}"
             + "\ntwo {{Two items}}\nfew {{{$count} items}}\nmany {{{$count} items}}\n* {{{$count} items}}";
@@ -632,6 +741,8 @@ public class AiTranslateQualityTest {
 
   private static class Fixture {
     final ObjectMapper mapper = new ObjectMapper();
+    final AiTranslateConfigurationProperties configuration =
+        new AiTranslateConfigurationProperties();
     final OpenAIClient provider = mock(OpenAIClient.class);
     final OpenAIClientPool pool = mock(OpenAIClientPool.class);
     final AiTranslateTextUnitAttemptService lineage = mock(AiTranslateTextUnitAttemptService.class);
@@ -701,7 +812,7 @@ public class AiTranslateQualityTest {
               repositoryService,
               importer,
               blobs,
-              new AiTranslateConfigurationProperties(),
+              configuration,
               provider,
               pool,
               mapper,

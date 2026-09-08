@@ -24,7 +24,8 @@ public class AiTranslateAttributionTest {
             TMTextUnitVariant.Status.REVIEW_NEEDED,
             textUnit,
             new AiTranslateType.SimpleCompletionOutput("Bonjour"),
-            "request-group-id");
+            "request-group-id",
+            false);
 
     TextUnitDTO preparedTextUnit = prepared.textUnitDTOWithVariantComment().textUnitDTO();
     assertThat(preparedTextUnit.getTarget()).isEqualTo("Bonjour");

@@ -38,8 +38,10 @@ so their prompts must not inherit the older gettext/database keyword overrides. 
 AI Translate prompts and candidate validation use `getMessageFormatKeywordsForLanguageTag`, which
 reads the current ICU cardinal/ordinal rules without the database/gettext keyword overrides. The
 policy checks target coverage while allowing natural fixed-count wording and retaining ambiguous
-placeholder omissions as review warnings. Its bounded repair loop applies to generated candidates,
-not to every translator save. See `032-ai-translation-quality.md` for the acceptance and retry rules.
+placeholder omissions as review warnings. Candidate validation and its bounded repair loop are
+disabled by default through `l10n.ai-translate.message-format-validation-enabled`; plural prompt
+guidance remains active. When enabled, the policy applies to generated candidates, not to every
+translator save. See `032-ai-translation-quality.md` for activation, acceptance, and retry rules.
 
 ## Tradeoffs
 

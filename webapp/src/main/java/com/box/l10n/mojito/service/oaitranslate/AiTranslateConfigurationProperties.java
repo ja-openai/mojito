@@ -12,6 +12,7 @@ public class AiTranslateConfigurationProperties {
   String openaiClientToken;
   String schedulerName = QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
   String modelName = "gpt-5.6-sol";
+  boolean messageFormatValidationEnabled = false;
   PoolProperties pool = new PoolProperties();
   RetryProperties retry = new RetryProperties();
   NoBatchProperties noBatch = new NoBatchProperties();
@@ -41,6 +42,17 @@ public class AiTranslateConfigurationProperties {
 
   public void setModelName(String modelName) {
     this.modelName = modelName;
+  }
+
+  /**
+   * Enables ICU/MF2 candidate checks and their single repair attempt; import checks are separate.
+   */
+  public boolean isMessageFormatValidationEnabled() {
+    return messageFormatValidationEnabled;
+  }
+
+  public void setMessageFormatValidationEnabled(boolean messageFormatValidationEnabled) {
+    this.messageFormatValidationEnabled = messageFormatValidationEnabled;
   }
 
   public PoolProperties getPool() {
