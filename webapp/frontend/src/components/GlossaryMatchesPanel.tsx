@@ -30,6 +30,19 @@ const getGlossaryMatchKey = (match: ApiMatchedGlossaryTerm) =>
 const getGlossaryTermHref = (match: ApiMatchedGlossaryTerm) =>
   match.glossaryId == null ? null : `/glossaries/${match.glossaryId}/terms/${match.tmTextUnitId}`;
 
+const enforcementPresentation: Record<string, { rank: number; label: string; tone: string }> = {
+  HARD: { rank: 0, label: 'Hard enforced', tone: 'hard' },
+  SOFT: { rank: 1, label: 'Soft enforced', tone: 'soft' },
+  REVIEW_ONLY: { rank: 2, label: 'Recommendation', tone: 'recommendation' },
+};
+
+const getEnforcementPresentation = (enforcement: string | null | undefined) =>
+  enforcementPresentation[enforcement?.trim().toUpperCase() ?? ''] ?? {
+    rank: 3,
+    label: 'Enforcement unspecified',
+    tone: 'unspecified',
+  };
+
 export function GlossaryMatchesPanel({
   matches,
   isLoading = false,
@@ -39,7 +52,15 @@ export function GlossaryMatchesPanel({
   showHeader = true,
 }: Props) {
   const [selectedMatch, setSelectedMatch] = useState<ApiMatchedGlossaryTerm | null>(null);
-  const displayMatches = useMemo(() => prepareGlossaryMatches(matches), [matches]);
+  const displayMatches = useMemo(
+    () =>
+      prepareGlossaryMatches(matches).sort(
+        (left, right) =>
+          getEnforcementPresentation(left.enforcement).rank -
+          getEnforcementPresentation(right.enforcement).rank,
+      ),
+    [matches],
+  );
   const selectedMatchKey = selectedMatch ? getGlossaryMatchKey(selectedMatch) : null;
 
   useEffect(() => {
@@ -145,17 +166,23 @@ export function GlossaryMatchesPanel({
         ) : (
           <div className="glossary-match-panel__list">
             {displayMatches.map((match) => {
+              const enforcement = getEnforcementPresentation(match.enforcement);
               const requiredTarget = getRequiredTarget(match);
               const requiredTargetClassName = match.doNotTranslate
                 ? 'glossary-match-panel__pair-value glossary-match-panel__pair-value--muted'
                 : 'glossary-match-panel__pair-value';
 
               return (
-                <article key={getGlossaryMatchKey(match)} className="glossary-match-panel__item">
+                <article
+                  key={getGlossaryMatchKey(match)}
+                  className="glossary-match-panel__item"
+                  data-enforcement={enforcement.tone}
+                >
                   <div className="glossary-match-panel__pair">
                     <div className="glossary-match-panel__pair-value">{match.source}</div>
                     <div className={requiredTargetClassName}>{requiredTarget}</div>
                   </div>
+                  <div className="glossary-match-panel__enforcement">{enforcement.label}</div>
                   <button
                     type="button"
                     className="glossary-match-panel__details-button"

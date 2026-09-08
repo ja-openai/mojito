@@ -52,6 +52,69 @@ function renderPanel(overrides: Partial<ApiMatchedGlossaryTerm> = {}) {
 }
 
 describe('GlossaryMatchesPanel', () => {
+  it('prioritizes enforcement while keeping source order and grouping repeated matches', () => {
+    const makeMatch = (
+      id: number,
+      source: string,
+      enforcement: string | null,
+      startIndex: number,
+    ) => ({
+      ...match,
+      tmTextUnitId: id,
+      source,
+      enforcement,
+      startIndex,
+      endIndex: startIndex + source.length,
+      matchedText: source,
+    });
+    const matches = [
+      makeMatch(1, 'Suggested', 'REVIEW_ONLY', 0),
+      makeMatch(2, 'Soft later', 'SOFT', 35),
+      makeMatch(3, 'Legacy', null, 10),
+      makeMatch(4, 'Hard later', 'HARD', 50),
+      makeMatch(5, 'Soft earlier', 'SOFT', 20),
+      makeMatch(6, 'Hard earlier', 'HARD', 40),
+      makeMatch(6, 'Hard earlier', 'HARD', 70),
+      makeMatch(7, 'Unknown', 'FUTURE_VALUE', 15),
+    ];
+    const originalMatches = structuredClone(matches);
+    render(
+      <MemoryRouter>
+        <GlossaryMatchesPanel matches={matches} />
+      </MemoryRouter>,
+    );
+
+    const cards = screen.getAllByRole('article');
+    expect(
+      cards.map((card) => within(card).getByRole('button').getAttribute('aria-label')),
+    ).toEqual([
+      'Details for Hard earlier',
+      'Details for Hard later',
+      'Details for Soft earlier',
+      'Details for Soft later',
+      'Details for Suggested',
+      'Details for Legacy',
+      'Details for Unknown',
+    ]);
+    expect(cards.map((card) => card.getAttribute('data-enforcement'))).toEqual([
+      'hard',
+      'hard',
+      'soft',
+      'soft',
+      'recommendation',
+      'unspecified',
+      'unspecified',
+    ]);
+    expect(within(cards[0]).getByText('Hard enforced')).toBeInTheDocument();
+    expect(within(cards[2]).getByText('Soft enforced')).toBeInTheDocument();
+    expect(within(cards[4]).getByText('Recommendation')).toBeInTheDocument();
+    expect(within(cards[5]).getByText('Enforcement unspecified')).toBeInTheDocument();
+    expect(matches).toEqual(originalMatches);
+
+    fireEvent.click(within(cards[0]).getByRole('button'));
+    expect(screen.getByText('Hard earlier [40-52], Hard earlier [70-82]')).toBeInTheDocument();
+  });
+
   it('shows compact cards and opens term details in a modal', () => {
     renderPanel();
 

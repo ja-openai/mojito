@@ -249,6 +249,15 @@ refresh without introducing a second serialization or invalidation contract.
 Review project detail and text-unit detail can show matched glossary terms and
 include glossary context in AI review requests.
 
+Matched-term cards order hard-enforced terms first (red stripe), soft-enforced
+terms next (amber stripe), and recommendations (`REVIEW_ONLY`) last (gray stripe).
+Each card also names its enforcement level so color is not the only cue. Missing
+or unrecognized enforcement values appear after recommendations with a neutral
+stripe and an explicit unspecified label. Repeated matches remain grouped by
+term, with source-position order preserved within each enforcement group. This
+presentation ordering does not change lexical matching, span positions, AI
+context ordering, or enforcement behavior.
+
 ### Database Load And Latency Impact
 
 Previously, every review/workbench glossary-match request and every AI

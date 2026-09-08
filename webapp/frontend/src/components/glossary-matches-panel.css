@@ -48,6 +48,7 @@
   gap: var(--space-1);
   padding: 10px 12px;
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  border-left: 3px solid var(--glossary-enforcement-color, var(--color-text-muted));
   border-radius: var(--radius-2);
   background: var(--color-surface);
   box-shadow: none;
@@ -59,7 +60,22 @@
 .glossary-match-panel__item:hover,
 .glossary-match-panel__item:focus-within {
   border-color: color-mix(in srgb, var(--color-border) 88%, transparent);
+  border-left-color: var(--glossary-enforcement-color, var(--color-text-muted));
   background: color-mix(in srgb, var(--color-surface-muted) 16%, var(--color-surface));
+}
+
+.glossary-match-panel__item[data-enforcement='hard'] {
+  --glossary-enforcement-color: var(--color-danger);
+}
+
+.glossary-match-panel__item[data-enforcement='soft'] {
+  --glossary-enforcement-color: var(--color-warning-border);
+}
+
+.glossary-match-panel__enforcement {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.35;
 }
 
 .glossary-match-panel__pair {
