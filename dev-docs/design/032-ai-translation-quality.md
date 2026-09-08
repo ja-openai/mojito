@@ -55,8 +55,8 @@ deployment configuration and restart the application to enable the candidate pol
 normal Spring configuration, not a live toggle. With the default, AI Translate skips these ICU/MF2
 candidate checks, their warning comments, and online/Batch candidate repair requests. Locale/plural
 prompts, response completion/identity/nonempty checks, and existing importer integrity checks remain
-active. Already submitted repair batches continue polling and import through the ordinary importer;
-disabling the policy does not abandon them or create another repair attempt.
+active. Repair batches already queued in the poll job continue polling and import through the
+ordinary importer; disabling the policy does not abandon them or create another repair attempt.
 
 When enabled, AI Translate evaluates recognized ICU/MF2 source and target messages before changing
 candidate DTOs or importing them, using the existing normalized translation-integrity diagnostic
@@ -106,10 +106,13 @@ and exported message compression are unchanged; any later optimization must pres
 selection semantics and should be justified by measured file size. Deterministic acceptance does
 not establish linguistic quality.
 
-Before rollout, consolidate shared read-only integrity checking separately from AI generation
-requirements such as complete locale category coverage. Extend the existing attempt/lineage tracking
-to distinguish provider transport retries, candidate repairs, and import failures, including their
-budgets and outcomes. The release flag leaves this refactor as separate work.
+Before enabling the candidate policy, add regression coverage and fix false rejections of valid
+nested/reordered ICU selectors and MF2 exact-number/category branches, inherited MF2 formatter-option
+changes that escape validation, and invalid built-in ICU formatter syntax that passes validation.
+Consolidate shared read-only integrity checking separately from AI generation requirements such as
+complete locale category coverage. Extend the existing attempt/lineage tracking to distinguish
+provider transport retries, candidate repairs, and import failures, including their budgets and
+outcomes. These remain separate work while the policy is disabled.
 
 ## Reasoning and speed
 
