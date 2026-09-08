@@ -66,6 +66,7 @@ import {
 } from '../../utils/request-attachments';
 import { getUserLabel } from '../../utils/userDisplayName';
 import { GlossaryCurationView, GlossarySuggestionDetailView } from './GlossaryCurationView';
+import { GlossaryDecisionNotes } from './GlossaryDecisionNotes';
 import { GlossaryTermsListControls, GlossaryTermsListView } from './GlossaryTermsListView';
 
 const TERM_TYPES = ['BRAND', 'PRODUCT', 'UI_LABEL', 'LEGAL', 'TECHNICAL', 'GENERAL'] as const;
@@ -314,6 +315,9 @@ const createBlankReference = (referenceType: ReferenceType = 'NOTE'): ReferenceD
   imageKey: '',
   tmTextUnitId: '',
 });
+
+const isDecisionNote = (reference: ReferenceDraft) =>
+  reference.referenceType === 'NOTE' && !reference.imageKey && !reference.tmTextUnitId;
 
 const getReferencePlaceholder = (referenceType: ReferenceType) => {
   switch (referenceType) {
@@ -1720,6 +1724,10 @@ export function AdminGlossaryTermsPanel({
           tmTextUnitId: editorDraft.tmTextUnitId,
         });
   const canEditProposalDraft = canManageTerms || editorDraft.tmTextUnitId == null;
+  const decisionNotes = editorDraft.references.filter(isDecisionNote);
+  const supportingReferences = editorDraft.references.filter(
+    (reference) => !isDecisionNote(reference),
+  );
   const replacementBackingFieldLabels = getReplacementBackingFieldLabels(
     originalEditorDraft,
     editorDraft,
@@ -2638,13 +2646,38 @@ export function AdminGlossaryTermsPanel({
                   </label>
                 </div>
 
-                <section className="glossary-term-admin__section">
+                <GlossaryDecisionNotes
+                  notes={decisionNotes}
+                  canEdit={canEditProposalDraft}
+                  onAdd={() =>
+                    setEditorDraft((current) => ({
+                      ...current,
+                      references: [...current.references, createBlankReference('NOTE')],
+                    }))
+                  }
+                  onChange={(id, caption) =>
+                    setEditorDraft((current) => ({
+                      ...current,
+                      references: current.references.map((reference) =>
+                        reference.id === id ? { ...reference, caption } : reference,
+                      ),
+                    }))
+                  }
+                  onRemove={(id) =>
+                    setEditorDraft((current) => ({
+                      ...current,
+                      references: current.references.filter((reference) => reference.id !== id),
+                    }))
+                  }
+                />
+
+                <section className="glossary-term-admin__section" aria-label="References">
                   <div className="glossary-term-admin__section-header">
                     <div>
                       <h4 className="glossary-term-admin__section-title">References</h4>
                       <p className="glossary-term-admin__section-description">
-                        Capture why this term exists: reviewer notes, observed usage, code context,
-                        or screenshots.
+                        Show where this term appears with observed usage, code context, or
+                        screenshots.
                       </p>
                     </div>
                     {canEditProposalDraft ? (
@@ -2655,7 +2688,10 @@ export function AdminGlossaryTermsPanel({
                           onClick={() =>
                             setEditorDraft((current) => ({
                               ...current,
-                              references: [...current.references, createBlankReference('NOTE')],
+                              references: [
+                                ...current.references,
+                                createBlankReference('STRING_USAGE'),
+                              ],
                             }))
                           }
                         >
@@ -2703,11 +2739,11 @@ export function AdminGlossaryTermsPanel({
                       ) : null}
                     </>
                   ) : null}
-                  {editorDraft.references.length === 0 ? (
+                  {supportingReferences.length === 0 ? (
                     <p className="settings-hint">No references yet.</p>
                   ) : (
                     <div className="glossary-term-admin__reference-list">
-                      {editorDraft.references.map((reference) => (
+                      {supportingReferences.map((reference) => (
                         <div key={reference.id} className="glossary-term-admin__reference-card">
                           <div className="glossary-term-admin__reference-header">
                             <div className="glossary-term-admin__reference-type">
@@ -2736,7 +2772,10 @@ export function AdminGlossaryTermsPanel({
                               >
                                 {REFERENCE_TYPES.filter(
                                   (referenceType) =>
-                                    referenceType !== 'SCREENSHOT' || Boolean(reference.imageKey),
+                                    (referenceType !== 'SCREENSHOT' ||
+                                      Boolean(reference.imageKey)) &&
+                                    (referenceType !== 'NOTE' ||
+                                      reference.referenceType === 'NOTE'),
                                 ).map((referenceType) => (
                                   <option key={referenceType} value={referenceType}>
                                     {REFERENCE_TYPE_LABELS[referenceType]}

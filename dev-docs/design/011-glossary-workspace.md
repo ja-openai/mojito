@@ -156,9 +156,18 @@ Supported reference types:
 These records explain why a term exists or where it was observed. They are not
 part of the translation-storage model.
 
-The term editor presents these as a compact `References` section. Users can add
-notes, observed usage, code references, or attach screenshots without exposing
-raw backend enum names or a prominent screenshot dropzone.
+The term editor presents plain note references in a dedicated `Decision notes`
+section, where users explain why a source term was added or changed. Users can
+add, edit, and remove notes with the same permissions and save action as other
+term metadata. HTTP(S) document and Slack links pasted into notes appear as
+clickable supporting links. Read-only users can read notes and open their links.
+These editable term-level notes reuse `NOTE` reference storage and the existing
+1,024-character caption limit; they are not a per-change audit history.
+
+Observed usage, code references, and screenshots remain in the compact
+`References` section. Existing reference types and import/export storage are
+preserved without exposing raw backend enum names or a prominent screenshot
+dropzone.
 
 ## Term Lifecycle
 

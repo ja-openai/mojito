@@ -1184,6 +1184,33 @@
   display: block;
 }
 
+.glossary-term-admin__decision-notes .glossary-term-admin__section-header {
+  flex-wrap: wrap;
+}
+
+.glossary-term-admin__decision-notes .glossary-term-admin__section-header > div {
+  flex: 1 1 16rem;
+}
+
+.glossary-term-admin__decision-notes .glossary-term-admin__section-header > button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.glossary-term-admin__decision-note-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.glossary-term-admin__decision-note-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
 .glossary-term-admin__index-section {
   padding: var(--space-3);
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
