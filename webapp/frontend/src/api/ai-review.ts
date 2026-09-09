@@ -59,6 +59,11 @@ export type AiReviewRequestError = Error & {
   detail?: string;
 };
 
+type AiReviewJob =
+  | { status: 'pending' }
+  | { status: 'completed'; response: AiReviewResponse }
+  | { status: 'failed'; error: { status: number; message: string } };
+
 export async function requestAiReview(
   payload: AiReviewRequest,
   options: { signal?: AbortSignal } = {},
@@ -67,7 +72,32 @@ export async function requestAiReview(
     throw new Error('AI review requires at least one message.');
   }
 
-  return postJson<AiReviewResponse>('/api/ai/review', payload, options);
+  options.signal?.throwIfAborted();
+  const { taskId } = await postJson<{ taskId: number }>('/api/ai/review/jobs', payload, options);
+  const result = await poll(
+    () => {
+      options.signal?.throwIfAborted();
+      return getJson<AiReviewJob>(`/api/ai/review/jobs/${taskId}`, options);
+    },
+    {
+      intervalMs: 1000,
+      timeoutMs: 20 * 60 * 1000,
+      timeoutMessage: 'AI review is taking too long. Please retry.',
+      isTransientError: (error) => !options.signal?.aborted && isTransientHttpError(error),
+      shouldStop: (job) => job.status !== 'pending',
+    },
+  );
+  options.signal?.throwIfAborted();
+  if (result.status === 'completed') {
+    return result.response;
+  }
+  if (result.status === 'failed') {
+    const error: AiReviewRequestError = new Error(result.error.message);
+    error.status = result.error.status;
+    error.detail = result.error.message;
+    throw error;
+  }
+  throw new Error('AI review returned an unexpected response.');
 }
 
 export async function fetchPrecomputedAiReview(
@@ -352,3 +382,4 @@ function isLikelyHtml(value: string): boolean {
     sample.includes('<title')
   );
 }
+import { isTransientHttpError, poll } from '../utils/poller';

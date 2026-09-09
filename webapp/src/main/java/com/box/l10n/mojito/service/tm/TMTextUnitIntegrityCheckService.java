@@ -13,6 +13,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author wyau
@@ -35,6 +36,7 @@ public class TMTextUnitIntegrityCheckService {
    *
    * @throws IntegrityCheckException
    */
+  @Transactional(readOnly = true)
   public void checkTMTextUnitIntegrity(Long tmTextUnitId, String contentToCheck)
       throws IntegrityCheckException {
     logger.debug("Checking Integrity of the TMTextUnit");

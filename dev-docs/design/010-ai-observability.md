@@ -98,6 +98,27 @@ Use `AiReviewChatWS_requestDuration_seconds_*` for interactive review chat laten
 `AiReviewService_requestDuration_seconds_*` for async/legacy review request latency. Both expose a
 `result` tag with `completed`, `timeout`, `provider_failed`, or `failed`.
 
+Interactive clients submit the full chat request to `POST /api/ai/review/jobs` and poll
+`GET /api/ai/review/jobs/{taskId}`. Submission returns a task ID without waiting for the model;
+each poll returns pending, the completed review, or a terminal error. This lets configured reasoning
+finish without holding a browser request open beyond an ingress deadline. The model, reasoning,
+prompt, glossary and integrity context, provider retries, and response validation are unchanged.
+The legacy synchronous `POST /api/ai/review` remains available for existing clients.
+
+Jobs use the existing shared Quartz scheduler and pollable-task output storage, so submission and
+polling can reach different API pods. Task data is restricted to its creator. Outputs use the existing
+minimum one-day retention; an expired result requires a new review. The client retries transient
+polling failures against the same task, and stops polling on navigation. Stopping polling does not
+cancel already queued or running provider work. Existing page request guards prevent a late result
+from appearing on another text unit. The client wait is bounded to twenty minutes.
+
+The chat duration metric measures job execution, excluding queue delay and browser polling. A
+completed model call alone does not prove that a client received the result; inspect submission,
+polling, and provider errors separately when assessing interactive reliability.
+Expected provider failures are stored in the job's error result, so generic Quartz completion counts
+describe task execution rather than successful reviews. Use the dedicated review status and metrics
+for provider outcomes.
+
 Review-project pages first check `/api/proto-ai-review-single-text-unit` with
 `onlyPrecomputed=true` when the automatic review has no page-only context messages. The backend reads
 the `for-frontend-v2` cached run. The public `for-frontend` run name maps to this version for new

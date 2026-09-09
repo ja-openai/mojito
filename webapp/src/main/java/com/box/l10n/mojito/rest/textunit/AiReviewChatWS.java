@@ -70,16 +70,9 @@ public class AiReviewChatWS {
   @PostMapping("/api/ai/review")
   @ResponseStatus(HttpStatus.OK)
   public AiReviewChatResponse chat(@RequestBody AiReviewChatRequest request) {
-    Objects.requireNonNull(request, "request must not be null");
-    if (request.messages() == null || request.messages().isEmpty()) {
-      throw new IllegalArgumentException("messages must not be empty");
-    }
+    validateRequest(request);
 
     String localeTag = hasText(request.localeTag()) ? request.localeTag().trim() : "en";
-
-    if (openAIClient == null) {
-      throw new IllegalStateException("openAIClientReview bean must be configured");
-    }
 
     AiReviewTextUnitVariantInput.ExistingTarget existingTarget = null;
     String target = hasText(request.target()) ? request.target() : null;
@@ -196,6 +189,16 @@ public class AiReviewChatWS {
 
     return new AiReviewChatResponse(
         new AiReviewChatMessage("assistant", reply), suggestions, review);
+  }
+
+  void validateRequest(AiReviewChatRequest request) {
+    Objects.requireNonNull(request, "request must not be null");
+    if (request.messages() == null || request.messages().isEmpty()) {
+      throw new IllegalArgumentException("messages must not be empty");
+    }
+    if (openAIClient == null) {
+      throw new IllegalStateException("openAIClientReview bean must be configured");
+    }
   }
 
   private void addSuggestion(

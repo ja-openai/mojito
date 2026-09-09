@@ -42,6 +42,7 @@ public class WebSecurityConfigAuthorizationTest {
   private static final String TRANSLATION_CORRECTIONS_PATH =
       "/api/admin/translation-corrections/apply";
   private static final String PREFERENCES_PATH = "/api/users/me/preferences";
+  private static final String AI_REVIEW_JOBS_PATH = "/api/ai/review/jobs";
 
   @Autowired WebApplicationContext applicationContext;
 
@@ -51,6 +52,20 @@ public class WebSecurityConfigAuthorizationTest {
   public void setup() {
     mockMvc =
         MockMvcBuilders.webAppContextSetup(applicationContext).apply(springSecurity()).build();
+  }
+
+  @Test
+  public void authenticatedTranslatorsCanStartAndPollAiReviewJobs() throws Exception {
+    for (String role : List.of("USER", "TRANSLATOR", "PM", "ADMIN")) {
+      mockMvc
+          .perform(post(AI_REVIEW_JOBS_PATH).with(user("test").roles(role)))
+          .andExpect(status().isOk());
+      mockMvc
+          .perform(get(AI_REVIEW_JOBS_PATH + "/91").with(user("test").roles(role)))
+          .andExpect(status().isOk());
+    }
+    mockMvc.perform(post(AI_REVIEW_JOBS_PATH)).andExpect(status().isForbidden());
+    mockMvc.perform(get(AI_REVIEW_JOBS_PATH + "/91")).andExpect(status().isForbidden());
   }
 
   @Test
@@ -140,6 +155,16 @@ public class WebSecurityConfigAuthorizationTest {
 
   @RestController
   static class LinguistTimeSpentStubController {
+
+    @PostMapping(AI_REVIEW_JOBS_PATH)
+    String startReview() {
+      return "ok";
+    }
+
+    @GetMapping(AI_REVIEW_JOBS_PATH + "/{taskId}")
+    String reviewStatus(@PathVariable String taskId) {
+      return taskId;
+    }
 
     @GetMapping(PREFERENCES_PATH)
     String getPreferences() {

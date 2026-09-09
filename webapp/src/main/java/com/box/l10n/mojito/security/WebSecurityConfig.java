@@ -274,7 +274,7 @@ public class WebSecurityConfig {
                 .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/translate")
                 .authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/ai/review")
+                .requestMatchers(HttpMethod.POST, "/api/ai/review", "/api/ai/review/jobs")
                 .authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/textunits/*")
                 .hasAnyRole("PM", "ADMIN")
