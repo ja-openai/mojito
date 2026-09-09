@@ -220,7 +220,8 @@ public class ReviewProjectService {
             request.teamId(),
             request.assignTranslator(),
             requestedByUserId,
-            request.projectSpecs());
+            request.projectSpecs(),
+            request.maxWordCountPerProject());
 
     QuartzJobInfo<CreateReviewProjectRequestCommand, CreateReviewProjectRequestResult>
         quartzJobInfo =
@@ -593,6 +594,10 @@ public class ReviewProjectService {
 
     int projectCountPerPreparedLocale =
         CollectionUtils.isEmpty(request.projectSpecs()) ? 1 : request.projectSpecs().size();
+    int maxWordCountPerProject =
+        request.maxWordCountPerProject() == null
+            ? Integer.MAX_VALUE
+            : request.maxWordCountPerProject();
     List<LocalePlan> localePlans = new ArrayList<>();
     ReviewFeature reviewFeature =
         hasReviewFeatureId ? getReviewFeatureOrThrow(request.reviewFeatureId()) : null;
@@ -642,7 +647,12 @@ public class ReviewProjectService {
 
         localePlans.add(
             preparedLocalePlan(
-                locale.getBcp47Tag(), locale, candidates, projectCountPerPreparedLocale, null));
+                locale.getBcp47Tag(),
+                locale,
+                candidates,
+                splitCandidatesByMaxWordCount(candidates, maxWordCountPerProject).size()
+                    * projectCountPerPreparedLocale,
+                null));
       } catch (RuntimeException e) {
         logger.warn(
             "Failed to prepare review project locale '{}' for request '{}': {}",
@@ -653,7 +663,8 @@ public class ReviewProjectService {
       }
     }
 
-    List<LocaleCandidates> localesToCreate = getPreparedLocales(localePlans);
+    List<LocaleCandidates> localesToCreate =
+        getPreparedLocalesWithChunks(localePlans, maxWordCountPerProject);
     if (localesToCreate.isEmpty()) {
       logger.info(
           "No review project locales created: name='{}', teamId={}, requestedLocales={}",
@@ -3948,13 +3959,6 @@ public class ReviewProjectService {
         0,
         LocalePlanStatus.ERROR,
         message == null || message.isBlank() ? "Unexpected error while preparing locale" : message);
-  }
-
-  private List<LocaleCandidates> getPreparedLocales(List<LocalePlan> localePlans) {
-    return localePlans.stream()
-        .filter(localePlan -> localePlan.status() == LocalePlanStatus.PREPARED)
-        .map(localePlan -> new LocaleCandidates(localePlan.locale(), localePlan.candidates()))
-        .toList();
   }
 
   private List<LocaleCandidates> getPreparedLocalesWithChunks(

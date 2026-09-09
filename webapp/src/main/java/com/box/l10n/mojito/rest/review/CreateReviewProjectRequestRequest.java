@@ -18,4 +18,5 @@ public record CreateReviewProjectRequestRequest(
     List<String> screenshotImageIds,
     String name,
     Long teamId,
-    Boolean assignTranslator) {}
+    Boolean assignTranslator,
+    Integer maxWordCountPerProject) {}

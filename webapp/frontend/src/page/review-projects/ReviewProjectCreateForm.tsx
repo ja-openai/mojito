@@ -46,6 +46,7 @@ export type ReviewProjectCreateFormValues = {
   repositoryIds?: number[] | null;
   statusFilter: ReviewProjectCreateStatusFilter;
   skipTextUnitsInOpenProjects: boolean;
+  maxWordCountPerProject: number | null;
   screenshotImageIds: string[];
   teamId: number | null;
   assignTranslator: boolean;
@@ -115,6 +116,7 @@ export function ReviewProjectCreateForm({
   const [type, setType] = useState<ApiReviewProjectType>('NORMAL');
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
   const [skipTextUnitsInOpenProjects, setSkipTextUnitsInOpenProjects] = useState(true);
+  const [maxWordCountDraft, setMaxWordCountDraft] = useState('');
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
   const [assignTranslator, setAssignTranslator] = useState(true);
@@ -154,6 +156,14 @@ export function ReviewProjectCreateForm({
     };
   }, []);
 
+  const maxWordCountPerProject = maxWordCountDraft.trim() ? Number(maxWordCountDraft) : null;
+  const maxWordCountValid =
+    maxWordCountPerProject === null ||
+    (/^\d+$/.test(maxWordCountDraft.trim()) &&
+      Number.isInteger(maxWordCountPerProject) &&
+      maxWordCountPerProject >= 1 &&
+      maxWordCountPerProject <= 2147483647);
+
   const canSubmit = useMemo(
     () =>
       Boolean(name.trim()) &&
@@ -164,10 +174,12 @@ export function ReviewProjectCreateForm({
           ? selectedRepositoryIds.length > 0
           : selectedReviewFeatureIds.length > 0) &&
       selectedLocaleTags.length > 0 &&
+      maxWordCountValid &&
       uploadQueue.every((item) => item.status !== 'uploading'),
     [
       dueDate,
       name,
+      maxWordCountValid,
       selectedLocaleTags.length,
       selectedReviewFeatureIds.length,
       selectedRepositoryIds.length,
@@ -403,6 +415,41 @@ export function ReviewProjectCreateForm({
           />
         </div>
 
+        <div className="review-create__field">
+          <label className="review-create__label" htmlFor="review-create-max-word-count">
+            Max word count per project (optional)
+          </label>
+          <input
+            id="review-create-max-word-count"
+            className="review-create__input"
+            type="text"
+            inputMode="numeric"
+            value={maxWordCountDraft}
+            onChange={(event) => setMaxWordCountDraft(event.target.value)}
+            placeholder="No limit"
+            disabled={isSubmitting}
+            aria-invalid={!maxWordCountValid}
+            aria-describedby={
+              maxWordCountValid
+                ? 'review-create-max-word-count-hint'
+                : 'review-create-max-word-count-hint review-create-max-word-count-error'
+            }
+          />
+          <span className="review-create__hint" id="review-create-max-word-count-hint">
+            Split each locale into projects by source word count. Leave blank for no limit.
+            Individual strings stay whole and may exceed the limit.
+          </span>
+          {!maxWordCountValid ? (
+            <span
+              className="review-create__error"
+              id="review-create-max-word-count-error"
+              role="alert"
+            >
+              Enter a whole number from 1 to 2,147,483,647, or leave blank.
+            </span>
+          ) : null}
+        </div>
+
         {teamOptions && onChangeTeam ? (
           <>
             <label className="review-create__field">
@@ -533,6 +580,7 @@ export function ReviewProjectCreateForm({
               reviewFeatureIds: sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureIds : null,
               statusFilter: selectedStatusFilter,
               skipTextUnitsInOpenProjects,
+              maxWordCountPerProject,
               screenshotImageIds: screenshotKeys,
               teamId: selectedTeamId,
               assignTranslator,

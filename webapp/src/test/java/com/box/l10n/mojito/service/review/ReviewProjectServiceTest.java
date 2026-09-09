@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.review;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -67,6 +68,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
+import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -547,6 +549,149 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void createReviewProjectRequestSplitsSelectedTextUnitsBySourceWords() {
+    assertManualProjectWordCounts("textUnits", 5, List.of(5, 7, 2));
+  }
+
+  @Test
+  public void createReviewProjectRequestSplitsRepositoryScopeBySourceWords() {
+    assertManualProjectWordCounts("repositories", 5, List.of(5, 7, 2));
+  }
+
+  @Test
+  public void createReviewProjectRequestSplitsReviewFeatureBySourceWords() {
+    assertManualProjectWordCounts("feature", 5, List.of(5, 7, 2));
+  }
+
+  @Test
+  public void createReviewProjectRequestWithoutWordLimitKeepsOneProjectPerLocale() {
+    assertManualProjectWordCounts("textUnits", null, List.of(14));
+  }
+
+  @Test
+  public void createReviewProjectRequestAsyncPreservesWordLimit() {
+    reviewProjectService.createReviewProjectRequestAsync(manualWordLimitRequest("textUnits", 5));
+
+    ArgumentCaptor<QuartzJobInfo> jobCaptor = ArgumentCaptor.forClass(QuartzJobInfo.class);
+    verify(quartzPollableTaskScheduler).scheduleJob(jobCaptor.capture());
+    CreateReviewProjectRequestCommand command =
+        (CreateReviewProjectRequestCommand) jobCaptor.getValue().getInput();
+    assertEquals(Integer.valueOf(5), command.maxWordCountPerProject());
+    assertEquals(Long.valueOf(99L), command.requestedByUserId());
+  }
+
+  @Test
+  public void createReviewProjectRequestRejectsNonPositiveWordLimit() {
+    for (int wordLimit : List.of(0, -1)) {
+      IllegalArgumentException error =
+          assertThrows(
+              IllegalArgumentException.class, () -> manualWordLimitRequest("textUnits", wordLimit));
+      assertEquals("maxWordCountPerProject must be positive", error.getMessage());
+    }
+  }
+
+  private void assertManualProjectWordCounts(
+      String scope, Integer wordLimit, List<Integer> expectedWordCounts) {
+    Locale locale = locale(41L, "ar");
+    when(localeService.findByBcp47Tag("ar")).thenReturn(locale);
+    when(localeService.findByBcp47Tag("fr")).thenReturn(locale(42L, "fr"));
+    when(reviewFeatureRepository.findByIdWithRepositories(51L))
+        .thenReturn(Optional.of(reviewFeature(51L, "Feature", repository(71L))));
+    List<TextUnitDTO> candidates =
+        List.of(
+            wordCountCandidate(1001L, "one two", 2),
+            wordCountCandidate(1002L, "one two three", 3),
+            wordCountCandidate(1003L, "one two three four five six seven", 7),
+            wordCountCandidate(1004L, "eight nine", 2),
+            wordCountCandidate(1005L, "already covered", 2));
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
+        .thenAnswer(
+            invocation -> {
+              TextUnitSearcherParameters parameters = invocation.getArgument(0);
+              return parameters.getLocaleId().equals(41L) ? candidates : List.of();
+            });
+    when(reviewProjectTextUnitRepository
+            .findTmTextUnitIdsByReviewProjectStatusAndLocaleIdAndTmTextUnitIds(
+                eq(ReviewProjectStatus.OPEN), eq(41L), any()))
+        .thenReturn(List.of(1005L));
+    when(reviewProjectRequestRepository.save(any(ReviewProjectRequest.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewProjectRequest request = invocation.getArgument(0);
+              request.setId(44L);
+              return request;
+            });
+    long[] nextProjectId = {12L};
+    when(reviewProjectRepository.save(any(ReviewProject.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewProject project = invocation.getArgument(0);
+              project.setId(nextProjectId[0]++);
+              return project;
+            });
+
+    CreateReviewProjectRequestResult result =
+        reviewProjectService.createReviewProjectRequest(manualWordLimitRequest(scope, wordLimit));
+
+    assertEquals(expectedWordCounts.size(), result.projectIds().size());
+    assertEquals(2, result.requestedLocaleCount());
+    assertEquals(1, result.createdLocaleCount());
+    assertEquals(1, result.skippedLocaleCount());
+    assertEquals(0, result.erroredLocaleCount());
+    assertEquals(4, result.localeResults().get(0).textUnitCount());
+    assertEquals(expectedWordCounts.size(), result.localeResults().get(0).projectCount());
+    assertEquals("Manual review", result.requestName());
+    ArgumentCaptor<ReviewProject> projects = ArgumentCaptor.forClass(ReviewProject.class);
+    verify(reviewProjectRepository, times(expectedWordCounts.size())).save(projects.capture());
+    assertEquals(
+        expectedWordCounts,
+        projects.getAllValues().stream().map(ReviewProject::getWordCount).toList());
+    for (ReviewProject project : projects.getAllValues()) {
+      assertEquals(Long.valueOf(44L), project.getReviewProjectRequest().getId());
+      assertEquals("ar", project.getLocale().getBcp47Tag());
+      assertNull(project.getAssignedTranslatorUser());
+    }
+    ArgumentCaptor<ReviewProjectTextUnit> textUnits =
+        ArgumentCaptor.forClass(ReviewProjectTextUnit.class);
+    verify(reviewProjectTextUnitRepository, times(4)).save(textUnits.capture());
+    assertEquals(
+        List.of(1001L, 1002L, 1003L, 1004L),
+        textUnits.getAllValues().stream().map(unit -> unit.getTmTextUnit().getId()).toList());
+  }
+
+  private TextUnitDTO wordCountCandidate(Long id, String source, int wordCount) {
+    TextUnitDTO candidate = new TextUnitDTO();
+    candidate.setTmTextUnitId(id);
+    candidate.setSource(source);
+    TMTextUnit textUnit = new TMTextUnit();
+    textUnit.setId(id);
+    when(entityManager.getReference(TMTextUnit.class, id)).thenReturn(textUnit);
+    when(wordCountService.getEnglishWordCount(source)).thenReturn(wordCount);
+    return candidate;
+  }
+
+  private CreateReviewProjectRequestCommand manualWordLimitRequest(
+      String scope, Integer wordLimit) {
+    return new CreateReviewProjectRequestCommand(
+        List.of("ar", "fr"),
+        null,
+        "textUnits".equals(scope) ? List.of(1001L, 1002L, 1003L, 1004L, 1005L) : null,
+        "feature".equals(scope) ? 51L : null,
+        "repositories".equals(scope) ? List.of(71L) : null,
+        StatusFilter.REVIEW_NEEDED,
+        true,
+        ReviewProjectType.NORMAL,
+        ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+        List.of(),
+        "Manual review",
+        null,
+        false,
+        99L,
+        null,
+        wordLimit);
+  }
+
+  @Test
   public void createReviewProjectRequestFiltersSelectedTextUnitsByStatus() {
     Locale locale = locale(41L, "ar");
     when(localeService.findByBcp47Tag("ar")).thenReturn(locale);
@@ -661,6 +806,15 @@ public class ReviewProjectServiceTest {
 
   @Test
   public void createReviewProjectRequestCreatesTerminologyPhaseProjects() {
+    assertTerminologyPhaseProjects(null, 2);
+  }
+
+  @Test
+  public void createReviewProjectRequestPreservesTerminologyPhasesForEveryChunk() {
+    assertTerminologyPhaseProjects(1, 4);
+  }
+
+  private void assertTerminologyPhaseProjects(Integer wordLimit, int projectCount) {
     Team team = team(7L);
     Locale locale = locale(41L, "en");
     User defaultPm = user(101L, "default-pm");
@@ -669,6 +823,9 @@ public class ReviewProjectServiceTest {
     tmTextUnit.setName("term.acme");
     tmTextUnit.setContent("Acme");
     tmTextUnit.setComment("Brand term");
+    TMTextUnit secondTextUnit = new TMTextUnit();
+    secondTextUnit.setId(1002L);
+    secondTextUnit.setContent("Example");
     ZonedDateTime specialistDueDate = ZonedDateTime.parse("2026-03-30T12:00:00Z");
     ZonedDateTime pmDueDate = ZonedDateTime.parse("2026-03-31T12:00:00Z");
 
@@ -676,8 +833,10 @@ public class ReviewProjectServiceTest {
     when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team));
     when(teamService.getPmPool(7L)).thenReturn(List.of(101L));
     when(userRepository.findById(101L)).thenReturn(Optional.of(defaultPm));
-    when(tmTextUnitRepository.findByIdIn(List.of(1001L))).thenReturn(List.of(tmTextUnit));
+    when(tmTextUnitRepository.findByIdIn(List.of(1001L, 1002L)))
+        .thenReturn(List.of(tmTextUnit, secondTextUnit));
     when(entityManager.getReference(TMTextUnit.class, 1001L)).thenReturn(tmTextUnit);
+    when(entityManager.getReference(TMTextUnit.class, 1002L)).thenReturn(secondTextUnit);
     when(reviewProjectRequestRepository.save(any(ReviewProjectRequest.class)))
         .thenAnswer(
             invocation -> {
@@ -694,13 +853,15 @@ public class ReviewProjectServiceTest {
               return project;
             });
     when(wordCountService.getEnglishWordCount("Acme")).thenReturn(1);
+    when(wordCountService.getEnglishWordCount("Example")).thenReturn(1);
 
     CreateReviewProjectRequestResult result =
         reviewProjectService.createReviewProjectRequest(
             new CreateReviewProjectRequestCommand(
                 List.of("en"),
                 null,
-                List.of(1001L),
+                List.of(1001L, 1002L),
+                null,
                 null,
                 StatusFilter.ALL,
                 false,
@@ -718,24 +879,26 @@ public class ReviewProjectServiceTest {
                         null,
                         null),
                     new CreateReviewProjectRequestCommand.ProjectSpec(
-                        ReviewProjectTerminologyPhase.PM_RESOLUTION, pmDueDate, null, null))));
+                        ReviewProjectTerminologyPhase.PM_RESOLUTION, pmDueDate, null, null)),
+                wordLimit));
 
-    assertEquals(List.of(12L, 13L), result.projectIds());
+    assertEquals(projectCount, result.projectIds().size());
     assertEquals(1, result.createdLocaleCount());
-    assertEquals(2, result.localeResults().get(0).projectCount());
+    assertEquals(projectCount, result.localeResults().get(0).projectCount());
     ArgumentCaptor<ReviewProject> projectCaptor = ArgumentCaptor.forClass(ReviewProject.class);
-    verify(reviewProjectRepository, times(2)).save(projectCaptor.capture());
-    assertEquals(
-        ReviewProjectTerminologyPhase.SPECIALIST_INPUT,
-        projectCaptor.getAllValues().get(0).getTerminologyPhase());
-    assertEquals(specialistDueDate, projectCaptor.getAllValues().get(0).getDueDate());
-    assertNull(projectCaptor.getAllValues().get(0).getAssignedPmUser());
-    assertEquals(
-        ReviewProjectTerminologyPhase.PM_RESOLUTION,
-        projectCaptor.getAllValues().get(1).getTerminologyPhase());
-    assertEquals(pmDueDate, projectCaptor.getAllValues().get(1).getDueDate());
-    assertNull(projectCaptor.getAllValues().get(1).getAssignedPmUser());
-    verify(reviewProjectTextUnitRepository, times(2)).save(any(ReviewProjectTextUnit.class));
+    verify(reviewProjectRepository, times(projectCount)).save(projectCaptor.capture());
+    for (int index = 0; index < projectCount; index += 2) {
+      ReviewProject specialist = projectCaptor.getAllValues().get(index);
+      ReviewProject pm = projectCaptor.getAllValues().get(index + 1);
+      assertEquals(
+          ReviewProjectTerminologyPhase.SPECIALIST_INPUT, specialist.getTerminologyPhase());
+      assertEquals(specialistDueDate, specialist.getDueDate());
+      assertNull(specialist.getAssignedPmUser());
+      assertEquals(ReviewProjectTerminologyPhase.PM_RESOLUTION, pm.getTerminologyPhase());
+      assertEquals(pmDueDate, pm.getDueDate());
+      assertNull(pm.getAssignedPmUser());
+    }
+    verify(reviewProjectTextUnitRepository, times(4)).save(any(ReviewProjectTextUnit.class));
   }
 
   @Test

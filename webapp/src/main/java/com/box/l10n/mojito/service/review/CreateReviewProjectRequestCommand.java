@@ -21,7 +21,49 @@ public record CreateReviewProjectRequestCommand(
     Long teamId,
     Boolean assignTranslator,
     Long requestedByUserId,
-    List<ProjectSpec> projectSpecs) {
+    List<ProjectSpec> projectSpecs,
+    Integer maxWordCountPerProject) {
+
+  public CreateReviewProjectRequestCommand {
+    if (maxWordCountPerProject != null && maxWordCountPerProject < 1) {
+      throw new IllegalArgumentException("maxWordCountPerProject must be positive");
+    }
+  }
+
+  public CreateReviewProjectRequestCommand(
+      List<String> localeTags,
+      String notes,
+      List<Long> tmTextUnitIds,
+      Long reviewFeatureId,
+      List<Long> repositoryIds,
+      StatusFilter statusFilter,
+      Boolean skipTextUnitsInOpenProjects,
+      ReviewProjectType type,
+      ZonedDateTime dueDate,
+      List<String> screenshotImageIds,
+      String name,
+      Long teamId,
+      Boolean assignTranslator,
+      Long requestedByUserId,
+      List<ProjectSpec> projectSpecs) {
+    this(
+        localeTags,
+        notes,
+        tmTextUnitIds,
+        reviewFeatureId,
+        repositoryIds,
+        statusFilter,
+        skipTextUnitsInOpenProjects,
+        type,
+        dueDate,
+        screenshotImageIds,
+        name,
+        teamId,
+        assignTranslator,
+        requestedByUserId,
+        projectSpecs,
+        null);
+  }
 
   public CreateReviewProjectRequestCommand(
       List<String> localeTags,

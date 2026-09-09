@@ -937,6 +937,10 @@ public class ReviewProjectWS {
     if (request == null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "request body is required");
     }
+    if (request.maxWordCountPerProject() != null && request.maxWordCountPerProject() < 1) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "maxWordCountPerProject must be positive");
+    }
 
     return new CreateReviewProjectRequestCommand(
         request.localeTags(),
@@ -953,7 +957,8 @@ public class ReviewProjectWS {
         request.teamId(),
         request.assignTranslator(),
         null,
-        null);
+        null,
+        request.maxWordCountPerProject());
   }
 
   private CreateGlossaryTerminologyReviewProjectCommand

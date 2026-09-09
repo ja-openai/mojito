@@ -66,6 +66,7 @@ Backend Notes
 - Cron execution runs as the system user and reuses the same feature-based review-project creation path as manual creation.
 - Automated creation always excludes text units already covered by any open review project for the same `tmTextUnit + locale`.
 - Manual and automated creation can skip default translator assignment while still keeping team and PM assignment.
+- Manual creation accepts an optional `maxWordCountPerProject` and reuses automation's source-word splitter for selected text units, repositories, and review features. Omitted or null means no splitting; a supplied limit must be a positive integer. Strings stay whole, so one string can exceed the limit. Locale results count all generated projects.
 
 Frontend Notes
 
@@ -74,6 +75,7 @@ Frontend Notes
 - Batch page can prefill from existing automations or the review-feature roster. Apply mode lives on the CTA: `Apply updates` upserts listed rows only, while `Replace enabled set` upserts listed rows and disables enabled automations omitted from the batch.
 - Detail page adds `Run now` plus a recent-runs table for the selected automation.
 - Manual review-project creation can also use a direct repository scope. Deep links use `/review-projects/new?scope=repositories&repositoryIds=<id>` with repeated `repositoryIds` for multi-repository setup.
+- The manual creation form offers **Max word count per project (optional)** for every scope, initially blank to preserve existing behavior.
 
 Follow-on Work
 

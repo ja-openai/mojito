@@ -376,6 +376,7 @@ export type ReviewProjectCreateRequest = {
   repositoryIds?: number[] | null;
   statusFilter?: ReviewProjectCreateStatusFilter | null;
   skipTextUnitsInOpenProjects?: boolean | null;
+  maxWordCountPerProject?: number | null;
   type?: ApiReviewProjectType | null;
   dueDate: string; // ISO string
   screenshotImageIds?: string[] | null;
