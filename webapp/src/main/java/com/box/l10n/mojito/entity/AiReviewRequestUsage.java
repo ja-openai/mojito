@@ -13,7 +13,7 @@ import java.time.ZonedDateTime;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-/** Request metadata for review adoption and latency reporting; never stores conversation text. */
+/** Review execution metadata and request/response snapshots for internal inspection. */
 @Entity
 @Table(
     name = "ai_review_request_usage",
@@ -76,6 +76,12 @@ public class AiReviewRequestUsage extends BaseEntity {
 
   @Column(name = "duration_ms")
   private Long durationMs;
+
+  @Column(name = "request_json", length = Integer.MAX_VALUE)
+  private String requestJson;
+
+  @Column(name = "response_json", length = Integer.MAX_VALUE)
+  private String responseJson;
 
   public User getUser() {
     return user;
@@ -203,5 +209,21 @@ public class AiReviewRequestUsage extends BaseEntity {
 
   public void setDurationMs(Long durationMs) {
     this.durationMs = durationMs;
+  }
+
+  public String getRequestJson() {
+    return requestJson;
+  }
+
+  public void setRequestJson(String requestJson) {
+    this.requestJson = requestJson;
+  }
+
+  public String getResponseJson() {
+    return responseJson;
+  }
+
+  public void setResponseJson(String responseJson) {
+    this.responseJson = responseJson;
   }
 }

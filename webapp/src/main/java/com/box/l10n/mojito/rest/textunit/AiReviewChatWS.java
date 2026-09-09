@@ -153,7 +153,7 @@ public class AiReviewChatWS {
             conversationMessages,
             settings.reasoningEffort());
     Stopwatch requestStopwatch = Stopwatch.createStarted();
-    AiReviewTextUnitVariantOutput output;
+    AiReviewChatResponse response;
     Long usageId = interactiveService.start(prepared, taskId);
     String returnedModel = null;
     String returnedTier = null;
@@ -165,11 +165,13 @@ public class AiReviewChatWS {
         returnedTier = responsesResponse.serviceTier();
       }
       String jsonResponse = AiReviewResponseValidator.outputText(responsesResponse);
-      output = objectMapper.readValueUnchecked(jsonResponse, AiReviewTextUnitVariantOutput.class);
+      AiReviewTextUnitVariantOutput output =
+          objectMapper.readValueUnchecked(jsonResponse, AiReviewTextUnitVariantOutput.class);
       if (output == null) {
         throw new InvalidReviewResponseException("AI review provider returned no review output.");
       }
       logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
+      response = toChatResponse(output);
     } catch (InvalidReviewResponseException e) {
       ResponseStatusException failure =
           new ResponseStatusException(
@@ -182,7 +184,8 @@ public class AiReviewChatWS {
           getRequestResultTag(failure),
           requestStopwatch.elapsed().toMillis(),
           returnedModel,
-          returnedTier);
+          returnedTier,
+          null);
       throw failure;
     } catch (RuntimeException e) {
       recordRequestDuration(localeTag, e, requestStopwatch, settings);
@@ -191,13 +194,22 @@ public class AiReviewChatWS {
           getRequestResultTag(e),
           requestStopwatch.elapsed().toMillis(),
           returnedModel,
-          returnedTier);
+          returnedTier,
+          null);
       throw e;
     }
     recordRequestDuration(localeTag, null, requestStopwatch, settings);
     interactiveService.finish(
-        usageId, "completed", requestStopwatch.elapsed().toMillis(), returnedModel, returnedTier);
+        usageId,
+        "completed",
+        requestStopwatch.elapsed().toMillis(),
+        returnedModel,
+        returnedTier,
+        response);
+    return response;
+  }
 
+  private AiReviewChatResponse toChatResponse(AiReviewTextUnitVariantOutput output) {
     String reply = output.target() != null ? output.target().explanation() : null;
     if (!hasText(reply) && output.reviewRequired() != null) {
       reply = output.reviewRequired().reason();

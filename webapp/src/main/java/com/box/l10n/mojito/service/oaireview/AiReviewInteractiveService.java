@@ -1,14 +1,17 @@
 package com.box.l10n.mojito.service.oaireview;
 
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.security.UserPreferences;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatRequest;
+import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatResponse;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.security.user.UserPreferencesService;
 import com.box.l10n.mojito.service.security.user.UserService;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -25,18 +28,21 @@ public class AiReviewInteractiveService {
   private final UserPreferencesService preferences;
   private final PollableTaskService tasks;
   private final AiReviewRequestUsageService usage;
+  private final ObjectMapper objectMapper;
 
   public AiReviewInteractiveService(
       AiReviewConfigurationProperties configuration,
       UserService users,
       UserPreferencesService preferences,
       PollableTaskService tasks,
-      AiReviewRequestUsageService usage) {
+      AiReviewRequestUsageService usage,
+      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper) {
     this.configuration = configuration;
     this.users = users;
     this.preferences = preferences;
     this.tasks = tasks;
     this.usage = usage;
+    this.objectMapper = objectMapper;
   }
 
   public Prepared prepare(AiReviewChatRequest request) {
@@ -135,7 +141,8 @@ public class AiReviewInteractiveService {
               settings.profileId(),
               settings.modelName(),
               settings.reasoningEffort(),
-              settings.serviceTier()));
+              settings.serviceTier(),
+              objectMapper.writeValueAsStringUnchecked(request)));
     } catch (RuntimeException e) {
       logger.warn("Unable to record AI review usage start", e);
       return null;
@@ -143,10 +150,21 @@ public class AiReviewInteractiveService {
   }
 
   public void finish(
-      Long id, String status, long durationMs, String returnedModel, String returnedTier) {
+      Long id,
+      String status,
+      long durationMs,
+      String returnedModel,
+      String returnedTier,
+      AiReviewChatResponse response) {
     if (id == null) return;
     try {
-      usage.finish(id, status, durationMs, returnedModel, returnedTier);
+      usage.finish(
+          id,
+          status,
+          durationMs,
+          returnedModel,
+          returnedTier,
+          response == null ? null : objectMapper.writeValueAsStringUnchecked(response));
     } catch (RuntimeException e) {
       logger.warn("Unable to record AI review usage outcome, usageId={}", id, e);
     }

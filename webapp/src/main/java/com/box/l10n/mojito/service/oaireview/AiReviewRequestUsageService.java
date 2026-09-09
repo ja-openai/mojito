@@ -21,7 +21,8 @@ public class AiReviewRequestUsageService {
       String profileId,
       String modelName,
       String reasoningEffort,
-      String requestedServiceTier) {}
+      String requestedServiceTier,
+      String requestJson) {}
 
   private static final Set<String> SURFACES =
       Set.of("review_project", "text_unit_detail", "unknown");
@@ -58,6 +59,7 @@ public class AiReviewRequestUsageService {
     usage.setModelName(bounded(input.modelName(), 255));
     usage.setReasoningEffort(bounded(input.reasoningEffort(), 32));
     usage.setRequestedServiceTier(bounded(input.requestedServiceTier(), 32));
+    usage.setRequestJson(input.requestJson());
     usage.setStatus("started");
     usage.setStartedAt(ZonedDateTime.now());
     return usageRepository.save(usage).getId();
@@ -65,7 +67,12 @@ public class AiReviewRequestUsageService {
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void finish(
-      Long id, String status, long durationMs, String returnedModel, String returnedServiceTier) {
+      Long id,
+      String status,
+      long durationMs,
+      String returnedModel,
+      String returnedServiceTier,
+      String responseJson) {
     allowed(status, FINISHED_STATUSES);
     if (durationMs < 0) {
       throw new IllegalArgumentException("AI review duration must not be negative");
@@ -83,6 +90,7 @@ public class AiReviewRequestUsageService {
               usage.setDurationMs(durationMs);
               usage.setReturnedModel(bounded(returnedModel, 255));
               usage.setReturnedServiceTier(bounded(returnedServiceTier, 32));
+              usage.setResponseJson("completed".equals(status) ? responseJson : null);
             });
   }
 

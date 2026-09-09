@@ -237,8 +237,9 @@ and cache provenance. These tests do not establish better linguistic quality or 
 can be removed.
 
 `ai_review_request_usage` (migration V109) records requester, selected/resolved settings, request
-category, and execution outcome/timing without storing transcripts. Recording is best effort and
-counts logical review executions rather than individual provider retries. It supports adoption and
+category, and execution outcome/timing. Migration V110 adds request and response snapshots for
+internal inspection; existing rows have no transcript backfill. Recording is best effort and counts
+logical review executions rather than individual provider retries. It supports adoption and
 latency analysis, including automatic versus follow-up use; it supplies no human linguistic
 judgment. Voluntary preset selection is not a randomized quality experiment.
 

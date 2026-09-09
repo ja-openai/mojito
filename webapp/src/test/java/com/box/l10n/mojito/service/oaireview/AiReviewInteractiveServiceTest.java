@@ -13,9 +13,13 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.security.UserPreferences;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatMessage;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatRequest;
+import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatResponse;
+import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatReview;
+import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatSuggestion;
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared;
 import com.box.l10n.mojito.service.oaireview.AiReviewRequestUsageService.StartInput;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
@@ -38,6 +42,7 @@ public class AiReviewInteractiveServiceTest {
   private PollableTaskService tasks;
   private AiReviewRequestUsageService usage;
   private AiReviewInteractiveService service;
+  private final ObjectMapper objectMapper = ObjectMapper.withNoFailOnUnknownProperties();
 
   @Before
   public void setUp() {
@@ -46,7 +51,9 @@ public class AiReviewInteractiveServiceTest {
     preferences = mock(UserPreferencesService.class);
     tasks = mock(PollableTaskService.class);
     usage = mock(AiReviewRequestUsageService.class);
-    service = new AiReviewInteractiveService(configuration, users, preferences, tasks, usage);
+    service =
+        new AiReviewInteractiveService(
+            configuration, users, preferences, tasks, usage, objectMapper);
   }
 
   @Test
@@ -139,7 +146,8 @@ public class AiReviewInteractiveServiceTest {
             "ultra",
             "configured-model",
             "high",
-            "default");
+            "default",
+            objectMapper.writeValueAsStringUnchecked(prepared.request()));
     when(usage.start(expected)).thenReturn(72L);
 
     assertEquals(Long.valueOf(72), service.start(prepared, 81L));
@@ -308,14 +316,15 @@ public class AiReviewInteractiveServiceTest {
             "version_a",
             "gpt-5.6-sol",
             "low",
-            "default");
+            "default",
+            objectMapper.writeValueAsStringUnchecked(prepared.request()));
     when(usage.start(expected)).thenReturn(72L);
 
     assertEquals(Long.valueOf(72), service.start(prepared, 81L));
-    service.finish(72L, "completed", 2400L, "returned-model", "priority");
+    service.finish(72L, "completed", 2400L, "returned-model", "priority", null);
 
     verify(usage).start(expected);
-    verify(usage).finish(72L, "completed", 2400L, "returned-model", "priority");
+    verify(usage).finish(72L, "completed", 2400L, "returned-model", "priority", null);
   }
 
   @Test
@@ -337,7 +346,54 @@ public class AiReviewInteractiveServiceTest {
                 "balanced",
                 "gpt-6-astra",
                 "low",
-                "priority"));
+                "priority",
+                objectMapper.writeValueAsStringUnchecked(prepared.request())));
+  }
+
+  @Test
+  public void inspectionSnapshotsKeepAllSubmittedRolesAndTheFullReturnedResponse() {
+    authenticate(17L, UserPreferences.defaults());
+    AiReviewChatRequest request =
+        new AiReviewChatRequest(
+            "Hello {name}",
+            "Привіт {name}",
+            "uk",
+            "Greeting in the account menu",
+            42L,
+            List.of(
+                new AiReviewChatMessage("system", "Page context"),
+                new AiReviewChatMessage("user", "Review this translation"),
+                new AiReviewChatMessage("assistant", "Earlier explanation"),
+                new AiReviewChatMessage("user", "Explain your suggestion")),
+            null,
+            "follow_up",
+            "review_project",
+            null,
+            "fast");
+    Prepared prepared = service.prepare(request);
+    when(usage.start(any())).thenReturn(72L);
+
+    assertEquals(Long.valueOf(72), service.start(prepared, 81L));
+    ArgumentCaptor<StartInput> input = ArgumentCaptor.forClass(StartInput.class);
+    verify(usage).start(input.capture());
+    assertEquals(
+        request,
+        objectMapper.readValueUnchecked(input.getValue().requestJson(), AiReviewChatRequest.class));
+
+    AiReviewChatResponse response =
+        new AiReviewChatResponse(
+            new AiReviewChatMessage("assistant", "Consider this alternative."),
+            List.of(new AiReviewChatSuggestion("Вітаємо, {name}", 94, "A different tone.")),
+            new AiReviewChatReview(2, "The current translation is valid."));
+    service.finish(72L, "completed", 2400L, "returned-model", "priority", response);
+    verify(usage)
+        .finish(
+            72L,
+            "completed",
+            2400L,
+            "returned-model",
+            "priority",
+            objectMapper.writeValueAsStringUnchecked(response));
   }
 
   @Test
@@ -389,13 +445,23 @@ public class AiReviewInteractiveServiceTest {
     when(usage.start(any())).thenThrow(new IllegalStateException("Storage unavailable"));
     doThrow(new IllegalStateException("Storage unavailable"))
         .when(usage)
-        .finish(72L, "timeout", 30000L, null, null);
+        .finish(72L, "timeout", 30000L, null, null, null);
 
     assertNull(service.start(prepared, 81L));
-    service.finish(null, "timeout", 30000L, null, null);
-    service.finish(72L, "timeout", 30000L, null, null);
+    service.finish(null, "timeout", 30000L, null, null, null);
+    service.finish(72L, "timeout", 30000L, null, null, null);
 
-    verify(usage).finish(72L, "timeout", 30000L, null, null);
+    verify(usage).finish(72L, "timeout", 30000L, null, null, null);
+
+    AiReviewChatResponse response =
+        new AiReviewChatResponse(
+            new AiReviewChatMessage("assistant", "No change suggested."), List.of(), null);
+    String responseJson = objectMapper.writeValueAsStringUnchecked(response);
+    doThrow(new IllegalStateException("Storage unavailable"))
+        .when(usage)
+        .finish(73L, "completed", 2400L, "model", "priority", responseJson);
+    service.finish(73L, "completed", 2400L, "model", "priority", response);
+    verify(usage).finish(73L, "completed", 2400L, "model", "priority", responseJson);
   }
 
   @Test

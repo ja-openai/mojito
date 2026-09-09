@@ -619,8 +619,15 @@ public class AiReviewChatWSTest {
     assertEquals(
         "AI review provider returned an incomplete response. Please retry.", failure.getReason());
     verify(interactiveService)
-        .finish(eq(91L), eq("provider_failed"), anyLong(), eq(expectedReturnedModel), isNull());
-    verify(interactiveService, never()).finish(eq(91L), eq("completed"), anyLong(), any(), any());
+        .finish(
+            eq(91L),
+            eq("provider_failed"),
+            anyLong(),
+            eq(expectedReturnedModel),
+            isNull(),
+            isNull());
+    verify(interactiveService, never())
+        .finish(eq(91L), eq("completed"), anyLong(), any(), any(), any());
     assertNull(
         meterRegistry.find("AiReviewChatWS.requestDuration").tag("result", "completed").timer());
     assertEquals(
@@ -678,7 +685,8 @@ public class AiReviewChatWSTest {
             org.mockito.ArgumentMatchers.eq("completed"),
             org.mockito.ArgumentMatchers.anyLong(),
             org.mockito.ArgumentMatchers.eq(successResponse("").model()),
-            org.mockito.ArgumentMatchers.isNull());
+            org.mockito.ArgumentMatchers.isNull(),
+            org.mockito.ArgumentMatchers.same(response));
     org.junit.Assert.assertFalse(
         new ObjectMapper().writeValueAsStringUnchecked(response).contains("gpt-"));
   }

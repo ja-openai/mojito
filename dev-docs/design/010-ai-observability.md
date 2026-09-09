@@ -160,16 +160,28 @@ Use `AiReviewChatWS_requestDuration_seconds_*` for interactive review chat laten
 `AiReviewService_requestDuration_seconds_*` for async/legacy review request latency. Both expose a
 `result` tag with `completed`, `timeout`, `provider_failed`, or `failed`.
 
-### Usage metadata
+### Usage metadata and inspection snapshots
 
 Migration `V109__AI_Review_Request_Usage.sql` adds `ai_review_request_usage`. Each logical review
 execution records the requester, optional pollable-task/text-unit IDs, locale, surface,
 `request_type` (`automatic`, `manual`, `follow_up`, `retry`, or `legacy`), selected preset or legacy profile, resolved
 model/reasoning, requested/returned tier and model, outcome, timestamps, and duration. The existing
 `reasoning_effort` column records the actual resolved effort frozen into the request; historical
-rows retain their original settings when preset mappings change. The table
-contains no source/target text, prompts, replies, or discussion transcript. Existing Quartz inputs
-and pollable-task outputs remain separate from this metadata.
+rows retain their original settings when preset mappings change.
+
+Migration `V110__AI_Review_Request_Transcripts.sql` adds nullable `request_json` and `response_json`
+columns to that row. At execution start, `request_json` captures the submitted request after locale
+normalization: source, target, source description, text-unit ID, selectors, request metadata, and
+all submitted message roles/content, including page context and earlier assistant text. On success,
+`response_json` captures the exact response returned by the review endpoint: assistant message,
+suggestions, and review assessment. Recorded failures retain the request and outcome with no
+assistant response. Historical rows remain null; there is no transcript backfill.
+
+These snapshots support internal inspection through the private usage repository/database; no
+history endpoint or conversation restoration is added. Earlier suggestion cards are available in
+their own request's response snapshot, since follow-ups submit only prior message text. The snapshots
+are independent of temporary Quartz inputs and pollable-task output retention, and have no automatic
+expiry. Provider message filtering and browser conversation behavior remain unchanged.
 
 Recording is best effort: storage failures do not fail a review and can leave missing starts or
 outcomes. A row spans the provider retry loop; it does not count each provider attempt or browser
