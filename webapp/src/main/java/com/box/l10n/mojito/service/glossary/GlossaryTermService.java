@@ -224,6 +224,9 @@ public class GlossaryTermService {
     List<String> resolvedLocaleTags = resolveRequestedLocaleTags(glossary, localeTags);
     Map<String, List<TextUnitDTO>> localizedByTermKey =
         loadLocalizedTextUnits(asset, resolvedLocaleTags);
+    Map<Long, SourceCreatedByView> sourceCreatedByByTmTextUnitId =
+        getSourceCreatedByByTmTextUnitId(
+            sourceTextUnits.stream().map(TextUnitDTO::getTmTextUnitId).toList());
 
     String normalizedSearchQuery = normalizeSearchQuery(searchQuery);
     SearchField resolvedSearchField = searchField == null ? SearchField.SOURCE : searchField;
@@ -234,6 +237,7 @@ public class GlossaryTermService {
                     toTermView(
                         textUnit,
                         metadataByTmTextUnitId.get(textUnit.getTmTextUnitId()),
+                        sourceCreatedByByTmTextUnitId.get(textUnit.getTmTextUnitId()),
                         localizedByTermKey.getOrDefault(textUnit.getName(), List.of()),
                         evidenceByMetadataId,
                         primaryLinksByMetadataId,
@@ -273,6 +277,7 @@ public class GlossaryTermService {
     return toTermView(
         sourceTextUnit,
         metadata,
+        getSourceCreatedBy(sourceTextUnit.getTmTextUnitId()),
         localizedTextUnits,
         evidenceByMetadataId,
         primaryLinksByMetadataId,
@@ -483,6 +488,7 @@ public class GlossaryTermService {
     return toTermView(
         refreshedSource,
         metadata,
+        getSourceCreatedBy(refreshedSource.getTmTextUnitId()),
         localizedTextUnits,
         evidenceByMetadataId,
         primaryLinksByMetadataId,
@@ -532,6 +538,7 @@ public class GlossaryTermService {
     return toTermView(
         sourceTextUnit,
         metadata,
+        getSourceCreatedBy(sourceTextUnit.getTmTextUnitId()),
         List.of(),
         evidenceByMetadataId,
         primaryLinksByMetadataId,
@@ -584,6 +591,7 @@ public class GlossaryTermService {
     return toTermView(
         sourceTextUnit,
         metadata,
+        getSourceCreatedBy(sourceTextUnit.getTmTextUnitId()),
         localizedTextUnits,
         evidenceByMetadataId,
         primaryLinksByMetadataId,
@@ -1318,9 +1326,33 @@ public class GlossaryTermService {
     return extractedTermsByNormalizedKey;
   }
 
+  private SourceCreatedByView getSourceCreatedBy(Long tmTextUnitId) {
+    return getSourceCreatedByByTmTextUnitId(List.of(tmTextUnitId)).get(tmTextUnitId);
+  }
+
+  private Map<Long, SourceCreatedByView> getSourceCreatedByByTmTextUnitId(
+      Collection<Long> tmTextUnitIds) {
+    if (tmTextUnitIds.isEmpty()) {
+      return Map.of();
+    }
+    Map<Long, SourceCreatedByView> result = new LinkedHashMap<>();
+    for (var creator : tmTextUnitRepository.findSourceCreatedByByIdIn(tmTextUnitIds)) {
+      result.put(
+          creator.tmTextUnitId(),
+          new SourceCreatedByView(
+              creator.userId(),
+              creator.username(),
+              creator.givenName(),
+              creator.surname(),
+              creator.commonName()));
+    }
+    return result;
+  }
+
   private TermView toTermView(
       TextUnitDTO sourceTextUnit,
       GlossaryTermMetadata metadata,
+      SourceCreatedByView sourceCreatedBy,
       List<TextUnitDTO> localizedTextUnits,
       Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId,
       Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId,
@@ -1379,6 +1411,7 @@ public class GlossaryTermService {
         metadata == null ? null : metadata.getId(),
         metadata == null ? null : metadata.getCreatedDate(),
         metadata == null ? null : metadata.getLastModifiedDate(),
+        sourceCreatedBy,
         sourceTextUnit.getTmTextUnitId(),
         sourceTextUnit.getName(),
         sourceTextUnit.getSource(),
@@ -2049,6 +2082,7 @@ public class GlossaryTermService {
       Long metadataId,
       ZonedDateTime createdDate,
       ZonedDateTime lastModifiedDate,
+      SourceCreatedByView sourceCreatedBy,
       Long tmTextUnitId,
       String termKey,
       String source,
@@ -2067,6 +2101,9 @@ public class GlossaryTermService {
       Integer termIndexRepositoryCount,
       List<TermTranslationView> translations,
       List<TermEvidenceView> evidence) {}
+
+  public record SourceCreatedByView(
+      Long id, String username, String givenName, String surname, String commonName) {}
 
   public record TermTranslationView(
       String localeTag, String target, String targetComment, String status) {}

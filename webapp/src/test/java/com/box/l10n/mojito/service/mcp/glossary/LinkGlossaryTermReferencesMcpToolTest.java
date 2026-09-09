@@ -72,6 +72,7 @@ public class LinkGlossaryTermReferencesMcpToolTest {
             10L,
             null,
             null,
+            null,
             20L,
             "actions",
             "Actions",

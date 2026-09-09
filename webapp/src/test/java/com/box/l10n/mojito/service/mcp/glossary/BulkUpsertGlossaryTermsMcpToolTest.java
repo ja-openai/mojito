@@ -180,6 +180,7 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
             10L,
             null,
             null,
+            null,
             20L,
             "actions",
             "Actions",

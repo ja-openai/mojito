@@ -141,6 +141,13 @@ Structured term metadata lives outside TM text-unit comments:
 This keeps glossary strings compatible with existing TM storage while avoiding a
 second translation store.
 
+The term editor shows `Created by` from the current backing source text unit's
+existing creator, using a display name or username fallback. If no creator is
+recorded, it shows `Unknown`. This read-only attribution is also returned as
+`sourceCreatedBy` in term API responses. Replacing the source text unit can change
+the displayed creator; this field does not track the original glossary-term
+creator or subsequent metadata and translation editors.
+
 ### References
 
 The backend model is still named `GlossaryTermEvidence`, but the UI should prefer

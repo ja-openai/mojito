@@ -93,6 +93,7 @@ public class ReviewGlossaryTermPlanMcpToolTest {
             10L,
             null,
             null,
+            null,
             20L,
             "actions",
             "Actions",

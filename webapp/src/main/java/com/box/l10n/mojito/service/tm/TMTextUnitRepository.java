@@ -36,6 +36,16 @@ public interface TMTextUnitRepository extends JpaRepository<TMTextUnit, Long> {
   List<TMTextUnit> findByIdIn(Collection<Long> ids);
 
   @Query(
+      """
+      select new com.box.l10n.mojito.service.tm.TextUnitSourceCreatedBy(
+        tu.id, creator.id, creator.username, creator.givenName, creator.surname, creator.commonName)
+      from TMTextUnit tu
+      join tu.createdByUser creator
+      where tu.id in :ids
+      """)
+  List<TextUnitSourceCreatedBy> findSourceCreatedByByIdIn(@Param("ids") Collection<Long> ids);
+
+  @Query(
       "select tu from TMTextUnit tu left outer join fetch tu.tmTextUnitStatistic where tu.id IN ?1")
   List<TMTextUnit> findByIdInAndEagerFetchStatistics(Collection<Long> ids);
 

@@ -56,7 +56,7 @@ function renderPanel() {
   );
 }
 
-describe('AdminGlossaryTermsPanel decision notes', () => {
+describe('AdminGlossaryTermsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -91,7 +91,37 @@ describe('AdminGlossaryTermsPanel decision notes', () => {
     });
   });
 
+  it.each([
+    {
+      label: 'named',
+      creator: { id: 7, username: 'creator@example.com', commonName: 'Taylor Lane' },
+      expected: 'Taylor Lane',
+    },
+    {
+      label: 'username-only',
+      creator: { id: 7, username: 'creator@example.com' },
+      expected: 'creator@example.com',
+    },
+    { label: 'unknown', creator: null, expected: 'Unknown' },
+  ])('shows the $label source creator to a read-only translator', async ({ creator, expected }) => {
+    mocks.role = 'ROLE_TRANSLATOR';
+    savedTerm.sourceCreatedBy = creator;
+    renderPanel();
+    const author = await screen.findByLabelText('Source creator');
+    expect(within(author).getByText('Created by')).toHaveAttribute(
+      'title',
+      'Creator recorded for the current source version.',
+    );
+    expect(within(author).getByText(expected)).toBeInTheDocument();
+    expect(within(author).queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
   it('saves and reopens decision notes with links without replacing the term or other evidence', async () => {
+    savedTerm.sourceCreatedBy = {
+      id: 7,
+      username: 'creator@example.com',
+      commonName: 'Taylor Lane',
+    };
     const panel = renderPanel();
     const existingNote = await screen.findByRole('textbox', { name: 'Decision note 1' });
     const updatedNote = 'Changed after product review: https://docs.example.com/naming';
@@ -130,6 +160,7 @@ describe('AdminGlossaryTermsPanel decision notes', () => {
       ],
     });
     expect(request).not.toHaveProperty('translations');
+    expect(request).not.toHaveProperty('sourceCreatedBy');
     await screen.findByText('Saved glossary term Workspace.');
     panel.unmount();
     renderPanel();
@@ -137,6 +168,9 @@ describe('AdminGlossaryTermsPanel decision notes', () => {
       updatedNote,
     );
     expect(screen.getByRole('textbox', { name: 'Decision note 2' })).toHaveValue(secondNote);
+    expect(
+      within(screen.getByLabelText('Source creator')).getByText('Taylor Lane'),
+    ).toBeInTheDocument();
   });
 
   it('removes a decision note while retaining usage and screenshot references', async () => {

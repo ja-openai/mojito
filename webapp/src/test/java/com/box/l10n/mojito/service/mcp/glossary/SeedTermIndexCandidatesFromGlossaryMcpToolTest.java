@@ -139,6 +139,7 @@ public class SeedTermIndexCandidatesFromGlossaryMcpToolTest {
             10L,
             null,
             null,
+            null,
             20L,
             "actions",
             "Actions",
@@ -160,6 +161,7 @@ public class SeedTermIndexCandidatesFromGlossaryMcpToolTest {
     private final TermView rejectedTerm =
         new TermView(
             11L,
+            null,
             null,
             null,
             21L,

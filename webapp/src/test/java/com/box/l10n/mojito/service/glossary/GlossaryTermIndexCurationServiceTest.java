@@ -553,6 +553,7 @@ public class GlossaryTermIndexCurationServiceTest {
         metadataId,
         null,
         null,
+        null,
         tmTextUnitId,
         source.toLowerCase(),
         source,

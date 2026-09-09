@@ -64,7 +64,7 @@ import {
   revokeRequestAttachmentUploadQueuePreviews,
   uploadRequestAttachmentFile,
 } from '../../utils/request-attachments';
-import { getUserLabel } from '../../utils/userDisplayName';
+import { getUserDisplayName, getUserLabel } from '../../utils/userDisplayName';
 import { GlossaryCurationView, GlossarySuggestionDetailView } from './GlossaryCurationView';
 import { GlossaryDecisionNotes } from './GlossaryDecisionNotes';
 import { GlossaryTermsListControls, GlossaryTermsListView } from './GlossaryTermsListView';
@@ -231,6 +231,7 @@ type TermDraft = {
   tmTextUnitId?: number | null;
   createdDate?: string | null;
   lastModifiedDate?: string | null;
+  sourceCreatedBy?: ApiGlossaryTerm['sourceCreatedBy'];
   termIndexCandidateId?: number | null;
   termIndexExtractedTermId?: number | null;
   termIndexOccurrenceCount?: number | null;
@@ -337,6 +338,7 @@ const createBlankDraft = (localeTags: string[] = []): TermDraft => ({
   tmTextUnitId: null,
   createdDate: null,
   lastModifiedDate: null,
+  sourceCreatedBy: null,
   termIndexCandidateId: null,
   termIndexExtractedTermId: null,
   termIndexOccurrenceCount: null,
@@ -383,6 +385,7 @@ const termToDraft = (term: ApiGlossaryTerm, localeTags: string[]): TermDraft => 
     tmTextUnitId: term.tmTextUnitId,
     createdDate: term.createdDate ?? null,
     lastModifiedDate: term.lastModifiedDate ?? null,
+    sourceCreatedBy: term.sourceCreatedBy ?? null,
     termIndexCandidateId: term.termIndexCandidateId ?? null,
     termIndexExtractedTermId: term.termIndexExtractedTermId ?? null,
     termIndexOccurrenceCount: term.termIndexOccurrenceCount ?? null,
@@ -2394,6 +2397,19 @@ export function AdminGlossaryTermsPanel({
                     />
                   </div>
                   <div className="glossary-term-admin__term-dates">
+                    {editorDraft.tmTextUnitId != null ? (
+                      <div className="glossary-term-admin__term-date" aria-label="Source creator">
+                        <span
+                          className="settings-field__label"
+                          title="Creator recorded for the current source version."
+                        >
+                          Created by
+                        </span>
+                        <span title={editorDraft.sourceCreatedBy?.username ?? undefined}>
+                          {getUserDisplayName(editorDraft.sourceCreatedBy ?? {}) || 'Unknown'}
+                        </span>
+                      </div>
+                    ) : null}
                     <div className="glossary-term-admin__term-date">
                       <span className="settings-field__label">Created</span>
                       <span title={getLocalAndUtcDateTimeTooltip(editorDraft.createdDate)}>

@@ -24,10 +24,14 @@ import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.TextUnitSourceCreatedBy;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Before;
@@ -101,6 +105,8 @@ public class GlossaryTermServiceTest {
     when(textUnitSearcher.search(any())).thenReturn(List.of(sourceTextUnit));
     when(tmTextUnitRepository.findById(sourceTextUnit.getTmTextUnitId()))
         .thenReturn(Optional.of(tmTextUnit));
+    when(tmTextUnitRepository.findSourceCreatedByByIdIn(List.of(sourceTextUnit.getTmTextUnitId())))
+        .thenReturn(List.of(sourceCreator(sourceTextUnit.getTmTextUnitId(), 101L)));
     when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitId(
             glossary.getId(), sourceTextUnit.getTmTextUnitId()))
         .thenReturn(Optional.empty());
@@ -163,6 +169,7 @@ public class GlossaryTermServiceTest {
         .findBySourceLocaleTagAndNormalizedKey("en", "new chat");
     verifyNoMoreInteractions(termIndexExtractedTermRepository);
     assertThat(view.termIndexExtractedTermId()).isEqualTo(extractedTerm.getId());
+    assertThat(view.sourceCreatedBy().id()).isEqualTo(101L);
     assertThat(savedLink.get().getTermIndexCandidate().getSourceType())
         .isEqualTo(TermIndexCandidate.SOURCE_TYPE_EXTRACTION);
     assertThat(savedLink.get().getTermIndexCandidate().getSourceLocaleTag()).isEqualTo("en");
@@ -238,6 +245,124 @@ public class GlossaryTermServiceTest {
     assertThat(definitionView.terms())
         .extracting(GlossaryTermService.TermView::source)
         .containsExactly("Billing");
+  }
+
+  @Test
+  public void searchTermsLoadsSourceCreatorsInOneBatchWithoutGlossaryMetadata() {
+    Glossary glossary = glossary(1L, "en");
+    Asset asset = asset(2L, glossary.getBackingRepository());
+    List<TextUnitDTO> sources =
+        List.of(
+            sourceTextUnit(3L, "alpha", "Alpha"),
+            sourceTextUnit(4L, "beta", "Beta"),
+            sourceTextUnit(5L, "gamma", "Gamma"));
+    when(userService.isCurrentUserTranslationRole()).thenReturn(true);
+    when(glossaryRepository.findByIdWithBindings(1L)).thenReturn(Optional.of(glossary));
+    when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(asset);
+    when(textUnitSearcher.search(any())).thenReturn(sources);
+    when(tmTextUnitRepository.findSourceCreatedByByIdIn(List.of(3L, 4L, 5L)))
+        .thenReturn(List.of(sourceCreator(3L, 101L), sourceCreator(4L, 102L)));
+
+    List<GlossaryTermService.TermView> terms =
+        glossaryTermService.searchTerms(1L, null, List.of(), 50).terms();
+
+    assertThat(terms).hasSize(3);
+    assertThat(terms.get(0).metadataId()).isNull();
+    assertThat(terms.get(0).sourceCreatedBy())
+        .isEqualTo(
+            new GlossaryTermService.SourceCreatedByView(
+                101L, "author101", "Alex", "Writer", "Alex Writer"));
+    assertThat(terms.get(1).sourceCreatedBy().id()).isEqualTo(102L);
+    assertThat(terms.get(2).sourceCreatedBy()).isNull();
+    ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode serializedTerm = objectMapper.valueToTree(terms.get(0));
+    assertThat(serializedTerm.get("sourceCreatedBy"))
+        .isEqualTo(
+            objectMapper.valueToTree(
+                Map.of(
+                    "id", 101L,
+                    "username", "author101",
+                    "givenName", "Alex",
+                    "surname", "Writer",
+                    "commonName", "Alex Writer")));
+    JsonNode serializedUnknown = objectMapper.valueToTree(terms.get(2));
+    assertThat(serializedUnknown.get("sourceCreatedBy").isNull()).isTrue();
+    verify(tmTextUnitRepository).findSourceCreatedByByIdIn(List.of(3L, 4L, 5L));
+    verifyNoMoreInteractions(tmTextUnitRepository);
+  }
+
+  @Test
+  public void getTermReturnsCurrentSourceCreatorOrNullWithoutGlossaryMetadata() {
+    Glossary glossary = glossary(1L, "en");
+    Asset asset = asset(2L, glossary.getBackingRepository());
+    when(userService.isCurrentUserTranslationRole()).thenReturn(true);
+    when(glossaryRepository.findByIdWithBindings(1L)).thenReturn(Optional.of(glossary));
+    when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(asset);
+    when(textUnitSearcher.search(any()))
+        .thenReturn(
+            List.of(sourceTextUnit(3L, "alpha", "Alpha"), sourceTextUnit(4L, "beta", "Beta")));
+    when(tmTextUnitRepository.findSourceCreatedByByIdIn(List.of(3L)))
+        .thenReturn(List.of(sourceCreator(3L, 101L)));
+
+    assertThat(glossaryTermService.getTerm(1L, 3L, List.of()).sourceCreatedBy().id())
+        .isEqualTo(101L);
+    assertThat(glossaryTermService.getTerm(1L, 4L, List.of()).sourceCreatedBy()).isNull();
+  }
+
+  @Test
+  public void replacementReturnsCreatorOfReplacementSourceEvenWhenMetadataIsReused() {
+    Glossary glossary = glossary(1L, "en");
+    Asset asset = asset(2L, glossary.getBackingRepository());
+    TextUnitDTO original = sourceTextUnit(3L, "workspace", "Workspace");
+    TextUnitDTO replacement = sourceTextUnit(4L, "workspace", "Project workspace");
+    TMTextUnit replacementTextUnit = new TMTextUnit();
+    replacementTextUnit.setId(4L);
+    GlossaryTermMetadata metadata = new GlossaryTermMetadata();
+    metadata.setId(5L);
+    metadata.setGlossary(glossary);
+    when(userService.isCurrentUserAdminOrPm()).thenReturn(true);
+    when(glossaryRepository.findByIdWithBindings(1L)).thenReturn(Optional.of(glossary));
+    when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(asset);
+    when(textUnitSearcher.search(any())).thenReturn(List.of(original), List.of(replacement));
+    when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitId(1L, 3L))
+        .thenReturn(Optional.of(metadata));
+    when(glossaryTermMetadataRepository.save(metadata)).thenReturn(metadata);
+    when(tmTextUnitRepository.findById(4L)).thenReturn(Optional.of(replacementTextUnit));
+    when(tmTextUnitRepository.findSourceCreatedByByIdIn(List.of(4L)))
+        .thenReturn(List.of(sourceCreator(4L, 102L)));
+
+    GlossaryTermService.TermView term =
+        glossaryTermService.upsertTerm(
+            1L,
+            3L,
+            new GlossaryTermService.TermUpsertCommand(
+                "workspace",
+                "Project workspace",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                GlossaryTermMetadata.PROVENANCE_AI_EXTRACTED,
+                null,
+                null,
+                true,
+                false,
+                null,
+                null,
+                List.of()));
+
+    assertThat(term.metadataId()).isEqualTo(5L);
+    assertThat(term.tmTextUnitId()).isEqualTo(4L);
+    assertThat(term.sourceCreatedBy().id()).isEqualTo(102L);
+    assertThat(metadata.getTmTextUnit()).isSameAs(replacementTextUnit);
+    verify(tmTextUnitRepository).findSourceCreatedByByIdIn(List.of(4L));
+  }
+
+  private TextUnitSourceCreatedBy sourceCreator(Long tmTextUnitId, Long userId) {
+    return new TextUnitSourceCreatedBy(
+        tmTextUnitId, userId, "author" + userId, "Alex", "Writer", "Alex Writer");
   }
 
   private Glossary glossary(Long id, String sourceLocaleTag) {

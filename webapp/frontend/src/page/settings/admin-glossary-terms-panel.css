@@ -974,6 +974,8 @@
 
 .glossary-term-admin__term-dates {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   align-items: flex-start;
   gap: var(--space-4);
   color: var(--color-text-muted);
@@ -983,6 +985,8 @@
 .glossary-term-admin__term-date {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
   gap: var(--space-1);
 }
 

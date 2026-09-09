@@ -64,6 +64,13 @@ export type ApiGlossaryTerm = {
   metadataId?: number | null;
   createdDate?: string | null;
   lastModifiedDate?: string | null;
+  sourceCreatedBy?: {
+    id: number;
+    username: string;
+    givenName?: string | null;
+    surname?: string | null;
+    commonName?: string | null;
+  } | null;
   tmTextUnitId: number;
   termKey: string;
   source: string;

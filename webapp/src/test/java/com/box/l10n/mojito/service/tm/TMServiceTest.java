@@ -223,6 +223,26 @@ public class TMServiceTest extends ServiceTestBase {
         tmService.addTMTextUnit(tmId, assetId, "name", "this is the content", "some comment");
   }
 
+  @Test
+  public void testSourceCreatedByProjection() throws RepositoryNameAlreadyUsedException {
+    createTestData();
+    TMTextUnit source =
+        tmService.addTMTextUnit(tmId, assetId, "workspace", "Workspace", "Product term");
+    var creator = source.getCreatedByUser();
+    assertNotNull(creator);
+
+    assertEquals(
+        List.of(
+            new TextUnitSourceCreatedBy(
+                source.getId(),
+                creator.getId(),
+                creator.getUsername(),
+                creator.getGivenName(),
+                creator.getSurname(),
+                creator.getCommonName())),
+        tmTextUnitRepository.findSourceCreatedByByIdIn(List.of(source.getId(), Long.MAX_VALUE)));
+  }
+
   private Long addTextUnitAndCheck(
       Long tmId,
       Long assetId,
