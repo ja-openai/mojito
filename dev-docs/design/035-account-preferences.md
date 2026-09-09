@@ -4,21 +4,29 @@ Personal preferences are stored in the backend so they follow the signed-in user
 across browsers and devices. My Settings (`/settings/me`) manages the Workbench
 result limit, preferred locales, Review Project shortcut bar, assisted translation
 editor, translation search preview, and default Review Project teams. The AI Review
-controls save the preset and whether automatic reviews are disabled.
+speed control saves the preset and whether automatic reviews are disabled.
 These preferences do not grant repository, locale, or team permissions.
 
-The speed control beside **AI Chat Review** offers **Fastest**, **Fast**, **Balanced**, **Thorough**,
-**Deep**, and **Ultra**, with Balanced as the account default. The backend maps each preset to a model,
-reasoning effort, and processing tier; the frontend exposes no provider model names. All six default
+The speed control beside **AI Chat Review** opens a popup with **Fastest**, **Fast**, **Balanced**,
+**Thorough**, **Deep**, and **Ultra**, plus an independent **Automatic review** toggle. Balanced with
+automatic review enabled is the account default. Changing speed preserves the automatic-review
+setting; toggling automatic review preserves the preset. The button shows **Auto off** when paused.
+The backend maps each of the six presets to a model, reasoning effort, and processing tier;
+the frontend exposes no provider model names. All six default
 presets request API Fast mode, separately from effort. See `010-ai-observability.md` for mappings and
-configuration. The adjacent gear controls automatic reviews. Both controls remain available when the
-review section is collapsed. Disabling automatic reviews keeps manual **Review** and **Ask** available.
+configuration. The speed control remains available when the review section is collapsed, and
+replaces the separate settings gear.
 Saving or restoring defaults in My Settings preserves these separate AI Review preferences.
+
+With automatic review off and an empty conversation, the chat row's single action is **Review**
+when the input is empty or whitespace. This runs one review using the selected preset without
+changing preferences. Typing changes the action to **Ask**; it remains **Ask** after the conversation
+starts. There is no additional standalone Review button.
 
 The slider previews changes while dragging and saves once on pointer release or completion of a
 keyboard adjustment. Failed saves show an error and restore the confirmed account value. A successful
-change clears the conversation and ignores earlier requests' results. Choices follow the account
-across browsers and devices. Interactive requests send a `presetId`; the server freezes the resolved
+change of preset clears the conversation and ignores earlier requests' results. Choices follow the
+account across browsers and devices. Interactive requests send a `presetId`; the server freezes the resolved
 model, effort, and service tier in the prepared request and queued job. Usage records the preset in
 `profile_id` alongside the actual model, reasoning, and tier fields.
 
@@ -67,7 +75,9 @@ sizes up to 2147483647, language tags, bounded lists, and existing enabled team 
 Only admins and PMs can change default teams; existing team access rules apply.
 Last successful writes to the same field win; different-field PATCHes are merged.
 `aiReviewPreset` accepts `fastest`, `fast`, `balanced`, `thorough`, `deep`, or `ultra`.
-`aiReviewAutomaticDisabled` must be a boolean and defaults to `false`. Legacy profile and effort fields
+`aiReviewAutomaticDisabled` must be a boolean and defaults to `false`. The automatic-review toggle
+PATCHes only this flag; selecting a speed PATCHes only `aiReviewPreset`. These independent writes
+preserve the other setting. Legacy profile and effort fields
 remain accepted for older clients. When no preset is stored, legacy `version_a` maps to Fast;
 `version_b` with `medium` maps to Thorough, with `high` to Deep, and otherwise to Balanced. Reading
 older preferences does not rewrite the row. These fields use the existing preferences JSON and

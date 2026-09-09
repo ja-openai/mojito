@@ -23,14 +23,16 @@ function resolvePreset(preferences?: ApiUserPreferences): AiReviewPreset {
 export function useAiReviewPreferences(): AiReviewSettings {
   const preferences = useUserPreferences();
   const save = useSaveUserPreferences();
+  const preset = resolvePreset(preferences.data);
+  const automaticDisabled = preferences.data?.aiReviewAutomaticDisabled ?? false;
   return {
-    preset: resolvePreset(preferences.data),
-    automaticDisabled: preferences.data?.aiReviewAutomaticDisabled ?? false,
+    preset,
+    automaticDisabled,
     ready: Boolean(preferences.data),
     isSaving: save.isPending,
     error:
       save.error?.message ?? (preferences.isError ? 'Could not load AI review settings.' : null),
-    onChangePreset: (preset) => save.mutate({ aiReviewPreset: preset }),
+    onChangePreset: (nextPreset) => save.mutate({ aiReviewPreset: nextPreset }),
     onChangeAutomaticDisabled: (disabled) => save.mutate({ aiReviewAutomaticDisabled: disabled }),
     onRetryLoad: () => {
       void preferences.refetch();

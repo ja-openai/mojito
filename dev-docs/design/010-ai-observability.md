@@ -84,9 +84,11 @@ AiTranslateService_requestsInFlight{mode="no_batch"}
 
 ## AI Review
 
-Review Project and text-unit details expose one preset slider beside **AI Chat Review**.
-Provider model names stay in backend configuration. The gear contains the automatic-review
-setting. Defaults are:
+Review Project and text-unit details expose one popup beside **AI Chat Review** containing a
+six-speed slider and an independent **Automatic review** toggle. Changing speed preserves whether
+automatic review is enabled; toggling automatic review preserves the selected preset. The speed
+button remains available when the section is collapsed and shows **Auto off** when paused.
+Provider model names stay in backend configuration. The six provider presets are:
 
 | Preset | Model | Reasoning effort | Service tier |
 | --- | --- | --- | --- |
@@ -117,17 +119,22 @@ See [Fast mode](https://developers.openai.com/api/docs/guides/fast-mode) and
 Ultra is the preset's display name; its API effort is `max`, not `ultra`.
 These labels describe intended speed/effort choices, not a measured latency or quality ranking.
 
-The account saves `aiReviewPreset` and the automatic-review opt-out. New clients send only a
-`presetId`; the server resolves the whole model/effort/tier combination. Omitted selectors use the
-saved preset. A request mixing `presetId` with legacy `profileId` or `reasoningEffort` is rejected.
+The account saves `aiReviewPreset` and `aiReviewAutomaticDisabled` independently. The speed slider
+PATCHes only the preset; the automatic-review toggle PATCHes only the disabled flag.
+New clients send only a `presetId`; the server resolves the whole model/effort/tier combination.
+Omitted selectors use the saved preset. A request mixing `presetId` with legacy `profileId` or
+`reasoningEffort` is rejected.
 Explicit legacy requests keep their model/effort configuration path, while old queued jobs retain
 legacy behavior. Background/legacy review and glossary AI continue using their existing configuration;
 provider Batch omits the online processing tier. New presets share the configured
 `l10n.ai-review.responses.text-verbosity`.
 
-Automatic requests wait for settings to load; turning them off leaves **Review** and **Ask**
-available. Changing the preset clears the current conversation and ignores late results from the
-previous selection. These choices do not change the shared prompt or constitute a quality comparison.
+Automatic requests wait for settings to load and stay paused while automatic review is disabled.
+For an empty conversation with automatic review off, the chat row shows **Review** when the input
+is empty or whitespace. It runs one review with the selected preset without enabling automatic
+review. Typing changes the same button to **Ask**; after a conversation starts, it remains **Ask**.
+Changing the preset clears the conversation and ignores late results from the previous selection.
+These choices do not change the shared prompt or constitute a quality comparison.
 
 Interactive clients submit `POST /api/ai/review/jobs` and poll `GET /api/ai/review/jobs/{taskId}`.
 Submission resolves the authenticated actor and selected settings, including the actual reasoning

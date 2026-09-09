@@ -54,7 +54,6 @@ import {
   fetchTextUnitHistory,
 } from '../../api/text-units';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
-import { AiReviewSettingsButton } from '../../components/AiReviewSettingsButton';
 import { AiReviewSpeedControl } from '../../components/AiReviewSpeedControl';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -4318,10 +4317,12 @@ function DetailPane({
                     <AiReviewSpeedControl
                       value={aiSettings.preset}
                       onChange={aiSettings.onChangePreset}
+                      automaticDisabled={aiSettings.automaticDisabled}
+                      onChangeAutomaticDisabled={aiSettings.onChangeAutomaticDisabled}
                       disabled={!aiSettings.ready || aiSettings.isSaving}
                       error={aiSettings.error}
+                      onRetry={!aiSettings.ready ? aiSettings.onRetryLoad : undefined}
                     />
-                    <AiReviewSettingsButton settings={aiSettings} />
                   </div>
                   <button
                     type="button"

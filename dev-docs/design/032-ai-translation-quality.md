@@ -129,7 +129,7 @@ l10n.ai-review.responses.text-verbosity=low
 l10n.ai-review.responses.service-tier=default
 ```
 
-Interactive Review Project and text-unit details use one preset slider beside **AI Chat Review**:
+Interactive Review Project and text-unit details use a six-speed slider beside **AI Chat Review**:
 **Fastest** (Luna / `none`), **Fast** (Sol / `none`), **Balanced** (Astra / `low`, account default),
 **Thorough** (Astra / `medium`), **Deep** (Astra / `high`), and **Ultra** (Astra / `max`). The UI hides
 provider model names. All six presets request API Fast mode via `service-tier=priority`, independently
@@ -143,7 +143,11 @@ or configuration changes do not alter an in-flight request. Usage retains both t
 actual provider settings. Older explicit profile/effort requests and already queued legacy jobs
 remain compatible with their existing configuration path.
 
-The gear contains the automatic-review setting. Turning it off keeps **Review** and **Ask** available.
+The same popup contains an independent **Automatic review** toggle. Changing speed preserves the
+automatic-review setting; toggling automatic review preserves the preset. With automatic review off
+and no conversation yet, the chat row's single button is **Review** when the input is empty or
+whitespace. This runs one review with the selected preset and leaves automatic review off. Typing
+switches that button to **Ask**, which remains the action after a conversation starts.
 Saving a different preset clears the conversation and discards stale responses from the previous
 selection. Text verbosity still uses the shared response setting above. Background review, glossary
 AI, and AI Translate keep their existing model and processing configuration.
@@ -222,8 +226,8 @@ page-context provenance; a scoped background precompute trigger remains pending.
 
 The widget uses the same bordered result layout for each outcome. Review text uses readable body
 type, proposed translations align with the result heading, and Use buttons remain visible without
-hover. The six-preset speed control sits beside the section heading. The automatic-review setting
-remains behind the adjacent gear. Both controls remain available when the section is collapsed.
+hover. The speed control sits beside the section heading and opens the six-preset slider and
+**Automatic review** toggle. It remains available when collapsed and shows **Auto off** when paused.
 
 ## Quality evidence and next decision
 

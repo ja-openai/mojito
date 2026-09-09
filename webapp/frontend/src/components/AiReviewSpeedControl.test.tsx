@@ -4,10 +4,115 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AiReviewSpeedControl } from './AiReviewSpeedControl';
 
+const automaticEnabled = { automaticDisabled: false, onChangeAutomaticDisabled: vi.fn() };
+
 describe('AiReviewSpeedControl', () => {
+  it('keeps speed and automatic review independent and shows the paused state', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const onChangeAutomaticDisabled = vi.fn();
+    const { rerender } = render(
+      <AiReviewSpeedControl
+        {...automaticEnabled}
+        value="balanced"
+        onChange={onChange}
+        automaticDisabled={false}
+        onChangeAutomaticDisabled={onChangeAutomaticDisabled}
+      />,
+    );
+    const button = screen.getByRole('button', { name: 'Review speed: Balanced' });
+    await user.click(button);
+    const automatic = screen.getByRole('checkbox', { name: 'Automatic review' });
+    expect(automatic).toBeChecked();
+    await user.click(automatic);
+    expect(onChangeAutomaticDisabled).toHaveBeenCalledExactlyOnceWith(true);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(automatic).toBeChecked();
+    rerender(
+      <AiReviewSpeedControl
+        {...automaticEnabled}
+        value="balanced"
+        onChange={onChange}
+        automaticDisabled
+        onChangeAutomaticDisabled={onChangeAutomaticDisabled}
+      />,
+    );
+    expect(button).toHaveTextContent('BalancedAuto off');
+    expect(button).toHaveAccessibleDescription('Auto off');
+    expect(automatic).not.toBeChecked();
+    expect(automatic).toHaveAccessibleDescription('Automatic review paused.');
+    const slider = screen.getByRole('slider', { name: 'Review speed' });
+    fireEvent.change(slider, { target: { value: '0' } });
+    expect(slider).toHaveAttribute('aria-valuetext', 'Fastest');
+    fireEvent.keyUp(slider, { key: 'Home' });
+    expect(onChange).toHaveBeenCalledExactlyOnceWith('fastest');
+    expect(onChangeAutomaticDisabled).toHaveBeenCalledOnce();
+    await user.click(automatic);
+    expect(onChangeAutomaticDisabled).toHaveBeenLastCalledWith(false);
+    expect(onChange).toHaveBeenCalledOnce();
+  });
+
+  it('keeps load-error recovery accessible while speed selection is disabled', async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <AiReviewSpeedControl
+        {...automaticEnabled}
+        value="balanced"
+        onChange={onChange}
+        disabled
+        error="Could not load AI review settings."
+        onRetry={onRetry}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('checkbox', { name: 'Automatic review' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load AI review settings.');
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps the automatic toggle focused and blocks changes while saving', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const onChangeAutomaticDisabled = vi.fn();
+    const props = { value: 'balanced' as const, onChange, onChangeAutomaticDisabled };
+    const { rerender } = render(<AiReviewSpeedControl {...props} automaticDisabled={false} />);
+    const button = screen.getByRole('button', { name: 'Review speed: Balanced' });
+    await user.click(button);
+    const automatic = screen.getByRole('checkbox', { name: 'Automatic review' });
+    await user.click(automatic);
+    expect(onChangeAutomaticDisabled).toHaveBeenCalledExactlyOnceWith(true);
+    rerender(<AiReviewSpeedControl {...props} automaticDisabled={false} disabled />);
+    expect(automatic).toHaveFocus();
+    await user.keyboard(' ');
+    await user.click(automatic);
+    expect(onChangeAutomaticDisabled).toHaveBeenCalledOnce();
+    expect(automatic).toBeChecked();
+    rerender(
+      <AiReviewSpeedControl
+        {...props}
+        automaticDisabled={false}
+        error="Could not save automatic review."
+      />,
+    );
+    expect(automatic).toBeChecked();
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save automatic review.');
+    expect(onChange).not.toHaveBeenCalled();
+    rerender(<AiReviewSpeedControl {...props} automaticDisabled={false} disabled />);
+    await user.keyboard('{Escape}');
+    expect(button).toHaveFocus();
+  });
+
   it('previews a drag and commits once on pointer release', () => {
     const onChange = vi.fn();
-    render(<AiReviewSpeedControl value="fastest" onChange={onChange} />);
+    render(<AiReviewSpeedControl {...automaticEnabled} value="fastest" onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: 'Review speed: Fastest' }));
     const slider = screen.getByRole('slider', { name: 'Review speed' });
     expect(slider).toHaveAttribute('max', '5');
@@ -27,7 +132,7 @@ describe('AiReviewSpeedControl', () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     const pageShortcut = vi.fn();
-    render(<AiReviewSpeedControl value="fastest" onChange={onChange} />);
+    render(<AiReviewSpeedControl {...automaticEnabled} value="fastest" onChange={onChange} />);
     await user.click(screen.getByRole('button', { name: 'Review speed: Fastest' }));
     const slider = screen.getByRole('slider', { name: 'Review speed' });
     expect(slider).toHaveFocus();
@@ -67,7 +172,7 @@ describe('AiReviewSpeedControl', () => {
     const onChange = vi.fn();
     render(
       <>
-        <AiReviewSpeedControl value="fastest" onChange={onChange} />
+        <AiReviewSpeedControl {...automaticEnabled} value="fastest" onChange={onChange} />
         <button>Outside</button>
       </>,
     );
@@ -86,18 +191,25 @@ describe('AiReviewSpeedControl', () => {
 
   it('resyncs confirmed values and reverts the preview when a save fails', () => {
     const onChange = vi.fn();
-    const { rerender } = render(<AiReviewSpeedControl value="fastest" onChange={onChange} />);
+    const { rerender } = render(
+      <AiReviewSpeedControl {...automaticEnabled} value="fastest" onChange={onChange} />,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Review speed: Fastest' }));
     const slider = screen.getByRole('slider');
     fireEvent.change(slider, { target: { value: '5' } });
     fireEvent.pointerUp(slider);
     rerender(
-      <AiReviewSpeedControl value="fastest" onChange={onChange} error="Could not save speed." />,
+      <AiReviewSpeedControl
+        {...automaticEnabled}
+        value="fastest"
+        onChange={onChange}
+        error="Could not save speed."
+      />,
     );
     expect(slider).toHaveValue('0');
     expect(screen.getByRole('alert')).toHaveTextContent('Could not save speed.');
     expect(screen.getByRole('dialog')).toBeVisible();
-    rerender(<AiReviewSpeedControl value="balanced" onChange={onChange} />);
+    rerender(<AiReviewSpeedControl {...automaticEnabled} value="balanced" onChange={onChange} />);
     expect(slider).toHaveValue('2');
     expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toBeVisible();
   });
@@ -105,14 +217,16 @@ describe('AiReviewSpeedControl', () => {
   it('blocks interaction while disabled, including an already-open slider', () => {
     const onChange = vi.fn();
     const { rerender } = render(
-      <AiReviewSpeedControl value="fastest" onChange={onChange} disabled />,
+      <AiReviewSpeedControl {...automaticEnabled} value="fastest" onChange={onChange} disabled />,
     );
     const button = screen.getByRole('button', { name: 'Review speed: Fastest' });
     fireEvent.click(button);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    rerender(<AiReviewSpeedControl value="fastest" onChange={onChange} />);
+    rerender(<AiReviewSpeedControl {...automaticEnabled} value="fastest" onChange={onChange} />);
     fireEvent.click(button);
-    rerender(<AiReviewSpeedControl value="fastest" onChange={onChange} disabled />);
+    rerender(
+      <AiReviewSpeedControl {...automaticEnabled} value="fastest" onChange={onChange} disabled />,
+    );
     const slider = screen.getByRole('slider');
     expect(slider).toHaveAttribute('aria-disabled', 'true');
     expect(slider).toHaveFocus();
@@ -121,5 +235,8 @@ describe('AiReviewSpeedControl', () => {
     fireEvent.pointerUp(slider);
     expect(onChange).not.toHaveBeenCalled();
     expect(slider).toHaveValue('0');
+    fireEvent.keyDown(slider, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(button).toHaveFocus();
   });
 });

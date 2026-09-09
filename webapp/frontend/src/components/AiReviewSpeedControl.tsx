@@ -9,8 +9,11 @@ import { getAnchoredDropdownPanelStyle } from './dropdownPosition';
 export type AiReviewSpeedControlProps = {
   value: AiReviewPreset;
   onChange: (value: AiReviewPreset) => void;
+  automaticDisabled: boolean;
+  onChangeAutomaticDisabled: (disabled: boolean) => void;
   disabled?: boolean;
   error?: string | null;
+  onRetry?: () => void;
 };
 
 const speeds: { value: AiReviewPreset; label: string; description: string }[] = [
@@ -35,8 +38,11 @@ const rangeKeys = new Set([
 export function AiReviewSpeedControl({
   value,
   onChange,
+  automaticDisabled,
+  onChangeAutomaticDisabled,
   disabled = false,
   error,
+  onRetry,
 }: AiReviewSpeedControlProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -47,6 +53,8 @@ export function AiReviewSpeedControl({
   const lastCommitted = useRef(value);
   const panelId = useId();
   const descriptionId = useId();
+  const automaticStatusId = useId();
+  const automaticDescriptionId = useId();
   const selected = speeds.find((speed) => speed.value === value)!;
   const preview = speeds.find((speed) => speed.value === draft)!;
 
@@ -112,13 +120,16 @@ export function AiReviewSpeedControl({
       <button
         type="button"
         ref={buttonRef}
-        className="ai-review-speed__button"
-        disabled={disabled}
+        className={`ai-review-speed__button${error ? ' has-error' : ''}`}
+        aria-disabled={disabled && !error}
+        title={error ?? (automaticDisabled ? 'Automatic review paused.' : 'Review speed')}
         aria-label={`Review speed: ${selected.label}`}
+        aria-describedby={automaticDisabled ? automaticStatusId : undefined}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => {
+          if (disabled && !error) return;
           setDraft(value);
           lastCommitted.current = value;
           setOpen((current) => !current);
@@ -137,6 +148,11 @@ export function AiReviewSpeedControl({
           <path d="M11.5 2 4 11h5l-.5 7L16 9h-5l.5-7Z" />
         </svg>
         <span>{selected.label}</span>
+        {automaticDisabled ? (
+          <span id={automaticStatusId} className="ai-review-speed__automatic-status">
+            Auto off
+          </span>
+        ) : null}
         <svg
           width="10"
           height="10"
@@ -205,7 +221,36 @@ export function AiReviewSpeedControl({
                 <span>Ultra</span>
               </div>
               <p id={descriptionId}>{preview.description}</p>
-              {error ? <div role="alert">{error}</div> : null}
+              <div className="ai-review-speed__automatic">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={!automaticDisabled}
+                    aria-disabled={disabled}
+                    aria-describedby={automaticDisabled ? automaticDescriptionId : undefined}
+                    onKeyDown={(event) => {
+                      if (disabled && event.key === ' ') event.preventDefault();
+                    }}
+                    onChange={(event) => {
+                      if (!disabled) onChangeAutomaticDisabled(!event.currentTarget.checked);
+                    }}
+                  />
+                  <span>Automatic review</span>
+                </label>
+                {automaticDisabled ? (
+                  <p id={automaticDescriptionId}>Automatic review paused.</p>
+                ) : null}
+              </div>
+              {error ? (
+                <div role="alert">
+                  {error}
+                  {onRetry ? (
+                    <button type="button" onClick={onRetry}>
+                      Try again
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
             </div>,
             document.body,
           )

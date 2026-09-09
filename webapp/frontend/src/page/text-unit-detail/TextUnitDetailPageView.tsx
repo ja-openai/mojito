@@ -7,7 +7,6 @@ import { Link } from 'react-router-dom';
 import type { AiReviewSuggestion } from '../../api/ai-review';
 import type { ApiGlossaryTerm, ApiMatchedGlossaryTerm } from '../../api/glossaries';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
-import { AiReviewSettingsButton } from '../../components/AiReviewSettingsButton';
 import { AiReviewSpeedControl } from '../../components/AiReviewSpeedControl';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -450,15 +449,15 @@ export function TextUnitDetailPageView({
                   title="AI Chat Review"
                   titleAction={
                     aiSettings ? (
-                      <>
-                        <AiReviewSpeedControl
-                          value={aiSettings.preset}
-                          onChange={aiSettings.onChangePreset}
-                          disabled={!aiSettings.ready || aiSettings.isSaving}
-                          error={aiSettings.error}
-                        />
-                        <AiReviewSettingsButton settings={aiSettings} />
-                      </>
+                      <AiReviewSpeedControl
+                        value={aiSettings.preset}
+                        onChange={aiSettings.onChangePreset}
+                        automaticDisabled={aiSettings.automaticDisabled}
+                        onChangeAutomaticDisabled={aiSettings.onChangeAutomaticDisabled}
+                        disabled={!aiSettings.ready || aiSettings.isSaving}
+                        error={aiSettings.error}
+                        onRetry={!aiSettings.ready ? aiSettings.onRetryLoad : undefined}
+                      />
                     ) : undefined
                   }
                   expanded={!isAiCollapsed}

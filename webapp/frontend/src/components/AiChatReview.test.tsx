@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ComponentProps } from 'react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { AiReviewSuggestion } from '../api/ai-review';
@@ -39,7 +41,111 @@ function renderReview(
   return { ...render(<AiChatReview {...props} />), props };
 }
 
+function renderComposer(overrides: Partial<ComponentProps<typeof AiChatReview>> = {}) {
+  const props: ComponentProps<typeof AiChatReview> = {
+    messages: [],
+    currentTarget: 'Compte',
+    input: '',
+    onChangeInput: vi.fn(),
+    onSubmit: vi.fn(),
+    onReview: vi.fn(),
+    onUseSuggestion: vi.fn(),
+    settings: {
+      preset: 'fast',
+      automaticDisabled: true,
+      ready: true,
+      isSaving: false,
+      error: null,
+      onChangePreset: vi.fn(),
+      onChangeAutomaticDisabled: vi.fn(),
+      onRetryLoad: vi.fn(),
+    },
+    isResponding: false,
+    ...overrides,
+  };
+  return { ...render(<AiChatReview {...props} />), props };
+}
+
 describe('AiChatReview', () => {
+  it('offers one Review CTA for the first empty round with automatic review off', async () => {
+    const user = userEvent.setup();
+    const { props } = renderComposer();
+    const review = screen.getByRole('button', { name: 'Review' });
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(review.closest('form')).toContainElement(screen.getByRole('textbox'));
+    expect(review).toBeEnabled();
+    await user.click(review);
+    expect(props.onReview).toHaveBeenCalledOnce();
+    expect(props.onSubmit).not.toHaveBeenCalled();
+    expect(props.settings?.onChangeAutomaticDisabled).not.toHaveBeenCalled();
+  });
+
+  it('submits a first one-off review with Enter even if the input is whitespace', async () => {
+    const user = userEvent.setup();
+    const { props } = renderComposer({ input: '   ' });
+    await user.click(screen.getByRole('textbox'));
+    await user.keyboard('{Enter}');
+    expect(props.onReview).toHaveBeenCalledOnce();
+    expect(props.onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('uses Ask for a typed first message and returns to Review when cleared', async () => {
+    const user = userEvent.setup();
+    const { props, rerender } = renderComposer();
+    rerender(<AiChatReview {...props} input="Make it warmer" />);
+    expect(screen.queryByRole('button', { name: 'Review' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ask' }));
+    expect(props.onSubmit).toHaveBeenCalledOnce();
+    expect(props.onReview).not.toHaveBeenCalled();
+    rerender(<AiChatReview {...props} input="" />);
+    expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled();
+  });
+
+  it('returns to Ask after the first result and requires a follow-up message', async () => {
+    const user = userEvent.setup();
+    const { props, rerender } = renderComposer({
+      messages: [{ id: 'result', sender: 'assistant', content: 'No change suggested.' }],
+    });
+    expect(screen.queryByRole('button', { name: 'Review' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled();
+    rerender(<AiChatReview {...props} input="Explain the terminology" />);
+    await user.click(screen.getByRole('button', { name: 'Ask' }));
+    expect(props.onSubmit).toHaveBeenCalledOnce();
+    expect(props.onReview).not.toHaveBeenCalled();
+  });
+
+  it('keeps the empty CTA as Ask while automatic review is enabled', () => {
+    const { props, rerender } = renderComposer();
+    rerender(
+      <AiChatReview {...props} settings={{ ...props.settings!, automaticDisabled: false }} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Review' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled();
+  });
+
+  it.each(['loading', 'saving', 'responding'] as const)(
+    'blocks one-off review while %s, including direct form submission',
+    (state) => {
+      const { props, rerender } = renderComposer();
+      rerender(
+        <AiChatReview
+          {...props}
+          isResponding={state === 'responding'}
+          settings={{
+            ...props.settings!,
+            ready: state !== 'loading',
+            isSaving: state === 'saving',
+          }}
+        />,
+      );
+      const review = screen.getByRole('button', { name: 'Review' });
+      expect(review).toBeDisabled();
+      fireEvent.submit(review.closest('form')!);
+      expect(props.onReview).not.toHaveBeenCalled();
+      expect(props.onSubmit).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     { score: 2, target: 'Compte', status: 'No change suggested' },
     { score: 2, target: 'Votre compte', status: 'Change suggested' },

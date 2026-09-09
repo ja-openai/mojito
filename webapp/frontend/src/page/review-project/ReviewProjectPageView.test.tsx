@@ -1294,6 +1294,10 @@ one {{Você tem {$count} arquivo.}}
     });
     const review = await screen.findByRole('button', { name: 'Review' });
     expect(review).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Review speed: Thorough' })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    );
     expect(requestAiReviewMock).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
       target: { value: 'Pagar {price} hoje' },
@@ -1306,6 +1310,11 @@ one {{Você tem {$count} arquivo.}}
       surface: 'review_project',
       target: 'Pagar {price} hoje',
     });
+    expect(saveUserPreferencesMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Review' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Thorough' }));
+    expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked();
     fireEvent.change(
       screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
       {
@@ -1321,13 +1330,11 @@ one {{Você tem {$count} arquivo.}}
     });
   });
 
-  it('keeps settings beside the AI Chat Review title while the conversation is collapsed', async () => {
+  it('keeps the speed control beside the AI Chat Review title while the conversation is collapsed', async () => {
     renderReviewProjectPageView();
     await screen.findByText('No issues found.');
     const title = screen.getByText('AI Chat Review');
-    const settingsButton = screen.getByRole('button', { name: 'AI review settings' });
     const speedButton = screen.getByRole('button', { name: 'Review speed: Balanced' });
-    expect(title.parentElement).toContainElement(settingsButton);
     expect(title.parentElement).toContainElement(speedButton);
     expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument();
     const header = title.closest('.review-project-detail__label-row') as HTMLElement;
@@ -1335,10 +1342,11 @@ one {{Você tem {$count} arquivo.}}
     expect(
       screen.queryByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
     ).not.toBeInTheDocument();
-    expect(settingsButton).toBeVisible();
     expect(speedButton).toBeVisible();
-    fireEvent.click(settingsButton);
-    expect(screen.getByRole('checkbox', { name: 'Review automatically' })).toBeVisible();
+    fireEvent.click(speedButton);
+    expect(screen.getByRole('slider', { name: 'Review speed' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'AI review settings' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Automatic review' })).toBeChecked();
     expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument();
   });
 
@@ -1356,11 +1364,56 @@ one {{Você tem {$count} arquivo.}}
       'Could not save review speed.',
     );
     expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'deep' });
-    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    );
     expect(slider).toHaveValue('2');
     expect(screen.getByText('No issues found.')).toBeVisible();
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
     expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ presetId: 'balanced' });
+  });
+
+  it('retries a failed preferences load from the speed popup before requesting review', async () => {
+    fetchUserPreferencesMock.mockRejectedValueOnce(new Error('Settings unavailable'));
+    renderReviewProjectPageView();
+    const speedButton = await screen.findByRole('button', { name: 'Review speed: Balanced' });
+    await waitFor(() => expect(speedButton).toHaveAttribute('aria-disabled', 'false'));
+    fireEvent.click(speedButton);
+    const panel = screen.getByRole('dialog', { name: 'Review speed' });
+    expect(await within(panel).findByRole('alert')).toHaveTextContent(
+      'Could not load AI review settings.',
+    );
+    expect(within(panel).getByRole('slider', { name: 'Review speed' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(requestAiReviewMock).not.toHaveBeenCalled();
+    fireEvent.click(within(panel).getByRole('button', { name: 'Try again' }));
+    await screen.findByText('No issues found.');
+    expect(fetchUserPreferencesMock).toHaveBeenCalledTimes(2);
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      presetId: 'balanced',
+      requestType: 'automatic',
+    });
+  });
+
+  it('enables automatic review without changing the selected preset', async () => {
+    fetchUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewAutomaticDisabled: true });
+    saveUserPreferencesMock.mockResolvedValue(preferences);
+    renderReviewProjectPageView();
+    const speedButton = await screen.findByRole('button', { name: 'Review speed: Balanced' });
+    await waitFor(() => expect(speedButton).toHaveAttribute('aria-disabled', 'false'));
+    fireEvent.click(speedButton);
+    expect(requestAiReviewMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic review' }));
+    await screen.findByText('No issues found.');
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewAutomaticDisabled: false });
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      presetId: 'balanced',
+      requestType: 'automatic',
+    });
   });
 
   it('skips precomputed AI review when glossary context is available', async () => {
@@ -1729,7 +1782,10 @@ one {{Você tem {$count} arquivo.}}
     fireEvent.pointerUp(slider);
     await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
     expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'ultra' });
-    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     expect(oldSignal.aborted).toBe(false);
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
 
@@ -1738,7 +1794,10 @@ one {{Você tem {$count} arquivo.}}
       await Promise.resolve();
     });
     await screen.findByText('No issues found.');
-    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    );
     expect(oldSignal.aborted).toBe(true);
     expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
       presetId: 'ultra',
@@ -1764,8 +1823,8 @@ one {{Você tem {$count} arquivo.}}
     renderReviewProjectPageView();
     await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
     const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
-    fireEvent.click(screen.getByRole('button', { name: 'AI review settings' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Review automatically' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic review' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled());
     expect(oldSignal.aborted).toBe(true);
     fireEvent.change(
@@ -1805,10 +1864,10 @@ one {{Você tem {$count} arquivo.}}
     fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
     await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(2));
     const signal = (requestAiReviewMock.mock.calls[1][1] as { signal: AbortSignal }).signal;
-    fireEvent.click(screen.getByRole('button', { name: 'AI review settings' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Review automatically' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic review' }));
     await waitFor(() =>
-      expect(screen.getByRole('checkbox', { name: 'Review automatically' })).not.toBeChecked(),
+      expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked(),
     );
     expect(signal.aborted).toBe(false);
     await act(async () => {

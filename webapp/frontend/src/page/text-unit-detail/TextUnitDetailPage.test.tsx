@@ -122,7 +122,7 @@ function renderTextUnitDetailPage(
         state?: unknown;
       } = '/text-units/3?locale=pt-PT',
   previousPath?: string,
-  accountPreferences: ApiUserPreferences = preferences,
+  accountPreferences: ApiUserPreferences | null = preferences,
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -131,7 +131,9 @@ function renderTextUnitDetailPage(
     },
   });
 
-  queryClient.setQueryData(userPreferencesQueryKey('translator'), accountPreferences);
+  if (accountPreferences) {
+    queryClient.setQueryData(userPreferencesQueryKey('translator'), accountPreferences);
+  }
 
   return {
     queryClient,
@@ -226,16 +228,25 @@ describe('TextUnitDetailPage', () => {
 
   it('keeps manual review, follow-up and retry on the selected preset with automatic review disabled', async () => {
     editorPreference.enabled = false;
-    renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
+    const { queryClient } = renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
       ...preferences,
       aiReviewPreset: 'ultra',
       aiReviewAutomaticDisabled: true,
     });
     const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    );
     await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
     fireEvent.change(editor, { target: { value: 'Pagar {price} hoje' } });
     expect(requestAiReviewMock).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    const reviewButton = screen.getByRole('button', { name: 'Review' });
+    expect(reviewButton.closest('form')).toContainElement(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+    );
+    expect(screen.queryByRole('button', { name: 'Ask' })).not.toBeInTheDocument();
+    fireEvent.click(reviewButton);
     await screen.findByText('No issues found.');
     expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
       presetId: 'ultra',
@@ -243,6 +254,13 @@ describe('TextUnitDetailPage', () => {
       surface: 'text_unit_detail',
       target: 'Pagar {price} hoje',
     });
+    expect(queryClient.getQueryData(userPreferencesQueryKey('translator'))).toMatchObject({
+      aiReviewPreset: 'ultra',
+      aiReviewAutomaticDisabled: true,
+    });
+    expect(saveUserPreferencesMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Review' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled();
     requestAiReviewMock.mockRejectedValueOnce(new Error('Temporary review failure'));
     fireEvent.change(
       screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
@@ -271,25 +289,110 @@ describe('TextUnitDetailPage', () => {
     }
   });
 
-  it('keeps settings beside the AI Chat Review title while the conversation is collapsed', async () => {
+  it('keeps the speed control beside the AI Chat Review title while the conversation is collapsed', async () => {
     renderTextUnitDetailPage();
     await screen.findByText('No issues found.');
     const titleButton = screen.getByRole('button', { name: 'AI Chat Review' });
-    const settingsButton = screen.getByRole('button', { name: 'AI review settings' });
     const speedButton = screen.getByRole('button', { name: 'Review speed: Balanced' });
-    expect(titleButton.parentElement).toContainElement(settingsButton);
     expect(titleButton.parentElement).toContainElement(speedButton);
-    expect(titleButton).not.toContainElement(settingsButton);
+    expect(titleButton).not.toContainElement(speedButton);
     expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument();
     fireEvent.click(titleButton);
     expect(
       screen.queryByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
     ).not.toBeInTheDocument();
-    expect(settingsButton).toBeVisible();
     expect(speedButton).toBeVisible();
-    fireEvent.click(settingsButton);
-    expect(screen.getByRole('checkbox', { name: 'Review automatically' })).toBeVisible();
+    fireEvent.click(speedButton);
+    expect(screen.getByRole('slider', { name: 'Review speed' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'AI review settings' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Automatic review' })).toBeChecked();
     expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument();
+  });
+
+  it('retries a failed preferences load from the speed popup before requesting review', async () => {
+    fetchUserPreferencesMock.mockRejectedValueOnce(new Error('Settings unavailable'));
+    renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, null);
+    await waitFor(() => expect(fetchUserPreferencesMock).toHaveBeenCalledTimes(1));
+    const speedButton = await screen.findByRole('button', { name: 'Review speed: Balanced' });
+    await waitFor(() => expect(speedButton).toHaveAttribute('aria-disabled', 'false'));
+    fireEvent.click(speedButton);
+    const panel = screen.getByRole('dialog', { name: 'Review speed' });
+    expect(await within(panel).findByRole('alert')).toHaveTextContent(
+      'Could not load AI review settings.',
+    );
+    expect(within(panel).getByRole('slider', { name: 'Review speed' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(requestAiReviewMock).not.toHaveBeenCalled();
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Try again' }));
+    await screen.findByText('No issues found.');
+    expect(fetchUserPreferencesMock).toHaveBeenCalledTimes(2);
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      presetId: 'balanced',
+      requestType: 'automatic',
+    });
+  });
+
+  it('keeps the selected preset for Ask and retry after disabling automatic review', async () => {
+    const { queryClient } = renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
+      ...preferences,
+      aiReviewPreset: 'deep',
+    });
+    await screen.findByText('No issues found.');
+    saveUserPreferencesMock.mockResolvedValue({
+      ...preferences,
+      aiReviewPreset: 'deep',
+      aiReviewAutomaticDisabled: true,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Deep' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic review' }));
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked(),
+    );
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewAutomaticDisabled: true });
+    expect(queryClient.getQueryData(userPreferencesQueryKey('translator'))).toMatchObject({
+      aiReviewPreset: 'deep',
+      aiReviewAutomaticDisabled: true,
+    });
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+    requestAiReviewMock.mockRejectedValueOnce(new Error('Temporary review failure'));
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      { target: { value: 'Explain the terminology.' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(3));
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'deep',
+      requestType: 'follow_up',
+    });
+    expect(requestAiReviewMock.mock.calls[2][0]).toMatchObject({
+      presetId: 'deep',
+      requestType: 'retry',
+    });
+  });
+
+  it('enables automatic review without changing the selected preset', async () => {
+    renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
+      ...preferences,
+      aiReviewPreset: 'thorough',
+      aiReviewAutomaticDisabled: true,
+    });
+    const speedButton = await screen.findByRole('button', { name: 'Review speed: Thorough' });
+    expect(requestAiReviewMock).not.toHaveBeenCalled();
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewPreset: 'thorough' });
+    fireEvent.click(speedButton);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic review' }));
+    await screen.findByText('No issues found.');
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewAutomaticDisabled: false });
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      presetId: 'thorough',
+      requestType: 'automatic',
+    });
   });
 
   it.each([
@@ -309,7 +412,10 @@ describe('TextUnitDetailPage', () => {
 
       await screen.findByText('No issues found.');
 
-      expect(screen.getByRole('button', { name: `Review speed: ${label}` })).toBeEnabled();
+      expect(screen.getByRole('button', { name: `Review speed: ${label}` })).toHaveAttribute(
+        'aria-disabled',
+        'false',
+      );
       expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
         presetId: preset,
         requestType: 'automatic',
@@ -318,7 +424,7 @@ describe('TextUnitDetailPage', () => {
     },
   );
 
-  it('aborts and discards a manual response after changing presets', async () => {
+  it('keeps automatic review off and discards the old manual response when speed changes', async () => {
     let finishOldReview!: (value: {
       message: { role: 'assistant'; content: string };
       suggestions: [];
@@ -346,7 +452,10 @@ describe('TextUnitDetailPage', () => {
     fireEvent.change(slider, { target: { value: '1' } });
     fireEvent.pointerUp(slider);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Review speed: Fast' })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: 'Review speed: Fast' })).toHaveAttribute(
+        'aria-disabled',
+        'false',
+      ),
     );
     expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'fast' });
     expect(oldSignal.aborted).toBe(true);
@@ -358,9 +467,11 @@ describe('TextUnitDetailPage', () => {
       await Promise.resolve();
     });
     expect(screen.queryByText('Old preset answer')).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked();
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: 'Review' }));
     await screen.findByText('No issues found.');
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
     expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
       presetId: 'fast',
       requestType: 'manual',
@@ -394,7 +505,10 @@ describe('TextUnitDetailPage', () => {
     fireEvent.keyUp(slider, { key: 'ArrowRight' });
     await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
     expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'thorough' });
-    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     expect(queryClient.getQueryData(userPreferencesQueryKey('translator'))).toMatchObject({
       aiReviewPreset: 'balanced',
     });
@@ -406,7 +520,10 @@ describe('TextUnitDetailPage', () => {
       await Promise.resolve();
     });
     await screen.findByText('No issues found.');
-    expect(screen.getByRole('button', { name: 'Review speed: Thorough' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Review speed: Thorough' })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    );
     expect(queryClient.getQueryData(userPreferencesQueryKey('translator'))).toMatchObject({
       aiReviewPreset: 'thorough',
     });

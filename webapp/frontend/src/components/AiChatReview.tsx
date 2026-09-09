@@ -57,6 +57,13 @@ export function AiChatReview({
     [getSuggestionError, messages],
   );
   const threadRef = useRef<HTMLDivElement | null>(null);
+  const hasInput = input.trim().length > 0;
+  const submitReview =
+    Boolean(onReview) && settings?.automaticDisabled === true && messages.length === 0 && !hasInput;
+  const submitDisabled =
+    isResponding ||
+    (settings ? !settings.ready || settings.isSaving : false) ||
+    (!hasInput && !submitReview);
 
   useEffect(() => {
     const thread = threadRef.current;
@@ -189,22 +196,13 @@ export function AiChatReview({
         ) : null}
       </div>
 
-      {onReview && messages.length === 0 && !isResponding ? (
-        <button
-          type="button"
-          className="ai-chat-review__button"
-          disabled={settings ? !settings.ready || settings.isSaving : false}
-          onClick={onReview}
-        >
-          Review
-        </button>
-      ) : null}
-
       <form
         className="ai-chat-review__form"
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           event.preventDefault();
-          onSubmit();
+          if (submitDisabled) return;
+          if (submitReview) onReview?.();
+          else onSubmit();
         }}
       >
         <input
@@ -217,13 +215,12 @@ export function AiChatReview({
         <button
           type="submit"
           className="ai-chat-review__button ai-chat-review__button--primary"
-          disabled={
-            isResponding ||
-            input.trim().length === 0 ||
-            (settings ? !settings.ready || settings.isSaving : false)
+          disabled={submitDisabled}
+          title={
+            submitReview ? 'Review this translation once. Automatic review stays off.' : undefined
           }
         >
-          Ask
+          {submitReview ? 'Review' : 'Ask'}
         </button>
       </form>
     </div>
