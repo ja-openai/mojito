@@ -4,7 +4,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -14,6 +18,9 @@ import static org.mockito.Mockito.when;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.openai.OpenAIClient;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
+import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService;
+import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared;
+import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Settings;
 import com.box.l10n.mojito.service.oaireview.AiReviewService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
@@ -41,6 +48,8 @@ public class AiReviewChatWSTest {
 
   @Mock AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService;
 
+  @Mock AiReviewInteractiveService interactiveService;
+
   private AiReviewChatWS aiReviewChatWS;
 
   private SimpleMeterRegistry meterRegistry;
@@ -60,7 +69,16 @@ public class AiReviewChatWSTest {
             objectMapper,
             tmTextUnitIntegrityCheckService,
             aiTranslateLocalePromptSuffixService,
-            meterRegistry);
+            meterRegistry,
+            interactiveService);
+    lenient()
+        .when(interactiveService.prepare(any()))
+        .thenAnswer(
+            invocation ->
+                new Prepared(
+                    invocation.getArgument(0),
+                    7L,
+                    new Settings("version_a", "gpt-5.6-sol", "max", "low", "default")));
   }
 
   @Test
@@ -512,6 +530,157 @@ public class AiReviewChatWSTest {
             .readValueUnchecked(inputJson, AiReviewService.AiReviewTextUnitVariantInput.class);
     assertEquals(" 保存 ", input.existingTarget().content());
     verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, " 保存 ");
+  }
+
+  @Test
+  public void chatUsesThePreparedLocaleForProviderAndUsage() {
+    AiReviewChatWS.AiReviewChatRequest original =
+        new AiReviewChatWS.AiReviewChatRequest(
+            "Hello",
+            "Bonjour",
+            " fr-CA ",
+            null,
+            42L,
+            List.of(new AiReviewChatWS.AiReviewChatMessage("user", "Review.")));
+    AiReviewChatWS.AiReviewChatRequest normalized =
+        new AiReviewChatWS.AiReviewChatRequest(
+            original.source(),
+            original.target(),
+            "fr-CA",
+            original.sourceDescription(),
+            original.tmTextUnitId(),
+            original.messages());
+    Prepared prepared =
+        new Prepared(
+            normalized, 7L, new Settings("version_b", "gpt-6-astra", "low", "low", "priority"));
+    when(interactiveService.prepare(original)).thenReturn(prepared);
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(successResponse("No change needed.")));
+
+    aiReviewChatWS.chat(original);
+
+    ArgumentCaptor<OpenAIClient.ResponsesRequest> requestCaptor =
+        ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
+    verify(openAIClient).getResponses(requestCaptor.capture(), any());
+    String inputJson =
+        ((OpenAIClient.ResponsesRequest.InputMessage.Text)
+                requestCaptor.getValue().input().getFirst().content().getFirst())
+            .text();
+    assertEquals(
+        prepared.request().localeTag(),
+        new ObjectMapper()
+            .readValueUnchecked(inputJson, AiReviewService.AiReviewTextUnitVariantInput.class)
+            .locale());
+    verify(interactiveService).start(prepared, null);
+    verify(aiTranslateLocalePromptSuffixService).getLocalePromptSuffix("fr-CA");
+    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, "Bonjour");
+  }
+
+  @Test
+  public void nullProviderResponseRecordsProviderFailureWithoutDereferencingMetadata() {
+    assertInvalidProviderOutput(null, null);
+  }
+
+  @Test
+  public void nullParsedReviewRecordsProviderFailureInsteadOfCompletion() {
+    OpenAIClient.ResponsesResponse response =
+        new OpenAIClient.ResponsesResponse(
+            "resp-null",
+            "response",
+            1712975853L,
+            "completed",
+            null,
+            null,
+            "returned-model",
+            List.of(responseOutput("null")),
+            null,
+            null);
+    assertInvalidProviderOutput(response, "returned-model");
+  }
+
+  private void assertInvalidProviderOutput(
+      OpenAIClient.ResponsesResponse response, String expectedReturnedModel) {
+    when(interactiveService.start(any(), isNull())).thenReturn(91L);
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(response));
+    AiReviewChatWS.AiReviewChatRequest request =
+        new AiReviewChatWS.AiReviewChatRequest(
+            "Save",
+            "保存",
+            "ja-JP",
+            null,
+            null,
+            List.of(new AiReviewChatWS.AiReviewChatMessage("user", "Review.")));
+
+    ResponseStatusException failure =
+        assertThrows(ResponseStatusException.class, () -> aiReviewChatWS.chat(request));
+
+    assertEquals(HttpStatus.BAD_GATEWAY, failure.getStatusCode());
+    assertEquals(
+        "AI review provider returned an incomplete response. Please retry.", failure.getReason());
+    verify(interactiveService)
+        .finish(eq(91L), eq("provider_failed"), anyLong(), eq(expectedReturnedModel), isNull());
+    verify(interactiveService, never()).finish(eq(91L), eq("completed"), anyLong(), any(), any());
+    assertNull(
+        meterRegistry.find("AiReviewChatWS.requestDuration").tag("result", "completed").timer());
+    assertEquals(
+        1L,
+        meterRegistry
+            .find("AiReviewChatWS.requestDuration")
+            .tag("result", "provider_failed")
+            .timer()
+            .count());
+  }
+
+  @Test
+  public void selectedPresetControlsProviderTimeoutMetricsAndUsageWithoutExposingModel() {
+    AiReviewChatWS.AiReviewChatRequest request =
+        new AiReviewChatWS.AiReviewChatRequest(
+            "x".repeat(2000),
+            null,
+            "ja-JP",
+            null,
+            42L,
+            List.of(new AiReviewChatWS.AiReviewChatMessage("user", "Review")),
+            null,
+            "manual",
+            "text_unit_detail",
+            null,
+            "deep");
+    Prepared prepared =
+        new Prepared(request, 7L, new Settings("deep", "gpt-6-astra", "high", "low", "priority"));
+    when(interactiveService.prepare(request)).thenReturn(prepared);
+    when(interactiveService.start(prepared, null)).thenReturn(91L);
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(successResponse("Keep this translation.")));
+
+    var response = aiReviewChatWS.chat(request);
+
+    ArgumentCaptor<OpenAIClient.ResponsesRequest> requestCaptor =
+        ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
+    ArgumentCaptor<Duration> timeoutCaptor = ArgumentCaptor.forClass(Duration.class);
+    verify(openAIClient).getResponses(requestCaptor.capture(), timeoutCaptor.capture());
+    assertEquals("gpt-6-astra", requestCaptor.getValue().model());
+    assertEquals("high", requestCaptor.getValue().reasoning().effort());
+    assertEquals("priority", requestCaptor.getValue().serviceTier());
+    org.junit.Assert.assertTrue(timeoutCaptor.getValue().toSeconds() > 100);
+    assertEquals(
+        1L,
+        meterRegistry
+            .find("AiReviewChatWS.requestDuration")
+            .tag("model", "gpt-6-astra")
+            .timer()
+            .count());
+    verify(interactiveService).start(prepared, null);
+    verify(interactiveService)
+        .finish(
+            org.mockito.ArgumentMatchers.eq(91L),
+            org.mockito.ArgumentMatchers.eq("completed"),
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.eq(successResponse("").model()),
+            org.mockito.ArgumentMatchers.isNull());
+    org.junit.Assert.assertFalse(
+        new ObjectMapper().writeValueAsStringUnchecked(response).contains("gpt-"));
   }
 
   private OpenAIClient.ResponsesResponse.Output responseOutput(String text) {

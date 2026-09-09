@@ -84,12 +84,67 @@ AiTranslateService_requestsInFlight{mode="no_batch"}
 
 ## AI Review
 
-AI Review defaults to `max` reasoning, `low` text verbosity, and `default` online processing. Override
-these with `l10n.ai-review.responses.reasoning-effort`, `text-verbosity`, and `service-tier`.
-Interactive review and glossary AI share these settings; provider Batch uses the reasoning and
-verbosity settings but omits the online processing tier. The provider response retains the actual
-`service_tier`, which can differ from the requested tier. It is available in captured response
-payloads; existing model/locale metric tags alone do not prove the requested processing tier was used.
+Review Project and text-unit details expose one preset slider beside **AI Chat Review**.
+Provider model names stay in backend configuration. The gear contains the automatic-review
+setting. Defaults are:
+
+| Preset | Model | Reasoning effort | Service tier |
+| --- | --- | --- | --- |
+| `fastest` | `gpt-5.6-luna` | `none` | `priority` |
+| `fast` | `gpt-5.6-sol` | `none` | `priority` |
+| `balanced` (account default) | `gpt-6-astra` | `low` | `priority` |
+| `thorough` | `gpt-6-astra` | `medium` | `priority` |
+| `deep` | `gpt-6-astra` | `high` | `priority` |
+| `ultra` | `gpt-6-astra` | `max` | `priority` |
+
+Override a preset with `l10n.ai-review.interactive.presets.<id>.model-name`,
+`reasoning-effort`, and `service-tier`. For example:
+
+```properties
+l10n.ai-review.interactive.presets.fastest.model-name=gpt-5.6-luna
+l10n.ai-review.interactive.presets.fastest.reasoning-effort=none
+l10n.ai-review.interactive.presets.fastest.service-tier=priority
+l10n.ai-review.interactive.presets.ultra.model-name=gpt-6-astra
+l10n.ai-review.interactive.presets.ultra.reasoning-effort=max
+l10n.ai-review.interactive.presets.ultra.service-tier=priority
+```
+
+`priority` requests API Fast mode independently of reasoning effort. All six default models support
+Fast mode; Astra with EU data residency requires a Standard (`default`) tier override. The response's
+actual model and service tier are recorded separately because the provider can downgrade a request.
+See [Fast mode](https://developers.openai.com/api/docs/guides/fast-mode) and
+[model/tier availability](https://developers.openai.com/api/docs/pricing?latest-pricing=fast).
+Ultra is the preset's display name; its API effort is `max`, not `ultra`.
+These labels describe intended speed/effort choices, not a measured latency or quality ranking.
+
+The account saves `aiReviewPreset` and the automatic-review opt-out. New clients send only a
+`presetId`; the server resolves the whole model/effort/tier combination. Omitted selectors use the
+saved preset. A request mixing `presetId` with legacy `profileId` or `reasoningEffort` is rejected.
+Explicit legacy requests keep their model/effort configuration path, while old queued jobs retain
+legacy behavior. Background/legacy review and glossary AI continue using their existing configuration;
+provider Batch omits the online processing tier. New presets share the configured
+`l10n.ai-review.responses.text-verbosity`.
+
+Automatic requests wait for settings to load; turning them off leaves **Review** and **Ask**
+available. Changing the preset clears the current conversation and ignores late results from the
+previous selection. These choices do not change the shared prompt or constitute a quality comparison.
+
+Interactive clients submit `POST /api/ai/review/jobs` and poll `GET /api/ai/review/jobs/{taskId}`.
+Submission resolves the authenticated actor and selected settings, including the actual reasoning
+effort, into the prepared request before queuing `AiReviewConfiguredChatJob`. That frozen input
+survives the API-to-worker boundary; subsequent preference changes do not alter the job. Already
+queued `AiReviewChatJob` inputs use their stored task owner and legacy configuration. The synchronous
+`POST /api/ai/review` also uses the configured review path. Both job types restrict results to their
+creator. Outputs use existing pollable-task blob retention (`MIN_1_DAY`); expiry requires a new
+request. Stopping browser polling does not cancel queued or running provider work.
+
+Submission returns a task ID without waiting for the model. Shared Quartz and pollable-task output
+storage let submission and polling reach different API pods. The client retries transient polling
+failures against the same task, bounds its wait to twenty minutes, and stops polling on navigation.
+Page request guards keep late results from appearing on another text unit. Expected provider failures
+are stored in the job result; generic Quartz completion does not imply a successful review. Inspect
+submission, polling, and provider outcomes separately when assessing interactive reliability.
+
 Direct requests use configurable adaptive timeout multipliers (`medium=4`, `high=6`, `xhigh=8`,
 `max=12`), capped at 300 seconds by default. These budgets are not measured latency or quality gains.
 See `032-ai-translation-quality.md` for the translation/review contract and evaluation plan.
@@ -98,43 +153,34 @@ Use `AiReviewChatWS_requestDuration_seconds_*` for interactive review chat laten
 `AiReviewService_requestDuration_seconds_*` for async/legacy review request latency. Both expose a
 `result` tag with `completed`, `timeout`, `provider_failed`, or `failed`.
 
-Interactive clients submit the full chat request to `POST /api/ai/review/jobs` and poll
-`GET /api/ai/review/jobs/{taskId}`. Submission returns a task ID without waiting for the model;
-each poll returns pending, the completed review, or a terminal error. This lets configured reasoning
-finish without holding a browser request open beyond an ingress deadline. The model, reasoning,
-prompt, glossary and integrity context, provider retries, and response validation are unchanged.
-The legacy synchronous `POST /api/ai/review` remains available for existing clients.
+### Usage metadata
 
-Jobs use the existing shared Quartz scheduler and pollable-task output storage, so submission and
-polling can reach different API pods. Task data is restricted to its creator. Outputs use the existing
-minimum one-day retention; an expired result requires a new review. The client retries transient
-polling failures against the same task, and stops polling on navigation. Stopping polling does not
-cancel already queued or running provider work. Existing page request guards prevent a late result
-from appearing on another text unit. The client wait is bounded to twenty minutes.
+Migration `V109__AI_Review_Request_Usage.sql` adds `ai_review_request_usage`. Each logical review
+execution records the requester, optional pollable-task/text-unit IDs, locale, surface,
+`request_type` (`automatic`, `manual`, `follow_up`, `retry`, or `legacy`), selected preset or legacy profile, resolved
+model/reasoning, requested/returned tier and model, outcome, timestamps, and duration. The existing
+`reasoning_effort` column records the actual resolved effort frozen into the request; historical
+rows retain their original settings when preset mappings change. The table
+contains no source/target text, prompts, replies, or discussion transcript. Existing Quartz inputs
+and pollable-task outputs remain separate from this metadata.
 
-The chat duration metric measures job execution, excluding queue delay and browser polling. A
-completed model call alone does not prove that a client received the result; inspect submission,
-polling, and provider errors separately when assessing interactive reliability.
-Expected provider failures are stored in the job's error result, so generic Quartz completion counts
-describe task execution rather than successful reviews. Use the dedicated review status and metrics
-for provider outcomes.
+Recording is best effort: storage failures do not fail a review and can leave missing starts or
+outcomes. A row spans the provider retry loop; it does not count each provider attempt or browser
+poll. Recovered job execution can create another row. Timing starts during execution, excluding
+queue delay and browser polling. A completed provider call does not prove the browser received it.
+Use this data to measure adoption, follow-up use, failures, and latency by selected model; it does
+not measure linguistic quality or establish that one model is better.
 
-Review-project pages first check `/api/proto-ai-review-single-text-unit` with
-`onlyPrecomputed=true` when the automatic review has no page-only context messages. The backend reads
-the `for-frontend-v2` cached run. The public `for-frontend` run name maps to this version for new
-precompute work, so old context-free reviews are not reused as current-policy reviews. Already
-scheduled old batches retain their stored run names on import. Custom run names are unchanged;
-future glossary/model/configuration edits do not automatically invalidate cached rows.
-Cache hits are rendered without calling the live interactive review
-endpoint, after the cached variant is revalidated through the existing text-unit lookup. If the page
-has deterministic warning context or matched glossary context, the review page skips the precomputed
-cache and calls live review so speed does not weaken review quality. Cache misses, unreadable cache
-rows, stale cached rows, and cached rows that contain no useful review content fall through to the
-live review path so translators do not see an empty AI panel. Cached output is considered useful when
-it contains a target suggestion, alternate suggestion, a complete existing-target rating with a
-`0..2` score and explanation, a review-required reason, or a `reviewRequired=true` flag. The
-translator page should not start provider work just to warm this cache; precompute should come from
-an explicit PM/admin/scheduled path that calls the async proto review job ahead of translator review.
+### Legacy precompute
+
+Review Project and text-unit details bypass legacy precomputed reviews for every request, including
+targets without extra page context. Existing cache rows lack model/settings provenance, so they
+cannot be attributed to the selected model. The proto API and stored `for-frontend-v2` runs remain
+available to existing callers; their lookup counters do not measure cache use by these pages.
+The reserved `for-frontend` name still maps to `for-frontend-v2` for new precompute work, while old
+in-flight batches and custom run names retain their namespaces. Reuse requires model/settings and
+prompt/glossary/context freshness checks plus a safe scoped PM/admin/scheduled precompute trigger;
+translator page loads must not warm this cache.
 
 Precomputed lookup outcomes are counted by `AiReviewWS.precomputedReviewLookup` with bounded tags:
 `requestMode={cache_only|live_or_compute}` and `result={hit|miss|unreadable|stale|empty}`.

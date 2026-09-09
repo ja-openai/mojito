@@ -23,6 +23,9 @@ const defaults = (): ApiUserPreferences => ({
   visibleTextEditorEnabled: false,
   reviewProjectSearchEnabled: false,
   defaultReviewTeamIds: [],
+  aiReviewProfile: 'version_b',
+  aiReviewPreset: 'balanced',
+  aiReviewAutomaticDisabled: false,
 });
 vi.mock('../../api/userPreferences', () => ({
   fetchUserPreferences: vi.fn(),
@@ -140,7 +143,7 @@ describe('SettingsPage account preferences', () => {
     expect(window.localStorage.getItem('workbench.worksetSize.v1')).toBe('25');
   });
 
-  it('restores defaults as a draft, discards it, then saves the reset atomically', async () => {
+  it('restores page defaults atomically while preserving AI Review settings', async () => {
     const user = userEvent.setup();
     accounts.translator = {
       ...defaults(),
@@ -149,6 +152,9 @@ describe('SettingsPage account preferences', () => {
       shortcutHelp: 'header',
       visibleTextEditorEnabled: true,
       reviewProjectSearchEnabled: true,
+      aiReviewProfile: 'version_a',
+      aiReviewPreset: 'ultra',
+      aiReviewAutomaticDisabled: true,
     };
     renderSettingsPage();
     await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
@@ -163,7 +169,24 @@ describe('SettingsPage account preferences', () => {
     await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
     await user.click(saveButton());
     await screen.findByText('Changes saved');
-    expect(accounts.translator).toEqual(defaults());
+    expect(accounts.translator).toEqual({
+      ...defaults(),
+      aiReviewProfile: 'version_a',
+      aiReviewPreset: 'ultra',
+      aiReviewAutomaticDisabled: true,
+    });
+  });
+
+  it('keeps the form clean when only AI Review preferences differ from defaults', () => {
+    accounts.translator = {
+      ...defaults(),
+      aiReviewProfile: 'version_a',
+      aiReviewPreset: 'deep',
+      aiReviewAutomaticDisabled: true,
+    };
+    renderSettingsPage();
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Restore defaults' })).toBeDisabled();
   });
 
   it('can save defaults instead of importing old browser values', async () => {
@@ -265,7 +288,13 @@ describe('SettingsPage account preferences', () => {
     accounts.translator = { ...defaults(), shortcutHelp: 'hidden' };
     renderSettingsPage();
     await user.click(editorToggle());
-    accounts.translator = { ...accounts.translator, worksetSize: 75 };
+    accounts.translator = {
+      ...accounts.translator,
+      worksetSize: 75,
+      aiReviewProfile: 'version_a',
+      aiReviewPreset: 'fastest',
+      aiReviewAutomaticDisabled: true,
+    };
     await user.click(saveButton());
     await screen.findByText('Changes saved');
     expect(saveUserPreferences).toHaveBeenCalledExactlyOnceWith(
@@ -274,6 +303,9 @@ describe('SettingsPage account preferences', () => {
     );
     expect(worksetInput()).toHaveValue(75);
     expect(accounts.translator.shortcutHelp).toBe('hidden');
+    expect(accounts.translator.aiReviewProfile).toBe('version_a');
+    expect(accounts.translator.aiReviewPreset).toBe('fastest');
+    expect(accounts.translator.aiReviewAutomaticDisabled).toBe(true);
   });
 
   it('refreshes clean forms but preserves drafts when saved settings refresh', async () => {

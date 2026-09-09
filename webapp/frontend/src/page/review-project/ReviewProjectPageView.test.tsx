@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { type ComponentProps } from 'react';
 import { flushSync } from 'react-dom';
 import type * as ReactRouterDom from 'react-router-dom';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AiReviewRequest } from '../../api/ai-review';
+import type { AiReviewRequest, AiReviewResponse } from '../../api/ai-review';
 import type * as GlossariesApi from '../../api/glossaries';
 import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
@@ -45,6 +45,10 @@ vi.mock('../../api/userPreferences', () => ({
 
 const preferences: ApiUserPreferences = {
   initialized: true,
+  aiReviewProfile: 'version_b',
+  aiReviewReasoningEffort: 'low',
+  aiReviewPreset: 'balanced',
+  aiReviewAutomaticDisabled: false,
   worksetSize: null,
   preferredLocales: [],
   shortcutHelp: null,
@@ -1246,36 +1250,117 @@ one {{Você tem {$count} arquivo.}}
     });
   });
 
-  it('uses precomputed AI review when available and skips the live request', async () => {
+  it('bypasses untagged precomputed reviews and sends only the selected preset', async () => {
     fetchPrecomputedAiReviewMock.mockResolvedValue({
-      message: { role: 'assistant', content: 'Cached review.' },
-      suggestions: [
-        {
-          content: 'Pague {price} agora',
-          confidenceLevel: 90,
-          explanation: 'Cached suggestion.',
-        },
-      ],
-      review: {
-        score: 80,
-        explanation: 'Cached score.',
-      },
+      message: { role: 'assistant', content: 'Cached review from an unknown version.' },
+      suggestions: [],
     });
-
     renderReviewProjectPageView();
+    await screen.findByText('No issues found.');
+    expect(fetchPrecomputedAiReviewMock).not.toHaveBeenCalled();
+    expect(requestAiReviewMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        presetId: 'balanced',
+        requestType: 'automatic',
+        surface: 'review_project',
+      }),
+      expect.any(Object),
+    );
+    expect(requestAiReviewMock.mock.calls[0][0]).not.toHaveProperty('profileId');
+    expect(requestAiReviewMock.mock.calls[0][0]).not.toHaveProperty('reasoningEffort');
+    expect(requestAiReviewMock.mock.calls[0][0]).not.toHaveProperty('modelName');
+    expect(screen.queryByText('Cached review from an unknown version.')).not.toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(fetchPrecomputedAiReviewMock).toHaveBeenCalledTimes(1);
-    });
-    const [variantId, options] = fetchPrecomputedAiReviewMock.mock.calls[0] as unknown as [
-      number,
-      { signal?: AbortSignal },
-    ];
-    expect(variantId).toBe(30);
-    expect(options.signal).toBeInstanceOf(AbortSignal);
-    expect(await screen.findByText('Cached score.')).toBeInTheDocument();
-    expect(screen.getByText('Pague {price} agora')).toBeInTheDocument();
+  it('waits for account settings and keeps manual review and Ask available when automatic review is off', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    let finishPreferences!: (value: ApiUserPreferences) => void;
+    fetchUserPreferencesMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishPreferences = resolve;
+        }),
+    );
+    renderReviewProjectPageView();
+    await waitFor(() => expect(fetchUserPreferencesMock).toHaveBeenCalled());
     expect(requestAiReviewMock).not.toHaveBeenCalled();
+    await act(async () => {
+      finishPreferences({
+        ...preferences,
+        aiReviewPreset: 'thorough',
+        aiReviewAutomaticDisabled: true,
+      });
+      await Promise.resolve();
+    });
+    const review = await screen.findByRole('button', { name: 'Review' });
+    expect(review).toBeEnabled();
+    expect(requestAiReviewMock).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Pagar {price} hoje' },
+    });
+    fireEvent.click(review);
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      presetId: 'thorough',
+      requestType: 'manual',
+      surface: 'review_project',
+      target: 'Pagar {price} hoje',
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      {
+        target: { value: 'Explain the terminology.' },
+      },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(2));
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'thorough',
+      requestType: 'follow_up',
+      surface: 'review_project',
+    });
+  });
+
+  it('keeps settings beside the AI Chat Review title while the conversation is collapsed', async () => {
+    renderReviewProjectPageView();
+    await screen.findByText('No issues found.');
+    const title = screen.getByText('AI Chat Review');
+    const settingsButton = screen.getByRole('button', { name: 'AI review settings' });
+    const speedButton = screen.getByRole('button', { name: 'Review speed: Balanced' });
+    expect(title.parentElement).toContainElement(settingsButton);
+    expect(title.parentElement).toContainElement(speedButton);
+    expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument();
+    const header = title.closest('.review-project-detail__label-row') as HTMLElement;
+    fireEvent.click(within(header).getByText('Hide', { selector: 'button' }));
+    expect(
+      screen.queryByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+    ).not.toBeInTheDocument();
+    expect(settingsButton).toBeVisible();
+    expect(speedButton).toBeVisible();
+    fireEvent.click(settingsButton);
+    expect(screen.getByRole('checkbox', { name: 'Review automatically' })).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument();
+  });
+
+  it('preserves the confirmed speed and existing review when saving a new speed fails', async () => {
+    saveUserPreferencesMock.mockRejectedValueOnce(new Error('Could not save review speed.'));
+    renderReviewProjectPageView();
+    await screen.findByText('No issues found.');
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    const panel = screen.getByRole('dialog', { name: 'Review speed' });
+    const slider = within(panel).getByRole('slider', { name: 'Review speed' });
+    fireEvent.change(slider, { target: { value: '4' } });
+    fireEvent.pointerUp(slider);
+
+    expect(await within(panel).findByRole('alert')).toHaveTextContent(
+      'Could not save review speed.',
+    );
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'deep' });
+    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toBeEnabled();
+    expect(slider).toHaveValue('2');
+    expect(screen.getByText('No issues found.')).toBeVisible();
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ presetId: 'balanced' });
   });
 
   it('skips precomputed AI review when glossary context is available', async () => {
@@ -1476,6 +1561,11 @@ one {{Você tem {$count} arquivo.}}
     fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
     await screen.findByText('No issues found.');
     const [initialRetry] = requestAiReviewMock.mock.calls[1] as [AiReviewRequest];
+    expect(initialRetry).toMatchObject({
+      presetId: 'balanced',
+      requestType: 'retry',
+      surface: 'review_project',
+    });
     expect(initialRetry.target).toBe(baseline);
     expect(initialRetry.messages[0].content).toContain('NBSP (U+00A0)');
 
@@ -1483,9 +1573,12 @@ one {{Você tem {$count} arquivo.}}
     fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
       target: { value: draft },
     });
-    fireEvent.change(screen.getByPlaceholderText('Ask AI for a suggestion'), {
-      target: { value: 'Check this spacing.' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      {
+        target: { value: 'Check this spacing.' },
+      },
+    );
     requestAiReviewMock.mockRejectedValueOnce(new Error('Follow-up failed'));
     fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
@@ -1500,25 +1593,6 @@ one {{Você tem {$count} arquivo.}}
       );
     }
     expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(draft);
-  });
-
-  it('falls back to live AI review when precomputed lookup fails', async () => {
-    fetchPrecomputedAiReviewMock.mockRejectedValue(new Error('Cache unavailable'));
-    requestAiReviewMock.mockResolvedValue({
-      message: { role: 'assistant', content: 'Live review after cache miss.' },
-      suggestions: [],
-      review: null,
-    });
-
-    renderReviewProjectPageView();
-
-    await waitFor(() => {
-      expect(fetchPrecomputedAiReviewMock).toHaveBeenCalledTimes(1);
-    });
-    await waitFor(() => {
-      expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
-    });
-    expect(await screen.findByText('Live review after cache miss.')).toBeInTheDocument();
   });
 
   it('aborts the automatic AI review request when the selected text unit changes', async () => {
@@ -1592,84 +1666,160 @@ one {{Você tem {$count} arquivo.}}
     });
   });
 
-  it('aborts the precomputed AI review lookup when the selected text unit changes', async () => {
-    fetchPrecomputedAiReviewMock.mockImplementation(() => new Promise(() => undefined));
-    const nextTextUnit: ApiReviewProjectTextUnit = {
-      ...textUnit,
-      id: 102,
-      tmTextUnit: {
-        ...textUnit.tmTextUnit!,
-        id: 4,
-        name: 'checkout.cancel',
-        content: 'Cancel payment',
-        comment: 'Checkout cancel copy',
-      },
-      baselineTmTextUnitVariant: {
-        id: 31,
-        content: 'Cancel payment',
-        status: 'REVIEW_NEEDED',
-        includedInLocalizedFile: true,
-        comment: null,
-      },
-    };
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-    const baseProps: ReviewProjectPageViewProps = {
-      projectId: project.id,
-      project: {
-        ...project,
-        reviewProjectTextUnits: [textUnit],
-      },
-      mutations: buildMutations(),
-      selectedTextUnitQueryId: null,
-      onSelectedTextUnitIdChange: noop,
-      openRequestDetailsQuery: false,
-      requestDetailsSource: null,
-      onRequestDetailsQueryHandled: noop,
-      onRequestDetailsFlowFinished: noop,
-    };
-
-    const { rerender } = render(renderReviewProjectPageViewNode(baseProps, queryClient));
-
-    await waitFor(() => {
-      expect(fetchPrecomputedAiReviewMock).toHaveBeenCalledTimes(1);
-    });
-    const [initialVariantId, initialOptions] = fetchPrecomputedAiReviewMock.mock
-      .calls[0] as unknown as [number, { signal?: AbortSignal }];
-    expect(initialVariantId).toBe(30);
-    const initialSignal = initialOptions.signal;
-    expect(initialSignal).toBeDefined();
-    expect(initialSignal?.aborted).toBe(false);
-
-    rerender(
-      renderReviewProjectPageViewNode(
-        {
-          ...baseProps,
-          project: {
-            ...project,
-            reviewProjectTextUnits: [nextTextUnit],
-          },
-        },
-        queryClient,
-      ),
+  it('aborts and discards an old response when the saved preset changes', async () => {
+    let finishOldReview!: (value: {
+      message: { role: 'assistant'; content: string };
+      suggestions: [];
+    }) => void;
+    requestAiReviewMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishOldReview = resolve;
+        }),
     );
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewPreset: 'fastest' });
+    renderReviewProjectPageView();
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+    const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    const slider = screen.getByRole('slider', { name: 'Review speed' });
+    fireEvent.change(slider, { target: { value: '0' } });
+    fireEvent.pointerUp(slider);
+    await screen.findByText('No issues found.');
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'fastest' });
+    expect(oldSignal.aborted).toBe(true);
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'fastest',
+      requestType: 'automatic',
+    });
+    await act(async () => {
+      finishOldReview({
+        message: { role: 'assistant', content: 'Old preset answer' },
+        suggestions: [],
+      });
+      await Promise.resolve();
+    });
+    expect(screen.queryByText('Old preset answer')).not.toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(initialSignal?.aborted).toBe(true);
+  it('saves the selected speed before replacing an automatic review and ignores its old result', async () => {
+    let finishOldReview!: (value: AiReviewResponse) => void;
+    let finishSave!: (value: ApiUserPreferences) => void;
+    requestAiReviewMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishOldReview = resolve;
+        }),
+    );
+    saveUserPreferencesMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    renderReviewProjectPageView();
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+    const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ presetId: 'balanced' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    const slider = screen.getByRole('slider', { name: 'Review speed' });
+    fireEvent.change(slider, { target: { value: '5' } });
+    expect(saveUserPreferencesMock).not.toHaveBeenCalled();
+    fireEvent.pointerUp(slider);
+    await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'ultra' });
+    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toBeDisabled();
+    expect(oldSignal.aborted).toBe(false);
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finishSave({ ...preferences, aiReviewPreset: 'ultra' });
+      await Promise.resolve();
     });
-    await waitFor(() => {
-      expect(fetchPrecomputedAiReviewMock).toHaveBeenCalledTimes(2);
+    await screen.findByText('No issues found.');
+    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toBeEnabled();
+    expect(oldSignal.aborted).toBe(true);
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'ultra',
+      requestType: 'automatic',
+      surface: 'review_project',
     });
-    const [nextVariantId, nextOptions] = fetchPrecomputedAiReviewMock.mock.calls[1] as unknown as [
-      number,
-      { signal?: AbortSignal },
-    ];
-    expect(nextVariantId).toBe(31);
-    expect(nextOptions.signal?.aborted).toBe(false);
-    expect(requestAiReviewMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      finishOldReview({
+        message: { role: 'assistant', content: 'Old balanced review' },
+        suggestions: [],
+      });
+      await Promise.resolve();
+    });
+    expect(screen.queryByText('Old balanced review')).not.toBeInTheDocument();
+    expect(screen.getByText('No issues found.')).toBeVisible();
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops an automatic request when automatic review is disabled and allows manual Ask', async () => {
+    requestAiReviewMock.mockImplementationOnce(() => new Promise(() => undefined));
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewAutomaticDisabled: true });
+    renderReviewProjectPageView();
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+    const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
+    fireEvent.click(screen.getByRole('button', { name: 'AI review settings' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Review automatically' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled());
+    expect(oldSignal.aborted).toBe(true);
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      {
+        target: { value: 'Check this translation.' },
+      },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'balanced',
+      requestType: 'manual',
+    });
+  });
+
+  it('keeps an in-flight manual Ask when automatic review is disabled', async () => {
+    renderReviewProjectPageView();
+    await screen.findByText('No issues found.');
+    let finishManual!: (value: {
+      message: { role: 'assistant'; content: string };
+      suggestions: [];
+    }) => void;
+    requestAiReviewMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishManual = resolve;
+        }),
+    );
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewAutomaticDisabled: true });
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      {
+        target: { value: 'Explain the terminology.' },
+      },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(2));
+    const signal = (requestAiReviewMock.mock.calls[1][1] as { signal: AbortSignal }).signal;
+    fireEvent.click(screen.getByRole('button', { name: 'AI review settings' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Review automatically' }));
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Review automatically' })).not.toBeChecked(),
+    );
+    expect(signal.aborted).toBe(false);
+    await act(async () => {
+      finishManual({
+        message: { role: 'assistant', content: 'Manual explanation completed.' },
+        suggestions: [],
+      });
+      await Promise.resolve();
+    });
+    expect(await screen.findByText('Manual explanation completed.')).toBeInTheDocument();
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
   });
 
   it('ignores pending manual AI chat responses after the selected text unit changes', async () => {
@@ -1737,9 +1887,12 @@ one {{Você tem {$count} arquivo.}}
     const { rerender } = render(renderReviewProjectPageViewNode(baseProps, queryClient));
 
     expect(await screen.findByText('Initial review.')).toBeInTheDocument();
-    fireEvent.change(screen.getByPlaceholderText('Ask AI for a suggestion'), {
-      target: { value: 'Can you improve it?' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      {
+        target: { value: 'Can you improve it?' },
+      },
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
 
     await waitFor(() => {

@@ -36,7 +36,11 @@ public class UserPreferencesService {
           "shortcutHelp",
           "visibleTextEditorEnabled",
           "reviewProjectSearchEnabled",
-          "defaultReviewTeamIds");
+          "defaultReviewTeamIds",
+          "aiReviewProfile",
+          "aiReviewAutomaticDisabled",
+          "aiReviewReasoningEffort",
+          "aiReviewPreset");
 
   private final UserService userService;
   private final UserPreferencesRepository preferencesRepository;
@@ -106,7 +110,27 @@ public class UserPreferencesService {
             || !Set.of("header", "bottom", "hidden").contains(shortcutHelp.textValue()))) {
       throw invalid("Shortcut help must be header, bottom, hidden, or null");
     }
-    for (String field : List.of("visibleTextEditorEnabled", "reviewProjectSearchEnabled")) {
+    JsonNode aiReviewProfile = merged.get("aiReviewProfile");
+    if (!aiReviewProfile.isTextual()
+        || !Set.of("version_a", "version_b").contains(aiReviewProfile.textValue())) {
+      throw invalid("AI review profile must be version_a or version_b");
+    }
+    JsonNode aiReviewReasoningEffort = merged.get("aiReviewReasoningEffort");
+    if (!aiReviewReasoningEffort.isTextual()
+        || !Set.of("low", "medium", "high").contains(aiReviewReasoningEffort.textValue())) {
+      throw invalid("AI review reasoning effort must be low, medium, or high");
+    }
+    JsonNode aiReviewPreset = merged.get("aiReviewPreset");
+    if (!aiReviewPreset.isTextual()
+        || !Set.of("fastest", "fast", "balanced", "thorough", "deep", "ultra")
+            .contains(aiReviewPreset.textValue())) {
+      throw invalid("Unknown AI review preset");
+    }
+    for (String field :
+        List.of(
+            "visibleTextEditorEnabled",
+            "reviewProjectSearchEnabled",
+            "aiReviewAutomaticDisabled")) {
       if (!merged.get(field).isBoolean()) {
         throw invalid(field + " must be a boolean");
       }

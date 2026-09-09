@@ -55,6 +55,8 @@ describe('SettingsPage default review teams', () => {
       visibleTextEditorEnabled: false,
       reviewProjectSearchEnabled: false,
       defaultReviewTeamIds: [],
+      aiReviewProfile: 'version_b',
+      aiReviewAutomaticDisabled: false,
     };
     vi.mocked(fetchUserPreferences).mockImplementation(() => Promise.resolve(preferences));
     vi.mocked(saveUserPreferences).mockImplementation((patch) => {

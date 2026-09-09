@@ -15,6 +15,8 @@ const preferences: ApiUserPreferences = {
   visibleTextEditorEnabled: false,
   reviewProjectSearchEnabled: false,
   defaultReviewTeamIds: [],
+  aiReviewProfile: 'version_b',
+  aiReviewAutomaticDisabled: false,
 };
 
 function SearchPreference() {

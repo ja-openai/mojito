@@ -24,6 +24,12 @@ const saveTextUnitMock = vi.hoisted(() => vi.fn());
 const checkTextUnitIntegrityMock = vi.hoisted(() => vi.fn());
 const editorPreference = vi.hoisted(() => ({ enabled: true }));
 const fetchRepositoriesMock = vi.hoisted(() => vi.fn());
+const fetchUserPreferencesMock = vi.hoisted(() => vi.fn());
+const saveUserPreferencesMock = vi.hoisted(() => vi.fn());
+vi.mock('../../api/userPreferences', () => ({
+  fetchUserPreferences: fetchUserPreferencesMock,
+  saveUserPreferences: saveUserPreferencesMock,
+}));
 
 vi.mock('../../api/repositories', () => ({ fetchRepositories: fetchRepositoriesMock }));
 
@@ -80,6 +86,10 @@ beforeAll(() => {
 
 const preferences: ApiUserPreferences = {
   initialized: true,
+  aiReviewProfile: 'version_b',
+  aiReviewReasoningEffort: 'low',
+  aiReviewPreset: 'balanced',
+  aiReviewAutomaticDisabled: false,
   worksetSize: null,
   preferredLocales: [],
   shortcutHelp: null,
@@ -112,6 +122,7 @@ function renderTextUnitDetailPage(
         state?: unknown;
       } = '/text-units/3?locale=pt-PT',
   previousPath?: string,
+  accountPreferences: ApiUserPreferences = preferences,
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -120,7 +131,7 @@ function renderTextUnitDetailPage(
     },
   });
 
-  queryClient.setQueryData(userPreferencesQueryKey('translator'), preferences);
+  queryClient.setQueryData(userPreferencesQueryKey('translator'), accountPreferences);
 
   return {
     queryClient,
@@ -167,6 +178,10 @@ function mockMf2TextUnit(messageFormat: string | null | undefined) {
 describe('TextUnitDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    requestAiReviewMock.mockReset();
+    fetchUserPreferencesMock.mockReset();
+    fetchUserPreferencesMock.mockResolvedValue(preferences);
+    saveUserPreferencesMock.mockReset();
     window.localStorage.clear();
     editorPreference.enabled = true;
     fetchRepositoriesMock.mockResolvedValue([
@@ -207,6 +222,211 @@ describe('TextUnitDetailPage', () => {
       suggestions: [],
       review: null,
     });
+  });
+
+  it('keeps manual review, follow-up and retry on the selected preset with automatic review disabled', async () => {
+    editorPreference.enabled = false;
+    renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
+      ...preferences,
+      aiReviewPreset: 'ultra',
+      aiReviewAutomaticDisabled: true,
+    });
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    fireEvent.change(editor, { target: { value: 'Pagar {price} hoje' } });
+    expect(requestAiReviewMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      presetId: 'ultra',
+      requestType: 'manual',
+      surface: 'text_unit_detail',
+      target: 'Pagar {price} hoje',
+    });
+    requestAiReviewMock.mockRejectedValueOnce(new Error('Temporary review failure'));
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      {
+        target: { value: 'Explain the terminology.' },
+      },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(3));
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'ultra',
+      requestType: 'follow_up',
+      surface: 'text_unit_detail',
+    });
+    expect(requestAiReviewMock.mock.calls[2][0]).toMatchObject({
+      presetId: 'ultra',
+      requestType: 'retry',
+      surface: 'text_unit_detail',
+      target: 'Pagar {price} hoje',
+    });
+    for (const [request] of requestAiReviewMock.mock.calls) {
+      expect(request).not.toHaveProperty('profileId');
+      expect(request).not.toHaveProperty('reasoningEffort');
+      expect(request).not.toHaveProperty('modelName');
+    }
+  });
+
+  it('keeps settings beside the AI Chat Review title while the conversation is collapsed', async () => {
+    renderTextUnitDetailPage();
+    await screen.findByText('No issues found.');
+    const titleButton = screen.getByRole('button', { name: 'AI Chat Review' });
+    const settingsButton = screen.getByRole('button', { name: 'AI review settings' });
+    const speedButton = screen.getByRole('button', { name: 'Review speed: Balanced' });
+    expect(titleButton.parentElement).toContainElement(settingsButton);
+    expect(titleButton.parentElement).toContainElement(speedButton);
+    expect(titleButton).not.toContainElement(settingsButton);
+    expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument();
+    fireEvent.click(titleButton);
+    expect(
+      screen.queryByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+    ).not.toBeInTheDocument();
+    expect(settingsButton).toBeVisible();
+    expect(speedButton).toBeVisible();
+    fireEvent.click(settingsButton);
+    expect(screen.getByRole('checkbox', { name: 'Review automatically' })).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['version_a', 'high', 'fast', 'Fast'],
+    ['version_b', 'medium', 'thorough', 'Thorough'],
+    ['version_b', 'high', 'deep', 'Deep'],
+    ['version_b', 'low', 'balanced', 'Balanced'],
+  ] as const)(
+    'uses the compatible preset for legacy %s/%s preferences',
+    async (profile, effort, preset, label) => {
+      renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
+        ...preferences,
+        aiReviewPreset: undefined,
+        aiReviewProfile: profile,
+        aiReviewReasoningEffort: effort,
+      });
+
+      await screen.findByText('No issues found.');
+
+      expect(screen.getByRole('button', { name: `Review speed: ${label}` })).toBeEnabled();
+      expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+        presetId: preset,
+        requestType: 'automatic',
+      });
+      expect(saveUserPreferencesMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('aborts and discards a manual response after changing presets', async () => {
+    let finishOldReview!: (value: {
+      message: { role: 'assistant'; content: string };
+      suggestions: [];
+    }) => void;
+    requestAiReviewMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishOldReview = resolve;
+        }),
+    );
+    saveUserPreferencesMock.mockResolvedValue({
+      ...preferences,
+      aiReviewPreset: 'fast',
+      aiReviewAutomaticDisabled: true,
+    });
+    renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
+      ...preferences,
+      aiReviewAutomaticDisabled: true,
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Review' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+    const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    const slider = screen.getByRole('slider', { name: 'Review speed' });
+    fireEvent.change(slider, { target: { value: '1' } });
+    fireEvent.pointerUp(slider);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Review speed: Fast' })).toBeEnabled(),
+    );
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'fast' });
+    expect(oldSignal.aborted).toBe(true);
+    await act(async () => {
+      finishOldReview({
+        message: { role: 'assistant', content: 'Old preset answer' },
+        suggestions: [],
+      });
+      await Promise.resolve();
+    });
+    expect(screen.queryByText('Old preset answer')).not.toBeInTheDocument();
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'fast',
+      requestType: 'manual',
+      surface: 'text_unit_detail',
+    });
+  });
+
+  it('saves the selected speed before replacing an automatic review and ignores its old result', async () => {
+    let finishOldReview!: (value: AiReviewApi.AiReviewResponse) => void;
+    let finishSave!: (value: ApiUserPreferences) => void;
+    requestAiReviewMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishOldReview = resolve;
+        }),
+    );
+    saveUserPreferencesMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    const { queryClient } = renderTextUnitDetailPage();
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+    const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ presetId: 'balanced' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    const slider = screen.getByRole('slider', { name: 'Review speed' });
+    fireEvent.change(slider, { target: { value: '3' } });
+    fireEvent.keyUp(slider, { key: 'ArrowRight' });
+    await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'thorough' });
+    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toBeDisabled();
+    expect(queryClient.getQueryData(userPreferencesQueryKey('translator'))).toMatchObject({
+      aiReviewPreset: 'balanced',
+    });
+    expect(oldSignal.aborted).toBe(false);
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finishSave({ ...preferences, aiReviewPreset: 'thorough' });
+      await Promise.resolve();
+    });
+    await screen.findByText('No issues found.');
+    expect(screen.getByRole('button', { name: 'Review speed: Thorough' })).toBeEnabled();
+    expect(queryClient.getQueryData(userPreferencesQueryKey('translator'))).toMatchObject({
+      aiReviewPreset: 'thorough',
+    });
+    expect(oldSignal.aborted).toBe(true);
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'thorough',
+      requestType: 'automatic',
+      surface: 'text_unit_detail',
+    });
+
+    await act(async () => {
+      finishOldReview({
+        message: { role: 'assistant', content: 'Old balanced review' },
+        suggestions: [],
+      });
+      await Promise.resolve();
+    });
+    expect(screen.queryByText('Old balanced review')).not.toBeInTheDocument();
+    expect(screen.getByText('No issues found.')).toBeVisible();
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
   });
 
   it('wires the protected editor into the target-locale detail route', async () => {

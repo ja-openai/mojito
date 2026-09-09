@@ -1,3 +1,5 @@
+import type { AiReviewPreset } from './userPreferences';
+
 export type AiReviewMessage = {
   role: 'user' | 'assistant';
   content: string;
@@ -9,6 +11,11 @@ export type AiReviewRequest = {
   localeTag?: string;
   sourceDescription?: string;
   tmTextUnitId?: number;
+  profileId?: 'version_a' | 'version_b';
+  reasoningEffort?: 'low' | 'medium' | 'high';
+  presetId?: AiReviewPreset;
+  requestType?: 'automatic' | 'manual' | 'follow_up' | 'retry';
+  surface?: 'review_project' | 'text_unit_detail';
   messages: AiReviewMessage[];
 };
 

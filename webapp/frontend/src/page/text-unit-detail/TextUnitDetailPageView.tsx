@@ -7,6 +7,8 @@ import { Link } from 'react-router-dom';
 import type { AiReviewSuggestion } from '../../api/ai-review';
 import type { ApiGlossaryTerm, ApiMatchedGlossaryTerm } from '../../api/glossaries';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
+import { AiReviewSettingsButton } from '../../components/AiReviewSettingsButton';
+import { AiReviewSpeedControl } from '../../components/AiReviewSpeedControl';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { GlossaryMatchesPanel } from '../../components/GlossaryMatchesPanel';
@@ -26,6 +28,7 @@ import {
 import { TranslationSearchPanel } from '../../components/TranslationSearchPanel';
 import { TranslationTextEditor } from '../../components/TranslationTextEditor';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
+import type { AiReviewSettings } from '../../hooks/useAiReviewPreferences';
 import { getGlossaryTermScreenshotEvidence } from '../../utils/glossaryTermEvidence';
 import type { ProtectedTextDiagnostic, ProtectedTextToken } from '../../utils/protectedTextTokens';
 
@@ -115,6 +118,8 @@ type TextUnitDetailPageViewProps = {
   isAiCollapsed: boolean;
   onToggleAiCollapsed: () => void;
   aiMessages: TextUnitDetailAiMessage[];
+  aiSettings?: AiReviewSettings;
+  onReviewAi?: () => void;
   aiInput: string;
   onChangeAiInput: (value: string) => void;
   onSubmitAi: () => void;
@@ -189,6 +194,8 @@ export function TextUnitDetailPageView({
   isAiCollapsed,
   onToggleAiCollapsed,
   aiMessages,
+  aiSettings,
+  onReviewAi,
   aiInput,
   onChangeAiInput,
   onSubmitAi,
@@ -441,12 +448,28 @@ export function TextUnitDetailPageView({
               <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--ai-inline">
                 <SectionHeader
                   title="AI Chat Review"
+                  titleAction={
+                    aiSettings ? (
+                      <>
+                        <AiReviewSpeedControl
+                          value={aiSettings.preset}
+                          onChange={aiSettings.onChangePreset}
+                          disabled={!aiSettings.ready || aiSettings.isSaving}
+                          error={aiSettings.error}
+                        />
+                        <AiReviewSettingsButton settings={aiSettings} />
+                      </>
+                    ) : undefined
+                  }
                   expanded={!isAiCollapsed}
                   onToggle={onToggleAiCollapsed}
                 />
                 {!isAiCollapsed ? (
                   <AiChatReview
                     messages={aiMessages}
+                    settings={aiSettings}
+                    onReview={onReviewAi}
+                    currentTarget={editorInfo.target}
                     input={aiInput}
                     onChangeInput={onChangeAiInput}
                     onSubmit={onSubmitAi}
@@ -759,32 +782,44 @@ function TextUnitScreenshotThumbnails({
 
 function SectionHeader({
   title,
+  titleAction,
   expanded,
   onToggle,
   summary,
   controls,
 }: {
   title: string;
+  titleAction?: ReactNode;
   expanded: boolean;
   onToggle: () => void;
   summary?: ReactNode;
   controls?: ReactNode;
 }) {
+  const heading = (
+    <button
+      type="button"
+      className="text-unit-detail-page__section-header"
+      onClick={onToggle}
+      aria-expanded={expanded}
+    >
+      <span className="text-unit-detail-page__section-heading">
+        <span className="text-unit-detail-page__section-title">{title}</span>
+        {summary ? <span className="text-unit-detail-page__section-summary">{summary}</span> : null}
+      </span>
+    </button>
+  );
   return (
-    <div className="text-unit-detail-page__section-header-row">
-      <button
-        type="button"
-        className="text-unit-detail-page__section-header"
-        onClick={onToggle}
-        aria-expanded={expanded}
-      >
-        <span className="text-unit-detail-page__section-heading">
-          <span className="text-unit-detail-page__section-title">{title}</span>
-          {summary ? (
-            <span className="text-unit-detail-page__section-summary">{summary}</span>
-          ) : null}
-        </span>
-      </button>
+    <div
+      className={`text-unit-detail-page__section-header-row${titleAction ? ' text-unit-detail-page__section-header-row--with-title-actions' : ''}`}
+    >
+      {titleAction ? (
+        <div className="text-unit-detail-page__section-title-actions">
+          {heading}
+          {titleAction}
+        </div>
+      ) : (
+        heading
+      )}
       {controls ? <div className="text-unit-detail-page__section-controls">{controls}</div> : null}
       <button
         type="button"

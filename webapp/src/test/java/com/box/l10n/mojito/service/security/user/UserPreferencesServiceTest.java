@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.entity.security.user.UserPreferencesEntity;
 import com.box.l10n.mojito.rest.security.UserPreferences;
 import com.box.l10n.mojito.security.Role;
 import com.box.l10n.mojito.security.UserDetailsImpl;
@@ -69,6 +70,10 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
   @Test
   public void defaultsAreReadWithoutInitializingOrChangingEitherAccount() {
     assertEquals(UserPreferences.defaults(), preferencesService.getCurrentUserPreferences());
+    assertEquals("version_b", preferencesService.getCurrentUserPreferences().aiReviewProfile());
+    assertEquals("low", preferencesService.getCurrentUserPreferences().aiReviewReasoningEffort());
+    assertEquals("balanced", preferencesService.getCurrentUserPreferences().aiReviewPreset());
+    assertFalse(preferencesService.getCurrentUserPreferences().aiReviewAutomaticDisabled());
     assertTrue(preferencesRepository.findByUserId(firstUser.getId()).isEmpty());
     authenticate(secondUser);
     assertEquals(UserPreferences.defaults(), preferencesService.getCurrentUserPreferences());
@@ -79,7 +84,9 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
     patch(
         """
         {"worksetSize":100,"preferredLocales":["fr-CA","FR-ca","de"],
-         "shortcutHelp":"hidden","visibleTextEditorEnabled":true}
+         "shortcutHelp":"hidden","visibleTextEditorEnabled":true,
+         "aiReviewProfile":"version_a","aiReviewAutomaticDisabled":true,
+         "aiReviewReasoningEffort":"high","aiReviewPreset":"ultra"}
         """);
     UserPreferences saved = patch("{\"reviewProjectSearchEnabled\":true}");
     assertTrue(saved.initialized());
@@ -88,6 +95,10 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
     assertEquals("hidden", saved.shortcutHelp());
     assertTrue(saved.visibleTextEditorEnabled());
     assertTrue(saved.reviewProjectSearchEnabled());
+    assertEquals("version_a", saved.aiReviewProfile());
+    assertTrue(saved.aiReviewAutomaticDisabled());
+    assertEquals("high", saved.aiReviewReasoningEffort());
+    assertEquals("ultra", saved.aiReviewPreset());
     assertEquals(saved, preferencesService.getCurrentUserPreferences());
     assertEquals(
         saved,
@@ -106,6 +117,47 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
   }
 
   @Test
+  public void historicalSavedPreferencesDefaultAiReviewWithoutChangingOtherSettings()
+      throws Exception {
+    UserPreferencesEntity entity = new UserPreferencesEntity();
+    entity.setUser(firstUser);
+    for (String profileField :
+        List.of("", ",\"aiReviewProfile\":null", ",\"aiReviewReasoningEffort\":null")) {
+      String historicalJson =
+          """
+          {"initialized":true,"worksetSize":50,"preferredLocales":["uk"],
+           "shortcutHelp":"hidden","visibleTextEditorEnabled":true,
+           "reviewProjectSearchEnabled":false,"defaultReviewTeamIds":[]%s}
+          """
+              .formatted(profileField);
+      entity.setPreferencesJson(historicalJson);
+      entity = preferencesRepository.saveAndFlush(entity);
+
+      UserPreferences restored = preferencesService.getCurrentUserPreferences();
+      assertEquals("version_b", restored.aiReviewProfile());
+      assertFalse(restored.aiReviewAutomaticDisabled());
+      assertEquals("low", restored.aiReviewReasoningEffort());
+      assertEquals("balanced", restored.aiReviewPreset());
+      assertTrue(restored.initialized());
+      assertEquals(Integer.valueOf(50), restored.worksetSize());
+      assertEquals(List.of("uk"), restored.preferredLocales());
+      assertEquals("hidden", restored.shortcutHelp());
+      assertTrue(restored.visibleTextEditorEnabled());
+      assertEquals(
+          historicalJson,
+          preferencesRepository.findByUserId(firstUser.getId()).orElseThrow().getPreferencesJson());
+
+      UserPreferences updated = patch("{\"worksetSize\":75}");
+      assertEquals("version_b", updated.aiReviewProfile());
+      assertFalse(updated.aiReviewAutomaticDisabled());
+      assertEquals("low", updated.aiReviewReasoningEffort());
+      assertEquals("balanced", updated.aiReviewPreset());
+      assertEquals(List.of("uk"), updated.preferredLocales());
+      assertEquals(updated, preferencesService.getCurrentUserPreferences());
+    }
+  }
+
+  @Test
   public void explicitNullResetsOverridesAndRemainsInitialized() throws Exception {
     patch("{\"worksetSize\":100,\"shortcutHelp\":\"bottom\",\"visibleTextEditorEnabled\":true}");
     UserPreferences reset = patch("{\"worksetSize\":null,\"shortcutHelp\":null}");
@@ -118,6 +170,50 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
     assertTrue(json.get("worksetSize").isNull());
     assertTrue(json.has("shortcutHelp"));
     assertEquals(reset, preferencesService.getCurrentUserPreferences());
+  }
+
+  @Test
+  public void historicalModelAndEffortChoicesResolveToPresetsWithoutRewritingStoredData()
+      throws Exception {
+    UserPreferencesEntity entity = new UserPreferencesEntity();
+    entity.setUser(firstUser);
+    for (String[] choice :
+        new String[][] {
+          {"version_a", "low", "fast"},
+          {"version_a", "high", "fast"},
+          {"version_b", "low", "balanced"},
+          {"version_b", "medium", "thorough"},
+          {"version_b", "high", "deep"}
+        }) {
+      String historicalJson =
+          """
+          {"initialized":true,"preferredLocales":[],"defaultReviewTeamIds":[],
+           "aiReviewProfile":"%s","aiReviewReasoningEffort":"%s","aiReviewPreset":null}
+          """
+              .formatted(choice[0], choice[1]);
+      entity.setPreferencesJson(historicalJson);
+      entity = preferencesRepository.saveAndFlush(entity);
+      UserPreferences restored = preferencesService.getCurrentUserPreferences();
+      assertEquals(choice[2], restored.aiReviewPreset());
+      assertEquals(choice[0], restored.aiReviewProfile());
+      assertEquals(choice[1], restored.aiReviewReasoningEffort());
+      assertEquals(
+          historicalJson,
+          preferencesRepository.findByUserId(firstUser.getId()).orElseThrow().getPreferencesJson());
+      assertEquals(choice[2], patch("{\"worksetSize\":75}").aiReviewPreset());
+    }
+  }
+
+  @Test
+  public void allSixPresetsPersistWithoutOverwritingOtherPreferences() throws Exception {
+    patch("{\"aiReviewAutomaticDisabled\":true,\"preferredLocales\":[\"uk\"]}");
+    for (String preset : List.of("fastest", "fast", "balanced", "thorough", "deep", "ultra")) {
+      UserPreferences saved = patch("{\"aiReviewPreset\":\"" + preset + "\"}");
+      assertEquals(preset, saved.aiReviewPreset());
+      assertTrue(saved.aiReviewAutomaticDisabled());
+      assertEquals(List.of("uk"), saved.preferredLocales());
+      assertEquals(saved, preferencesService.getCurrentUserPreferences());
+    }
   }
 
   @Test
@@ -139,6 +235,25 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
             "{\"preferredLocales\":[10]}",
             "{\"visibleTextEditorEnabled\":1}",
             "{\"reviewProjectSearchEnabled\":null}",
+            "{\"aiReviewProfile\":\"unknown\"}",
+            "{\"aiReviewProfile\":\"\"}",
+            "{\"aiReviewProfile\":null}",
+            "{\"aiReviewProfile\":true}",
+            "{\"aiReviewAutomaticDisabled\":null}",
+            "{\"aiReviewAutomaticDisabled\":\"true\"}",
+            "{\"aiReviewReasoningEffort\":\"ultra\"}",
+            "{\"aiReviewReasoningEffort\":\"none\"}",
+            "{\"aiReviewReasoningEffort\":\"\"}",
+            "{\"aiReviewReasoningEffort\":null}",
+            "{\"aiReviewReasoningEffort\":true}",
+            "{\"aiReviewPreset\":\"gpt-6-astra\"}",
+            "{\"aiReviewPreset\":\"unknown\"}",
+            "{\"aiReviewPreset\":\"\"}",
+            "{\"aiReviewPreset\":null}",
+            "{\"aiReviewPreset\":true}",
+            "{\"worksetSize\":100,\"aiReviewPreset\":\"unknown\"}",
+            "{\"worksetSize\":100,\"aiReviewReasoningEffort\":\"invalid\"}",
+            "{\"worksetSize\":100,\"aiReviewProfile\":\"unknown\"}",
             "{\"worksetSize\":100,\"visibleTextEditorEnabled\":\"true\"}")) {
       ResponseStatusException exception =
           assertThrows(ResponseStatusException.class, () -> patch(body));

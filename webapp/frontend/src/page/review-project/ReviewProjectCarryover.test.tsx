@@ -104,6 +104,8 @@ function mountProject(fixture: CarryoverFixture, { deferSaves = false } = {}) {
     visibleTextEditorEnabled: false,
     reviewProjectSearchEnabled: false,
     defaultReviewTeamIds: [],
+    aiReviewProfile: 'version_b',
+    aiReviewAutomaticDisabled: false,
   });
   queryClient.setQueryData(queryKey, project);
   const pending: Array<() => void> = [];

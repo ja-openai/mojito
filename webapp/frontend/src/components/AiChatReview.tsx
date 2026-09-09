@@ -3,6 +3,7 @@ import './ai-chat-review.css';
 import { type FormEvent, useEffect, useId, useMemo, useRef } from 'react';
 
 import type { AiReviewReview, AiReviewSuggestion } from '../api/ai-review';
+import type { AiReviewSettings } from '../hooks/useAiReviewPreferences';
 
 export type AiChatReviewMessage = {
   id: string;
@@ -16,24 +17,30 @@ export type AiChatReviewMessage = {
 
 type AiChatReviewProps = {
   messages: AiChatReviewMessage[];
+  currentTarget: string;
   input: string;
   onChangeInput: (value: string) => void;
   onSubmit: () => void;
   onUseSuggestion: (suggestion: AiReviewSuggestion) => void;
   getSuggestionError?: (suggestion: AiReviewSuggestion) => string | null;
   onRetryError?: () => void;
+  onReview?: () => void;
+  settings?: AiReviewSettings;
   isResponding: boolean;
   className?: string;
 };
 
 export function AiChatReview({
   messages,
+  currentTarget,
   input,
   onChangeInput,
   onSubmit,
   onUseSuggestion,
   getSuggestionError,
   onRetryError,
+  onReview,
+  settings,
   isResponding,
   className,
 }: AiChatReviewProps) {
@@ -49,15 +56,6 @@ export function AiChatReview({
       ),
     [getSuggestionError, messages],
   );
-  const firstReviewMessage = useMemo(() => {
-    for (const message of messages) {
-      if (message.sender === 'assistant' && message.review) {
-        return message;
-      }
-    }
-    return null;
-  }, [messages]);
-
   const threadRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -73,13 +71,28 @@ export function AiChatReview({
       <div className="ai-chat-review__thread" ref={threadRef}>
         {messages.map((message, index) => {
           const review = message.review;
-          const showReview =
-            message.id === firstReviewMessage?.id &&
-            message.sender === 'assistant' &&
-            Boolean(review);
-          const reviewBadge = review ? getReviewBadge(review.score) : null;
           const reviewSummary = review?.explanation?.trim() || message.content;
-          const suggestions = message.suggestions ?? [];
+          const allSuggestions = message.suggestions ?? [];
+          const suggestions = allSuggestions.filter(
+            (suggestion) => suggestion.content !== currentTarget,
+          );
+          const showResult =
+            message.sender === 'assistant' &&
+            (Boolean(review) || allSuggestions.length > 0) &&
+            !message.isError;
+          const resultStatus =
+            suggestions.length > 0
+              ? 'Change suggested'
+              : !review || review.score === 2
+                ? 'No change suggested'
+                : 'Review needed';
+          const resultExplanation =
+            (review && review.score !== 2 && suggestions.length === 0
+              ? review.explanation?.trim()
+              : '') ||
+            (suggestions[0] ?? allSuggestions[0])?.explanation?.trim() ||
+            message.content.trim() ||
+            reviewSummary;
           const isLastMessage = index === messages.length - 1;
           const showRetryButton =
             Boolean(onRetryError) &&
@@ -93,19 +106,13 @@ export function AiChatReview({
               key={message.id}
               className={`ai-chat-review__message ai-chat-review__message--${message.sender}`}
             >
-              {showReview && review ? (
-                <div className="ai-chat-review__review">
-                  {reviewBadge ? (
-                    <span
-                      className={`ai-chat-review__review-badge${
-                        reviewBadge.className ? ` ${reviewBadge.className}` : ''
-                      }`}
-                    >
-                      {reviewBadge.label}
-                    </span>
+              {showResult ? (
+                <>
+                  <p className="ai-chat-review__result-status">{resultStatus}</p>
+                  {suggestions.length === 0 && resultExplanation ? (
+                    <p className="ai-chat-review__message-content">{resultExplanation}</p>
                   ) : null}
-                  <p>{reviewSummary}</p>
-                </div>
+                </>
               ) : (
                 <p className="ai-chat-review__message-content">{message.content}</p>
               )}
@@ -132,16 +139,14 @@ export function AiChatReview({
                       key={`${message.id}-suggestion-${suggestionIndex}`}
                       className="ai-chat-review__suggestion"
                     >
-                      <span className="ai-chat-review__suggestion-score">
-                        {formatSuggestionScore(suggestion.confidenceLevel)}
-                      </span>
                       <div className="ai-chat-review__suggestion-main">
                         <span className="ai-chat-review__suggestion-content">
                           {suggestion.content}
                         </span>
-                        {suggestion.explanation ? (
+                        {suggestion.explanation?.trim() ||
+                        (showResult && suggestionIndex === 0 && resultExplanation) ? (
                           <span className="ai-chat-review__suggestion-explanation">
-                            {suggestion.explanation}
+                            {suggestion.explanation?.trim() || resultExplanation}
                           </span>
                         ) : null}
                         {suggestionErrors.get(suggestion) ? (
@@ -184,6 +189,17 @@ export function AiChatReview({
         ) : null}
       </div>
 
+      {onReview && messages.length === 0 && !isResponding ? (
+        <button
+          type="button"
+          className="ai-chat-review__button"
+          disabled={settings ? !settings.ready || settings.isSaving : false}
+          onClick={onReview}
+        >
+          Review
+        </button>
+      ) : null}
+
       <form
         className="ai-chat-review__form"
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
@@ -195,52 +211,21 @@ export function AiChatReview({
           type="text"
           value={input}
           onChange={(event) => onChangeInput(event.target.value)}
-          placeholder="Ask AI for a suggestion"
-          disabled={isResponding}
+          placeholder="Chat with AI: rephrase, adjust the tone, or ask a question…"
+          disabled={isResponding || (settings ? !settings.ready || settings.isSaving : false)}
         />
         <button
           type="submit"
           className="ai-chat-review__button ai-chat-review__button--primary"
-          disabled={isResponding || input.trim().length === 0}
+          disabled={
+            isResponding ||
+            input.trim().length === 0 ||
+            (settings ? !settings.ready || settings.isSaving : false)
+          }
         >
           Ask
         </button>
       </form>
     </div>
   );
-}
-
-function getReviewBadge(score: number): { label: string; className: string } | null {
-  if (!Number.isFinite(score)) {
-    return null;
-  }
-  switch (score) {
-    case 0:
-      return {
-        label: 'Bad',
-        className: 'ai-chat-review__review-badge--bad',
-      };
-    case 2:
-      return {
-        label: 'Good',
-        className: '',
-      };
-    default:
-      return {
-        label: 'Average',
-        className: 'ai-chat-review__review-badge--average',
-      };
-  }
-}
-
-function formatSuggestionScore(confidenceLevel: number | undefined): string {
-  if (typeof confidenceLevel !== 'number' || !Number.isFinite(confidenceLevel)) {
-    return '—';
-  }
-
-  if (Number.isInteger(confidenceLevel)) {
-    return String(confidenceLevel);
-  }
-
-  return confidenceLevel.toFixed(2).replace(/\.?0+$/, '');
 }

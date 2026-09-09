@@ -17,6 +17,7 @@ import type { ApiReviewProjectTextUnit } from '../../api/review-projects';
 import type { ApiUserProfile } from '../../api/users';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import { UserContext } from '../../hooks/useUser';
+import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
 import type * as IntegrityCheck from '../../utils/integrityCheck';
 import { buildCarryoverProject, carryoverFixtures } from './review-project-carryover.fixtures';
 import { ReviewProjectPage } from './ReviewProjectPage';
@@ -175,6 +176,17 @@ function mountWorkflow({
     },
   });
   queryClient.setQueryData(queryKey, project);
+  queryClient.setQueryData(userPreferencesQueryKey('fixture-reviewer'), {
+    initialized: true,
+    worksetSize: null,
+    preferredLocales: [],
+    shortcutHelp: null,
+    visibleTextEditorEnabled: false,
+    reviewProjectSearchEnabled: false,
+    defaultReviewTeamIds: [],
+    aiReviewProfile: 'version_b',
+    aiReviewAutomaticDisabled: false,
+  });
   fetchProjectMock.mockResolvedValue(project);
   const responseFor = (request: SaveRequest): ApiReviewProjectTextUnit => {
     const row = project.reviewProjectTextUnits.find((item) => item.id === request.textUnitId)!;
@@ -421,7 +433,7 @@ describe('Review Project actual editor adversarial interactions', () => {
   it.each(['mf2-rich', 'mf2-raw'] as const)(
     'keeps the %s draft unchanged when AI alters its declarations',
     async (mode) => {
-      fetchAiMock.mockResolvedValue(
+      requestAiMock.mockResolvedValue(
         aiResponse('Changed structure', mf2Message.replace(':number', ':string')),
       );
       const harness = await mountEditor(mode);
@@ -440,7 +452,7 @@ describe('Review Project actual editor adversarial interactions', () => {
     async (mode) => {
       const suggestion =
         mode === 'mf2-rich' ? mf2Message.replace('You have', 'Now there are') : 'AI replacement';
-      fetchAiMock.mockResolvedValue(aiResponse('Suggestion for this row', suggestion));
+      requestAiMock.mockResolvedValue(aiResponse('Suggestion for this row', suggestion));
       const harness = await mountEditor(mode);
       const use = await screen.findByRole('button', { name: 'Use' });
       const pending = deferred<ApiReviewProjectTextUnit>();
@@ -488,17 +500,22 @@ describe('Review Project actual editor adversarial interactions', () => {
   );
 
   it('drops a delayed AI follow-up when the same row receives a new review revision', async () => {
-    fetchAiMock.mockResolvedValue(aiResponse('Initial review'));
+    requestAiMock.mockResolvedValue(aiResponse('Initial review'));
     const harness = await mountEditor('assisted');
     await screen.findByText('Initial review');
     const pending = deferred<ReturnType<typeof aiResponse>>();
     requestAiMock.mockImplementationOnce(() => pending.promise);
-    fireEvent.change(screen.getByPlaceholderText('Ask AI for a suggestion'), {
-      target: { value: 'Please improve it' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      {
+        target: { value: 'Please improve it' },
+      },
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
-    await waitFor(() => expect(requestAiMock).toHaveBeenCalledTimes(1));
-    fetchAiMock.mockResolvedValue(aiResponse('New revision review', 'Current revision suggestion'));
+    await waitFor(() => expect(requestAiMock).toHaveBeenCalledTimes(2));
+    requestAiMock.mockResolvedValue(
+      aiResponse('New revision review', 'Current revision suggestion'),
+    );
     const changed = structuredClone(harness.project);
     changed.reviewProjectTextUnits[0].reviewStateRevision = 'external-notes-revision';
     await act(() => harness.refresh(changed));

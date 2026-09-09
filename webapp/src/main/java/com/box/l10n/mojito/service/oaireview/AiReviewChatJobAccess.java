@@ -31,6 +31,8 @@ public class AiReviewChatJobAccess {
   }
 
   public static boolean isReviewChatJob(PollableTask task) {
-    return task != null && AiReviewChatJob.class.getCanonicalName().equals(task.getName());
+    return task != null
+        && (AiReviewChatJob.class.getCanonicalName().equals(task.getName())
+            || AiReviewConfiguredChatJob.class.getCanonicalName().equals(task.getName()));
   }
 }

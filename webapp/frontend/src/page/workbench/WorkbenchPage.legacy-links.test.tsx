@@ -100,6 +100,8 @@ function renderWorkbench(path: string) {
     visibleTextEditorEnabled: false,
     reviewProjectSearchEnabled: false,
     defaultReviewTeamIds: [],
+    aiReviewProfile: 'version_b',
+    aiReviewAutomaticDisabled: false,
   });
 
   return render(

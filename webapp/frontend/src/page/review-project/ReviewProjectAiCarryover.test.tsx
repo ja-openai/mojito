@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { flushSync } from 'react-dom';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { AiReviewRequest } from '../../api/ai-review';
 import type { ApiReviewProjectDetail } from '../../api/review-projects';
 import type { ApiUserProfile } from '../../api/users';
 import { UserContext } from '../../hooks/useUser';
@@ -12,11 +13,9 @@ import { buildCarryoverProject, carryoverFixtures } from './review-project-carry
 import type { ReviewProjectMutationControls } from './review-project-mutations';
 import { ReviewProjectPageView } from './ReviewProjectPageView';
 
-const fetchPrecomputedAiReviewMock = vi.hoisted(() => vi.fn());
 const requestAiReviewMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../api/ai-review', () => ({
-  fetchPrecomputedAiReview: fetchPrecomputedAiReviewMock,
   formatAiReviewError: (error: unknown) => ({ message: String(error), detail: null }),
   requestAiReview: requestAiReviewMock,
 }));
@@ -94,7 +93,6 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  fetchPrecomputedAiReviewMock.mockReset();
   requestAiReviewMock.mockReset();
 });
 
@@ -109,6 +107,8 @@ function renderProject(project: ApiReviewProjectDetail) {
     visibleTextEditorEnabled: false,
     reviewProjectSearchEnabled: false,
     defaultReviewTeamIds: [],
+    aiReviewProfile: 'version_b',
+    aiReviewAutomaticDisabled: false,
   });
   render(
     <QueryClientProvider client={queryClient}>
@@ -145,10 +145,11 @@ describe('Review Project AI suggestion ownership', () => {
     'does not apply project $projectId previous-row suggestions during a selection commit',
     async (fixture) => {
       const project = buildCarryoverProject(fixture);
-      const first = project.reviewProjectTextUnits[0];
-      fetchPrecomputedAiReviewMock.mockImplementation((variantId: number) =>
-        variantId === first.currentTmTextUnitVariant!.id
-          ? Promise.resolve(reviewResponse('First row review', fixture.predecessor.target))
+      const firstTmTextUnitId = project.reviewProjectTextUnits[0].tmTextUnit!.id;
+      const previousSuggestion = fixture.predecessor.target.replace(/\.$/, '');
+      requestAiReviewMock.mockImplementation((request: AiReviewRequest) =>
+        request.tmTextUnitId === firstTmTextUnitId && request.target === fixture.predecessor.target
+          ? Promise.resolve(reviewResponse('First row review', previousSuggestion))
           : new Promise<never>(() => {}),
       );
       const onRequestSaveDecision = renderProject(project);
@@ -183,7 +184,6 @@ describe('Review Project AI suggestion ownership', () => {
     const fixture = carryoverFixtures[0];
     const project = buildCarryoverProject(fixture);
     const target = 'સુધારેલ અનુવાદ';
-    fetchPrecomputedAiReviewMock.mockResolvedValue(null);
     requestAiReviewMock
       .mockRejectedValueOnce(new Error('Review unavailable'))
       .mockResolvedValueOnce(reviewResponse('Retried current row review', target));
@@ -201,20 +201,39 @@ describe('Review Project AI suggestion ownership', () => {
     expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
   });
 
-  it('ignores a previous-row precomputed response arriving after the new row review', async () => {
+  it('ignores a previous-row review response arriving after the new row review', async () => {
     const fixture = carryoverFixtures[0];
     const project = buildCarryoverProject(fixture);
+    const firstTmTextUnitId = project.reviewProjectTextUnits[0].tmTextUnit!.id;
+    // Keep the proposed target different from the current draft so its Use button is shown.
+    const nextDraft = fixture.next.target.replace(/\.$/, '');
+    project.reviewProjectTextUnits[1].currentTmTextUnitVariant!.content = nextDraft;
     let resolvePreviousReview!: (response: ReturnType<typeof reviewResponse>) => void;
-    fetchPrecomputedAiReviewMock
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            resolvePreviousReview = resolve;
-          }),
-      )
-      .mockResolvedValueOnce(reviewResponse('Current row review', fixture.next.target));
+    const previousReview = new Promise<ReturnType<typeof reviewResponse>>((resolve) => {
+      resolvePreviousReview = resolve;
+    });
+    requestAiReviewMock.mockImplementation((request: AiReviewRequest) => {
+      if (
+        request.tmTextUnitId === firstTmTextUnitId &&
+        request.target === fixture.predecessor.target
+      ) {
+        return previousReview;
+      }
+      if (request.tmTextUnitId === fixture.next.tmTextUnitId && request.target === nextDraft) {
+        return Promise.resolve(reviewResponse('Current row review', fixture.next.target));
+      }
+      return new Promise<never>(() => {});
+    });
     const onRequestSaveDecision = renderProject(project);
-    await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() =>
+      expect(requestAiReviewMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tmTextUnitId: firstTmTextUnitId,
+          target: fixture.predecessor.target,
+        }),
+        expect.any(Object),
+      ),
+    );
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     const currentSuggestionButton = await screen.findByRole('button', { name: 'Use' });
     await act(async () => {

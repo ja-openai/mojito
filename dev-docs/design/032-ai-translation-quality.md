@@ -116,10 +116,9 @@ outcomes. These remain separate work while the policy is disabled.
 
 ## Reasoning and speed
 
-The default model remains `gpt-5.6-sol`. AI Translate, AI Review, and OpenAI MT use `max` reasoning,
-`low` verbosity, and standard (`default`) online processing by default. Review settings are also
-shared by glossary AI extraction/review. Deployment properties can override these defaults
-independently:
+AI Translate, background/legacy AI Review, and OpenAI MT default to `gpt-5.6-sol`, `max` reasoning,
+`low` verbosity, and standard (`default`) online processing. Background review settings are also
+shared by glossary AI extraction/review. Deployment properties can override these defaults:
 
 ```properties
 l10n.ai-translate.responses.reasoning-effort=max
@@ -129,6 +128,25 @@ l10n.ai-review.responses.reasoning-effort=max
 l10n.ai-review.responses.text-verbosity=low
 l10n.ai-review.responses.service-tier=default
 ```
+
+Interactive Review Project and text-unit details use one preset slider beside **AI Chat Review**:
+**Fastest** (Luna / `none`), **Fast** (Sol / `none`), **Balanced** (Astra / `low`, account default),
+**Thorough** (Astra / `medium`), **Deep** (Astra / `high`), and **Ultra** (Astra / `max`). The UI hides
+provider model names. All six presets request API Fast mode via `service-tier=priority`, independently
+of reasoning effort. These are intended speed/effort choices, not measured latency or quality claims.
+
+Each model/effort/tier mapping is configurable under `l10n.ai-review.interactive.presets.<id>`;
+see `010-ai-observability.md` for exact property names and defaults. The account stores a preset ID,
+and the client sends that ID without overriding its model or effort. Submission freezes the resolved
+model, effort, and service tier with the authenticated actor before queuing the job. Later preference
+or configuration changes do not alter an in-flight request. Usage retains both the preset ID and
+actual provider settings. Older explicit profile/effort requests and already queued legacy jobs
+remain compatible with their existing configuration path.
+
+The gear contains the automatic-review setting. Turning it off keeps **Review** and **Ask** available.
+Saving a different preset clears the conversation and discards stale responses from the previous
+selection. Text verbosity still uses the shared response setting above. Background review, glossary
+AI, and AI Translate keep their existing model and processing configuration.
 
 `fast` and `priority` are API aliases. Deployments with access to `ultrafast` processing for
 `gpt-5.6-sol` can set both service-tier properties to `ultrafast` while keeping reasoning at `max`.
@@ -163,6 +181,14 @@ surrounding whitespace. Alternatives require a real ambiguity or an explicit req
 rubric distinguishes substantive defects, minor actionable defects, and no identified defect;
 no score constitutes approval.
 
+Every review result shows a visible **Change suggested**, **No change suggested**, or **Review
+needed** heading and one explanation. Changed results show the specific suggestion explanation
+once; no-change results use the original-target explanation, falling back to the message or review.
+Proposed translations and **Use** remain visible, including whitespace-only changes; text identical
+to the current target is never repeated. The widget omits confidence scores. Follow-ups with assessments or
+suggestions use the same layout; ordinary chat replies remain visible. Errors and retry behavior
+remain unchanged.
+
 Background, Batch, and single-item fallback reviews receive repository-scoped glossary context and
 locale guidance. Requested source-only review modes keep their own input and output schema.
 Interactive pages retain their existing warning/glossary context path.
@@ -176,8 +202,9 @@ from the source does not by itself make a target space erroneous. Existing bound
 repeated-space, tab, control, and other warnings still reach the model independently.
 
 The same context builder runs for initial review, chat follow-up, and retry using that request's
-target. Presence observations require live review, including narrow-NBSP-only targets that
-previously could use precomputed review; targets without page context retain the cache path.
+target. Review Project and text-unit details now use live review for every request, including
+targets without page context. Legacy precomputed rows lack model/settings provenance and cannot
+be safely attributed to the selected preset.
 This frontend change does not alter saved text, save-time integrity checks, the existing UI
 inspection signal, or Hidden chars Auto/All/Off. Neutral UI presentation and deterministic
 locale-specific typography checks remain separate design work; no per-locale rule table is added.
@@ -187,10 +214,16 @@ only the fallback. Responses output must be complete and contain message text be
 a suggestion or cached review, even when a partial response contains parseable JSON. Legacy
 Chat Completions review imports retain their existing format handling.
 
-New frontend precompute work uses the internal `for-frontend-v2` run name. Old rows remain stored,
-old in-flight batches keep their original import namespace, and cache-only lookups never initiate
-provider work. This is a policy-version boundary, not continuous invalidation after glossary or
-configuration edits. Custom run names are preserved.
+The legacy proto API still maps new `for-frontend` precompute work to `for-frontend-v2`. Old rows
+remain stored, old in-flight batches keep their import namespace, and cache-only lookups never
+initiate provider work. That boundary does not provide continuous glossary/prompt/model/settings
+freshness. Re-enabling cache use in the interactive pages requires those checks and compatible
+page-context provenance; a scoped background precompute trigger remains pending.
+
+The widget uses the same bordered result layout for each outcome. Review text uses readable body
+type, proposed translations align with the result heading, and Use buttons remain visible without
+hover. The six-preset speed control sits beside the section heading. The automatic-review setting
+remains behind the adjacent gear. Both controls remain available when the section is collapsed.
 
 ## Quality evidence and next decision
 
@@ -198,6 +231,12 @@ The automated regression suite covers output identity, incomplete response handl
 isolation, do-not-translate metadata, reasoning/speed serialization, deadlines, context propagation,
 and cache provenance. These tests do not establish better linguistic quality or prove that review
 can be removed.
+
+`ai_review_request_usage` (migration V109) records requester, selected/resolved settings, request
+category, and execution outcome/timing without storing transcripts. Recording is best effort and
+counts logical review executions rather than individual provider retries. It supports adoption and
+latency analysis, including automatic versus follow-up use; it supplies no human linguistic
+judgment. Voluntary preset selection is not a randomized quality experiment.
 
 Before rollout claims, select a fixed set of human-reviewed examples covering ambiguous UI strings,
 negation/conditions, quantities, glossary and do-not-translate terms, regional wording, ICU/MF2

@@ -8,6 +8,9 @@ import com.box.l10n.mojito.openai.OpenAIClient.ResponsesResponse;
 import com.box.l10n.mojito.rest.textunit.AiReviewType.AiReviewTextUnitVariantOutput;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
+import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService;
+import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared;
+import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Settings;
 import com.box.l10n.mojito.service.oaireview.AiReviewResponseValidator;
 import com.box.l10n.mojito.service.oaireview.AiReviewResponseValidator.InvalidReviewResponseException;
 import com.box.l10n.mojito.service.oaireview.AiReviewService.AiReviewTextUnitVariantInput;
@@ -50,6 +53,7 @@ public class AiReviewChatWS {
   private final TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService;
   private final AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService;
   private final MeterRegistry meterRegistry;
+  private final AiReviewInteractiveService interactiveService;
 
   public AiReviewChatWS(
       @Qualifier("openAIClientReview") @Nullable OpenAIClient openAIClient,
@@ -57,7 +61,8 @@ public class AiReviewChatWS {
       @Qualifier("objectMapperReview") ObjectMapper objectMapper,
       TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService,
       AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService,
-      MeterRegistry meterRegistry) {
+      MeterRegistry meterRegistry,
+      AiReviewInteractiveService interactiveService) {
     this.openAIClient = openAIClient;
     this.aiReviewConfigurationProperties = Objects.requireNonNull(aiReviewConfigurationProperties);
     this.objectMapper = Objects.requireNonNull(objectMapper);
@@ -65,14 +70,30 @@ public class AiReviewChatWS {
     this.aiTranslateLocalePromptSuffixService =
         Objects.requireNonNull(aiTranslateLocalePromptSuffixService);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
+    this.interactiveService = Objects.requireNonNull(interactiveService);
   }
 
   @PostMapping("/api/ai/review")
   @ResponseStatus(HttpStatus.OK)
   public AiReviewChatResponse chat(@RequestBody AiReviewChatRequest request) {
+    return chatPrepared(prepare(request), null);
+  }
+
+  public Prepared prepare(AiReviewChatRequest request) {
+    validateRequest(request);
+    return interactiveService.prepare(request);
+  }
+
+  public AiReviewChatResponse chatLegacyJob(AiReviewChatRequest request, Long taskId) {
+    return chatPrepared(interactiveService.prepareLegacyJob(request, taskId), taskId);
+  }
+
+  public AiReviewChatResponse chatPrepared(Prepared prepared, Long taskId) {
+    AiReviewChatRequest request = prepared.request();
+    Settings settings = prepared.settings();
     validateRequest(request);
 
-    String localeTag = hasText(request.localeTag()) ? request.localeTag().trim() : "en";
+    String localeTag = request.localeTag();
 
     AiReviewTextUnitVariantInput.ExistingTarget existingTarget = null;
     String target = hasText(request.target()) ? request.target() : null;
@@ -90,11 +111,11 @@ public class AiReviewChatWS {
 
     ResponsesRequest.Builder requestBuilder =
         ResponsesRequest.builder()
-            .model(aiReviewConfigurationProperties.getModelName())
+            .model(settings.modelName())
             .instructions(getPrompt(localeTag))
-            .reasoningEffort(aiReviewConfigurationProperties.getResponses().getReasoningEffort())
-            .textVerbosity(aiReviewConfigurationProperties.getResponses().getTextVerbosity())
-            .serviceTier(aiReviewConfigurationProperties.getResponses().getServiceTier())
+            .reasoningEffort(settings.reasoningEffort())
+            .textVerbosity(settings.textVerbosity())
+            .serviceTier(settings.serviceTier())
             .addUserText(inputPayload)
             .addJsonSchema(AiReviewTextUnitVariantOutput.class);
     String integrityContextMessage = buildIntegrityContextMessage(request.tmTextUnitId(), target);
@@ -129,14 +150,25 @@ public class AiReviewChatWS {
             sourceDescription,
             target,
             integrityContextMessage,
-            conversationMessages);
+            conversationMessages,
+            settings.reasoningEffort());
     Stopwatch requestStopwatch = Stopwatch.createStarted();
     AiReviewTextUnitVariantOutput output;
+    Long usageId = interactiveService.start(prepared, taskId);
+    String returnedModel = null;
+    String returnedTier = null;
     try {
       ResponsesResponse responsesResponse =
-          getResponsesWithRetry(responsesRequest, localeTag, requestTimeout);
+          getResponsesWithRetry(responsesRequest, localeTag, requestTimeout, settings);
+      if (responsesResponse != null) {
+        returnedModel = responsesResponse.model();
+        returnedTier = responsesResponse.serviceTier();
+      }
       String jsonResponse = AiReviewResponseValidator.outputText(responsesResponse);
       output = objectMapper.readValueUnchecked(jsonResponse, AiReviewTextUnitVariantOutput.class);
+      if (output == null) {
+        throw new InvalidReviewResponseException("AI review provider returned no review output.");
+      }
       logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
     } catch (InvalidReviewResponseException e) {
       ResponseStatusException failure =
@@ -144,13 +176,27 @@ public class AiReviewChatWS {
               HttpStatus.BAD_GATEWAY,
               "AI review provider returned an incomplete response. Please retry.",
               e);
-      recordRequestDuration(localeTag, failure, requestStopwatch);
+      recordRequestDuration(localeTag, failure, requestStopwatch, settings);
+      interactiveService.finish(
+          usageId,
+          getRequestResultTag(failure),
+          requestStopwatch.elapsed().toMillis(),
+          returnedModel,
+          returnedTier);
       throw failure;
     } catch (RuntimeException e) {
-      recordRequestDuration(localeTag, e, requestStopwatch);
+      recordRequestDuration(localeTag, e, requestStopwatch, settings);
+      interactiveService.finish(
+          usageId,
+          getRequestResultTag(e),
+          requestStopwatch.elapsed().toMillis(),
+          returnedModel,
+          returnedTier);
       throw e;
     }
-    recordRequestDuration(localeTag, null, requestStopwatch);
+    recordRequestDuration(localeTag, null, requestStopwatch, settings);
+    interactiveService.finish(
+        usageId, "completed", requestStopwatch.elapsed().toMillis(), returnedModel, returnedTier);
 
     String reply = output.target() != null ? output.target().explanation() : null;
     if (!hasText(reply) && output.reviewRequired() != null) {
@@ -280,7 +326,8 @@ public class AiReviewChatWS {
       String sourceDescription,
       String target,
       String integrityContextMessage,
-      List<AiReviewChatMessage> conversationMessages) {
+      List<AiReviewChatMessage> conversationMessages,
+      String reasoningEffort) {
     int textCharCount =
         safeLength(source)
             + safeLength(sourceDescription)
@@ -291,14 +338,11 @@ public class AiReviewChatWS {
                 .sum();
     return aiReviewConfigurationProperties
         .getTimeout()
-        .resolveRequestTimeout(
-            conversationMessages.size(),
-            textCharCount,
-            aiReviewConfigurationProperties.getResponses().getReasoningEffort());
+        .resolveRequestTimeout(conversationMessages.size(), textCharCount, reasoningEffort);
   }
 
   private ResponseStatusException toResponseStatusException(
-      CompletionException e, String localeTag, Duration requestTimeout) {
+      CompletionException e, String localeTag, Duration requestTimeout, Settings settings) {
     Throwable cause = unwrapCompletionException(e);
     if (cause instanceof HttpTimeoutException) {
       long timeoutSeconds = requestTimeout.toSeconds();
@@ -307,7 +351,7 @@ public class AiReviewChatWS {
               "AiReviewChatWS.timeouts",
               Tags.of(
                   "model",
-                  sanitizeTagValue(aiReviewConfigurationProperties.getModelName()),
+                  sanitizeTagValue(settings.modelName()),
                   "locale",
                   sanitizeTagValue(localeTag)))
           .increment();
@@ -323,7 +367,7 @@ public class AiReviewChatWS {
               "AiReviewChatWS.providerFailures",
               Tags.of(
                   "model",
-                  sanitizeTagValue(aiReviewConfigurationProperties.getModelName()),
+                  sanitizeTagValue(settings.modelName()),
                   "locale",
                   sanitizeTagValue(localeTag),
                   "statusCode",
@@ -332,7 +376,7 @@ public class AiReviewChatWS {
       logger.warn(
           "AI review provider request failed, statusCode={}, model={}, locale={}",
           openAIClientResponseException.getStatusCode(),
-          aiReviewConfigurationProperties.getModelName(),
+          settings.modelName(),
           localeTag,
           cause);
       return new ResponseStatusException(
@@ -350,7 +394,10 @@ public class AiReviewChatWS {
   }
 
   private ResponsesResponse getResponsesWithRetry(
-      ResponsesRequest responsesRequest, String localeTag, Duration requestTimeout) {
+      ResponsesRequest responsesRequest,
+      String localeTag,
+      Duration requestTimeout,
+      Settings settings) {
     CompletionException lastFailure = null;
     for (int attempt = 1; attempt <= MAX_RETRYABLE_PROVIDER_ATTEMPTS; attempt++) {
       try {
@@ -361,17 +408,17 @@ public class AiReviewChatWS {
         if (!(cause instanceof OpenAIClientResponseException openAIClientResponseException)
             || !isRetryableProviderStatus(openAIClientResponseException.getStatusCode())
             || attempt == MAX_RETRYABLE_PROVIDER_ATTEMPTS) {
-          throw toResponseStatusException(e, localeTag, requestTimeout);
+          throw toResponseStatusException(e, localeTag, requestTimeout, settings);
         }
         logger.warn(
             "Retrying AI review provider request after statusCode={}, attempt={}, model={}, locale={}",
             openAIClientResponseException.getStatusCode(),
             attempt,
-            aiReviewConfigurationProperties.getModelName(),
+            settings.modelName(),
             localeTag);
       }
     }
-    throw toResponseStatusException(lastFailure, localeTag, requestTimeout);
+    throw toResponseStatusException(lastFailure, localeTag, requestTimeout, settings);
   }
 
   private Throwable unwrapCompletionException(Throwable throwable) {
@@ -392,13 +439,13 @@ public class AiReviewChatWS {
   }
 
   private void recordRequestDuration(
-      String localeTag, RuntimeException failure, Stopwatch requestStopwatch) {
+      String localeTag, RuntimeException failure, Stopwatch requestStopwatch, Settings settings) {
     meterRegistry
         .timer(
             "AiReviewChatWS.requestDuration",
             Tags.of(
                 "model",
-                sanitizeTagValue(aiReviewConfigurationProperties.getModelName()),
+                sanitizeTagValue(settings.modelName()),
                 "locale",
                 sanitizeTagValue(localeTag),
                 "result",
@@ -427,7 +474,80 @@ public class AiReviewChatWS {
       String localeTag,
       String sourceDescription,
       Long tmTextUnitId,
-      List<AiReviewChatMessage> messages) {}
+      List<AiReviewChatMessage> messages,
+      String profileId,
+      String requestType,
+      String surface,
+      String reasoningEffort,
+      String presetId) {
+    public AiReviewChatRequest(
+        String source,
+        String target,
+        String localeTag,
+        String sourceDescription,
+        Long tmTextUnitId,
+        List<AiReviewChatMessage> messages,
+        String profileId,
+        String requestType,
+        String surface,
+        String reasoningEffort) {
+      this(
+          source,
+          target,
+          localeTag,
+          sourceDescription,
+          tmTextUnitId,
+          messages,
+          profileId,
+          requestType,
+          surface,
+          reasoningEffort,
+          null);
+    }
+
+    public AiReviewChatRequest(
+        String source,
+        String target,
+        String localeTag,
+        String sourceDescription,
+        Long tmTextUnitId,
+        List<AiReviewChatMessage> messages,
+        String profileId,
+        String requestType,
+        String surface) {
+      this(
+          source,
+          target,
+          localeTag,
+          sourceDescription,
+          tmTextUnitId,
+          messages,
+          profileId,
+          requestType,
+          surface,
+          null);
+    }
+
+    public AiReviewChatRequest(
+        String source,
+        String target,
+        String localeTag,
+        String sourceDescription,
+        Long tmTextUnitId,
+        List<AiReviewChatMessage> messages) {
+      this(
+          source,
+          target,
+          localeTag,
+          sourceDescription,
+          tmTextUnitId,
+          messages,
+          null,
+          null,
+          null,
+          null);
+    }
+  }
 
   public record AiReviewChatMessage(String role, String content) {}
 

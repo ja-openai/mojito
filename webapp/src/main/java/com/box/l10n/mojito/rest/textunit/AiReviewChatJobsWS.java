@@ -9,6 +9,8 @@ import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatResponse;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJob;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
+import com.box.l10n.mojito.service.oaireview.AiReviewConfiguredChatJob;
+import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import java.time.ZonedDateTime;
@@ -56,10 +58,10 @@ public class AiReviewChatJobsWS {
     if (request == null || request.messages() == null || request.messages().isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "messages must not be empty");
     }
-    aiReviewChatWS.validateRequest(request);
-    QuartzJobInfo<AiReviewChatRequest, AiReviewChatJob.Result> job =
-        QuartzJobInfo.newBuilder(AiReviewChatJob.class)
-            .withInput(request)
+    Prepared prepared = aiReviewChatWS.prepare(request);
+    QuartzJobInfo<Prepared, AiReviewChatJob.Result> job =
+        QuartzJobInfo.newBuilder(AiReviewConfiguredChatJob.class)
+            .withInput(prepared)
             .withInlineInput(true)
             .withScheduler(configuration.getSchedulerName())
             .withRequestRecovery(true)

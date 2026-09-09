@@ -38,6 +38,8 @@ vi.mock('./hooks/useUserPreferences', async (importActual) => ({
       visibleTextEditorEnabled: false,
       reviewProjectSearchEnabled: false,
       defaultReviewTeamIds: [],
+      aiReviewProfile: 'version_b',
+      aiReviewAutomaticDisabled: false,
     },
     isError: false,
     isFetching: false,

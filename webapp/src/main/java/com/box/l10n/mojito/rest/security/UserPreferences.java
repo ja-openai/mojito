@@ -11,9 +11,77 @@ public record UserPreferences(
     String shortcutHelp,
     boolean visibleTextEditorEnabled,
     boolean reviewProjectSearchEnabled,
-    List<Long> defaultReviewTeamIds) {
+    List<Long> defaultReviewTeamIds,
+    String aiReviewProfile,
+    boolean aiReviewAutomaticDisabled,
+    String aiReviewReasoningEffort,
+    String aiReviewPreset) {
+
+  public UserPreferences {
+    aiReviewProfile = aiReviewProfile == null ? "version_b" : aiReviewProfile;
+    aiReviewReasoningEffort = aiReviewReasoningEffort == null ? "low" : aiReviewReasoningEffort;
+    if (aiReviewPreset == null) {
+      aiReviewPreset =
+          "version_a".equals(aiReviewProfile)
+              ? "fast"
+              : switch (aiReviewReasoningEffort) {
+                case "medium" -> "thorough";
+                case "high" -> "deep";
+                default -> "balanced";
+              };
+    }
+  }
+
+  public UserPreferences(
+      boolean initialized,
+      Integer worksetSize,
+      List<String> preferredLocales,
+      String shortcutHelp,
+      boolean visibleTextEditorEnabled,
+      boolean reviewProjectSearchEnabled,
+      List<Long> defaultReviewTeamIds,
+      String aiReviewProfile,
+      boolean aiReviewAutomaticDisabled,
+      String aiReviewReasoningEffort) {
+    this(
+        initialized,
+        worksetSize,
+        preferredLocales,
+        shortcutHelp,
+        visibleTextEditorEnabled,
+        reviewProjectSearchEnabled,
+        defaultReviewTeamIds,
+        aiReviewProfile,
+        aiReviewAutomaticDisabled,
+        aiReviewReasoningEffort,
+        null);
+  }
+
+  public UserPreferences(
+      boolean initialized,
+      Integer worksetSize,
+      List<String> preferredLocales,
+      String shortcutHelp,
+      boolean visibleTextEditorEnabled,
+      boolean reviewProjectSearchEnabled,
+      List<Long> defaultReviewTeamIds,
+      String aiReviewProfile,
+      boolean aiReviewAutomaticDisabled) {
+    this(
+        initialized,
+        worksetSize,
+        preferredLocales,
+        shortcutHelp,
+        visibleTextEditorEnabled,
+        reviewProjectSearchEnabled,
+        defaultReviewTeamIds,
+        aiReviewProfile,
+        aiReviewAutomaticDisabled,
+        "low");
+  }
 
   public static UserPreferences defaults() {
-    return new UserPreferences(false, null, List.of(), null, false, false, List.of());
+    return new UserPreferences(
+        false, null, List.of(), null, false, false, List.of(), "version_b", false, "low");
   }
 }

@@ -6,8 +6,10 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatMessage;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatRequest;
@@ -15,29 +17,31 @@ import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatResponse;
 import java.util.List;
 import org.junit.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 public class AiReviewChatJobTest {
 
   @Test
-  public void workerUsesTheExistingReviewWithTheCompleteRequest() {
+  public void legacyWorkerPassesTheCompleteRequestAndTaskIdForOwnerResolution() {
     AiReviewChatJob job = job();
     AiReviewChatRequest request = request();
     AiReviewChatResponse response =
         new AiReviewChatResponse(
             new AiReviewChatMessage("assistant", "Review result"), List.of(), null);
-    when(job.aiReviewChatWS.chat(request)).thenReturn(response);
+    when(job.aiReviewChatWS.chatLegacyJob(request, 91L)).thenReturn(response);
     AiReviewChatJob.Result result = job.call(request);
     assertSame(response, result.response());
     assertNull(result.error());
-    verify(job.aiReviewChatWS).chat(request);
+    verify(job.aiReviewChatWS).chatLegacyJob(request, 91L);
+    verifyNoMoreInteractions(job.aiReviewChatWS);
   }
 
   @Test
   public void workerKeepsExpectedProviderFailuresInTheResult() {
     for (HttpStatus status : List.of(HttpStatus.BAD_GATEWAY, HttpStatus.GATEWAY_TIMEOUT)) {
       AiReviewChatJob job = job();
-      when(job.aiReviewChatWS.chat(request()))
+      when(job.aiReviewChatWS.chatLegacyJob(request(), 91L))
           .thenThrow(
               new ResponseStatusException(
                   status, "AI review is temporarily unavailable. Please retry."));
@@ -49,16 +53,30 @@ public class AiReviewChatJobTest {
   }
 
   @Test
+  public void providerFailureWithoutReasonUsesTheSafeFallback() {
+    AiReviewChatJob job = job();
+    when(job.aiReviewChatWS.chatLegacyJob(request(), 91L))
+        .thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY));
+    AiReviewChatJob.Result result = job.call(request());
+    assertNull(result.response());
+    assertEquals(502, result.error().status());
+    assertEquals("AI review failed. Please retry.", result.error().message());
+  }
+
+  @Test
   public void unexpectedFailuresReachQuartzFailureTracking() {
     AiReviewChatJob job = job();
     IllegalStateException failure = new IllegalStateException("unexpected internal failure");
-    when(job.aiReviewChatWS.chat(request())).thenThrow(failure);
+    when(job.aiReviewChatWS.chatLegacyJob(request(), 91L)).thenThrow(failure);
     assertSame(failure, assertThrows(IllegalStateException.class, () -> job.call(request())));
   }
 
   private AiReviewChatJob job() {
     AiReviewChatJob job = new AiReviewChatJob();
     job.aiReviewChatWS = mock(AiReviewChatWS.class);
+    PollableTask task = new PollableTask();
+    task.setId(91L);
+    ReflectionTestUtils.setField(job, "currentPollableTask", task);
     return job;
   }
 

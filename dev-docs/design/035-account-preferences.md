@@ -1,10 +1,26 @@
 # Account preferences
 
-My Settings (`/settings/me`) stores personal preferences in the backend so they
-follow the signed-in user across browsers and devices. The six fields are the
-Workbench result limit, preferred locales, Review Project shortcut bar, assisted
-translation editor, translation search preview, and default Review Project teams.
+Personal preferences are stored in the backend so they follow the signed-in user
+across browsers and devices. My Settings (`/settings/me`) manages the Workbench
+result limit, preferred locales, Review Project shortcut bar, assisted translation
+editor, translation search preview, and default Review Project teams. The AI Review
+controls save the preset and whether automatic reviews are disabled.
 These preferences do not grant repository, locale, or team permissions.
+
+The speed control beside **AI Chat Review** offers **Fastest**, **Fast**, **Balanced**, **Thorough**,
+**Deep**, and **Ultra**, with Balanced as the account default. The backend maps each preset to a model,
+reasoning effort, and processing tier; the frontend exposes no provider model names. All six default
+presets request API Fast mode, separately from effort. See `010-ai-observability.md` for mappings and
+configuration. The adjacent gear controls automatic reviews. Both controls remain available when the
+review section is collapsed. Disabling automatic reviews keeps manual **Review** and **Ask** available.
+Saving or restoring defaults in My Settings preserves these separate AI Review preferences.
+
+The slider previews changes while dragging and saves once on pointer release or completion of a
+keyboard adjustment. Failed saves show an error and restore the confirmed account value. A successful
+change clears the conversation and ignores earlier requests' results. Choices follow the account
+across browsers and devices. Interactive requests send a `presetId`; the server freezes the resolved
+model, effort, and service tier in the prepared request and queued job. Usage records the preset in
+`profile_id` alongside the actual model, reasoning, and tier fields.
 
 ## Saving and restoring
 
@@ -35,7 +51,7 @@ settings page use server values, even if old browser keys remain.
 ## Backend
 
 `GET /api/users/me/preferences` returns the current account's settings, including
-`initialized: false` when no row exists. `PATCH` accepts only the six preference
+`initialized: false` when no row exists. `PATCH` accepts only the supported preference
 fields and derives ownership from the authenticated user. A dedicated
 `user_preferences` row has a unique user ID and cascades on user deletion. The
 transaction locks the user before loading or creating the row, serializing even
@@ -50,6 +66,12 @@ off. Lists default to empty. The API validates JSON types, positive integer work
 sizes up to 2147483647, language tags, bounded lists, and existing enabled team IDs.
 Only admins and PMs can change default teams; existing team access rules apply.
 Last successful writes to the same field win; different-field PATCHes are merged.
+`aiReviewPreset` accepts `fastest`, `fast`, `balanced`, `thorough`, `deep`, or `ultra`.
+`aiReviewAutomaticDisabled` must be a boolean and defaults to `false`. Legacy profile and effort fields
+remain accepted for older clients. When no preset is stored, legacy `version_a` maps to Fast;
+`version_b` with `medium` maps to Thorough, with `high` to Deep, and otherwise to Balanced. Reading
+older preferences does not rewrite the row. These fields use the existing preferences JSON and
+require no additional schema migration.
 
 Flyway migration `V108__User_Preferences.sql` creates the table. Deploy the backend
 and schema with the frontend; an older backend does not provide this endpoint.

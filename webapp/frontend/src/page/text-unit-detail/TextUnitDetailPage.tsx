@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -35,6 +35,7 @@ import {
   mf2TranslationErrors,
 } from '../../components/mf2/translationValidation';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
+import { useAiReviewPreferences } from '../../hooks/useAiReviewPreferences';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { useReviewProjectSearchEnabled } from '../../hooks/useReviewProjectSearchEnabled';
 import { useUser } from '../../hooks/useUser';
@@ -95,6 +96,10 @@ export function TextUnitDetailPage() {
   const [searchParams] = useSearchParams();
   const locationState = (location.state as LocationState | null) ?? null;
   const currentUser = useUser();
+  const aiSettings = useAiReviewPreferences();
+  const aiPreset = aiSettings.preset;
+  const aiPreferencesReady = aiSettings.ready;
+  const aiAutomaticDisabled = aiSettings.automaticDisabled;
   const queryClient = useQueryClient();
 
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
@@ -130,7 +135,8 @@ export function TextUnitDetailPage() {
   } | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const [aiMessages, setAiMessages] = useState<TextUnitDetailAiMessage[]>([]);
+  const aiRequestAttemptRef = useRef(0);
+  const aiRequestAbortControllerRef = useRef<AbortController | null>(null);
   const [aiInput, setAiInput] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
 
@@ -460,18 +466,61 @@ export function TextUnitDetailPage() {
     }
     const variantId =
       activeTextUnit.tmTextUnitVariantId ?? activeTextUnit.tmTextUnitCurrentVariantId;
-    return `${activeTextUnit.tmTextUnitId}:${localeForEditing}:${variantId ?? 'none'}`;
-  }, [activeTextUnit, localeForEditing]);
+    return `${currentUser.username}:${activeTextUnit.tmTextUnitId}:${localeForEditing}:${variantId ?? 'none'}:${aiPreset}`;
+  }, [activeTextUnit, localeForEditing, currentUser.username, aiPreset]);
+
+  const [storedAiConversation, setStoredAiConversation] = useState<{
+    contextKey: string | null;
+    messages: TextUnitDetailAiMessage[];
+  }>(() => ({ contextKey: aiContextKey, messages: [] }));
+  const aiMessages = useMemo(
+    () => (storedAiConversation.contextKey === aiContextKey ? storedAiConversation.messages : []),
+    [aiContextKey, storedAiConversation],
+  );
+  const setAiMessages = useCallback(
+    (next: React.SetStateAction<TextUnitDetailAiMessage[]>) => {
+      setStoredAiConversation((previous) => ({
+        contextKey: aiContextKey,
+        messages:
+          typeof next === 'function'
+            ? next(previous.contextKey === aiContextKey ? previous.messages : [])
+            : next,
+      }));
+    },
+    [aiContextKey],
+  );
 
   useEffect(() => {
-    if (!activeTextUnit || !localeForEditing || aiContextKey === null) {
-      setAiMessages([]);
-      setAiInput('');
-      setIsAiResponding(false);
+    aiRequestAttemptRef.current += 1;
+    aiRequestAbortControllerRef.current?.abort();
+    aiRequestAbortControllerRef.current = null;
+    setAiMessages([]);
+    setAiInput('');
+    setIsAiResponding(false);
+    return () => {
+      aiRequestAttemptRef.current += 1;
+      aiRequestAbortControllerRef.current?.abort();
+      aiRequestAbortControllerRef.current = null;
+    };
+  }, [aiContextKey, setAiMessages]);
+
+  useEffect(() => {
+    if (
+      !aiPreferencesReady ||
+      aiAutomaticDisabled ||
+      glossaryMatchesQuery.isLoading ||
+      !activeTextUnit ||
+      !localeForEditing ||
+      aiContextKey === null
+    ) {
       return;
     }
 
     let cancelled = false;
+    const requestAttempt = (aiRequestAttemptRef.current += 1);
+    aiRequestAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    aiRequestAbortControllerRef.current = abortController;
     setAiMessages([]);
     setAiInput('');
     setIsAiResponding(true);
@@ -484,17 +533,23 @@ export function TextUnitDetailPage() {
 
     void (async () => {
       try {
-        const response = await requestAiReview({
-          source: activeTextUnit.source ?? '',
-          target: activeTextUnit.target ?? '',
-          localeTag: localeForEditing,
-          sourceDescription: activeTextUnit.comment ?? '',
-          tmTextUnitId: activeTextUnit.tmTextUnitId,
-          messages: [glossaryContextMessage, initialMessage].filter(
-            (message): message is AiReviewMessage => message != null,
-          ),
-        });
-        if (cancelled) {
+        const response = await requestAiReview(
+          {
+            presetId: aiPreset,
+            requestType: 'automatic',
+            surface: 'text_unit_detail',
+            source: activeTextUnit.source ?? '',
+            target: activeTextUnit.target ?? '',
+            localeTag: localeForEditing,
+            sourceDescription: activeTextUnit.comment ?? '',
+            tmTextUnitId: activeTextUnit.tmTextUnitId,
+            messages: [glossaryContextMessage, initialMessage].filter(
+              (message): message is AiReviewMessage => message != null,
+            ),
+          },
+          { signal: abortController.signal },
+        );
+        if (cancelled || aiRequestAttemptRef.current !== requestAttempt) {
           return;
         }
 
@@ -508,7 +563,7 @@ export function TextUnitDetailPage() {
           },
         ]);
       } catch (error: unknown) {
-        if (cancelled) {
+        if (cancelled || aiRequestAttemptRef.current !== requestAttempt) {
           return;
         }
 
@@ -523,16 +578,35 @@ export function TextUnitDetailPage() {
           },
         ]);
       } finally {
-        if (!cancelled) {
+        if (!cancelled && aiRequestAttemptRef.current === requestAttempt) {
           setIsAiResponding(false);
+        }
+        if (aiRequestAbortControllerRef.current === abortController) {
+          aiRequestAbortControllerRef.current = null;
         }
       }
     })();
 
     return () => {
       cancelled = true;
+      abortController.abort();
+      if (aiRequestAbortControllerRef.current === abortController) {
+        aiRequestAttemptRef.current += 1;
+        aiRequestAbortControllerRef.current = null;
+        setIsAiResponding(false);
+      }
     };
-  }, [activeTextUnit, aiContextKey, glossaryMatchesQuery.data, localeForEditing]);
+  }, [
+    activeTextUnit,
+    aiContextKey,
+    aiPreset,
+    aiPreferencesReady,
+    aiAutomaticDisabled,
+    glossaryMatchesQuery.data,
+    glossaryMatchesQuery.isLoading,
+    localeForEditing,
+    setAiMessages,
+  ]);
 
   const sortedHistoryItems = useMemo(() => {
     return [...(historyQuery.data ?? [])].sort((a, b) => {
@@ -997,7 +1071,7 @@ export function TextUnitDetailPage() {
   }, []);
 
   const handleSubmitAi = useCallback(() => {
-    if (isAiResponding || !activeTextUnit || !localeForEditing) {
+    if (!aiPreferencesReady || isAiResponding || !activeTextUnit || !localeForEditing) {
       return;
     }
 
@@ -1013,6 +1087,10 @@ export function TextUnitDetailPage() {
     };
 
     const baseMessages = aiMessages.filter((message) => !message.isError);
+    const requestAttempt = (aiRequestAttemptRef.current += 1);
+    aiRequestAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    aiRequestAbortControllerRef.current = abortController;
     setAiMessages((previous) => [...previous, userMessage]);
     setAiInput('');
     setIsAiResponding(true);
@@ -1025,16 +1103,25 @@ export function TextUnitDetailPage() {
         }));
         const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
-        const response = await requestAiReview({
-          source: activeTextUnit.source ?? '',
-          target: draftTarget,
-          localeTag: localeForEditing,
-          sourceDescription: activeTextUnit.comment ?? '',
-          tmTextUnitId: activeTextUnit.tmTextUnitId,
-          messages: [glossaryContextMessage, ...conversation].filter(
-            (message): message is AiReviewMessage => message != null,
-          ),
-        });
+        const response = await requestAiReview(
+          {
+            presetId: aiPreset,
+            requestType: baseMessages.length > 0 ? 'follow_up' : 'manual',
+            surface: 'text_unit_detail',
+            source: activeTextUnit.source ?? '',
+            target: draftTarget,
+            localeTag: localeForEditing,
+            sourceDescription: activeTextUnit.comment ?? '',
+            tmTextUnitId: activeTextUnit.tmTextUnitId,
+            messages: [glossaryContextMessage, ...conversation].filter(
+              (message): message is AiReviewMessage => message != null,
+            ),
+          },
+          { signal: abortController.signal },
+        );
+        if (aiRequestAttemptRef.current !== requestAttempt) {
+          return;
+        }
 
         const assistantMessage: TextUnitDetailAiMessage = {
           id: `assistant-${Date.now()}`,
@@ -1046,6 +1133,9 @@ export function TextUnitDetailPage() {
 
         setAiMessages((previous) => [...previous, assistantMessage]);
       } catch (error: unknown) {
+        if (aiRequestAttemptRef.current !== requestAttempt) {
+          return;
+        }
         const aiError = formatAiReviewError(error);
         setAiMessages((previous) => [
           ...previous.filter((message) => !message.isError),
@@ -1058,10 +1148,18 @@ export function TextUnitDetailPage() {
           },
         ]);
       } finally {
-        setIsAiResponding(false);
+        if (aiRequestAttemptRef.current === requestAttempt) {
+          setIsAiResponding(false);
+        }
+        if (aiRequestAbortControllerRef.current === abortController) {
+          aiRequestAbortControllerRef.current = null;
+        }
       }
     })();
   }, [
+    aiPreset,
+    aiPreferencesReady,
+    setAiMessages,
     activeTextUnit,
     aiInput,
     aiMessages,
@@ -1071,70 +1169,97 @@ export function TextUnitDetailPage() {
     localeForEditing,
   ]);
 
-  const handleRetryAi = useCallback(() => {
-    if (isAiResponding || !activeTextUnit || !localeForEditing) {
-      return;
-    }
-
-    const baseMessages = aiMessages.filter((message) => !message.isError);
-    const conversation: AiReviewMessage[] =
-      baseMessages.length > 0
-        ? baseMessages.map((message) => ({
-            role: message.sender,
-            content: message.content,
-          }))
-        : [{ role: 'user', content: DEFAULT_AI_REVIEW_PROMPT }];
-    const retryTarget = baseMessages.length > 0 ? draftTarget : (activeTextUnit.target ?? '');
-    const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
-
-    setIsAiResponding(true);
-    void (async () => {
-      try {
-        const response = await requestAiReview({
-          source: activeTextUnit.source ?? '',
-          target: retryTarget,
-          localeTag: localeForEditing,
-          sourceDescription: activeTextUnit.comment ?? '',
-          tmTextUnitId: activeTextUnit.tmTextUnitId,
-          messages: [glossaryContextMessage, ...conversation].filter(
-            (message): message is AiReviewMessage => message != null,
-          ),
-        });
-        const assistantMessage: TextUnitDetailAiMessage = {
-          id: `assistant-${Date.now()}`,
-          sender: 'assistant',
-          content: response.message.content,
-          suggestions: response.suggestions,
-          review: response.review,
-        };
-        setAiMessages((previous) => [
-          ...previous.filter((message) => !message.isError),
-          assistantMessage,
-        ]);
-      } catch (error: unknown) {
-        const aiError = formatAiReviewError(error);
-        setAiMessages((previous) => [
-          ...previous.filter((message) => !message.isError),
-          {
-            id: `assistant-error-${Date.now()}`,
-            sender: 'assistant',
-            content: aiError.message,
-            isError: true,
-            errorDetail: aiError.detail,
-          },
-        ]);
-      } finally {
-        setIsAiResponding(false);
+  const handleRetryAi = useCallback(
+    (requestType: 'manual' | 'retry' = 'retry') => {
+      if (!aiPreferencesReady || isAiResponding || !activeTextUnit || !localeForEditing) {
+        return;
       }
-    })();
-  }, [
-    activeTextUnit,
-    aiMessages,
-    draftTarget,
-    glossaryMatchesQuery.data,
-    isAiResponding,
-    localeForEditing,
-  ]);
+
+      const baseMessages = aiMessages.filter((message) => !message.isError);
+      const requestAttempt = (aiRequestAttemptRef.current += 1);
+      aiRequestAbortControllerRef.current?.abort();
+      const abortController = new AbortController();
+      aiRequestAbortControllerRef.current = abortController;
+      const conversation: AiReviewMessage[] =
+        baseMessages.length > 0
+          ? baseMessages.map((message) => ({
+              role: message.sender,
+              content: message.content,
+            }))
+          : [{ role: 'user', content: DEFAULT_AI_REVIEW_PROMPT }];
+      const retryTarget = draftTarget;
+      const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
+
+      setIsAiResponding(true);
+      void (async () => {
+        try {
+          const response = await requestAiReview(
+            {
+              presetId: aiPreset,
+              requestType,
+              surface: 'text_unit_detail',
+              source: activeTextUnit.source ?? '',
+              target: retryTarget,
+              localeTag: localeForEditing,
+              sourceDescription: activeTextUnit.comment ?? '',
+              tmTextUnitId: activeTextUnit.tmTextUnitId,
+              messages: [glossaryContextMessage, ...conversation].filter(
+                (message): message is AiReviewMessage => message != null,
+              ),
+            },
+            { signal: abortController.signal },
+          );
+          if (aiRequestAttemptRef.current !== requestAttempt) {
+            return;
+          }
+          const assistantMessage: TextUnitDetailAiMessage = {
+            id: `assistant-${Date.now()}`,
+            sender: 'assistant',
+            content: response.message.content,
+            suggestions: response.suggestions,
+            review: response.review,
+          };
+          setAiMessages((previous) => [
+            ...previous.filter((message) => !message.isError),
+            assistantMessage,
+          ]);
+        } catch (error: unknown) {
+          if (aiRequestAttemptRef.current !== requestAttempt) {
+            return;
+          }
+          const aiError = formatAiReviewError(error);
+          setAiMessages((previous) => [
+            ...previous.filter((message) => !message.isError),
+            {
+              id: `assistant-error-${Date.now()}`,
+              sender: 'assistant',
+              content: aiError.message,
+              isError: true,
+              errorDetail: aiError.detail,
+            },
+          ]);
+        } finally {
+          if (aiRequestAttemptRef.current === requestAttempt) {
+            setIsAiResponding(false);
+          }
+          if (aiRequestAbortControllerRef.current === abortController) {
+            aiRequestAbortControllerRef.current = null;
+          }
+        }
+      })();
+    },
+    [
+      aiPreset,
+      aiPreferencesReady,
+      setAiMessages,
+      activeTextUnit,
+      aiMessages,
+      draftTarget,
+      glossaryMatchesQuery.data,
+      isAiResponding,
+      localeForEditing,
+    ],
+  );
 
   const getAiSuggestionError = useCallback(
     (suggestion: AiReviewSuggestion) =>
@@ -1231,10 +1356,16 @@ export function TextUnitDetailPage() {
       isAiCollapsed={isAiCollapsed}
       onToggleAiCollapsed={() => setIsAiCollapsed((current) => !current)}
       aiMessages={aiMessages}
+      aiSettings={aiSettings}
+      onReviewAi={
+        activeTextUnit && localeForEditing && !glossaryMatchesQuery.isLoading
+          ? () => handleRetryAi('manual')
+          : undefined
+      }
       aiInput={aiInput}
       onChangeAiInput={setAiInput}
       onSubmitAi={handleSubmitAi}
-      onRetryAi={handleRetryAi}
+      onRetryAi={() => handleRetryAi()}
       onUseAiSuggestion={handleUseAiSuggestion}
       getAiSuggestionError={getAiSuggestionError}
       isAiResponding={isAiResponding}

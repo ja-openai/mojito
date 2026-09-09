@@ -31,7 +31,16 @@ function sameLocales(first: string[], second: string[]) {
   );
 }
 
-type SettingsDraft = Omit<ApiUserPreferences, 'initialized' | 'worksetSize' | 'shortcutHelp'> & {
+type SettingsDraft = Omit<
+  ApiUserPreferences,
+  | 'initialized'
+  | 'worksetSize'
+  | 'shortcutHelp'
+  | 'aiReviewProfile'
+  | 'aiReviewAutomaticDisabled'
+  | 'aiReviewReasoningEffort'
+  | 'aiReviewPreset'
+> & {
   worksetSize: string;
   shortcutHelp: ReviewProjectShortcutHelpPreference;
 };

@@ -1,3 +1,7 @@
+export type AiReviewProfile = 'version_a' | 'version_b';
+export type AiReviewReasoningEffort = 'low' | 'medium' | 'high';
+export type AiReviewPreset = 'fastest' | 'fast' | 'balanced' | 'thorough' | 'deep' | 'ultra';
+
 export type ApiUserPreferences = {
   initialized: boolean;
   worksetSize: number | null;
@@ -6,6 +10,10 @@ export type ApiUserPreferences = {
   visibleTextEditorEnabled: boolean;
   reviewProjectSearchEnabled: boolean;
   defaultReviewTeamIds: number[];
+  aiReviewProfile: AiReviewProfile;
+  aiReviewReasoningEffort?: AiReviewReasoningEffort;
+  aiReviewPreset?: AiReviewPreset;
+  aiReviewAutomaticDisabled: boolean;
 };
 
 export type UserPreferencesPatch = Partial<Omit<ApiUserPreferences, 'initialized'>>;

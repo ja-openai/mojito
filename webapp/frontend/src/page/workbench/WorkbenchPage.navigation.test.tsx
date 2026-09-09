@@ -210,6 +210,8 @@ function renderWorkbench(searchRequest: TextUnitSearchRequest | null = originalS
     visibleTextEditorEnabled: false,
     reviewProjectSearchEnabled: false,
     defaultReviewTeamIds: [],
+    aiReviewProfile: 'version_b',
+    aiReviewAutomaticDisabled: false,
   });
   render(
     <QueryClientProvider client={queryClient}>

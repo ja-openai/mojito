@@ -19,6 +19,8 @@ const defaults: ApiUserPreferences = {
   visibleTextEditorEnabled: false,
   reviewProjectSearchEnabled: false,
   defaultReviewTeamIds: [],
+  aiReviewProfile: 'version_b',
+  aiReviewAutomaticDisabled: false,
 };
 
 function makeWrapper(queryClient: QueryClient, getUsername = () => 'alice') {

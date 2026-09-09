@@ -18,7 +18,8 @@ public class AiReviewChatJob
   @Override
   public Result call(AiReviewChatRequest request) {
     try {
-      return new Result(aiReviewChatWS.chat(request), null);
+      return new Result(
+          aiReviewChatWS.chatLegacyJob(request, getCurrentPollableTask().getId()), null);
     } catch (ResponseStatusException exception) {
       // Preserve the safe provider failure/timeout message across the asynchronous boundary.
       return new Result(

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
  * @author wyau
  */
 @Component
+@Transactional(readOnly = true)
 public class TMTextUnitIntegrityCheckService {
   /** logger */
   static Logger logger = getLogger(TMTextUnitIntegrityCheckService.class);

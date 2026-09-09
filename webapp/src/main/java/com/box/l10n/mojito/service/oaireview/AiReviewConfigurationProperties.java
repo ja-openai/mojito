@@ -2,7 +2,9 @@ package com.box.l10n.mojito.service.oaireview;
 
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +16,118 @@ public class AiReviewConfigurationProperties {
   String modelName = "gpt-5.6-sol";
   ResponsesProperties responses = new ResponsesProperties();
   TimeoutProperties timeout = new TimeoutProperties();
+  InteractiveProperties interactive = new InteractiveProperties();
+
+  public InteractiveProperties getInteractive() {
+    return interactive;
+  }
+
+  public void setInteractive(InteractiveProperties interactive) {
+    this.interactive = interactive;
+  }
+
+  public static class InteractiveProperties {
+    ProfileProperties versionA = new ProfileProperties("gpt-5.6-sol", "low");
+    ProfileProperties versionB = new ProfileProperties("gpt-6-astra", "low");
+    Map<String, ProfileProperties> presets = defaultPresets();
+
+    private static Map<String, ProfileProperties> defaultPresets() {
+      return new LinkedHashMap<>(
+          Map.of(
+              "fastest", new ProfileProperties("gpt-5.6-luna", "none", "priority"),
+              "fast", new ProfileProperties("gpt-5.6-sol", "none", "priority"),
+              "balanced", new ProfileProperties("gpt-6-astra", "low", "priority"),
+              "thorough", new ProfileProperties("gpt-6-astra", "medium", "priority"),
+              "deep", new ProfileProperties("gpt-6-astra", "high", "priority"),
+              "ultra", new ProfileProperties("gpt-6-astra", "max", "priority")));
+    }
+
+    public Map<String, ProfileProperties> getPresets() {
+      return presets;
+    }
+
+    public void setPresets(Map<String, ProfileProperties> presets) {
+      // Spring map binding creates a new value for a partially overridden preset.
+      Map<String, ProfileProperties> merged = defaultPresets();
+      presets.forEach(
+          (id, configured) -> {
+            ProfileProperties defaults = merged.get(id);
+            if (defaults != null && configured != null) {
+              configured =
+                  new ProfileProperties(
+                      configured.getModelName() == null
+                          ? defaults.getModelName()
+                          : configured.getModelName(),
+                      configured.getReasoningEffort() == null
+                          ? defaults.getReasoningEffort()
+                          : configured.getReasoningEffort(),
+                      configured.getServiceTier() == null
+                          ? defaults.getServiceTier()
+                          : configured.getServiceTier());
+            }
+            merged.put(id, configured);
+          });
+      this.presets = merged;
+    }
+
+    public ProfileProperties getVersionA() {
+      return versionA;
+    }
+
+    public void setVersionA(ProfileProperties versionA) {
+      this.versionA = versionA;
+    }
+
+    public ProfileProperties getVersionB() {
+      return versionB;
+    }
+
+    public void setVersionB(ProfileProperties versionB) {
+      this.versionB = versionB;
+    }
+  }
+
+  public static class ProfileProperties {
+    String modelName;
+    String reasoningEffort;
+    String serviceTier;
+
+    public ProfileProperties() {}
+
+    public ProfileProperties(String modelName, String reasoningEffort) {
+      this(modelName, reasoningEffort, null);
+    }
+
+    public ProfileProperties(String modelName, String reasoningEffort, String serviceTier) {
+      this.modelName = modelName;
+      this.reasoningEffort = reasoningEffort;
+      this.serviceTier = serviceTier;
+    }
+
+    public String getModelName() {
+      return modelName;
+    }
+
+    public void setModelName(String modelName) {
+      this.modelName = modelName;
+    }
+
+    public String getReasoningEffort() {
+      return reasoningEffort;
+    }
+
+    public void setReasoningEffort(String reasoningEffort) {
+      this.reasoningEffort = reasoningEffort;
+    }
+
+    public String getServiceTier() {
+      return serviceTier;
+    }
+
+    public void setServiceTier(String serviceTier) {
+      this.serviceTier = serviceTier;
+    }
+  }
 
   public String getOpenaiClientToken() {
     return openaiClientToken;
