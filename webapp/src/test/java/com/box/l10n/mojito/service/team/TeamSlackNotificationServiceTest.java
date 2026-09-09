@@ -2,8 +2,11 @@ package com.box.l10n.mojito.service.team;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.Locale;
@@ -12,19 +15,24 @@ import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequestSlackThread;
+import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.review.ReviewProjectRequestSlackThreadRepository;
 import com.box.l10n.mojito.slack.SlackClient;
+import com.box.l10n.mojito.slack.SlackClientException;
 import com.box.l10n.mojito.slack.SlackClients;
 import com.box.l10n.mojito.slack.request.Message;
 import com.box.l10n.mojito.slack.response.ChatPostMessageResponse;
 import com.box.l10n.mojito.utils.ServerConfig;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mockito;
+import org.springframework.web.client.RestClientException;
 
 public class TeamSlackNotificationServiceTest {
 
@@ -65,9 +73,18 @@ public class TeamSlackNotificationServiceTest {
     teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
         request, List.of(project));
 
-    ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-    verify(slackClient).sendInstantMessage(messageCaptor.capture());
-    assertThat(messageCaptor.getValue().getThreadTs()).isNull();
+    List<Message> messages = sentMessages(2);
+    assertThat(messages.get(0).getChannel()).isEqualTo("channel-1");
+    assertThat(messages.get(0).getThreadTs()).isNull();
+    assertThat(messages.get(0).getText())
+        .isEqualTo(
+            "*Payments launch*\n"
+                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=44|request #44>");
+    assertThat(messages.get(0).getUnfurlLinks()).isFalse();
+    assertThat(messages.get(0).getUnfurlMedia()).isFalse();
+    assertThat(messages.get(1).getChannel()).isEqualTo("channel-1");
+    assertThat(messages.get(1).getThreadTs()).isEqualTo("171.001");
+    assertThat(messages.get(1).getText()).startsWith("*Review request details*\n");
 
     ArgumentCaptor<ReviewProjectRequestSlackThread> threadCaptor =
         ArgumentCaptor.forClass(ReviewProjectRequestSlackThread.class);
@@ -76,6 +93,11 @@ public class TeamSlackNotificationServiceTest {
     assertThat(threadCaptor.getValue().getSlackClientId()).isEqualTo("client-1");
     assertThat(threadCaptor.getValue().getSlackChannelId()).isEqualTo("channel-1");
     assertThat(threadCaptor.getValue().getThreadTs()).isEqualTo("171.001");
+
+    InOrder deliveryOrder = inOrder(slackClient, requestSlackThreadRepository);
+    deliveryOrder.verify(slackClient).sendInstantMessage(messages.get(0));
+    deliveryOrder.verify(requestSlackThreadRepository).save(threadCaptor.getValue());
+    deliveryOrder.verify(slackClient).sendInstantMessage(messages.get(1));
   }
 
   @Test
@@ -92,10 +114,23 @@ public class TeamSlackNotificationServiceTest {
     projectA.setAssignedTranslatorUser(user(301L, "translator_fr1"));
     projectB.setAssignedTranslatorUser(user(302L, "translator_es2"));
     projectC.setAssignedTranslatorUser(user(302L, "translator_es2"));
+    projectA.setAssignedPmUser(user(300L, "review_pm"));
+    projectB.setAssignedPmUser(user(300L, "review_pm"));
+    projectA.setType(ReviewProjectType.NORMAL);
+    projectB.setType(ReviewProjectType.NORMAL);
+    projectC.setType(ReviewProjectType.NORMAL);
+    projectA.setDueDate(ZonedDateTime.parse("2026-09-10T17:00:00Z"));
+    projectB.setDueDate(ZonedDateTime.parse("2026-09-10T17:00:00Z"));
 
     when(teamService.getTeamSlackSettings(7L))
         .thenReturn(new TeamService.TeamSlackSettings(true, "client-1", "channel-1"));
-    when(teamService.getTeamSlackUserMappings(7L)).thenReturn(List.of());
+    when(teamService.getTeamSlackUserMappings(7L))
+        .thenReturn(
+            List.of(
+                new TeamService.TeamSlackUserMappingEntry(
+                    300L, "review_pm", "U_PM", null, null, null),
+                new TeamService.TeamSlackUserMappingEntry(
+                    301L, "translator_fr1", "U_TRANSLATOR", null, null, null)));
     when(slackClients.getById("client-1")).thenReturn(slackClient);
     when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.010"));
     when(requestSlackThreadRepository.findByReviewProjectRequest_Id(49L))
@@ -104,12 +139,21 @@ public class TeamSlackNotificationServiceTest {
     teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
         request, List.of(projectA, projectB, projectC));
 
-    ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-    verify(slackClient).sendInstantMessage(messageCaptor.capture());
-    assertThat(messageCaptor.getValue().getText())
-        .contains("Description: Check wording in the checkout flow.")
-        .contains("Locales (2): ca, fr-FR")
-        .contains("Assigned Translators: translator_fr1 (fr-FR), translator_es2 (ca)");
+    List<Message> messages = sentMessages(2);
+    assertThat(messages.get(0).getText())
+        .isEqualTo(
+            "*Checkout review*\n"
+                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=49|request #49>");
+    assertThat(messages.get(1).getThreadTs()).isEqualTo("171.010");
+    assertThat(messages.get(1).getText())
+        .isEqualTo(
+            "*Review request details*\n"
+                + "Type: Normal\n"
+                + "Due: 2026-09-10 10:00 PDT\n"
+                + "Description: Check wording in the checkout flow.\n"
+                + "Locales (2): ca, fr-FR\n"
+                + "Assigned PMs: <@U_PM>\n"
+                + "Assigned Translators: <@U_TRANSLATOR> (fr-FR), translator_es2 (ca)");
   }
 
   @Test
@@ -138,9 +182,13 @@ public class TeamSlackNotificationServiceTest {
 
     teamSlackNotificationService.sendReviewProjectCreateRequestNotification(request, projects);
 
-    ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-    verify(slackClient).sendInstantMessage(messageCaptor.capture());
-    assertThat(messageCaptor.getValue().getText())
+    List<Message> messages = sentMessages(2);
+    assertThat(messages.get(0).getText())
+        .isEqualTo(
+            "*Nightly web review*\n"
+                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=50|request #50>");
+    assertThat(messages.get(1).getThreadTs()).isEqualTo("171.011");
+    assertThat(messages.get(1).getText())
         .contains("Source: Automation — Web nightly sweep (cron)")
         .contains("Locales (7): am, bn, bs, ca, cs, da, +1 more")
         .doesNotContain("Description:");
@@ -167,6 +215,10 @@ public class TeamSlackNotificationServiceTest {
     ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
     verify(slackClient).sendInstantMessage(messageCaptor.capture());
     assertThat(messageCaptor.getValue().getThreadTs()).isEqualTo("171.002");
+    assertThat(messageCaptor.getValue().getText())
+        .contains("Mojito review project reassigned: #92 — Catalog refresh [ja-JP]")
+        .contains("Note: Shift to APAC")
+        .doesNotContain("View request in Mojito:");
     verify(requestSlackThreadRepository, never()).save(any(ReviewProjectRequestSlackThread.class));
   }
 
@@ -188,9 +240,16 @@ public class TeamSlackNotificationServiceTest {
     teamSlackNotificationService.sendReviewProjectAssignmentNotification(
         project, ReviewProjectAssignmentEventType.REASSIGNED, null);
 
-    ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-    verify(slackClient).sendInstantMessage(messageCaptor.capture());
-    assertThat(messageCaptor.getValue().getThreadTs()).isNull();
+    List<Message> messages = sentMessages(2);
+    assertThat(messages.get(0).getChannel()).isEqualTo("channel-2");
+    assertThat(messages.get(0).getThreadTs()).isNull();
+    assertThat(messages.get(0).getText())
+        .isEqualTo(
+            "*Mobile QA*\n"
+                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=46|request #46>");
+    assertThat(messages.get(1).getChannel()).isEqualTo("channel-2");
+    assertThat(messages.get(1).getThreadTs()).isEqualTo("171.005");
+    assertThat(messages.get(1).getText()).contains("Mojito review project reassigned: #93");
 
     ArgumentCaptor<ReviewProjectRequestSlackThread> threadCaptor =
         ArgumentCaptor.forClass(ReviewProjectRequestSlackThread.class);
@@ -221,6 +280,10 @@ public class TeamSlackNotificationServiceTest {
     ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
     verify(slackClient).sendInstantMessage(messageCaptor.capture());
     assertThat(messageCaptor.getValue().getThreadTs()).isEqualTo("171.006");
+    assertThat(messageCaptor.getValue().getText())
+        .startsWith("*Review request details*\n")
+        .contains("Locales (1): fr-FR")
+        .doesNotContain("View request in Mojito:");
     verify(requestSlackThreadRepository, never()).save(any(ReviewProjectRequestSlackThread.class));
   }
 
@@ -245,7 +308,198 @@ public class TeamSlackNotificationServiceTest {
     ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
     verify(slackClient).sendInstantMessage(messageCaptor.capture());
     assertThat(messageCaptor.getValue().getThreadTs()).isEqualTo("171.008");
+    assertThat(messageCaptor.getValue().getText())
+        .startsWith("*Review request details*\n")
+        .contains("Locales (1): ja-JP")
+        .doesNotContain("View request in Mojito:");
     verify(requestSlackThreadRepository, never()).save(any(ReviewProjectRequestSlackThread.class));
+  }
+
+  @Test
+  public void createRequestNotificationCreatesNewRootWhenClientChanges() throws Exception {
+    ReviewProjectRequest request = reviewProjectRequest(51L, "Desktop review");
+    ReviewProject project = reviewProject(209L, request, team(7L), "fr-FR");
+    ReviewProjectRequestSlackThread previousThread =
+        requestThread(request, "old-client", "channel-1", "171.012");
+    configureTeamSlack();
+    when(requestSlackThreadRepository.findByReviewProjectRequest_Id(51L))
+        .thenReturn(Optional.of(previousThread));
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.013"));
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        request, List.of(project));
+
+    List<Message> messages = sentMessages(2);
+    assertThat(messages.get(0).getThreadTs()).isNull();
+    assertThat(messages.get(0).getText())
+        .isEqualTo(
+            "*Desktop review*\n"
+                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=51|request #51>");
+    assertThat(messages.get(1).getThreadTs()).isEqualTo("171.013");
+    assertThat(messages.get(1).getText()).startsWith("*Review request details*\n");
+    verify(requestSlackThreadRepository).save(previousThread);
+    assertThat(previousThread.getSlackClientId()).isEqualTo("client-1");
+    assertThat(previousThread.getSlackChannelId()).isEqualTo("channel-1");
+    assertThat(previousThread.getThreadTs()).isEqualTo("171.013");
+  }
+
+  @Test
+  public void assignmentWithoutExistingThreadCreatesCompactEmergencyRoot() throws Exception {
+    ReviewProjectRequest request = reviewProjectRequest(52L, "Urgent checkout fix");
+    ReviewProject project = reviewProject(210L, request, team(7L), "fr-FR");
+    project.setType(ReviewProjectType.EMERGENCY);
+    configureTeamSlack();
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.014"));
+
+    teamSlackNotificationService.sendReviewProjectAssignmentNotification(
+        project, ReviewProjectAssignmentEventType.ASSIGNED, "Coverage needed");
+
+    List<Message> messages = sentMessages(2);
+    assertThat(messages.get(0).getThreadTs()).isNull();
+    assertThat(messages.get(0).getText())
+        .isEqualTo(
+            "*\uD83D\uDEA8 Urgent checkout fix*\n"
+                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=52|request #52>");
+    assertThat(messages.get(1).getThreadTs()).isEqualTo("171.014");
+    assertThat(messages.get(1).getText())
+        .startsWith("[EMERGENCY] Mojito review project assigned: #210")
+        .contains("Note: Coverage needed");
+  }
+
+  @Test
+  public void createRequestNotificationStopsWhenRootSendFails() throws Exception {
+    ReviewProjectRequest request = reviewProjectRequest(53L, "Search review");
+    ReviewProject project = reviewProject(211L, request, team(7L), "fr-FR");
+    configureTeamSlack();
+    when(slackClient.sendInstantMessage(any(Message.class)))
+        .thenThrow(new SlackClientException("Unable to post root"));
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        request, List.of(project));
+
+    Message root = sentMessages(1).get(0);
+    assertThat(root.getThreadTs()).isNull();
+    assertThat(root.getText()).startsWith("*Search review*\n");
+    verify(requestSlackThreadRepository, never()).save(any(ReviewProjectRequestSlackThread.class));
+  }
+
+  @Test
+  public void createRequestNotificationStopsWhenRootResponseIsMissing() throws Exception {
+    assertMissingRootTimestampStopsDetails(null);
+  }
+
+  @Test
+  public void createRequestNotificationStopsWhenRootTimestampIsMissing() throws Exception {
+    assertMissingRootTimestampStopsDetails(chatResponse(null));
+  }
+
+  @Test
+  public void createRequestNotificationStopsWhenRootTimestampIsBlank() throws Exception {
+    assertMissingRootTimestampStopsDetails(chatResponse("  "));
+  }
+
+  @Test
+  public void createRequestNotificationRetainsRootWhenDetailsFailAndReusesItOnRetry()
+      throws Exception {
+    assertDetailsFailureRetainsRoot(new SlackClientException("Unable to post details"));
+  }
+
+  @Test
+  public void createRequestNotificationRetainsRootWhenDetailsTransportFailsAndReusesItOnRetry()
+      throws Exception {
+    assertDetailsFailureRetainsRoot(new RestClientException("Slack connection failed"));
+  }
+
+  private void assertDetailsFailureRetainsRoot(Exception failure) throws Exception {
+    ReviewProjectRequest request = reviewProjectRequest(55L, "Settings review");
+    ReviewProject project = reviewProject(213L, request, team(7L), "fr-FR");
+    ReviewProjectRequestSlackThread savedThread =
+        requestThread(request, "client-1", "channel-1", "171.015");
+    configureTeamSlack();
+    when(requestSlackThreadRepository.findByReviewProjectRequest_Id(55L))
+        .thenReturn(Optional.empty(), Optional.empty(), Optional.of(savedThread));
+    when(slackClient.sendInstantMessage(any(Message.class)))
+        .thenReturn(chatResponse("171.015"))
+        .thenThrow(failure)
+        .thenReturn(chatResponse("171.016"));
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        request, List.of(project));
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        request, List.of(project));
+
+    List<Message> messages = sentMessages(3);
+    assertThat(messages.get(0).getThreadTs()).isNull();
+    assertThat(messages.get(1).getThreadTs()).isEqualTo("171.015");
+    assertThat(messages.get(2).getThreadTs()).isEqualTo("171.015");
+    assertThat(messages.get(2).getText()).isEqualTo(messages.get(1).getText());
+
+    ArgumentCaptor<ReviewProjectRequestSlackThread> threadCaptor =
+        ArgumentCaptor.forClass(ReviewProjectRequestSlackThread.class);
+    verify(requestSlackThreadRepository).save(threadCaptor.capture());
+    assertThat(threadCaptor.getValue().getReviewProjectRequest()).isSameAs(request);
+    assertThat(threadCaptor.getValue().getThreadTs()).isEqualTo("171.015");
+    InOrder deliveryOrder = inOrder(slackClient, requestSlackThreadRepository);
+    deliveryOrder.verify(slackClient).sendInstantMessage(messages.get(0));
+    deliveryOrder.verify(requestSlackThreadRepository).save(threadCaptor.getValue());
+    deliveryOrder.verify(slackClient).sendInstantMessage(messages.get(1));
+  }
+
+  @Test
+  public void assignmentWithoutRequestRemainsStandalone() throws Exception {
+    assertStandaloneAssignment(null);
+  }
+
+  @Test
+  public void assignmentWithoutPersistedRequestRemainsStandalone() throws Exception {
+    assertStandaloneAssignment(reviewProjectRequest(null, "Unsaved request"));
+  }
+
+  private void assertMissingRootTimestampStopsDetails(ChatPostMessageResponse response)
+      throws Exception {
+    ReviewProjectRequest request = reviewProjectRequest(54L, "Profile review");
+    ReviewProject project = reviewProject(212L, request, team(7L), "fr-FR");
+    configureTeamSlack();
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(response);
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        request, List.of(project));
+
+    Message root = sentMessages(1).get(0);
+    assertThat(root.getThreadTs()).isNull();
+    assertThat(root.getText()).startsWith("*Profile review*\n");
+    verify(requestSlackThreadRepository, never()).save(any(ReviewProjectRequestSlackThread.class));
+  }
+
+  private void assertStandaloneAssignment(ReviewProjectRequest request) throws Exception {
+    ReviewProject project = reviewProject(214L, request, team(7L), "fr-FR");
+    configureTeamSlack();
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.017"));
+
+    teamSlackNotificationService.sendReviewProjectAssignmentNotification(
+        project, ReviewProjectAssignmentEventType.ASSIGNED, "Direct assignment");
+
+    Message message = sentMessages(1).get(0);
+    assertThat(message.getChannel()).isEqualTo("channel-1");
+    assertThat(message.getThreadTs()).isNull();
+    assertThat(message.getText())
+        .startsWith("Mojito review project assigned: #214")
+        .contains("Note: Direct assignment")
+        .contains("View project: <http://localhost:8080/review-projects/214|review project #214>");
+    verifyNoInteractions(requestSlackThreadRepository);
+  }
+
+  private void configureTeamSlack() {
+    when(teamService.getTeamSlackSettings(7L))
+        .thenReturn(new TeamService.TeamSlackSettings(true, "client-1", "channel-1"));
+    when(teamService.getTeamSlackUserMappings(7L)).thenReturn(List.of());
+    when(slackClients.getById("client-1")).thenReturn(slackClient);
+  }
+
+  private List<Message> sentMessages(int count) throws SlackClientException {
+    ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+    verify(slackClient, times(count)).sendInstantMessage(messageCaptor.capture());
+    return messageCaptor.getAllValues();
   }
 
   private ReviewProjectRequest reviewProjectRequest(Long id, String name) {

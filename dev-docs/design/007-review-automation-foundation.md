@@ -68,6 +68,33 @@ Backend Notes
 - Manual and automated creation can skip default translator assignment while still keeping team and PM assignment.
 - Manual creation accepts an optional `maxWordCountPerProject` and reuses automation's source-word splitter for selected text units, repositories, and review features. Omitted or null means no splitting; a supplied limit must be a positive integer. Strings stay whole, so one string can exceed the limit. Locale results count all generated projects.
 
+Slack Notifications
+
+- Manual and automated review requests use one shared format. Team settings still select the Slack client/channel; automation setup does not need a format selector.
+- The channel message contains only the bold request title (with the emergency marker when applicable) and the request link. Link and media previews are disabled on this message to keep it compact.
+- A reply contains the existing request details: project type, due date, description excerpt or automation source, locales, assigned PMs, and assigned translators with locale coverage. User mappings still produce Slack mentions in this reply.
+- Request-wide and individual assignment updates reply to the saved request thread. If the Slack client/channel changes or there is no saved thread, Mojito creates a compact parent before posting the update.
+- The parent timestamp is saved before posting the reply. A failed reply leaves the parent available for later notifications; an unsuccessful parent post or missing timestamp stops delivery of the reply. Delivery remains best-effort, without an automatic retry queue.
+
+Example channel message:
+
+```text
+*Checkout review*
+View request in Mojito: <https://mojito.example/review-projects?requestId=44|request #44>
+```
+
+Example reply:
+
+```text
+*Review request details*
+Type: Normal
+Due: 2026-09-10 17:00 PDT
+Description: Check wording in the checkout flow.
+Locales (2): de-DE, fr-FR
+Assigned PMs: <@U_PM>
+Assigned Translators: <@U_TRANSLATOR_DE> (de-DE), <@U_TRANSLATOR_FR> (fr-FR)
+```
+
 Frontend Notes
 
 - List page mirrors review features: search, enabled filter, result-size control, create modal, hover edit/delete.

@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 
 @Service
 public class TeamSlackNotificationService {
@@ -103,8 +104,14 @@ public class TeamSlackNotificationService {
     }
 
     try {
-      sendSlackMessage(slackClient, settings, text, reviewProject.getReviewProjectRequest(), true);
-    } catch (SlackClientException ex) {
+      ReviewProjectRequest request = reviewProject.getReviewProjectRequest();
+      sendRequestSlackMessage(
+          slackClient,
+          settings,
+          buildReviewProjectRequestHeader(request, isEmergencyType(reviewProject.getType())),
+          text,
+          request);
+    } catch (SlackClientException | RestClientException ex) {
       logger.warn(
           "Failed to send review project assignment Slack notification for project {} team {}: {}",
           reviewProject.getId(),
@@ -185,8 +192,16 @@ public class TeamSlackNotificationService {
       return;
     }
 
-    Team team =
+    List<ReviewProject> projects =
         projectsInput.stream()
+            .filter(project -> project != null && project.getId() != null)
+            .toList();
+    if (projects.isEmpty()) {
+      return;
+    }
+
+    Team team =
+        projects.stream()
             .map(ReviewProject::getTeam)
             .filter(t -> t != null && t.getId() != null)
             .findFirst()
@@ -215,15 +230,18 @@ public class TeamSlackNotificationService {
         getMappingsByUserId(team.getId());
 
     String text =
-        buildReviewProjectCreateRequestMessage(
-            reviewProjectRequest, projectsInput, mappingsByUserId);
-    if (isBlank(text)) {
-      return;
-    }
+        buildReviewProjectRequestDetails(reviewProjectRequest, projects, mappingsByUserId);
 
     try {
-      sendSlackMessage(slackClient, settings, text, reviewProjectRequest, true);
-    } catch (SlackClientException ex) {
+      sendRequestSlackMessage(
+          slackClient,
+          settings,
+          buildReviewProjectRequestHeader(
+              reviewProjectRequest,
+              projects.stream().anyMatch(project -> isEmergencyType(project.getType()))),
+          text,
+          reviewProjectRequest);
+    } catch (SlackClientException | RestClientException ex) {
       logger.warn(
           "Failed to send review project {} Slack notification for request {} team {}: {}",
           context,
@@ -316,26 +334,14 @@ public class TeamSlackNotificationService {
     return builder.toString();
   }
 
-  private String buildReviewProjectCreateRequestMessage(
-      ReviewProjectRequest reviewProjectRequest,
-      List<ReviewProject> createdProjects,
-      Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
-    List<ReviewProject> projects =
-        createdProjects.stream()
-            .filter(project -> project != null && project.getId() != null)
-            .toList();
-    if (projects.isEmpty()) {
-      return null;
-    }
-
+  private String buildReviewProjectRequestHeader(
+      ReviewProjectRequest reviewProjectRequest, boolean emergency) {
     String requestName = reviewProjectRequest != null ? reviewProjectRequest.getName() : null;
     Long requestId = reviewProjectRequest != null ? reviewProjectRequest.getId() : null;
-    String requestNotes = reviewProjectRequest != null ? reviewProjectRequest.getNotes() : null;
-    List<String> localeTags = collectDistinctLocaleTags(projects);
 
     StringBuilder builder = new StringBuilder();
     builder.append("*");
-    if (projects.stream().anyMatch(project -> isEmergencyType(project.getType()))) {
+    if (emergency) {
       builder.append("\uD83D\uDEA8 ");
     }
     if (!isBlank(requestName)) {
@@ -351,10 +357,18 @@ public class TeamSlackNotificationService {
     if (!isBlank(requestLink)) {
       builder.append("\nView request in Mojito: ").append(requestLink);
     }
+    return builder.toString();
+  }
 
+  private String buildReviewProjectRequestDetails(
+      ReviewProjectRequest reviewProjectRequest,
+      List<ReviewProject> projects,
+      Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
+    StringBuilder builder = new StringBuilder("*Review request details*");
     appendReviewProjectTypesSummaryLine(builder, projects);
     appendReviewProjectDueDatesSummaryLine(builder, projects);
-    appendRequestContextSummaryLine(builder, requestNotes);
+    appendRequestContextSummaryLine(builder, reviewProjectRequest.getNotes());
+    List<String> localeTags = collectDistinctLocaleTags(projects);
     builder.append("\nLocales");
     if (!localeTags.isEmpty()) {
       builder.append(" (").append(localeTags.size()).append(")");
@@ -713,33 +727,44 @@ public class TeamSlackNotificationService {
     return "<" + url + "|automation #" + automationId + ">";
   }
 
-  private void sendSlackMessage(
+  private void sendRequestSlackMessage(
       SlackClient slackClient,
       TeamService.TeamSlackSettings settings,
-      String text,
-      ReviewProjectRequest reviewProjectRequest,
-      boolean preferExistingRequestThread)
+      String header,
+      String details,
+      ReviewProjectRequest reviewProjectRequest)
       throws SlackClientException {
     Message message = new Message();
     message.setChannel(settings.slackChannelId());
-    message.setText(text);
+    message.setText(details);
 
-    if (preferExistingRequestThread
-        && reviewProjectRequest != null
-        && reviewProjectRequest.getId() != null) {
-      reviewProjectRequestSlackThreadRepository
-          .findByReviewProjectRequest_Id(reviewProjectRequest.getId())
-          .filter(thread -> matchesSlackDestination(thread, settings))
-          .map(ReviewProjectRequestSlackThread::getThreadTs)
-          .filter(threadTs -> !isBlank(threadTs))
-          .ifPresent(message::setThreadTs);
+    if (reviewProjectRequest != null && reviewProjectRequest.getId() != null) {
+      String threadTs =
+          reviewProjectRequestSlackThreadRepository
+              .findByReviewProjectRequest_Id(reviewProjectRequest.getId())
+              .filter(thread -> matchesSlackDestination(thread, settings))
+              .map(ReviewProjectRequestSlackThread::getThreadTs)
+              .filter(ts -> !isBlank(ts))
+              .orElse(null);
+      if (isBlank(threadTs)) {
+        Message root = new Message();
+        root.setChannel(settings.slackChannelId());
+        root.setText(header);
+        root.setUnfurlLinks(false);
+        root.setUnfurlMedia(false);
+        ChatPostMessageResponse response = slackClient.sendInstantMessage(root);
+        threadTs = response != null ? response.getTs() : null;
+        if (isBlank(threadTs)) {
+          throw new SlackClientException(
+              "Slack did not return a timestamp for the request message");
+        }
+        // Keep the parent available for later updates even if posting the details fails.
+        saveRequestSlackThread(reviewProjectRequest, settings, threadTs);
+      }
+      message.setThreadTs(threadTs);
     }
 
-    ChatPostMessageResponse response = slackClient.sendInstantMessage(message);
-    if (isBlank(message.getThreadTs())) {
-      saveRequestSlackThread(
-          reviewProjectRequest, settings, response != null ? response.getTs() : null);
-    }
+    slackClient.sendInstantMessage(message);
   }
 
   private boolean matchesSlackDestination(
