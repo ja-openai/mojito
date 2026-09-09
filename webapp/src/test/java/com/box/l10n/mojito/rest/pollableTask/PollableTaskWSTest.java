@@ -22,6 +22,28 @@ import org.springframework.web.server.ResponseStatusException;
 public class PollableTaskWSTest {
 
   @Test
+  public void missingTaskCannotExposeRetainedInputOrOutput() {
+    PollableTaskWS ws = new PollableTaskWS();
+    ws.pollableTaskService = new StubPollableTaskService(null);
+    ws.aiReviewChatJobAccess = mock(AiReviewChatJobAccess.class);
+    ws.pollableTaskBlobStorage = mock(PollableTaskBlobStorage.class);
+
+    for (Runnable read :
+        List.<Runnable>of(
+            () -> ws.getPollableTaskById(404L),
+            () -> ws.getPollableTaskInput(404L),
+            () -> ws.getPollableTaskOutput(404L))) {
+      assertThatThrownBy(read::run)
+          .isInstanceOf(ResponseStatusException.class)
+          .satisfies(
+              throwable ->
+                  assertThat(((ResponseStatusException) throwable).getStatusCode())
+                      .isEqualTo(HttpStatus.NOT_FOUND));
+    }
+    verifyNoInteractions(ws.aiReviewChatJobAccess, ws.pollableTaskBlobStorage);
+  }
+
+  @Test
   public void genericEndpointsEnforceReviewOwnershipBeforeReadingTaskData() {
     PollableTask task = new PollableTask();
     task.setId(91L);

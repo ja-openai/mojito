@@ -41,20 +41,23 @@ public class PollableTaskWS {
   @RequestMapping(method = RequestMethod.GET, value = "/api/pollableTasks/{pollableTaskId}")
   public PollableTask getPollableTaskById(@PathVariable Long pollableTaskId) {
     PollableTask task = pollableTaskService.getPollableTask(pollableTaskId);
+    if (task == null) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pollable task not found.");
+    }
     aiReviewChatJobAccess.assertCanRead(task);
     return task;
   }
 
   @RequestMapping(method = RequestMethod.GET, value = "/api/pollableTasks/{pollableTaskId}/output")
   public String getPollableTaskOutput(@PathVariable Long pollableTaskId) {
-    aiReviewChatJobAccess.assertCanRead(pollableTaskService.getPollableTask(pollableTaskId));
+    getPollableTaskById(pollableTaskId);
     String outputJson = pollableTaskBlobStorage.getOutputJson(pollableTaskId);
     return outputJson;
   }
 
   @RequestMapping(method = RequestMethod.GET, value = "/api/pollableTasks/{pollableTaskId}/input")
   public String getPollableTaskInput(@PathVariable Long pollableTaskId) {
-    aiReviewChatJobAccess.assertCanRead(pollableTaskService.getPollableTask(pollableTaskId));
+    getPollableTaskById(pollableTaskId);
     String inputJson = pollableTaskBlobStorage.getInputJson(pollableTaskId);
     return inputJson;
   }
