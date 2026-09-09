@@ -45,6 +45,9 @@ public class PollableTaskService {
   @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
   public PollableTask getPollableTask(long id) {
     final PollableTask pollableTask = pollableTaskRepository.findById(id).orElse(null);
+    if (pollableTask == null) {
+      return null;
+    }
     // Access all subtasks within the transaction to fetch all entities from the database since
     // we don't use EAGER fetch on the entity anymore.
     fetchSubTasks(pollableTask);

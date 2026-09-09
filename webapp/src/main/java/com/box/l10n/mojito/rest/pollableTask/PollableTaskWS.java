@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.rest.pollableTask;
 
 import com.box.l10n.mojito.entity.PollableTask;
+import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskInspectionService;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
@@ -29,6 +30,8 @@ public class PollableTaskWS {
 
   @Autowired PollableTaskInspectionService pollableTaskInspectionService;
 
+  @Autowired AiReviewChatJobAccess aiReviewChatJobAccess;
+
   /**
    * Gets a {@link PollableTask} by id.
    *
@@ -37,17 +40,21 @@ public class PollableTaskWS {
    */
   @RequestMapping(method = RequestMethod.GET, value = "/api/pollableTasks/{pollableTaskId}")
   public PollableTask getPollableTaskById(@PathVariable Long pollableTaskId) {
-    return pollableTaskService.getPollableTask(pollableTaskId);
+    PollableTask task = pollableTaskService.getPollableTask(pollableTaskId);
+    aiReviewChatJobAccess.assertCanRead(task);
+    return task;
   }
 
   @RequestMapping(method = RequestMethod.GET, value = "/api/pollableTasks/{pollableTaskId}/output")
   public String getPollableTaskOutput(@PathVariable Long pollableTaskId) {
+    aiReviewChatJobAccess.assertCanRead(pollableTaskService.getPollableTask(pollableTaskId));
     String outputJson = pollableTaskBlobStorage.getOutputJson(pollableTaskId);
     return outputJson;
   }
 
   @RequestMapping(method = RequestMethod.GET, value = "/api/pollableTasks/{pollableTaskId}/input")
   public String getPollableTaskInput(@PathVariable Long pollableTaskId) {
+    aiReviewChatJobAccess.assertCanRead(pollableTaskService.getPollableTask(pollableTaskId));
     String inputJson = pollableTaskBlobStorage.getInputJson(pollableTaskId);
     return inputJson;
   }

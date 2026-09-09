@@ -2,8 +2,10 @@ package com.box.l10n.mojito.service.mcp.task;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskInspectionService;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
@@ -109,7 +111,8 @@ public class InspectTaskMcpToolTest {
           new PollableTaskService(),
           new PollableTaskBlobStorage(),
           emptyRepositoryRepository(),
-          ObjectMapper.withNoFailOnUnknownProperties());
+          ObjectMapper.withNoFailOnUnknownProperties(),
+          mock(AiReviewChatJobAccess.class));
     }
 
     @Override

@@ -2,10 +2,14 @@ package com.box.l10n.mojito.service.pollableTask;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import java.lang.reflect.Proxy;
 import java.time.ZonedDateTime;
@@ -14,8 +18,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 public class PollableTaskInspectionServiceTest {
+
+  @Test
+  public void inspectionEnforcesReviewOwnershipBeforeLoadingInputOrOutput() {
+    PollableTask task = new PollableTask();
+    task.setId(91L);
+    task.setName(com.box.l10n.mojito.service.oaireview.AiReviewChatJob.class.getCanonicalName());
+    AiReviewChatJobAccess access = mock(AiReviewChatJobAccess.class);
+    doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(access).assertCanRead(task);
+    PollableTaskBlobStorage storage = mock(PollableTaskBlobStorage.class);
+    PollableTaskInspectionService service =
+        new PollableTaskInspectionService(
+            new StubPollableTaskService(task, List.of()),
+            storage,
+            repositoryRepository(Optional.empty(), null),
+            ObjectMapper.withNoFailOnUnknownProperties(),
+            access);
+
+    assertThatThrownBy(() -> service.inspectTask(91L)).isInstanceOf(ResponseStatusException.class);
+    verifyNoInteractions(storage);
+  }
 
   @Test
   public void inspectTaskResolvesRepositoryAndParsesUnexpectedFailureDetails() {
@@ -43,7 +69,8 @@ public class PollableTaskInspectionServiceTest {
             pollableTaskService,
             pollableTaskBlobStorage,
             repositoryRepository(Optional.of(repository), null),
-            ObjectMapper.withNoFailOnUnknownProperties());
+            ObjectMapper.withNoFailOnUnknownProperties(),
+            mock(AiReviewChatJobAccess.class));
 
     PollableTaskInspectionService.TaskInspection inspection = service.inspectTask(50255159L);
 
@@ -67,7 +94,8 @@ public class PollableTaskInspectionServiceTest {
             new StubPollableTaskService(null, List.of()),
             new StubPollableTaskBlobStorage(),
             repositoryRepository(Optional.empty(), null),
-            ObjectMapper.withNoFailOnUnknownProperties());
+            ObjectMapper.withNoFailOnUnknownProperties(),
+            mock(AiReviewChatJobAccess.class));
 
     assertThatThrownBy(() -> service.inspectTask(404L))
         .isInstanceOf(IllegalArgumentException.class)
