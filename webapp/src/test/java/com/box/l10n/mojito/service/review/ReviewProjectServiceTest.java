@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,6 +37,7 @@ import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
+import com.box.l10n.mojito.entity.review.ReviewProjectRequestScreenshot;
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
@@ -421,7 +423,7 @@ public class ReviewProjectServiceTest {
     when(teamRepository.findByIdAndEnabledTrue(8L)).thenReturn(Optional.of(nextTeam));
 
     reviewProjectService.updateProjectRequest(
-        21L, "Catalog refresh", "notes", null, null, null, 8L, true);
+        21L, "Catalog refresh", "notes", null, null, List.of("updated-context.png"), 8L, true);
 
     assertEquals(nextTeam, projectA.getTeam());
     assertEquals(nextTeam, projectB.getTeam());
@@ -431,6 +433,17 @@ public class ReviewProjectServiceTest {
     verify(reviewProjectAssignmentHistoryRepository, times(2))
         .save(any(ReviewProjectAssignmentHistory.class));
     verify(teamSlackNotificationService)
+        .sendReviewProjectRequestAssignmentNotification(request, List.of(projectA, projectB));
+    var notificationOrder =
+        inOrder(reviewProjectRequestScreenshotRepository, teamSlackNotificationService);
+    notificationOrder
+        .verify(reviewProjectRequestScreenshotRepository)
+        .deleteByReviewProjectRequestId(44L);
+    notificationOrder
+        .verify(reviewProjectRequestScreenshotRepository)
+        .save(any(ReviewProjectRequestScreenshot.class));
+    notificationOrder
+        .verify(teamSlackNotificationService)
         .sendReviewProjectRequestAssignmentNotification(request, List.of(projectA, projectB));
   }
 

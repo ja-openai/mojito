@@ -1993,10 +1993,10 @@ public class ReviewProjectService {
     }
     Team nextTeam = shouldUpdateTeam ? resolveTeam(teamId) : null;
     boolean assignmentChanged = false;
+    List<ReviewProject> projects = List.of();
 
     if (type != null || dueDate != null || shouldUpdateTeam) {
-      List<ReviewProject> projects =
-          reviewProjectRepository.findByRequestIdWithAssignment(request.getId());
+      projects = reviewProjectRepository.findByRequestIdWithAssignment(request.getId());
       for (ReviewProject project : projects) {
         if (type != null) {
           project.setType(type);
@@ -2033,10 +2033,6 @@ public class ReviewProjectService {
           }
         }
       }
-      if (assignmentChanged) {
-        teamSlackNotificationService.sendReviewProjectRequestAssignmentNotification(
-            request, projects);
-      }
     }
     reviewProjectRepository.flush();
 
@@ -2056,6 +2052,11 @@ public class ReviewProjectService {
         screenshot.setImageName(imageId);
         reviewProjectScreenshotRepository.save(screenshot);
       }
+    }
+
+    if (assignmentChanged) {
+      teamSlackNotificationService.sendReviewProjectRequestAssignmentNotification(
+          request, projects);
     }
 
     return getProjectDetail(projectId);

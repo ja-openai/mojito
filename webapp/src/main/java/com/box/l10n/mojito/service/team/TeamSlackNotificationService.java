@@ -9,6 +9,7 @@ import com.box.l10n.mojito.entity.review.ReviewProjectRequestSlackThread;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.review.ReviewAutomationCronSchedulerService;
+import com.box.l10n.mojito.service.review.ReviewProjectRepository;
 import com.box.l10n.mojito.service.review.ReviewProjectRequestSlackThreadRepository;
 import com.box.l10n.mojito.slack.SlackClient;
 import com.box.l10n.mojito.slack.SlackClientException;
@@ -26,6 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,14 +41,15 @@ public class TeamSlackNotificationService {
   private static final Logger logger = LoggerFactory.getLogger(TeamSlackNotificationService.class);
   private static final String DEFAULT_DUE_DATE_TIME_ZONE_ID = "America/Los_Angeles";
   private static final String AUTOMATION_NOTES_PREFIX = "Created by review automation ";
-  private static final int MAX_SUMMARY_LOCALE_TAGS = 6;
-  private static final int MAX_REQUEST_DESCRIPTION_LENGTH = 160;
+  private static final int MAX_REQUEST_DESCRIPTION_LENGTH = 3000;
   private static final DateTimeFormatter SLACK_DUE_DATE_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z");
 
   private final TeamService teamService;
   private final SlackClients slackClients;
   private final ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository;
+  private final ReviewProjectRepository reviewProjectRepository;
+  private final ReviewProjectSlackAttachmentService attachmentService;
   private final ServerConfig serverConfig;
   private final ZoneId reviewProjectDueDateTimeZone;
 
@@ -54,6 +57,8 @@ public class TeamSlackNotificationService {
       TeamService teamService,
       SlackClients slackClients,
       ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository,
+      ReviewProjectRepository reviewProjectRepository,
+      ReviewProjectSlackAttachmentService attachmentService,
       ServerConfig serverConfig,
       @Value(
               "${l10n.review-project.notifications.due-date-timezone:"
@@ -63,6 +68,8 @@ public class TeamSlackNotificationService {
     this.teamService = teamService;
     this.slackClients = slackClients;
     this.reviewProjectRequestSlackThreadRepository = reviewProjectRequestSlackThreadRepository;
+    this.reviewProjectRepository = reviewProjectRepository;
+    this.attachmentService = attachmentService;
     this.serverConfig = serverConfig;
     this.reviewProjectDueDateTimeZone = toDueDateTimeZoneOrDefault(reviewProjectDueDateTimeZoneId);
   }
@@ -108,7 +115,12 @@ public class TeamSlackNotificationService {
       sendRequestSlackMessage(
           slackClient,
           settings,
-          buildReviewProjectRequestHeader(request, isEmergencyType(reviewProject.getType())),
+          () -> {
+            List<ReviewProject> projects =
+                reviewProjectRepository.findByRequestIdWithAssignment(request.getId());
+            return buildReviewProjectRequestHeader(
+                request, projects.isEmpty() ? List.of(reviewProject) : projects);
+          },
           text,
           request);
     } catch (SlackClientException | RestClientException ex) {
@@ -236,9 +248,7 @@ public class TeamSlackNotificationService {
       sendRequestSlackMessage(
           slackClient,
           settings,
-          buildReviewProjectRequestHeader(
-              reviewProjectRequest,
-              projects.stream().anyMatch(project -> isEmergencyType(project.getType()))),
+          () -> buildReviewProjectRequestHeader(reviewProjectRequest, projects),
           text,
           reviewProjectRequest);
     } catch (SlackClientException | RestClientException ex) {
@@ -335,27 +345,30 @@ public class TeamSlackNotificationService {
   }
 
   private String buildReviewProjectRequestHeader(
-      ReviewProjectRequest reviewProjectRequest, boolean emergency) {
+      ReviewProjectRequest reviewProjectRequest, List<ReviewProject> projects) {
     String requestName = reviewProjectRequest != null ? reviewProjectRequest.getName() : null;
     Long requestId = reviewProjectRequest != null ? reviewProjectRequest.getId() : null;
 
-    StringBuilder builder = new StringBuilder();
-    builder.append("*");
-    if (emergency) {
-      builder.append("\uD83D\uDEA8 ");
-    }
-    if (!isBlank(requestName)) {
-      builder.append(requestName.trim());
-    } else if (requestId != null) {
-      builder.append("Review request #").append(requestId);
-    } else {
-      builder.append("Review request");
-    }
-    builder.append("*");
-
-    String requestLink = buildReviewProjectRequestLink(requestId);
-    if (!isBlank(requestLink)) {
-      builder.append("\nView request in Mojito: ").append(requestLink);
+    boolean emergency = projects.stream().anyMatch(project -> isEmergencyType(project.getType()));
+    String title =
+        !isBlank(requestName) ? normalizeWhitespace(requestName) : "Review request #" + requestId;
+    String label = escapeSlackText(title).replace("|", " · ");
+    String requestLink = buildReviewProjectRequestLink(requestId, label);
+    String linkedTitle = requestLink == null ? label : requestLink;
+    StringBuilder builder =
+        new StringBuilder(emergency ? "🚨 " : "").append("*").append(linkedTitle).append("*");
+    List<ZonedDateTime> dueDates =
+        projects.stream()
+            .map(ReviewProject::getDueDate)
+            .filter(java.util.Objects::nonNull)
+            .sorted(java.util.Comparator.comparing(ZonedDateTime::toInstant))
+            .toList();
+    if (!dueDates.isEmpty()) {
+      boolean differentDates =
+          dueDates.stream().map(ZonedDateTime::toInstant).distinct().count() > 1;
+      builder
+          .append(differentDates ? " — Earliest due: " : " — Due: ")
+          .append(formatDueDate(dueDates.get(0)));
     }
     return builder.toString();
   }
@@ -365,16 +378,20 @@ public class TeamSlackNotificationService {
       List<ReviewProject> projects,
       Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
     StringBuilder builder = new StringBuilder("*Review request details*");
+    String link = buildReviewProjectRequestLink(reviewProjectRequest.getId());
+    builder.append("\nRequest: ").append(link == null ? "#" + reviewProjectRequest.getId() : link);
+    appendWordCountLine(builder, projects);
     appendReviewProjectTypesSummaryLine(builder, projects);
     appendReviewProjectDueDatesSummaryLine(builder, projects);
     appendRequestContextSummaryLine(builder, reviewProjectRequest.getNotes());
+    builder.append(attachmentService.buildAttachmentSummary(reviewProjectRequest.getId()));
     List<String> localeTags = collectDistinctLocaleTags(projects);
     builder.append("\nLocales");
     if (!localeTags.isEmpty()) {
       builder.append(" (").append(localeTags.size()).append(")");
     }
     builder.append(": ");
-    builder.append(localeTags.isEmpty() ? "—" : formatLocaleTagSummary(localeTags));
+    builder.append(localeTags.isEmpty() ? "—" : String.join(", ", localeTags));
 
     appendDistinctUserSummaryLine(
         builder,
@@ -384,6 +401,41 @@ public class TeamSlackNotificationService {
     appendTranslatorSummaryLine(builder, projects, mappingsByUserId);
 
     return builder.toString();
+  }
+
+  private String escapeSlackText(String value) {
+    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+  }
+
+  private void appendWordCountLine(StringBuilder builder, List<ReviewProject> projects) {
+    Map<String, Long> wordsByLocale = new LinkedHashMap<>();
+    for (ReviewProject project : projects) {
+      if (project.getLocale() != null && !isBlank(project.getLocale().getBcp47Tag())) {
+        wordsByLocale.merge(
+            project.getLocale().getBcp47Tag(),
+            project.getWordCount() == null ? 0L : Math.max(0L, project.getWordCount()),
+            Long::sum);
+      }
+    }
+    if (wordsByLocale.isEmpty()) {
+      return;
+    }
+    long min = wordsByLocale.values().stream().mapToLong(Long::longValue).min().orElse(0);
+    long max = wordsByLocale.values().stream().mapToLong(Long::longValue).max().orElse(0);
+    builder.append("\nReview words: ").append(formatWordCount(min));
+    if (min != max) {
+      builder.append("–").append(formatWordCount(max));
+    }
+    if (wordsByLocale.size() > 1) {
+      builder
+          .append(" per locale · ")
+          .append(formatWordCount(wordsByLocale.values().stream().mapToLong(Long::longValue).sum()))
+          .append(" total");
+    }
+  }
+
+  private String formatWordCount(long count) {
+    return String.format(java.util.Locale.ROOT, "%,d", count);
   }
 
   private void appendReviewProjectTypesSummaryLine(
@@ -506,7 +558,7 @@ public class TeamSlackNotificationService {
       if (localeTags.isEmpty()) {
         rendered.add(entry.getKey());
       } else {
-        rendered.add(entry.getKey() + " (" + formatLocaleTagSummary(localeTags) + ")");
+        rendered.add(entry.getKey() + " (" + String.join(", ", localeTags) + ")");
       }
     }
     builder.append(String.join(", ", rendered));
@@ -538,9 +590,10 @@ public class TeamSlackNotificationService {
       return;
     }
 
-    String descriptionExcerpt = summarizeRequestDescription(requestNotes);
-    if (!isBlank(descriptionExcerpt)) {
-      builder.append("\nDescription: ").append(descriptionExcerpt);
+    if (!isBlank(requestNotes)) {
+      builder
+          .append("\nDescription: ")
+          .append(escapeSlackText(abbreviate(requestNotes.trim(), MAX_REQUEST_DESCRIPTION_LENGTH)));
     }
   }
 
@@ -551,28 +604,6 @@ public class TeamSlackNotificationService {
     }
     String source = normalized.substring(AUTOMATION_NOTES_PREFIX.length()).trim();
     return source.isEmpty() ? null : source;
-  }
-
-  private String summarizeRequestDescription(String requestNotes) {
-    String normalized = normalizeWhitespace(requestNotes);
-    if (isBlank(normalized)) {
-      return null;
-    }
-    int sentenceEnd = findSentenceBoundary(normalized);
-    String summary =
-        sentenceEnd >= 0 ? normalized.substring(0, sentenceEnd + 1).trim() : normalized;
-    return abbreviate(summary, MAX_REQUEST_DESCRIPTION_LENGTH);
-  }
-
-  private int findSentenceBoundary(String text) {
-    for (int i = 0; i < text.length(); i++) {
-      char current = text.charAt(i);
-      if ((current == '.' || current == '!' || current == '?')
-          && (i + 1 == text.length() || Character.isWhitespace(text.charAt(i + 1)))) {
-        return i;
-      }
-    }
-    return -1;
   }
 
   private String normalizeWhitespace(String value) {
@@ -606,18 +637,6 @@ public class TeamSlackNotificationService {
 
   private List<String> sortLocaleTags(Set<String> localeTags) {
     return localeTags.stream().sorted(String.CASE_INSENSITIVE_ORDER).toList();
-  }
-
-  private String formatLocaleTagSummary(List<String> localeTags) {
-    if (localeTags == null || localeTags.isEmpty()) {
-      return "—";
-    }
-    int limit = Math.min(localeTags.size(), MAX_SUMMARY_LOCALE_TAGS);
-    List<String> visible = localeTags.subList(0, limit);
-    if (localeTags.size() <= MAX_SUMMARY_LOCALE_TAGS) {
-      return String.join(", ", visible);
-    }
-    return String.join(", ", visible) + ", +" + (localeTags.size() - limit) + " more";
   }
 
   private String eventTypeLabel(ReviewProjectAssignmentEventType eventType) {
@@ -696,6 +715,10 @@ public class TeamSlackNotificationService {
   }
 
   private String buildReviewProjectRequestLink(Long requestId) {
+    return buildReviewProjectRequestLink(requestId, "request #" + requestId);
+  }
+
+  private String buildReviewProjectRequestLink(Long requestId, String label) {
     String configuredServerUrl = serverConfig != null ? serverConfig.getUrl() : null;
     if (requestId == null || isBlank(configuredServerUrl)) {
       return null;
@@ -708,7 +731,7 @@ public class TeamSlackNotificationService {
       return null;
     }
     String url = base + "/review-projects?requestId=" + requestId;
-    return "<" + url + "|request #" + requestId + ">";
+    return "<" + url + "|" + label + ">";
   }
 
   private String buildReviewAutomationLink(Long automationId) {
@@ -730,7 +753,7 @@ public class TeamSlackNotificationService {
   private void sendRequestSlackMessage(
       SlackClient slackClient,
       TeamService.TeamSlackSettings settings,
-      String header,
+      Supplier<String> header,
       String details,
       ReviewProjectRequest reviewProjectRequest)
       throws SlackClientException {
@@ -749,7 +772,7 @@ public class TeamSlackNotificationService {
       if (isBlank(threadTs)) {
         Message root = new Message();
         root.setChannel(settings.slackChannelId());
-        root.setText(header);
+        root.setText(header.get());
         root.setUnfurlLinks(false);
         root.setUnfurlMedia(false);
         ChatPostMessageResponse response = slackClient.sendInstantMessage(root);

@@ -1200,8 +1200,7 @@ export function TeamDetailPage() {
                 />
               </div>
               <div className="user-detail-page__hint">
-                One channel per team (v1). User-to-Slack-ID mappings are stored per team in the
-                backend.
+                Slack messages for this team use this channel.
               </div>
               <div className="user-detail-page__actions">
                 <button
