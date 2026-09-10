@@ -30,6 +30,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -140,6 +141,15 @@ public class OpenAIClient {
 
   public CompletableFuture<ResponsesResponse> getResponses(
       ResponsesRequest responsesRequest, Duration httpRequestTimeout) {
+    return getResponsesCall(responsesRequest, httpRequestTimeout).response();
+  }
+
+  /** Separates the parsed response from termination of the underlying client HTTP request. */
+  public record ResponsesCall(
+      CompletableFuture<ResponsesResponse> response, CompletableFuture<Void> transportSettled) {}
+
+  public ResponsesCall getResponsesCall(
+      ResponsesRequest responsesRequest, Duration httpRequestTimeout) {
 
     String payload;
     try {
@@ -157,25 +167,44 @@ public class OpenAIClient {
             .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
             .build();
 
+    CompletableFuture<HttpResponse<String>> httpResponseFuture =
+        httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
     CompletableFuture<ResponsesResponse> responsesResponse =
-        httpClient
-            .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-            .thenApplyAsync(
-                httpResponse -> {
-                  if (httpResponse.statusCode() != 200) {
-                    throw new OpenAIClientResponseException("Responses API failed", httpResponse);
-                  } else {
-                    try {
-                      return objectMapper.readValue(httpResponse.body(), ResponsesResponse.class);
-                    } catch (JsonProcessingException e) {
-                      throw new OpenAIClientResponseException(
-                          "Can't deserialize ResponsesResponse", e, httpResponse);
-                    }
-                  }
-                },
-                asyncExecutor);
+        httpResponseFuture.thenApplyAsync(
+            httpResponse -> {
+              if (httpResponse.statusCode() != 200) {
+                throw new OpenAIClientResponseException("Responses API failed", httpResponse);
+              } else {
+                try {
+                  return objectMapper.readValue(httpResponse.body(), ResponsesResponse.class);
+                } catch (JsonProcessingException e) {
+                  throw new OpenAIClientResponseException(
+                      "Can't deserialize ResponsesResponse", e, httpResponse);
+                }
+              }
+            },
+            asyncExecutor);
 
-    return responsesResponse;
+    CompletableFuture<Void> transportSettled = new CompletableFuture<>();
+    AtomicBoolean cancellationInProgress = new AtomicBoolean();
+    httpResponseFuture.whenComplete(
+        (response, error) -> {
+          if (!cancellationInProgress.get()) transportSettled.complete(null);
+        });
+    responsesResponse.whenComplete(
+        (response, error) -> {
+          if (responsesResponse.isCancelled()) {
+            cancellationInProgress.set(true);
+            try {
+              httpResponseFuture.cancel(true);
+            } finally {
+              // A raw future may notify dependents from inside cancel, before it returns.
+              cancellationInProgress.set(false);
+              if (httpResponseFuture.isDone()) transportSettled.complete(null);
+            }
+          }
+        });
+    return new ResponsesCall(responsesResponse, transportSettled);
   }
 
   private static ObjectNode createStrictJsonSchema(Class<?> type) {
