@@ -178,6 +178,70 @@ public class OpenAIClient {
     return responsesResponse;
   }
 
+  private static ObjectNode createStrictJsonSchema(Class<?> type) {
+    ObjectMapper objectMapper = new ObjectMapper();
+    JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(objectMapper);
+    com.fasterxml.jackson.module.jsonSchema.JsonSchema baseSchema = null;
+    try {
+      baseSchema = schemaGen.generateSchema(type);
+    } catch (JsonMappingException e) {
+      throw new RuntimeException(e);
+    }
+    JsonNode schemaNode = objectMapper.valueToTree(baseSchema);
+    ObjectNode rootNode = (ObjectNode) schemaNode;
+    enhanceSchema(rootNode);
+    return rootNode;
+  }
+
+  private static void enhanceSchema(ObjectNode objectNode) {
+
+    if (!objectNode.has("type")) {
+      objectNode.put("type", "object");
+    }
+    objectNode.put("additionalProperties", false);
+
+    if (objectNode.has("properties")) {
+      ObjectNode propertiesNode = (ObjectNode) objectNode.get("properties");
+      ArrayNode requiredFields = objectNode.putArray("required");
+
+      Iterator<Map.Entry<String, JsonNode>> fields = propertiesNode.fields();
+      while (fields.hasNext()) {
+        Map.Entry<String, JsonNode> field = fields.next();
+        String fieldName = field.getKey();
+        requiredFields.add(fieldName);
+
+        JsonNode fieldSchema = field.getValue();
+        if (fieldSchema.isObject()) {
+          ObjectNode fieldObjectNode = (ObjectNode) fieldSchema;
+
+          String fieldType =
+              fieldObjectNode.has("type") ? fieldObjectNode.get("type").asText() : null;
+
+          if ("object".equals(fieldType) && fieldObjectNode.has("properties")) {
+            enhanceSchema(fieldObjectNode);
+          } else if ("array".equals(fieldType) && fieldObjectNode.has("items")) {
+            enhanceArrayItems(fieldObjectNode);
+          }
+        }
+      }
+    }
+  }
+
+  private static void enhanceArrayItems(ObjectNode arrayNode) {
+    JsonNode itemsNode = arrayNode.get("items");
+    if (itemsNode != null && itemsNode.isObject()) {
+      ObjectNode itemsObjectNode = (ObjectNode) itemsNode;
+
+      if (itemsObjectNode.has("properties")) {
+        enhanceSchema(itemsObjectNode);
+      }
+
+      if (!itemsObjectNode.has("additionalProperties")) {
+        itemsObjectNode.put("additionalProperties", false);
+      }
+    }
+  }
+
   public record ResponsesRequest(
       String model,
       String instructions,
@@ -208,67 +272,7 @@ public class OpenAIClient {
         }
 
         public static ObjectNode createJsonSchema(Class<?> type) {
-          ObjectMapper objectMapper = new ObjectMapper();
-          JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(objectMapper);
-          com.fasterxml.jackson.module.jsonSchema.JsonSchema baseSchema = null;
-          try {
-            baseSchema = schemaGen.generateSchema(type);
-          } catch (JsonMappingException e) {
-            throw new RuntimeException(e);
-          }
-          JsonNode schemaNode = objectMapper.valueToTree(baseSchema);
-          ObjectNode rootNode = (ObjectNode) schemaNode;
-          enhanceSchema(rootNode);
-          return rootNode;
-        }
-
-        private static void enhanceSchema(ObjectNode objectNode) {
-
-          if (!objectNode.has("type")) {
-            objectNode.put("type", "object");
-          }
-          objectNode.put("additionalProperties", false);
-
-          if (objectNode.has("properties")) {
-            ObjectNode propertiesNode = (ObjectNode) objectNode.get("properties");
-            ArrayNode requiredFields = objectNode.putArray("required");
-
-            Iterator<Map.Entry<String, JsonNode>> fields = propertiesNode.fields();
-            while (fields.hasNext()) {
-              Map.Entry<String, JsonNode> field = fields.next();
-              String fieldName = field.getKey();
-              requiredFields.add(fieldName);
-
-              JsonNode fieldSchema = field.getValue();
-              if (fieldSchema.isObject()) {
-                ObjectNode fieldObjectNode = (ObjectNode) fieldSchema;
-
-                String fieldType =
-                    fieldObjectNode.has("type") ? fieldObjectNode.get("type").asText() : null;
-
-                if ("object".equals(fieldType) && fieldObjectNode.has("properties")) {
-                  enhanceSchema(fieldObjectNode);
-                } else if ("array".equals(fieldType) && fieldObjectNode.has("items")) {
-                  enhanceArrayItems(fieldObjectNode);
-                }
-              }
-            }
-          }
-        }
-
-        private static void enhanceArrayItems(ObjectNode arrayNode) {
-          JsonNode itemsNode = arrayNode.get("items");
-          if (itemsNode != null && itemsNode.isObject()) {
-            ObjectNode itemsObjectNode = (ObjectNode) itemsNode;
-
-            if (itemsObjectNode.has("properties")) {
-              enhanceSchema(itemsObjectNode);
-            }
-
-            if (!itemsObjectNode.has("additionalProperties")) {
-              itemsObjectNode.put("additionalProperties", false);
-            }
-          }
+          return createStrictJsonSchema(type);
         }
       }
     }
@@ -645,67 +649,7 @@ public class OpenAIClient {
       public record JsonSchema(boolean strict, String name, Object schema) {
 
         public static ObjectNode createJsonSchema(Class<?> type) {
-          ObjectMapper objectMapper = new ObjectMapper();
-          JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(objectMapper);
-          com.fasterxml.jackson.module.jsonSchema.JsonSchema baseSchema = null;
-          try {
-            baseSchema = schemaGen.generateSchema(type);
-          } catch (JsonMappingException e) {
-            throw new RuntimeException(e);
-          }
-          JsonNode schemaNode = objectMapper.valueToTree(baseSchema);
-          ObjectNode rootNode = (ObjectNode) schemaNode;
-          enhanceSchema(rootNode);
-          return rootNode;
-        }
-
-        private static void enhanceSchema(ObjectNode objectNode) {
-
-          if (!objectNode.has("type")) {
-            objectNode.put("type", "object");
-          }
-          objectNode.put("additionalProperties", false);
-
-          if (objectNode.has("properties")) {
-            ObjectNode propertiesNode = (ObjectNode) objectNode.get("properties");
-            ArrayNode requiredFields = objectNode.putArray("required");
-
-            Iterator<Map.Entry<String, JsonNode>> fields = propertiesNode.fields();
-            while (fields.hasNext()) {
-              Map.Entry<String, JsonNode> field = fields.next();
-              String fieldName = field.getKey();
-              requiredFields.add(fieldName);
-
-              JsonNode fieldSchema = field.getValue();
-              if (fieldSchema.isObject()) {
-                ObjectNode fieldObjectNode = (ObjectNode) fieldSchema;
-
-                String fieldType =
-                    fieldObjectNode.has("type") ? fieldObjectNode.get("type").asText() : null;
-
-                if ("object".equals(fieldType) && fieldObjectNode.has("properties")) {
-                  enhanceSchema(fieldObjectNode);
-                } else if ("array".equals(fieldType) && fieldObjectNode.has("items")) {
-                  enhanceArrayItems(fieldObjectNode);
-                }
-              }
-            }
-          }
-        }
-
-        private static void enhanceArrayItems(ObjectNode arrayNode) {
-          JsonNode itemsNode = arrayNode.get("items");
-          if (itemsNode != null && itemsNode.isObject()) {
-            ObjectNode itemsObjectNode = (ObjectNode) itemsNode;
-
-            if (itemsObjectNode.has("properties")) {
-              enhanceSchema(itemsObjectNode);
-            }
-
-            if (!itemsObjectNode.has("additionalProperties")) {
-              itemsObjectNode.put("additionalProperties", false);
-            }
-          }
+          return createStrictJsonSchema(type);
         }
       }
     }

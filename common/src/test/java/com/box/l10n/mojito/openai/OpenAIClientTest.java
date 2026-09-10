@@ -60,6 +60,65 @@ public class OpenAIClientTest {
     assertEquals("API key must be provided", illegalStateException.getMessage());
   }
 
+  record SchemaOutput(
+      SchemaMetadata metadata, List<SchemaTranslation> translations, List<String> notes) {}
+
+  record SchemaMetadata(boolean reviewed) {}
+
+  record SchemaTranslation(String target) {}
+
+  @Test
+  public void testStrictJsonSchemaForResponsesAndChatCompletions() throws IOException {
+    JsonNode expected =
+        new ObjectMapper()
+            .readTree(
+                """
+                {
+                  "type": "object",
+                  "id": "urn:jsonschema:com:box:l10n:mojito:openai:OpenAIClientTest:SchemaOutput",
+                  "properties": {
+                    "metadata": {
+                      "type": "object",
+                      "id": "urn:jsonschema:com:box:l10n:mojito:openai:OpenAIClientTest:SchemaMetadata",
+                      "properties": {"reviewed": {"type": "boolean"}},
+                      "additionalProperties": false,
+                      "required": ["reviewed"]
+                    },
+                    "translations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "id": "urn:jsonschema:com:box:l10n:mojito:openai:OpenAIClientTest:SchemaTranslation",
+                        "properties": {"target": {"type": "string"}},
+                        "additionalProperties": false,
+                        "required": ["target"]
+                      }
+                    },
+                    "notes": {"type": "array", "items": {"type": "string", "additionalProperties": false}}
+                  },
+                  "additionalProperties": false,
+                  "required": ["metadata", "translations", "notes"]
+                }
+                """);
+
+    assertEquals(
+        expected,
+        OpenAIClient.ResponsesRequest.TextContainer.JsonSchema.createJsonSchema(
+            SchemaOutput.class));
+    assertEquals(
+        expected,
+        OpenAIClient.ChatCompletionsRequest.JsonFormat.JsonSchema.createJsonSchema(
+            SchemaOutput.class));
+
+    OpenAIClient.ResponsesRequest request =
+        OpenAIClient.ResponsesRequest.builder().addJsonSchema(SchemaOutput.class).build();
+    JsonNode serializedFormat = new ObjectMapper().valueToTree(request).at("/text/format");
+    assertEquals(expected, serializedFormat.get("schema"));
+    assertEquals("json_schema", serializedFormat.get("type").asText());
+    assertEquals("output_json_schema", serializedFormat.get("name").asText());
+    assertTrue(serializedFormat.get("strict").asBoolean());
+  }
+
   @Test
   public void testGetChatCompletionsSuccess() throws Exception {
     OpenAIClient.ChatCompletionsRequest chatCompletionsRequest =
