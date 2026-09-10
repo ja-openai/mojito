@@ -141,20 +141,47 @@ Changing the preset clears the conversation and ignores late results from the pr
 These choices do not change the shared prompt or constitute a quality comparison.
 
 Interactive clients submit `POST /api/ai/review/jobs` and poll `GET /api/ai/review/jobs/{taskId}`.
-Submission resolves the authenticated actor and selected settings, including the actual reasoning
-effort, into the prepared request before queuing `AiReviewConfiguredChatJob`. That frozen input
-survives the API-to-worker boundary; subsequent preference changes do not alter the job. Already
-queued `AiReviewChatJob` inputs use their stored task owner and legacy configuration. The synchronous
-`POST /api/ai/review` also uses the configured review path. Both job types restrict results to their
-creator. Outputs use existing pollable-task blob retention (`MIN_1_DAY`); expiry requires a new
-request. Stopping browser polling does not cancel queued or running provider work.
+Submission freezes the authenticated actor and selected settings in a prepared request, creates an
+existing pollable task, and starts the asynchronous provider call directly on the API instance.
+New interactive requests do not create Quartz jobs. The legacy `POST /api/ai/review` response contract
+uses the same bounded task lifecycle through asynchronous servlet completion. Reads and cancellation
+remain restricted to the task creator. Outputs retain existing blob retention (`MIN_1_DAY`).
 
-Submission returns a task ID without waiting for the model. Shared Quartz and pollable-task output
-storage let submission and polling reach different API pods. The client retries transient polling
-failures against the same task, bounds its wait to twenty minutes, and stops polling on navigation.
-Page request guards keep late results from appearing on another text unit. Expected provider failures
-are stored in the job result; generic Quartz completion does not imply a successful review. Inspect
-submission, polling, and provider outcomes separately when assessing interactive reliability.
+The task stays pending until its result is persisted. A completion callback stages a canonical
+result in the task's existing JSON message, writes the output blob, and then marks the task finished.
+If output storage fails, a bounded cleanup pass retries the immutable staged result. Polling may
+reach any API pod. The client polls the same task and cancels it with
+`DELETE /api/ai/review/jobs/{taskId}` on navigation, including navigation during submission.
+Cancellation is durable; local calls are cancelled immediately, and other instances detect it
+through periodic checks. Cancellation propagates to the underlying HTTP request.
+
+### Interactive provider capacity and deadlines
+
+`l10n.ai-review.execution.max-in-flight` defaults to **400 across all instances**, independent of
+Quartz threads or replica count. `max-in-flight-per-user` defaults to **3 per authenticated user**,
+including admins, shared across instances. A uniquely named, non-expiring database `MBlob` row holds bounded
+attempt reservations. Admission locks this row and the task in a short transaction using NOWAIT,
+then launches HTTP only after commit. Full capacity returns a retryable busy result; there is no
+interactive backlog. This is a request admission limit, not a separate HTTP connection pool.
+
+`l10n.ai-review.execution.timeout-seconds` defaults to **180 seconds overall**, measured from task
+creation. Each provider attempt uses the smaller of its adaptive timeout and the remaining overall
+budget, with at most three attempts. Expired, cancelled, or finished tasks cannot initiate a call
+or retry. Attempt tokens fence result writes and reservation release. Cancellation releases its
+reservation after the underlying HTTP future terminates or acknowledges cancellation. After process
+loss, the reservation expires at the original deadline. Client HTTP cancellation cannot establish
+whether the remote provider has stopped computing.
+
+A process restart may fail an in-flight review. A five-second cleanup pass scans unfinished review
+tasks with bounded keyset pages, materializes staged results, and fails expired or abandoned calls.
+It never resubmits an uncertain request. Generic pollable-task zombie cleanup excludes these tasks
+to preserve the guarded lifecycle. Old Quartz chat jobs remain compatible for draining and skip
+provider execution once terminal or expired. AI Translate and background review retain their
+existing scheduling and completion behavior. No schema migration is required.
+
+Automatic Ultra requests fall back to Balanced, including frozen inputs from older deployments.
+The saved Ultra preference remains available for permitted manual requests. The temporary policy is
+controlled by `l10n.ai-review.interactive.ultra-automatic-enabled=false`.
 
 Direct requests use configurable adaptive timeout multipliers (`medium=4`, `high=6`, `xhigh=8`,
 `max=12`), capped at 300 seconds by default. These budgets are not measured latency or quality gains.
@@ -189,8 +216,10 @@ expiry. Provider message filtering and browser conversation behavior remain unch
 
 Recording is best effort: storage failures do not fail a review and can leave missing starts or
 outcomes. A row spans the provider retry loop; it does not count each provider attempt or browser
-poll. Recovered job execution can create another row. Timing starts during execution, excluding
-queue delay and browser polling. A completed provider call does not prove the browser received it.
+poll. Timing starts during execution, excluding submission/admission time and browser polling.
+Compare task creation with usage start for admission latency, and usage duration for provider work.
+A completed provider call does not prove the browser received it. Lifecycle persistence and
+capacity admission are mandatory even when this optional inspection recording fails.
 Use this data to measure adoption, follow-up use, failures, and latency by selected model; it does
 not measure linguistic quality or establish that one model is better.
 

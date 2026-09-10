@@ -18,7 +18,7 @@ describe('requestAiReview', () => {
       headers: { 'Content-Type': 'application/json' },
     });
 
-  it('preserves review context and the abort signal when starting and polling a job', async () => {
+  it('preserves review context and uses the abort signal for polling', async () => {
     const abortController = new AbortController();
     const payload = {
       source: 'Account',
@@ -52,7 +52,7 @@ describe('requestAiReview', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify(payload),
-        signal: abortController.signal,
+        signal: undefined,
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -124,7 +124,7 @@ describe('requestAiReview', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('stops polling when navigation aborts the request', async () => {
+  it('cancels server work and stops polling when navigation aborts the request', async () => {
     vi.useFakeTimers();
     const abortController = new AbortController();
     const fetchMock = vi
@@ -142,7 +142,38 @@ describe('requestAiReview', () => {
     abortController.abort();
     await vi.advanceTimersByTimeAsync(1000);
     await expect(result).resolves.toMatchObject({ name: 'AbortError' });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/ai/review/jobs/42',
+      expect.objectContaining({ method: 'DELETE', keepalive: true }),
+    );
+  });
+
+  it('cancels a task when navigation happens before its submission response arrives', async () => {
+    const controller = new AbortController();
+    let submitted!: (response: Response) => void;
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            submitted = resolve;
+          }),
+      )
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const result = requestAiReview(
+      { messages: [{ role: 'user', content: 'Review.' }] },
+      { signal: controller.signal },
+    ).catch((error: unknown) => error);
+    controller.abort();
+    submitted(json({ taskId: 73 }, 202));
+    await expect(result).resolves.toMatchObject({ name: 'AbortError' });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/ai/review/jobs/73',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
   });
 
   it('does not submit an already aborted request', async () => {

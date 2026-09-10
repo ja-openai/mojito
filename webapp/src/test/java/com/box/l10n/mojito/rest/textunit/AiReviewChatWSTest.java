@@ -9,7 +9,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -30,8 +32,14 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -81,6 +89,17 @@ public class AiReviewChatWSTest {
                     invocation.getArgument(0),
                     7L,
                     new Settings("version_a", "gpt-5.6-sol", "max", "low", "default")));
+    // Existing request/response fixtures represent an HTTP request that ends with its response.
+    // Cancellation-specific tests below provide an independent transport signal instead.
+    lenient()
+        .when(openAIClient.getResponsesCall(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              CompletableFuture<OpenAIClient.ResponsesResponse> response =
+                  openAIClient.getResponses(invocation.getArgument(0), invocation.getArgument(1));
+              return new OpenAIClient.ResponsesCall(
+                  response, response.handle((value, failure) -> null));
+            });
   }
 
   @Test
@@ -794,6 +813,262 @@ public class AiReviewChatWSTest {
     assertTrue(AiReviewType.PROMPT_ALL.contains("return it verbatim as target.content"));
     assertFalse(AiReviewType.PROMPT_ALL.contains("offer two distinct"));
     assertFalse(AiReviewType.PROMPT_ALL.contains("self-estimated confidence"));
+  }
+
+  @Test
+  public void asyncReviewReturnsWhileProviderIsPendingAndRecordsTheExactResponseOnce() {
+    CompletableFuture<OpenAIClient.ResponsesResponse> provider = new CompletableFuture<>();
+    when(openAIClient.getResponses(any(), any())).thenReturn(provider);
+    when(interactiveService.start(any(), eq(81L))).thenReturn(91L);
+
+    CompletableFuture<AiReviewChatWS.AiReviewChatResponse> result =
+        aiReviewChatWS.chatPreparedAsync(
+            asyncPrepared(), 81L, Instant.now().plusSeconds(30), () -> true);
+
+    assertFalse(result.isDone());
+    verify(interactiveService, never()).finish(any(), any(), anyLong(), any(), any(), any());
+    provider.complete(successResponse("Asynchronous reply."));
+    AiReviewChatWS.AiReviewChatResponse response = result.join();
+    assertEquals("Asynchronous reply.", response.message().content());
+    assertFalse(result.cancel(true));
+    verify(interactiveService)
+        .finish(
+            eq(91L),
+            eq("completed"),
+            anyLong(),
+            eq("gpt-5.6-sol"),
+            isNull(),
+            org.mockito.ArgumentMatchers.same(response));
+  }
+
+  @Test
+  public void asyncReviewRejectsIncompleteProviderOutput() {
+    OpenAIClient.ResponsesResponse complete = successResponse("Incomplete reply.");
+    OpenAIClient.ResponsesResponse incomplete =
+        new OpenAIClient.ResponsesResponse(
+            complete.id(),
+            complete.object(),
+            complete.createdAt(),
+            "incomplete",
+            null,
+            new OpenAIClient.ResponsesResponse.IncompleteDetails("max_output_tokens"),
+            complete.model(),
+            complete.output(),
+            complete.usage(),
+            complete.metadata());
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(incomplete));
+    when(interactiveService.start(any(), eq(81L))).thenReturn(91L);
+
+    CompletableFuture<AiReviewChatWS.AiReviewChatResponse> result =
+        aiReviewChatWS.chatPreparedAsync(
+            asyncPrepared(), 81L, Instant.now().plusSeconds(30), () -> true);
+    CompletionException failure = assertThrows(CompletionException.class, result::join);
+
+    assertEquals(
+        HttpStatus.BAD_GATEWAY, ((ResponseStatusException) failure.getCause()).getStatusCode());
+    verify(openAIClient).getResponses(any(), any());
+    verify(interactiveService)
+        .finish(
+            eq(91L), eq("provider_failed"), anyLong(), eq(complete.model()), isNull(), isNull());
+  }
+
+  @Test
+  public void asyncRetriesUseOnlyTheRemainingOverallDeadlineAndStopAfterThreeAttempts() {
+    when(openAIClient.getResponses(any(), any()))
+        .thenAnswer(ignored -> CompletableFuture.failedFuture(retryableFailure()));
+    Instant deadline = Instant.now().plusSeconds(5);
+
+    CompletableFuture<AiReviewChatWS.AiReviewChatResponse> result =
+        aiReviewChatWS.chatPreparedAsync(asyncPrepared(), 81L, deadline, () -> true);
+    CompletionException failure = assertThrows(CompletionException.class, result::join);
+    assertEquals(
+        HttpStatus.BAD_GATEWAY, ((ResponseStatusException) failure.getCause()).getStatusCode());
+    ArgumentCaptor<Duration> timeouts = ArgumentCaptor.forClass(Duration.class);
+    verify(openAIClient, times(3)).getResponses(any(), timeouts.capture());
+    Duration prior = Duration.ofSeconds(5);
+    for (Duration timeout : timeouts.getAllValues()) {
+      assertTrue(timeout.compareTo(Duration.ZERO) > 0);
+      assertTrue(timeout.compareTo(prior) <= 0);
+      prior = timeout;
+    }
+  }
+
+  @Test
+  public void asyncOverallDeadlineCancelsPendingProviderAndPreventsLateRetry() throws Exception {
+    CompletableFuture<OpenAIClient.ResponsesResponse> provider = new CompletableFuture<>();
+    when(openAIClient.getResponses(any(), any())).thenReturn(provider);
+    CompletableFuture<AiReviewChatWS.AiReviewChatResponse> result =
+        aiReviewChatWS.chatPreparedAsync(
+            asyncPrepared(), 81L, Instant.now().plusMillis(100), () -> true);
+
+    ExecutionException failure =
+        assertThrows(ExecutionException.class, () -> result.get(2, TimeUnit.SECONDS));
+    assertEquals(
+        HttpStatus.GATEWAY_TIMEOUT, ((ResponseStatusException) failure.getCause()).getStatusCode());
+    // Completion hooks can run after the waiting caller wakes; wait for cancellation without
+    // polling.
+    provider.handle((response, error) -> null).get(2, TimeUnit.SECONDS);
+    assertTrue(provider.isCancelled());
+    assertFalse(provider.completeExceptionally(retryableFailure()));
+    verify(openAIClient).getResponses(any(), any());
+  }
+
+  @Test
+  public void asyncCancellationStopsTheActiveProviderAndRecordsOnlyOneFailure() {
+    CompletableFuture<OpenAIClient.ResponsesResponse> provider = new CompletableFuture<>();
+    when(openAIClient.getResponses(any(), any())).thenReturn(provider);
+    when(interactiveService.start(any(), eq(81L))).thenReturn(91L);
+    CompletableFuture<AiReviewChatWS.AiReviewChatResponse> result =
+        aiReviewChatWS.chatPreparedAsync(
+            asyncPrepared(), 81L, Instant.now().plusSeconds(30), () -> true);
+
+    assertTrue(result.cancel(true));
+    assertTrue(provider.isCancelled());
+    assertFalse(provider.complete(successResponse("Late reply.")));
+    verify(interactiveService)
+        .finish(eq(91L), eq("failed"), anyLong(), isNull(), isNull(), isNull());
+    verify(openAIClient).getResponses(any(), any());
+  }
+
+  @Test
+  public void cancelledReviewSettlesOnlyAfterItsClientTransportEnds() {
+    CompletableFuture<OpenAIClient.ResponsesResponse> provider = new CompletableFuture<>();
+    CompletableFuture<Void> transport = new CompletableFuture<>();
+    doReturn(new OpenAIClient.ResponsesCall(provider, transport))
+        .when(openAIClient)
+        .getResponsesCall(any(), any());
+    AiReviewChatWS.ReviewCall call =
+        aiReviewChatWS.chatPreparedCall(
+            asyncPrepared(), 81L, Instant.now().plusSeconds(30), () -> true);
+
+    assertTrue(call.result().cancel(true));
+
+    assertTrue(provider.isCancelled());
+    assertFalse(call.transportSettled().isDone());
+    transport.complete(null);
+    assertTrue(call.transportSettled().isDone());
+    assertFalse(call.transportSettled().isCompletedExceptionally());
+  }
+
+  @Test
+  public void retrySettlementWaitsForEveryStartedClientTransport() {
+    CompletableFuture<OpenAIClient.ResponsesResponse> first = new CompletableFuture<>();
+    CompletableFuture<OpenAIClient.ResponsesResponse> second = new CompletableFuture<>();
+    CompletableFuture<Void> firstTransport = new CompletableFuture<>();
+    CompletableFuture<Void> secondTransport = new CompletableFuture<>();
+    doReturn(
+            new OpenAIClient.ResponsesCall(first, firstTransport),
+            new OpenAIClient.ResponsesCall(second, secondTransport))
+        .when(openAIClient)
+        .getResponsesCall(any(), any());
+    AiReviewChatWS.ReviewCall call =
+        aiReviewChatWS.chatPreparedCall(
+            asyncPrepared(), 81L, Instant.now().plusSeconds(30), () -> true);
+
+    first.completeExceptionally(retryableFailure());
+    second.complete(successResponse("Retry response."));
+
+    assertEquals("Retry response.", call.result().join().message().content());
+    assertFalse(call.transportSettled().isDone());
+    secondTransport.complete(null);
+    assertFalse(call.transportSettled().isDone());
+    firstTransport.complete(null);
+    assertTrue(call.transportSettled().isDone());
+    verify(openAIClient, times(2)).getResponsesCall(any(), any());
+  }
+
+  @Test
+  public void cancellationWhileCreatingARetryWaitsForItsHandleAndCancelsIt() {
+    AtomicReference<AiReviewChatWS.ReviewCall> call = new AtomicReference<>();
+    CompletableFuture<OpenAIClient.ResponsesResponse> first = new CompletableFuture<>();
+    CompletableFuture<OpenAIClient.ResponsesResponse> second = new CompletableFuture<>();
+    CompletableFuture<Void> secondTransport = new CompletableFuture<>();
+    AtomicBoolean settledDuringCreation = new AtomicBoolean();
+    doReturn(new OpenAIClient.ResponsesCall(first, CompletableFuture.completedFuture(null)))
+        .doAnswer(
+            invocation -> {
+              call.get().result().cancel(true);
+              settledDuringCreation.set(call.get().transportSettled().isDone());
+              return new OpenAIClient.ResponsesCall(second, secondTransport);
+            })
+        .when(openAIClient)
+        .getResponsesCall(any(), any());
+    call.set(
+        aiReviewChatWS.chatPreparedCall(
+            asyncPrepared(), 81L, Instant.now().plusSeconds(30), () -> true));
+
+    first.completeExceptionally(retryableFailure());
+
+    assertTrue(call.get().result().isCancelled());
+    assertTrue(second.isCancelled());
+    assertFalse(settledDuringCreation.get());
+    assertFalse(call.get().transportSettled().isDone());
+    secondTransport.complete(null);
+    assertTrue(call.get().transportSettled().isDone());
+    verify(openAIClient, times(2)).getResponsesCall(any(), any());
+  }
+
+  @Test
+  public void synchronousClientCreationFailureDoesNotLeaveTransportReserved() {
+    doAnswer(
+            ignored -> {
+              throw new IllegalArgumentException("Invalid request");
+            })
+        .when(openAIClient)
+        .getResponsesCall(any(), any());
+
+    AiReviewChatWS.ReviewCall call =
+        aiReviewChatWS.chatPreparedCall(
+            asyncPrepared(), 81L, Instant.now().plusSeconds(30), () -> true);
+
+    assertTrue(call.result().isCompletedExceptionally());
+    assertTrue(call.transportSettled().isDone());
+  }
+
+  @Test
+  public void asyncReviewDoesNotSendWithoutAnActiveClaim() {
+    AiReviewChatWS.ReviewCall call =
+        aiReviewChatWS.chatPreparedCall(
+            asyncPrepared(), 81L, Instant.now().plusSeconds(30), () -> false);
+    assertTrue(call.result().isCancelled());
+    assertTrue(call.transportSettled().isDone());
+    verify(openAIClient, never()).getResponsesCall(any(), any());
+  }
+
+  @Test
+  public void asyncReviewDoesNotRetryAfterLosingItsClaim() {
+    CompletableFuture<OpenAIClient.ResponsesResponse> provider = new CompletableFuture<>();
+    AtomicBoolean active = new AtomicBoolean(true);
+    when(openAIClient.getResponses(any(), any())).thenReturn(provider);
+    CompletableFuture<AiReviewChatWS.AiReviewChatResponse> result =
+        aiReviewChatWS.chatPreparedAsync(
+            asyncPrepared(), 81L, Instant.now().plusSeconds(30), active::get);
+
+    active.set(false);
+    provider.completeExceptionally(retryableFailure());
+    assertTrue(result.isCancelled());
+    verify(openAIClient).getResponses(any(), any());
+  }
+
+  private Prepared asyncPrepared() {
+    return new Prepared(
+        new AiReviewChatWS.AiReviewChatRequest(
+            "Save",
+            "保存",
+            "ja-JP",
+            null,
+            null,
+            List.of(new AiReviewChatWS.AiReviewChatMessage("user", "Review."))),
+        7L,
+        new Settings("balanced", "gpt-5.6-sol", "max", "low", "default"));
+  }
+
+  private OpenAIClient.OpenAIClientResponseException retryableFailure() {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(503);
+    when(response.body()).thenReturn("{}");
+    return new OpenAIClient.OpenAIClientResponseException("Responses API failed", response);
   }
 
   private AiReviewChatWS.AiReviewChatResponse candidateResponse(

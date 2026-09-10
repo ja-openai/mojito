@@ -83,31 +83,51 @@ export async function requestAiReview(
   }
 
   options.signal?.throwIfAborted();
-  const { taskId } = await postJson<{ taskId: number }>('/api/ai/review/jobs', payload, options);
-  const result = await poll(
-    () => {
-      options.signal?.throwIfAborted();
-      return getJson<AiReviewJob>(`/api/ai/review/jobs/${taskId}`, options);
-    },
-    {
-      intervalMs: 1000,
-      timeoutMs: 20 * 60 * 1000,
-      timeoutMessage: 'AI review is taking too long. Please retry.',
-      isTransientError: (error) => !options.signal?.aborted && isTransientHttpError(error),
-      shouldStop: (job) => job.status !== 'pending',
-    },
-  );
-  options.signal?.throwIfAborted();
-  if (result.status === 'completed') {
-    return result.response;
+  // Read the short submission response even if navigation occurs, so we can cancel its task ID.
+  const { taskId } = await postJson<{ taskId: number }>('/api/ai/review/jobs', payload);
+  let cancellationSent = false;
+  const cancel = () => {
+    if (cancellationSent) return;
+    cancellationSent = true;
+    void fetch(`/api/ai/review/jobs/${taskId}`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      keepalive: true,
+    }).catch(() => {
+      // The server's overall deadline also bounds work if navigation cancellation cannot arrive.
+    });
+  };
+  options.signal?.addEventListener('abort', cancel, { once: true });
+  try {
+    if (options.signal?.aborted) cancel();
+    options.signal?.throwIfAborted();
+    const result = await poll(
+      () => {
+        options.signal?.throwIfAborted();
+        return getJson<AiReviewJob>(`/api/ai/review/jobs/${taskId}`, options);
+      },
+      {
+        intervalMs: 1000,
+        timeoutMs: 20 * 60 * 1000,
+        timeoutMessage: 'AI review is taking too long. Please retry.',
+        isTransientError: (error) => !options.signal?.aborted && isTransientHttpError(error),
+        shouldStop: (job) => job.status !== 'pending',
+      },
+    );
+    options.signal?.throwIfAborted();
+    if (result.status === 'completed') {
+      return result.response;
+    }
+    if (result.status === 'failed') {
+      const error: AiReviewRequestError = new Error(result.error.message);
+      error.status = result.error.status;
+      error.detail = result.error.message;
+      throw error;
+    }
+    throw new Error('AI review returned an unexpected response.');
+  } finally {
+    options.signal?.removeEventListener('abort', cancel);
   }
-  if (result.status === 'failed') {
-    const error: AiReviewRequestError = new Error(result.error.message);
-    error.status = result.error.status;
-    error.detail = result.error.message;
-    throw error;
-  }
-  throw new Error('AI review returned an unexpected response.');
 }
 
 export async function fetchPrecomputedAiReview(
