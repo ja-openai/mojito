@@ -75,6 +75,13 @@ sizes up to 2147483647, language tags, bounded lists, and existing enabled team 
 Only admins and PMs can change default teams; existing team access rules apply.
 Last successful writes to the same field win; different-field PATCHes are merged.
 `aiReviewPreset` accepts `fastest`, `fast`, `balanced`, `thorough`, `deep`, or `ultra`.
+`aiReviewStyle` accepts `corrections_only` or `corrections_and_alternatives`, defaulting to the latter
+for both new accounts and existing JSON without the field. `aiReviewShowScore` is a boolean that
+defaults to `true`. Style changes affect the next review and invalidate incompatible local results;
+score visibility is a rendering preference and does not initiate provider work. Both settings are
+shared by Review Projects and Workbench details and PATCH independently of speed and automatic review.
+Scores appear as compact numeric pills in review results. The information icon beside **Show score**
+in the settings dropdown explains their meaning on hover, focus, or click without changing preferences.
 `aiReviewAutomaticDisabled` must be a boolean and defaults to `false`. The automatic-review toggle
 PATCHes only this flag; selecting a speed PATCHes only `aiReviewPreset`. These independent writes
 preserve the other setting. Legacy profile and effort fields

@@ -3,7 +3,7 @@ import './ai-review-speed-control.css';
 import { type CSSProperties, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import type { AiReviewPreset } from '../api/userPreferences';
+import type { AiReviewPreset, AiReviewStyle } from '../api/userPreferences';
 import { getAnchoredDropdownPanelStyle } from './dropdownPosition';
 
 export type AiReviewSpeedControlProps = {
@@ -11,6 +11,10 @@ export type AiReviewSpeedControlProps = {
   onChange: (value: AiReviewPreset) => void;
   automaticDisabled: boolean;
   onChangeAutomaticDisabled: (disabled: boolean) => void;
+  reviewStyle?: AiReviewStyle;
+  onChangeReviewStyle?: (style: AiReviewStyle) => void;
+  showScore?: boolean;
+  onChangeShowScore?: (show: boolean) => void;
   disabled?: boolean;
   error?: string | null;
   onRetry?: () => void;
@@ -40,6 +44,10 @@ export function AiReviewSpeedControl({
   onChange,
   automaticDisabled,
   onChangeAutomaticDisabled,
+  reviewStyle = 'corrections_and_alternatives',
+  onChangeReviewStyle,
+  showScore = true,
+  onChangeShowScore,
   disabled = false,
   error,
   onRetry,
@@ -221,6 +229,26 @@ export function AiReviewSpeedControl({
                 <span>Ultra</span>
               </div>
               <p id={descriptionId}>{preview.description}</p>
+              <div className="ai-review-speed__style">
+                <label>
+                  <span>Review style</span>
+                  <select
+                    value={reviewStyle}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      onChangeReviewStyle?.(event.currentTarget.value as AiReviewStyle)
+                    }
+                  >
+                    <option value="corrections_only">Corrections only</option>
+                    <option value="corrections_and_alternatives">Corrections + alternatives</option>
+                  </select>
+                </label>
+                <p>
+                  {reviewStyle === 'corrections_only'
+                    ? 'Suggest fixes for identified issues.'
+                    : 'Suggest fixes and offer alternative wording when useful.'}
+                </p>
+              </div>
               <div className="ai-review-speed__automatic">
                 <label>
                   <input
@@ -240,6 +268,18 @@ export function AiReviewSpeedControl({
                 {automaticDisabled ? (
                   <p id={automaticDescriptionId}>Automatic review paused.</p>
                 ) : null}
+                <div className="ai-review-speed__score-option">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={showScore}
+                      disabled={disabled}
+                      onChange={(event) => onChangeShowScore?.(event.currentTarget.checked)}
+                    />
+                    <span>Show score</span>
+                  </label>
+                  <ScoreHelp />
+                </div>
               </div>
               {error ? (
                 <div role="alert">
@@ -256,5 +296,45 @@ export function AiReviewSpeedControl({
           )
         : null}
     </>
+  );
+}
+
+function ScoreHelp() {
+  const id = useId();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span
+      className="ai-review-speed__score-help"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => {
+        if (document.activeElement !== buttonRef.current) setOpen(false);
+      }}
+    >
+      <button
+        ref={buttonRef}
+        type="button"
+        className="ai-review-speed__score-info"
+        aria-label="About model confidence"
+        aria-describedby={open ? id : undefined}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onClick={() => setOpen(true)}
+      >
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.4" />
+          <path d="M10 9v5" stroke="currentColor" strokeWidth="1.4" />
+          <circle cx="10" cy="6" r="1" fill="currentColor" />
+        </svg>
+      </button>
+      {open ? (
+        <span id={id} role="tooltip" className="ai-review-speed__score-tooltip">
+          The model's self-reported confidence in its wording, from 0 to 100. This is not a
+          translation quality rating or a measured probability of correctness. A high score can
+          still accompany an error.
+        </span>
+      ) : null}
+    </span>
   );
 }

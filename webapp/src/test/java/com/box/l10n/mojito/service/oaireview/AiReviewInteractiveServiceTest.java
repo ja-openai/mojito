@@ -2,7 +2,6 @@ package com.box.l10n.mojito.service.oaireview;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -63,7 +62,8 @@ public class AiReviewInteractiveServiceTest {
 
     Prepared prepared = service.prepare(request);
 
-    assertSame(request, prepared.request());
+    assertEquals(request.messages(), prepared.request().messages());
+    assertEquals("corrections_and_alternatives", prepared.request().reviewStyle());
     assertEquals(Long.valueOf(17), prepared.userId());
     assertEquals("fast", prepared.settings().profileId());
     assertEquals("gpt-5.6-sol", prepared.settings().modelName());
@@ -83,6 +83,54 @@ public class AiReviewInteractiveServiceTest {
         () -> service.prepare(request("version_a", "review_project", "manual")));
 
     verifyNoInteractions(preferences, tasks, usage);
+  }
+
+  @Test
+  public void savedReviewStyleIsFrozenAndAnExplicitRequestCanOverrideIt() {
+    authenticate(
+        17L,
+        objectMapper.readValueUnchecked(
+            """
+            {"aiReviewStyle":"corrections_only","aiReviewShowScore":false,
+             "aiReviewPreset":"deep","aiReviewAutomaticDisabled":true}
+            """,
+            UserPreferences.class));
+    Prepared saved = service.prepare(request(null, "review_project", "manual"));
+    assertEquals("corrections_only", saved.request().reviewStyle());
+    assertEquals("deep", saved.settings().profileId());
+
+    AiReviewChatRequest override =
+        requestWithStyle(saved.request(), "corrections_and_alternatives");
+    Prepared selected = service.prepare(override);
+    assertEquals("corrections_and_alternatives", selected.request().reviewStyle());
+    authenticate(99L, UserPreferences.defaults());
+    Prepared serialized =
+        objectMapper.readValueUnchecked(
+            objectMapper.writeValueAsStringUnchecked(saved), Prepared.class);
+    service.start(serialized, 81L);
+    verify(usage)
+        .start(
+            argThat(
+                input ->
+                    input.userId().equals(17L)
+                        && objectMapper
+                            .readValueUnchecked(input.requestJson(), AiReviewChatRequest.class)
+                            .reviewStyle()
+                            .equals("corrections_only")));
+  }
+
+  @Test
+  public void invalidReviewStyleIsRejectedBeforeSchedulingOrRecordingUsage() {
+    authenticate(17L, UserPreferences.defaults());
+    for (String style : List.of("", "suggestions", "CORRECTIONS_ONLY")) {
+      assertEquals(
+          HttpStatus.BAD_REQUEST,
+          assertThrows(
+                  ResponseStatusException.class,
+                  () -> service.prepare(requestWithStyle(request(null, null, null), style)))
+              .getStatusCode());
+    }
+    verifyNoInteractions(tasks, usage);
   }
 
   @Test
@@ -377,7 +425,7 @@ public class AiReviewInteractiveServiceTest {
     ArgumentCaptor<StartInput> input = ArgumentCaptor.forClass(StartInput.class);
     verify(usage).start(input.capture());
     assertEquals(
-        request,
+        prepared.request(),
         objectMapper.readValueUnchecked(input.getValue().requestJson(), AiReviewChatRequest.class));
 
     AiReviewChatResponse response =
@@ -473,7 +521,8 @@ public class AiReviewInteractiveServiceTest {
 
     Prepared prepared = service.prepareLegacyJob(request, 81L);
 
-    assertSame(request, prepared.request());
+    assertEquals(request.messages(), prepared.request().messages());
+    assertEquals("corrections_only", prepared.request().reviewStyle());
     assertEquals(Long.valueOf(17), prepared.userId());
     assertEquals("version_b", prepared.settings().profileId());
     assertEquals("legacy-model", prepared.settings().modelName());
@@ -523,6 +572,22 @@ public class AiReviewInteractiveServiceTest {
 
   private AiReviewChatRequest requestWithLocale(String locale) {
     return requestWithEffort(locale, null);
+  }
+
+  private AiReviewChatRequest requestWithStyle(AiReviewChatRequest request, String style) {
+    return new AiReviewChatRequest(
+        request.source(),
+        request.target(),
+        request.localeTag(),
+        request.sourceDescription(),
+        request.tmTextUnitId(),
+        request.messages(),
+        request.profileId(),
+        request.requestType(),
+        request.surface(),
+        request.reasoningEffort(),
+        request.presetId(),
+        style);
   }
 
   private AiReviewChatRequest presetRequest(String preset) {

@@ -87,7 +87,7 @@ public enum AiReviewType {
       """,
       AiReviewGlossaryOutput.class);
 
-  public static final String PROMPT_ALL =
+  private static final String REVIEW_CHECKS =
       """
       You are a senior software-localization reviewer. Check the existing translation against
       the source, target locale, context, and supplied glossary before suggesting any change.
@@ -112,17 +112,29 @@ public enum AiReviewType {
          all plural/select branches. Preserve variable names, selectors, functions, and protected
          code. Translate the human-readable content. Treat supplied integrity failures as
          evidence to investigate; never silently remove a placeholder to make a sentence fluent.
+      """;
+
+  private static final String CORRECTIONS_RULE =
+      """
       4. Distinguish an actual error from a valid stylistic alternative. If the existing target
          is accurate, natural, and satisfies the constraints, return it verbatim as target.content.
          Do not rewrite it to demonstrate effort. If a correction is needed, make the smallest
          change that fixes the identified defect, then recheck meaning and structure.
          If no existing target is supplied, provide a translation using the same checks.
 
+      """;
+
+  private static final String REVIEW_CONTEXT =
+      """
       Preserve tone and regional usage. Prioritize meaning and natural grammar over matching
       source length; enforce a length limit only when one is explicitly supplied. Brief UI text
       is not inherently ambiguous. Flag only ambiguity that materially changes the translation
       and cannot be resolved from the supplied context. Do not invent product behavior.
 
+      """;
+
+  private static final String BATCH_OUTPUT =
+      """
       OUTPUT
       Return the JSON object required by the schema:
       - source: the unchanged source.
@@ -133,6 +145,10 @@ public enum AiReviewType {
       - altTarget: use empty content/explanation and confidenceLevel 0 unless a materially
         different plausible interpretation needs clarification or the user requested alternatives.
         Explain the interpretation rather than offering an arbitrary paraphrase.
+      """;
+
+  private static final String REVIEW_ASSESSMENT =
+      """
       - existingTargetRating: when an existing target is supplied, explain the evidence and score
         it consistently: 0 = a meaning, structural, or required-terminology error; 1 = an actionable
         minor grammar, spelling, or locale defect; 2 = no concrete defect found. A preference
@@ -143,6 +159,73 @@ public enum AiReviewType {
         means only that no issue was identified. AI confidence or a good score never approves a
         translation, replaces a human decision, or proves that further review is unnecessary.
       """;
+
+  public static final String PROMPT_ALL =
+      REVIEW_CHECKS + CORRECTIONS_RULE + REVIEW_CONTEXT + BATCH_OUTPUT + REVIEW_ASSESSMENT;
+
+  private static final String INTERACTIVE_ALTERNATIVES_RULE =
+      """
+      4. Assess the original translation independently from any candidate wording. A preference
+         between equally valid phrasings is not a defect. If a correction is needed, make target
+         the smallest change that fixes it, then recheck meaning and structure.
+         Also offer useful alternative wording when possible. If the original is already valid,
+         offer two distinct, natural candidate wordings in target and altTarget, each different
+         from the original and from the other candidate. Keep the original's rating at 2 when
+         no concrete defect exists. Explain each candidate's useful difference without implying
+         the original was wrong. Respect explicit chat requests that narrow the desired output.
+         Do not force arbitrary paraphrases, cosmetic changes, or unsupported interpretations
+         just to fill two slots. Return the original as target and leave altTarget empty when
+         no useful alternative exists. If no existing target is supplied, provide a translation
+         and, when useful, a distinct alternative using the same checks.
+
+      """;
+
+  private static final String INTERACTIVE_OUTPUT =
+      """
+      OUTPUT
+      Return the JSON object required by the schema:
+      - source: the unchanged source.
+      - target: content, a concise explanation of the correction or optional wording choice (or
+        why the unchanged wording is valid), and confidenceLevel (0-100).
+      - descriptionRating: explanation and score (0 = missing/misleading context, 1 = partially
+        useful, 2 = sufficient). A low context score alone does not make the translation wrong.
+      """;
+
+  private static final String INTERACTIVE_ALTERNATIVES_OUTPUT =
+      """
+      - altTarget: a second distinct useful candidate when possible, with content, an explanation
+        of its optional wording or interpretation, and confidenceLevel (0-100). Leave content and
+        explanation empty and confidenceLevel 0 when no useful second candidate exists.
+      """;
+
+  private static final String INTERACTIVE_CORRECTIONS_OUTPUT =
+      """
+      - altTarget: use empty content/explanation and confidenceLevel 0 unless a materially
+        different plausible interpretation needs clarification or the user explicitly requests
+        alternative wording. Explain the interpretation or useful wording difference; do not
+        offer an arbitrary paraphrase.
+      """;
+
+  private static final String INTERACTIVE_CONFIDENCE =
+      """
+
+      Confidence is your self-estimated confidence in each proposed wording, not an external
+      quality measurement or a calibrated probability. It is separate from the 0-2 defect rating
+      of the original translation. Assess that original before choosing candidate wordings;
+      offering an optional alternative must not lower its rating or make reviewRequired true.
+      """;
+
+  /** Null styles belong to jobs frozen before review-style preferences were introduced. */
+  public static String interactivePrompt(String reviewStyle) {
+    boolean alternatives = "corrections_and_alternatives".equals(reviewStyle);
+    return REVIEW_CHECKS
+        + (alternatives ? INTERACTIVE_ALTERNATIVES_RULE : CORRECTIONS_RULE)
+        + REVIEW_CONTEXT
+        + INTERACTIVE_OUTPUT
+        + (alternatives ? INTERACTIVE_ALTERNATIVES_OUTPUT : INTERACTIVE_CORRECTIONS_OUTPUT)
+        + REVIEW_ASSESSMENT
+        + INTERACTIVE_CONFIDENCE;
+  }
 
   final String description;
   final boolean forTextUnitVariantReview;

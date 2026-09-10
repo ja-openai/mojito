@@ -57,6 +57,11 @@ public class AiReviewInteractiveService {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Automatic AI review is turned off.");
     }
     surface(request);
+    String reviewStyle =
+        oneOf(
+            request.reviewStyle(),
+            saved.aiReviewStyle(),
+            Set.of("corrections_only", "corrections_and_alternatives"));
     boolean hasLegacySelector = request.profileId() != null || request.reasoningEffort() != null;
     if (request.presetId() != null && hasLegacySelector) {
       throw new ResponseStatusException(
@@ -80,7 +85,7 @@ public class AiReviewInteractiveService {
             HttpStatus.SERVICE_UNAVAILABLE, "The selected AI review preset is unavailable.");
       }
       return new Prepared(
-          normalizeRequestLocale(request),
+          normalizeRequest(request, reviewStyle),
           userId,
           new Settings(
               preset,
@@ -103,7 +108,7 @@ public class AiReviewInteractiveService {
               throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown AI review model.");
         };
     return new Prepared(
-        normalizeRequestLocale(request),
+        normalizeRequest(request, reviewStyle),
         userId,
         new Settings(
             profile,
@@ -116,7 +121,8 @@ public class AiReviewInteractiveService {
   /** Drain jobs submitted by an older deployment without depending on an HTTP security context. */
   public Prepared prepareLegacyJob(AiReviewChatRequest request, Long taskId) {
     return new Prepared(
-        normalizeRequestLocale(request),
+        normalizeRequest(
+            request, request.reviewStyle() == null ? "corrections_only" : request.reviewStyle()),
         tasks.getCreatedByUserIdWithAncestorFallback(taskId),
         new Settings(
             "version_b",
@@ -170,14 +176,14 @@ public class AiReviewInteractiveService {
     }
   }
 
-  private AiReviewChatRequest normalizeRequestLocale(AiReviewChatRequest request) {
+  private AiReviewChatRequest normalizeRequest(AiReviewChatRequest request, String reviewStyle) {
     String locale = request.localeTag();
     String normalized = locale == null || locale.isBlank() ? "en" : locale.trim();
     if (normalized.length() > 64) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "AI review locale must be at most 64 characters.");
     }
-    if (normalized.equals(locale)) {
+    if (normalized.equals(locale) && reviewStyle.equals(request.reviewStyle())) {
       return request;
     }
     return new AiReviewChatRequest(
@@ -191,7 +197,8 @@ public class AiReviewInteractiveService {
         request.requestType(),
         request.surface(),
         request.reasoningEffort(),
-        request.presetId());
+        request.presetId(),
+        reviewStyle);
   }
 
   private String requestType(AiReviewChatRequest request) {

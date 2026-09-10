@@ -1,14 +1,18 @@
-import type { AiReviewPreset, ApiUserPreferences } from '../api/userPreferences';
+import type { AiReviewPreset, AiReviewStyle, ApiUserPreferences } from '../api/userPreferences';
 import { useSaveUserPreferences, useUserPreferences } from './useUserPreferences';
 
 export type AiReviewSettings = {
   preset: AiReviewPreset;
   automaticDisabled: boolean;
+  reviewStyle: AiReviewStyle;
+  showScore: boolean;
   ready: boolean;
   isSaving: boolean;
   error: string | null;
   onChangePreset: (preset: AiReviewPreset) => void;
   onChangeAutomaticDisabled: (disabled: boolean) => void;
+  onChangeReviewStyle: (style: AiReviewStyle) => void;
+  onChangeShowScore: (showScore: boolean) => void;
   onRetryLoad: () => void;
 };
 
@@ -28,12 +32,16 @@ export function useAiReviewPreferences(): AiReviewSettings {
   return {
     preset,
     automaticDisabled,
+    reviewStyle: preferences.data?.aiReviewStyle ?? 'corrections_and_alternatives',
+    showScore: preferences.data?.aiReviewShowScore ?? true,
     ready: Boolean(preferences.data),
     isSaving: save.isPending,
     error:
       save.error?.message ?? (preferences.isError ? 'Could not load AI review settings.' : null),
     onChangePreset: (nextPreset) => save.mutate({ aiReviewPreset: nextPreset }),
     onChangeAutomaticDisabled: (disabled) => save.mutate({ aiReviewAutomaticDisabled: disabled }),
+    onChangeReviewStyle: (style) => save.mutate({ aiReviewStyle: style }),
+    onChangeShowScore: (showScore) => save.mutate({ aiReviewShowScore: showScore }),
     onRetryLoad: () => {
       void preferences.refetch();
     },

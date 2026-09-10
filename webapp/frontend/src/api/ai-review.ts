@@ -1,4 +1,4 @@
-import type { AiReviewPreset } from './userPreferences';
+import type { AiReviewPreset, AiReviewStyle } from './userPreferences';
 
 export type AiReviewMessage = {
   role: 'user' | 'assistant';
@@ -14,6 +14,7 @@ export type AiReviewRequest = {
   profileId?: 'version_a' | 'version_b';
   reasoningEffort?: 'low' | 'medium' | 'high';
   presetId?: AiReviewPreset;
+  reviewStyle?: AiReviewStyle;
   requestType?: 'automatic' | 'manual' | 'follow_up' | 'retry';
   surface?: 'review_project' | 'text_unit_detail';
   messages: AiReviewMessage[];
@@ -21,6 +22,7 @@ export type AiReviewRequest = {
 
 export type AiReviewSuggestion = {
   content: string;
+  kind?: 'correction' | 'alternative';
   confidenceLevel?: number;
   explanation?: string;
 };
@@ -28,6 +30,7 @@ export type AiReviewSuggestion = {
 export type AiReviewReview = {
   score: number;
   explanation: string;
+  confidenceLevel?: number;
 };
 
 export type AiReviewResponse = {

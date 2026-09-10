@@ -1,6 +1,7 @@
 export type AiReviewProfile = 'version_a' | 'version_b';
 export type AiReviewReasoningEffort = 'low' | 'medium' | 'high';
 export type AiReviewPreset = 'fastest' | 'fast' | 'balanced' | 'thorough' | 'deep' | 'ultra';
+export type AiReviewStyle = 'corrections_only' | 'corrections_and_alternatives';
 
 export type ApiUserPreferences = {
   initialized: boolean;
@@ -14,6 +15,8 @@ export type ApiUserPreferences = {
   aiReviewReasoningEffort?: AiReviewReasoningEffort;
   aiReviewPreset?: AiReviewPreset;
   aiReviewAutomaticDisabled: boolean;
+  aiReviewStyle?: AiReviewStyle;
+  aiReviewShowScore?: boolean;
 };
 
 export type UserPreferencesPatch = Partial<Omit<ApiUserPreferences, 'initialized'>>;

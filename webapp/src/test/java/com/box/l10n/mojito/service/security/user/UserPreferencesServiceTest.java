@@ -74,6 +74,10 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
     assertEquals("low", preferencesService.getCurrentUserPreferences().aiReviewReasoningEffort());
     assertEquals("balanced", preferencesService.getCurrentUserPreferences().aiReviewPreset());
     assertFalse(preferencesService.getCurrentUserPreferences().aiReviewAutomaticDisabled());
+    assertEquals(
+        "corrections_and_alternatives",
+        preferencesService.getCurrentUserPreferences().aiReviewStyle());
+    assertTrue(preferencesService.getCurrentUserPreferences().aiReviewShowScore());
     assertTrue(preferencesRepository.findByUserId(firstUser.getId()).isEmpty());
     authenticate(secondUser);
     assertEquals(UserPreferences.defaults(), preferencesService.getCurrentUserPreferences());
@@ -122,7 +126,11 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
     UserPreferencesEntity entity = new UserPreferencesEntity();
     entity.setUser(firstUser);
     for (String profileField :
-        List.of("", ",\"aiReviewProfile\":null", ",\"aiReviewReasoningEffort\":null")) {
+        List.of(
+            "",
+            ",\"aiReviewProfile\":null",
+            ",\"aiReviewReasoningEffort\":null",
+            ",\"aiReviewStyle\":null,\"aiReviewShowScore\":null")) {
       String historicalJson =
           """
           {"initialized":true,"worksetSize":50,"preferredLocales":["uk"],
@@ -138,6 +146,8 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
       assertFalse(restored.aiReviewAutomaticDisabled());
       assertEquals("low", restored.aiReviewReasoningEffort());
       assertEquals("balanced", restored.aiReviewPreset());
+      assertEquals("corrections_and_alternatives", restored.aiReviewStyle());
+      assertTrue(restored.aiReviewShowScore());
       assertTrue(restored.initialized());
       assertEquals(Integer.valueOf(50), restored.worksetSize());
       assertEquals(List.of("uk"), restored.preferredLocales());
@@ -152,6 +162,8 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
       assertFalse(updated.aiReviewAutomaticDisabled());
       assertEquals("low", updated.aiReviewReasoningEffort());
       assertEquals("balanced", updated.aiReviewPreset());
+      assertEquals("corrections_and_alternatives", updated.aiReviewStyle());
+      assertTrue(updated.aiReviewShowScore());
       assertEquals(List.of("uk"), updated.preferredLocales());
       assertEquals(updated, preferencesService.getCurrentUserPreferences());
     }
@@ -217,6 +229,29 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
   }
 
   @Test
+  public void reviewStyleAndScorePersistIndependentlyOfSpeedAndAutomaticReview() throws Exception {
+    patch("{\"aiReviewPreset\":\"deep\",\"aiReviewAutomaticDisabled\":true}");
+    UserPreferences saved =
+        patch("{\"aiReviewStyle\":\"corrections_only\",\"aiReviewShowScore\":false}");
+    assertEquals(saved, preferencesService.getCurrentUserPreferences());
+    assertEquals("corrections_only", saved.aiReviewStyle());
+    assertFalse(saved.aiReviewShowScore());
+    assertEquals("deep", saved.aiReviewPreset());
+    assertTrue(saved.aiReviewAutomaticDisabled());
+
+    UserPreferences alternatives = patch("{\"aiReviewStyle\":\"corrections_and_alternatives\"}");
+    assertFalse(alternatives.aiReviewShowScore());
+    assertTrue(alternatives.aiReviewAutomaticDisabled());
+    assertEquals("deep", alternatives.aiReviewPreset());
+    UserPreferences scores = patch("{\"aiReviewShowScore\":true}");
+    assertEquals("corrections_and_alternatives", scores.aiReviewStyle());
+    assertTrue(scores.aiReviewShowScore());
+    assertEquals("deep", scores.aiReviewPreset());
+    assertTrue(scores.aiReviewAutomaticDisabled());
+    assertEquals(scores, patch("{\"aiReviewPreset\":\"deep\"}"));
+  }
+
+  @Test
   public void invalidInputCannotSaveAnyFields() throws Exception {
     UserPreferences saved = patch("{\"worksetSize\":50}");
     for (String body :
@@ -251,6 +286,12 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
             "{\"aiReviewPreset\":\"\"}",
             "{\"aiReviewPreset\":null}",
             "{\"aiReviewPreset\":true}",
+            "{\"aiReviewStyle\":\"unknown\"}",
+            "{\"aiReviewStyle\":null}",
+            "{\"aiReviewStyle\":true}",
+            "{\"aiReviewShowScore\":null}",
+            "{\"aiReviewShowScore\":\"false\"}",
+            "{\"worksetSize\":100,\"aiReviewStyle\":\"unknown\"}",
             "{\"worksetSize\":100,\"aiReviewPreset\":\"unknown\"}",
             "{\"worksetSize\":100,\"aiReviewReasoningEffort\":\"invalid\"}",
             "{\"worksetSize\":100,\"aiReviewProfile\":\"unknown\"}",

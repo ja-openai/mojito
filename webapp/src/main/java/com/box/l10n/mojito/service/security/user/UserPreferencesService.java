@@ -40,7 +40,9 @@ public class UserPreferencesService {
           "aiReviewProfile",
           "aiReviewAutomaticDisabled",
           "aiReviewReasoningEffort",
-          "aiReviewPreset");
+          "aiReviewPreset",
+          "aiReviewStyle",
+          "aiReviewShowScore");
 
   private final UserService userService;
   private final UserPreferencesRepository preferencesRepository;
@@ -126,11 +128,18 @@ public class UserPreferencesService {
             .contains(aiReviewPreset.textValue())) {
       throw invalid("Unknown AI review preset");
     }
+    JsonNode aiReviewStyle = merged.get("aiReviewStyle");
+    if (!aiReviewStyle.isTextual()
+        || !Set.of("corrections_only", "corrections_and_alternatives")
+            .contains(aiReviewStyle.textValue())) {
+      throw invalid("AI review style must be corrections_only or corrections_and_alternatives");
+    }
     for (String field :
         List.of(
             "visibleTextEditorEnabled",
             "reviewProjectSearchEnabled",
-            "aiReviewAutomaticDisabled")) {
+            "aiReviewAutomaticDisabled",
+            "aiReviewShowScore")) {
       if (!merged.get(field).isBoolean()) {
         throw invalid(field + " must be a boolean");
       }

@@ -112,7 +112,7 @@ public class AiReviewChatWS {
     ResponsesRequest.Builder requestBuilder =
         ResponsesRequest.builder()
             .model(settings.modelName())
-            .instructions(getPrompt(localeTag))
+            .instructions(getPrompt(localeTag, request.reviewStyle()))
             .reasoningEffort(settings.reasoningEffort())
             .textVerbosity(settings.textVerbosity())
             .serviceTier(settings.serviceTier())
@@ -172,7 +172,7 @@ public class AiReviewChatWS {
         throw new InvalidReviewResponseException("AI review provider returned no review output.");
       }
       logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
-      response = toChatResponse(output);
+      response = toChatResponse(output, target);
     } catch (InvalidReviewResponseException e) {
       ResponseStatusException failure =
           new ResponseStatusException(
@@ -210,7 +210,8 @@ public class AiReviewChatWS {
     return response;
   }
 
-  private AiReviewChatResponse toChatResponse(AiReviewTextUnitVariantOutput output) {
+  private AiReviewChatResponse toChatResponse(
+      AiReviewTextUnitVariantOutput output, String originalTarget) {
     String reply = output.target() != null ? output.target().explanation() : null;
     if (!hasText(reply) && output.reviewRequired() != null) {
       reply = output.reviewRequired().reason();
@@ -222,13 +223,28 @@ public class AiReviewChatWS {
     List<AiReviewChatSuggestion> suggestions = new ArrayList<>();
     Set<String> seen = new HashSet<>();
 
+    boolean hasOriginalAssessment =
+        originalTarget != null && hasUsefulExistingTargetRating(output.existingTargetRating());
+    boolean unchangedTarget =
+        originalTarget != null
+            && output.target() != null
+            && originalTarget.equals(output.target().content());
+    String primaryKind = null;
+    if (hasOriginalAssessment) {
+      if (output.existingTargetRating().score() == 2) {
+        primaryKind = "alternative";
+      } else if (!unchangedTarget) {
+        primaryKind = "correction";
+      }
+    }
     if (output.target() != null) {
       addSuggestion(
           suggestions,
           seen,
           output.target().content(),
           output.target().confidenceLevel(),
-          output.target().explanation());
+          output.target().explanation(),
+          primaryKind);
     }
     if (output.altTarget() != null) {
       addSuggestion(
@@ -236,14 +252,17 @@ public class AiReviewChatWS {
           seen,
           output.altTarget().content(),
           output.altTarget().confidenceLevel(),
-          output.altTarget().explanation());
+          output.altTarget().explanation(),
+          "alternative");
     }
 
     AiReviewChatReview review = null;
-    if (hasUsefulExistingTargetRating(output.existingTargetRating())) {
+    if (hasOriginalAssessment) {
       review =
           new AiReviewChatReview(
-              output.existingTargetRating().score(), output.existingTargetRating().explanation());
+              output.existingTargetRating().score(),
+              output.existingTargetRating().explanation(),
+              unchangedTarget ? output.target().confidenceLevel() : null);
     }
 
     return new AiReviewChatResponse(
@@ -265,12 +284,13 @@ public class AiReviewChatWS {
       Set<String> seen,
       String content,
       Integer confidenceLevel,
-      String explanation) {
+      String explanation,
+      String kind) {
     if (!hasText(content)) {
       return;
     }
     if (seen.add(content)) {
-      suggestions.add(new AiReviewChatSuggestion(content, confidenceLevel, explanation));
+      suggestions.add(new AiReviewChatSuggestion(content, confidenceLevel, explanation, kind));
     }
   }
 
@@ -289,11 +309,10 @@ public class AiReviewChatWS {
     return value.trim();
   }
 
-  private String getPrompt(String localeTag) {
+  private String getPrompt(String localeTag, String reviewStyle) {
+    String prompt = AiReviewType.interactivePrompt(reviewStyle);
     String promptSuffix = aiTranslateLocalePromptSuffixService.getLocalePromptSuffix(localeTag);
-    return promptSuffix == null
-        ? AiReviewType.PROMPT_ALL
-        : "%s %s".formatted(AiReviewType.PROMPT_ALL, promptSuffix);
+    return promptSuffix == null ? prompt : "%s %s".formatted(prompt, promptSuffix);
   }
 
   private String buildIntegrityContextMessage(Long tmTextUnitId, String target, String localeTag) {
@@ -493,7 +512,35 @@ public class AiReviewChatWS {
       String requestType,
       String surface,
       String reasoningEffort,
-      String presetId) {
+      String presetId,
+      String reviewStyle) {
+    public AiReviewChatRequest(
+        String source,
+        String target,
+        String localeTag,
+        String sourceDescription,
+        Long tmTextUnitId,
+        List<AiReviewChatMessage> messages,
+        String profileId,
+        String requestType,
+        String surface,
+        String reasoningEffort,
+        String presetId) {
+      this(
+          source,
+          target,
+          localeTag,
+          sourceDescription,
+          tmTextUnitId,
+          messages,
+          profileId,
+          requestType,
+          surface,
+          reasoningEffort,
+          presetId,
+          null);
+    }
+
     public AiReviewChatRequest(
         String source,
         String target,
@@ -566,9 +613,17 @@ public class AiReviewChatWS {
   public record AiReviewChatMessage(String role, String content) {}
 
   public record AiReviewChatSuggestion(
-      String content, Integer confidenceLevel, String explanation) {}
+      String content, Integer confidenceLevel, String explanation, String kind) {
+    public AiReviewChatSuggestion(String content, Integer confidenceLevel, String explanation) {
+      this(content, confidenceLevel, explanation, null);
+    }
+  }
 
-  public record AiReviewChatReview(int score, String explanation) {}
+  public record AiReviewChatReview(int score, String explanation, Integer confidenceLevel) {
+    public AiReviewChatReview(int score, String explanation) {
+      this(score, explanation, null);
+    }
+  }
 
   public record AiReviewChatResponse(
       AiReviewChatMessage message,

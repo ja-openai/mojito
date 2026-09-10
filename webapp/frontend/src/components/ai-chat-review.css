@@ -197,3 +197,34 @@
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
 }
+
+.ai-chat-review__suggestion-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.ai-chat-review__suggestion-kind {
+  font-weight: var(--font-weight-semibold);
+}
+
+.ai-chat-review__confidence.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-width: 2em;
+  min-height: 0;
+  height: 1.4em;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: color-mix(in srgb, var(--color-border) 24%, transparent);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+}

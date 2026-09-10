@@ -98,6 +98,7 @@ export function TextUnitDetailPage() {
   const currentUser = useUser();
   const aiSettings = useAiReviewPreferences();
   const aiPreset = aiSettings.preset;
+  const aiReviewStyle = aiSettings.reviewStyle;
   const aiPreferencesReady = aiSettings.ready;
   const aiAutomaticDisabled = aiSettings.automaticDisabled;
   const queryClient = useQueryClient();
@@ -466,8 +467,8 @@ export function TextUnitDetailPage() {
     }
     const variantId =
       activeTextUnit.tmTextUnitVariantId ?? activeTextUnit.tmTextUnitCurrentVariantId;
-    return `${currentUser.username}:${activeTextUnit.tmTextUnitId}:${localeForEditing}:${variantId ?? 'none'}:${aiPreset}`;
-  }, [activeTextUnit, localeForEditing, currentUser.username, aiPreset]);
+    return `${currentUser.username}:${activeTextUnit.tmTextUnitId}:${localeForEditing}:${variantId ?? 'none'}:${aiPreset}:${aiReviewStyle}`;
+  }, [activeTextUnit, localeForEditing, currentUser.username, aiPreset, aiReviewStyle]);
 
   const [storedAiConversation, setStoredAiConversation] = useState<{
     contextKey: string | null;
@@ -536,6 +537,7 @@ export function TextUnitDetailPage() {
         const response = await requestAiReview(
           {
             presetId: aiPreset,
+            reviewStyle: aiReviewStyle,
             requestType: 'automatic',
             surface: 'text_unit_detail',
             source: activeTextUnit.source ?? '',
@@ -600,6 +602,7 @@ export function TextUnitDetailPage() {
     activeTextUnit,
     aiContextKey,
     aiPreset,
+    aiReviewStyle,
     aiPreferencesReady,
     aiAutomaticDisabled,
     glossaryMatchesQuery.data,
@@ -1107,6 +1110,7 @@ export function TextUnitDetailPage() {
         const response = await requestAiReview(
           {
             presetId: aiPreset,
+            reviewStyle: aiReviewStyle,
             requestType: baseMessages.length > 0 ? 'follow_up' : 'manual',
             surface: 'text_unit_detail',
             source: activeTextUnit.source ?? '',
@@ -1159,6 +1163,7 @@ export function TextUnitDetailPage() {
     })();
   }, [
     aiPreset,
+    aiReviewStyle,
     aiPreferencesReady,
     setAiMessages,
     activeTextUnit,
@@ -1197,6 +1202,7 @@ export function TextUnitDetailPage() {
           const response = await requestAiReview(
             {
               presetId: aiPreset,
+              reviewStyle: aiReviewStyle,
               requestType,
               surface: 'text_unit_detail',
               source: activeTextUnit.source ?? '',
@@ -1251,6 +1257,7 @@ export function TextUnitDetailPage() {
     },
     [
       aiPreset,
+      aiReviewStyle,
       aiPreferencesReady,
       setAiMessages,
       activeTextUnit,

@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useId, useMemo, useRef } from 'react';
 
 import type { AiReviewReview, AiReviewSuggestion } from '../api/ai-review';
 import type { AiReviewSettings } from '../hooks/useAiReviewPreferences';
+import { AiReviewConfidence } from './AiReviewConfidence';
 
 export type AiChatReviewMessage = {
   id: string;
@@ -58,6 +59,7 @@ export function AiChatReview({
   );
   const threadRef = useRef<HTMLDivElement | null>(null);
   const hasInput = input.trim().length > 0;
+  const showScore = settings?.showScore ?? true;
   const submitReview =
     Boolean(onReview) && settings?.automaticDisabled === true && messages.length === 0 && !hasInput;
   const submitDisabled =
@@ -83,17 +85,23 @@ export function AiChatReview({
           const suggestions = allSuggestions.filter(
             (suggestion) => suggestion.content !== currentTarget,
           );
+          const hasCorrection = suggestions.some((suggestion) => suggestion.kind !== 'alternative');
+          const hasOnlyAlternatives = suggestions.length > 0 && !hasCorrection;
           const showResult =
             message.sender === 'assistant' &&
             (Boolean(review) || allSuggestions.length > 0) &&
             !message.isError;
-          const resultStatus =
-            suggestions.length > 0
-              ? 'Change suggested'
+          const resultStatus = hasCorrection
+            ? 'Change suggested'
+            : !review && hasOnlyAlternatives
+              ? 'Alternative wording'
               : !review || review.score === 2
-                ? 'No change suggested'
+                ? hasOnlyAlternatives
+                  ? 'No correction suggested'
+                  : 'No change suggested'
                 : 'Review needed';
           const resultExplanation =
+            (hasOnlyAlternatives ? reviewSummary : '') ||
             (review && review.score !== 2 && suggestions.length === 0
               ? review.explanation?.trim()
               : '') ||
@@ -116,8 +124,16 @@ export function AiChatReview({
               {showResult ? (
                 <>
                   <p className="ai-chat-review__result-status">{resultStatus}</p>
-                  {suggestions.length === 0 && resultExplanation ? (
+                  {(suggestions.length === 0 || hasOnlyAlternatives) && resultExplanation ? (
                     <p className="ai-chat-review__message-content">{resultExplanation}</p>
+                  ) : null}
+                  {showScore && suggestions.length === 0 ? (
+                    <AiReviewConfidence
+                      value={
+                        allSuggestions.find((suggestion) => suggestion.content === currentTarget)
+                          ?.confidenceLevel ?? review?.confidenceLevel
+                      }
+                    />
                   ) : null}
                 </>
               ) : (
@@ -141,47 +157,69 @@ export function AiChatReview({
 
               {suggestions.length > 0 ? (
                 <div className="ai-chat-review__suggestions">
-                  {suggestions.map((suggestion, suggestionIndex) => (
-                    <div
-                      key={`${message.id}-suggestion-${suggestionIndex}`}
-                      className="ai-chat-review__suggestion"
-                    >
-                      <div className="ai-chat-review__suggestion-main">
-                        <span className="ai-chat-review__suggestion-content">
-                          {suggestion.content}
-                        </span>
-                        {suggestion.explanation?.trim() ||
-                        (showResult && suggestionIndex === 0 && resultExplanation) ? (
-                          <span className="ai-chat-review__suggestion-explanation">
-                            {suggestion.explanation?.trim() || resultExplanation}
+                  {suggestions.map((suggestion, suggestionIndex) => {
+                    const explanation =
+                      suggestion.explanation?.trim() ||
+                      (!hasOnlyAlternatives && showResult && suggestionIndex === 0
+                        ? resultExplanation
+                        : '');
+                    const showExplanation =
+                      explanation && (!hasOnlyAlternatives || explanation !== resultExplanation);
+                    return (
+                      <div
+                        key={`${message.id}-suggestion-${suggestionIndex}`}
+                        className="ai-chat-review__suggestion"
+                      >
+                        <div className="ai-chat-review__suggestion-main">
+                          {suggestion.kind || showScore ? (
+                            <div className="ai-chat-review__suggestion-meta">
+                              {suggestion.kind ? (
+                                <span className="ai-chat-review__suggestion-kind">
+                                  {suggestion.kind === 'alternative'
+                                    ? 'Alternative wording'
+                                    : 'Suggested correction'}
+                                </span>
+                              ) : null}
+                              {showScore ? (
+                                <AiReviewConfidence value={suggestion.confidenceLevel} />
+                              ) : null}
+                            </div>
+                          ) : null}
+                          <span className="ai-chat-review__suggestion-content">
+                            {suggestion.content}
                           </span>
-                        ) : null}
-                        {suggestionErrors.get(suggestion) ? (
-                          <span
-                            className="ai-chat-review__suggestion-error"
-                            id={`${validationId}-${index}-${suggestionIndex}`}
+                          {showExplanation ? (
+                            <span className="ai-chat-review__suggestion-explanation">
+                              {explanation}
+                            </span>
+                          ) : null}
+                          {suggestionErrors.get(suggestion) ? (
+                            <span
+                              className="ai-chat-review__suggestion-error"
+                              id={`${validationId}-${index}-${suggestionIndex}`}
+                            >
+                              Cannot use this suggestion: {suggestionErrors.get(suggestion)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="ai-chat-review__suggestion-actions">
+                          <button
+                            type="button"
+                            className="ai-chat-review__button"
+                            disabled={Boolean(suggestionErrors.get(suggestion))}
+                            aria-describedby={
+                              suggestionErrors.get(suggestion)
+                                ? `${validationId}-${index}-${suggestionIndex}`
+                                : undefined
+                            }
+                            onClick={() => onUseSuggestion(suggestion)}
                           >
-                            Cannot use this suggestion: {suggestionErrors.get(suggestion)}
-                          </span>
-                        ) : null}
+                            Use
+                          </button>
+                        </div>
                       </div>
-                      <div className="ai-chat-review__suggestion-actions">
-                        <button
-                          type="button"
-                          className="ai-chat-review__button"
-                          disabled={Boolean(suggestionErrors.get(suggestion))}
-                          aria-describedby={
-                            suggestionErrors.get(suggestion)
-                              ? `${validationId}-${index}-${suggestionIndex}`
-                              : undefined
-                          }
-                          onClick={() => onUseSuggestion(suggestion)}
-                        >
-                          Use
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : null}
             </div>

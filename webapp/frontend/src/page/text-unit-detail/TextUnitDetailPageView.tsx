@@ -453,6 +453,10 @@ export function TextUnitDetailPageView({
                       <AiReviewSpeedControl
                         value={aiSettings.preset}
                         onChange={aiSettings.onChangePreset}
+                        reviewStyle={aiSettings.reviewStyle}
+                        onChangeReviewStyle={aiSettings.onChangeReviewStyle}
+                        showScore={aiSettings.showScore}
+                        onChangeShowScore={aiSettings.onChangeShowScore}
                         automaticDisabled={aiSettings.automaticDisabled}
                         onChangeAutomaticDisabled={aiSettings.onChangeAutomaticDisabled}
                         disabled={!aiSettings.ready || aiSettings.isSaving}

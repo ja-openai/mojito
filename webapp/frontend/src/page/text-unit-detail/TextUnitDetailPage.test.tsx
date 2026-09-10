@@ -234,6 +234,7 @@ describe('TextUnitDetailPage', () => {
       ...preferences,
       aiReviewPreset: 'ultra',
       aiReviewAutomaticDisabled: true,
+      aiReviewStyle: 'corrections_only',
     });
     const editor = await screen.findByRole('textbox', { name: 'Translation' });
     expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveAttribute(
@@ -253,12 +254,14 @@ describe('TextUnitDetailPage', () => {
     expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
       presetId: 'ultra',
       requestType: 'manual',
+      reviewStyle: 'corrections_only',
       surface: 'text_unit_detail',
       target: 'Pagar {price} hoje',
     });
     expect(queryClient.getQueryData(userPreferencesQueryKey('translator'))).toMatchObject({
       aiReviewPreset: 'ultra',
       aiReviewAutomaticDisabled: true,
+      aiReviewStyle: 'corrections_only',
     });
     expect(saveUserPreferencesMock).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Review' })).not.toBeInTheDocument();
@@ -276,11 +279,13 @@ describe('TextUnitDetailPage', () => {
     expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
       presetId: 'ultra',
       requestType: 'follow_up',
+      reviewStyle: 'corrections_only',
       surface: 'text_unit_detail',
     });
     expect(requestAiReviewMock.mock.calls[2][0]).toMatchObject({
       presetId: 'ultra',
       requestType: 'retry',
+      reviewStyle: 'corrections_only',
       surface: 'text_unit_detail',
       target: 'Pagar {price} hoje',
     });
@@ -289,6 +294,148 @@ describe('TextUnitDetailPage', () => {
       expect(request).not.toHaveProperty('reasoningEffort');
       expect(request).not.toHaveProperty('modelName');
     }
+  });
+
+  it('waits for a saved style before refreshing automatic review and discards the previous style result', async () => {
+    let finishOldReview!: (value: AiReviewApi.AiReviewResponse) => void;
+    let finishSave!: (value: ApiUserPreferences) => void;
+    requestAiReviewMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishOldReview = resolve;
+        }),
+    );
+    saveUserPreferencesMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
+      ...preferences,
+      aiReviewStyle: 'corrections_only',
+    });
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+    const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ reviewStyle: 'corrections_only' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    const style = screen.getByRole('combobox', { name: 'Review style' });
+    fireEvent.change(style, { target: { value: 'corrections_and_alternatives' } });
+    await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({
+      aiReviewStyle: 'corrections_and_alternatives',
+    });
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+    expect(oldSignal.aborted).toBe(false);
+    await act(async () => {
+      finishSave({ ...preferences, aiReviewStyle: 'corrections_and_alternatives' });
+      await Promise.resolve();
+    });
+    await screen.findByText('No issues found.');
+    expect(style).toHaveValue('corrections_and_alternatives');
+    expect(oldSignal.aborted).toBe(true);
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'balanced',
+      reviewStyle: 'corrections_and_alternatives',
+      requestType: 'automatic',
+      surface: 'text_unit_detail',
+    });
+    await act(async () => {
+      finishOldReview({
+        message: { role: 'assistant', content: 'Old corrections-only answer' },
+        suggestions: [],
+      });
+      await Promise.resolve();
+    });
+    expect(screen.queryByText('Old corrections-only answer')).not.toBeInTheDocument();
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('changes style with automatic review off without starting a review, then uses it for one-off Review', async () => {
+    renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
+      ...preferences,
+      aiReviewAutomaticDisabled: true,
+    });
+    const reviewButton = await screen.findByRole('button', { name: 'Review' });
+    await waitFor(() => expect(reviewButton).toBeEnabled());
+    fireEvent.click(reviewButton);
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      reviewStyle: 'corrections_and_alternatives',
+    });
+    saveUserPreferencesMock.mockResolvedValue({
+      ...preferences,
+      aiReviewAutomaticDisabled: true,
+      aiReviewStyle: 'corrections_only',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Review style' }), {
+      target: { value: 'corrections_only' },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Review style' })).toHaveValue(
+        'corrections_only',
+      ),
+    );
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewStyle: 'corrections_only' });
+    expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked();
+    expect(screen.queryByText('No issues found.')).not.toBeInTheDocument();
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'balanced',
+      reviewStyle: 'corrections_only',
+      requestType: 'manual',
+      surface: 'text_unit_detail',
+    });
+    expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked();
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('saves score visibility without cancelling or repeating the review or clearing its result', async () => {
+    let finishReview!: (value: AiReviewApi.AiReviewResponse) => void;
+    requestAiReviewMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishReview = resolve;
+        }),
+    );
+    renderTextUnitDetailPage();
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+    const signal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    expect(screen.getByRole('combobox', { name: 'Review style' })).toHaveValue(
+      'corrections_and_alternatives',
+    );
+    const scoreToggle = screen.getByRole('checkbox', { name: 'Show score' });
+    expect(scoreToggle).toBeChecked();
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewShowScore: false });
+    fireEvent.click(scoreToggle);
+    await waitFor(() => expect(scoreToggle).not.toBeChecked());
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewShowScore: false });
+    expect(signal.aborted).toBe(false);
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      finishReview({
+        message: { role: 'assistant', content: 'Current translation is valid.' },
+        suggestions: [],
+        review: { score: 2, explanation: 'Current translation is valid.', confidenceLevel: 94 },
+      });
+      await Promise.resolve();
+    });
+    await screen.findByText('Current translation is valid.');
+    expect(screen.queryByLabelText('Model confidence: 94 out of 100')).not.toBeInTheDocument();
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewShowScore: true });
+    fireEvent.click(scoreToggle);
+    expect(await screen.findByLabelText('Model confidence: 94 out of 100')).toHaveTextContent(
+      /^94$/,
+    );
+    expect(saveUserPreferencesMock.mock.calls[1][0]).toEqual({ aiReviewShowScore: true });
+    expect(screen.getByText('Current translation is valid.')).toBeVisible();
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+    expect(requestAiReviewMock.mock.calls[0][0]).not.toHaveProperty('showScore');
   });
 
   it('keeps the speed control beside the AI Chat Review title while the conversation is collapsed', async () => {

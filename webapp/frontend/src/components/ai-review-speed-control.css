@@ -145,9 +145,37 @@
 }
 
 .ai-review-speed__automatic {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin-top: var(--space-3);
   padding-top: var(--space-3);
   border-top: var(--border-width) solid var(--color-border);
+}
+
+.ai-review-speed__style {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.ai-review-speed__style label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ai-review-speed__style select {
+  width: 100%;
+  min-height: 2rem;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--font-weight-regular);
 }
 
 .ai-review-speed__automatic label {
@@ -163,6 +191,50 @@
 
 .ai-review-speed__automatic input[aria-disabled='true'] {
   opacity: 0.55;
+}
+
+.ai-review-speed__score-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ai-review-speed__score-help,
+.ai-review-speed__score-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-review-speed__score-info {
+  padding: 2px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: help;
+}
+
+.ai-review-speed__score-info:focus-visible {
+  outline: 2px solid var(--color-focus-border);
+  outline-offset: 2px;
+}
+
+.ai-review-speed__score-tooltip {
+  box-sizing: border-box;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 4px 16px rgb(15 23 42 / 15%);
+  line-height: 1.5;
 }
 
 .ai-review-speed__panel [role='alert'] button {

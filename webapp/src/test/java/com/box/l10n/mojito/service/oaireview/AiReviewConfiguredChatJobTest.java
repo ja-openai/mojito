@@ -35,6 +35,7 @@ public class AiReviewConfiguredChatJobTest {
     assertEquals("selected-model", prepared.settings().modelName());
     assertEquals("max", prepared.settings().reasoningEffort());
     assertEquals("ultra", prepared.request().presetId());
+    assertEquals("corrections_only", prepared.request().reviewStyle());
     assertEquals("priority", prepared.settings().serviceTier());
     AiReviewConfiguredChatJob job = job();
     AiReviewChatResponse response =
@@ -109,7 +110,8 @@ public class AiReviewConfiguredChatJobTest {
             "manual",
             "review_project",
             null,
-            "ultra");
+            "ultra",
+            "corrections_only");
     return new Prepared(
         request, 17L, new Settings("ultra", "selected-model", "max", "low", "priority"));
   }

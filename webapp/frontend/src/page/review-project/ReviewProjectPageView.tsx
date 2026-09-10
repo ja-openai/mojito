@@ -1904,6 +1904,7 @@ function DetailPane({
   const user = useUser();
   const aiSettings = useAiReviewPreferences();
   const aiPreset = aiSettings.preset;
+  const aiReviewStyle = aiSettings.reviewStyle;
   const aiPreferencesReady = aiSettings.ready;
   const aiAutomaticDisabled = aiSettings.automaticDisabled;
   const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
@@ -1993,9 +1994,10 @@ function DetailPane({
   const aiContextKey = useMemo(() => {
     const variantId =
       textUnit.currentTmTextUnitVariant?.id ?? textUnit.baselineTmTextUnitVariant?.id ?? 'none';
-    return `${textUnit.id}:${localeTag}:${variantId}:${textUnit.reviewStateRevision ?? 'none'}:${aiPreset}`;
+    return `${textUnit.id}:${localeTag}:${variantId}:${textUnit.reviewStateRevision ?? 'none'}:${aiPreset}:${aiReviewStyle}`;
   }, [
     aiPreset,
+    aiReviewStyle,
     localeTag,
     textUnit.baselineTmTextUnitVariant?.id,
     textUnit.currentTmTextUnitVariant?.id,
@@ -2653,6 +2655,7 @@ function DetailPane({
         const response = await requestAiReview(
           {
             presetId: aiPreset,
+            reviewStyle: aiReviewStyle,
             requestType: 'automatic',
             surface: 'review_project',
             source: source ?? '',
@@ -2720,6 +2723,7 @@ function DetailPane({
   }, [
     aiContextKey,
     aiPreset,
+    aiReviewStyle,
     aiPreferencesReady,
     aiAutomaticDisabled,
     agentReview,
@@ -3319,6 +3323,7 @@ function DetailPane({
         const response = await requestAiReview(
           {
             presetId: aiPreset,
+            reviewStyle: aiReviewStyle,
             requestType: baseMessages.length > 0 ? 'follow_up' : 'manual',
             surface: 'review_project',
             source: source ?? '',
@@ -3369,6 +3374,7 @@ function DetailPane({
     })();
   }, [
     aiPreset,
+    aiReviewStyle,
     aiPreferencesReady,
     aiInput,
     aiMessages,
@@ -3417,6 +3423,7 @@ function DetailPane({
           const response = await requestAiReview(
             {
               presetId: aiPreset,
+              reviewStyle: aiReviewStyle,
               requestType,
               surface: 'review_project',
               source: source ?? '',
@@ -3469,6 +3476,7 @@ function DetailPane({
     },
     [
       aiPreset,
+      aiReviewStyle,
       aiPreferencesReady,
       aiMessages,
       draftTarget,
@@ -4521,6 +4529,10 @@ function DetailPane({
                     <AiReviewSpeedControl
                       value={aiSettings.preset}
                       onChange={aiSettings.onChangePreset}
+                      reviewStyle={aiSettings.reviewStyle}
+                      onChangeReviewStyle={aiSettings.onChangeReviewStyle}
+                      showScore={aiSettings.showScore}
+                      onChangeShowScore={aiSettings.onChangeShowScore}
                       automaticDisabled={aiSettings.automaticDisabled}
                       onChangeAutomaticDisabled={aiSettings.onChangeAutomaticDisabled}
                       disabled={!aiSettings.ready || aiSettings.isSaving}

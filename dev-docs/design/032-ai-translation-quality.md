@@ -179,17 +179,29 @@ and [Fast mode contract](https://developers.openai.com/api/docs/guides/fast-mode
 
 ## Review where it adds value
 
-The shared review prompt checks meaning, required terminology, locale grammar, and protected
-structure before proposing a correction. A valid target is returned verbatim, including meaningful
-surrounding whitespace. Alternatives require a real ambiguity or an explicit request. The rating
+The shared review process checks meaning, required terminology, locale grammar, and protected
+structure before proposing a correction. Batch review and the interactive **Corrections only** style
+return a valid target verbatim, including meaningful surrounding whitespace. In that style,
+alternatives require a real ambiguity or an explicit request. The interactive default is
+**Corrections + alternatives**, which also offers two distinct useful candidate wordings when
+possible, including for an acceptable original translation. Optional wording never constitutes a
+defect; the original translation is assessed independently from the candidates. The rating
 rubric distinguishes substantive defects, minor actionable defects, and no identified defect;
 no score constitutes approval.
 
-Every review result shows a visible **Change suggested**, **No change suggested**, or **Review
-needed** heading and one explanation. Changed results show the specific suggestion explanation
+Review results distinguish **Change suggested**, **No change suggested**, and **Review needed**.
+When only optional alternatives accompany a valid original, the heading is **No correction suggested**
+and the original assessment remains visible. Candidate labels distinguish
+**Suggested correction** from **Alternative wording**. Corrections show the specific explanation
 once; no-change results use the original-target explanation, falling back to the message or review.
 Proposed translations and **Use** remain visible, including whitespace-only changes; text identical
-to the current target is never repeated. The widget omits confidence scores. Follow-ups with assessments or
+to the current target is never repeated. **Show score** defaults on and displays the model's
+`confidenceLevel` (0-100) as a compact numeric pill beside each candidate, or beside an unchanged
+result when available. An accessible label identifies the value as model confidence; the visible pill
+contains only the number. The information icon beside **Show score** in the settings dropdown explains
+on hover, focus, or click that this is self-reported model confidence, not a translation quality rating
+or a calibrated probability. The separate 0-2 defect rating is not displayed as confidence.
+Hiding scores changes presentation only and does not request another review. Follow-ups with assessments or
 suggestions use the same layout; ordinary chat replies remain visible. Errors and retry behavior
 remain unchanged.
 
@@ -226,8 +238,11 @@ page-context provenance; a scoped background precompute trigger remains pending.
 
 The widget uses the same bordered result layout for each outcome. Review text uses readable body
 type, proposed translations align with the result heading, and Use buttons remain visible without
-hover. The speed control sits beside the section heading and opens the six-preset slider and
-**Automatic review** toggle. It remains available when collapsed and shows **Auto off** when paused.
+hover. The speed control sits beside the section heading and opens the six-preset slider,
+**Review style** selector, **Show score** checkbox, and **Automatic review** toggle. These account
+preferences are saved independently. Changing style invalidates the prior review context, but
+does not enable automatic review for an opted-out user. It remains available when collapsed and
+shows **Auto off** when paused.
 
 ## Quality evidence and next decision
 
@@ -240,8 +255,9 @@ can be removed.
 category, and execution outcome/timing. Migration V110 adds request and response snapshots for
 internal inspection; existing rows have no transcript backfill. Recording is best effort and counts
 logical review executions rather than individual provider retries. It supports adoption and
-latency analysis, including automatic versus follow-up use; it supplies no human linguistic
-judgment. Voluntary preset selection is not a randomized quality experiment.
+latency analysis, including automatic versus follow-up use. The request snapshot records the
+resolved review style. It supplies no human linguistic judgment. Voluntary preset selection is not
+a randomized quality experiment.
 
 Before rollout claims, select a fixed set of human-reviewed examples covering ambiguous UI strings,
 negation/conditions, quantities, glossary and do-not-translate terms, regional wording, ICU/MF2

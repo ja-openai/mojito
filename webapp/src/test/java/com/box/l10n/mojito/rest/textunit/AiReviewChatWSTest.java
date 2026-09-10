@@ -1,8 +1,10 @@
 package com.box.l10n.mojito.rest.textunit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -132,7 +134,7 @@ public class AiReviewChatWSTest {
     verify(openAIClient, never()).getChatCompletions(any(), any());
 
     assertEquals(
-        "%s %s".formatted(AiReviewType.PROMPT_ALL, "Use Canadian French terminology."),
+        "%s %s".formatted(AiReviewType.interactivePrompt(null), "Use Canadian French terminology."),
         requestCaptor.getValue().instructions());
     assertEquals("gpt-5.6-sol", requestCaptor.getValue().model());
     assertEquals("Prefer the accepted locale phrasing.", response.message().content());
@@ -277,7 +279,7 @@ public class AiReviewChatWSTest {
         ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
     verify(openAIClient).getResponses(requestCaptor.capture(), any());
 
-    assertEquals(AiReviewType.PROMPT_ALL, requestCaptor.getValue().instructions());
+    assertEquals(AiReviewType.interactivePrompt(null), requestCaptor.getValue().instructions());
     verify(aiTranslateLocalePromptSuffixService).getLocalePromptSuffix("ja-JP");
   }
 
@@ -693,6 +695,149 @@ public class AiReviewChatWSTest {
             org.mockito.ArgumentMatchers.same(response));
     org.junit.Assert.assertFalse(
         new ObjectMapper().writeValueAsStringUnchecked(response).contains("gpt-"));
+  }
+
+  @Test
+  public void validOriginalCanHaveTwoAlternativesWithoutBeingClassifiedAsACorrection() {
+    AiReviewChatWS.AiReviewChatResponse response =
+        candidateResponse("corrections_and_alternatives", "Bonjour", "Salut", "Coucou", 2);
+
+    assertEquals(2, response.review().score());
+    assertNull(response.review().confidenceLevel());
+    assertEquals(2, response.suggestions().size());
+    assertEquals("alternative", response.suggestions().get(0).kind());
+    assertEquals("alternative", response.suggestions().get(1).kind());
+    assertEquals(Integer.valueOf(91), response.suggestions().get(0).confidenceLevel());
+    ArgumentCaptor<OpenAIClient.ResponsesRequest> request =
+        ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
+    verify(openAIClient).getResponses(request.capture(), any());
+    assertEquals(
+        AiReviewType.interactivePrompt("corrections_and_alternatives"),
+        request.getValue().instructions());
+  }
+
+  @Test
+  public void concreteDefectClassifiesPrimaryFixSeparatelyFromOptionalAlternative() {
+    AiReviewChatWS.AiReviewChatResponse response =
+        candidateResponse("corrections_and_alternatives", "Bonjoure", "Bonjour", "Salut", 1);
+
+    assertEquals(1, response.review().score());
+    assertNull(response.review().confidenceLevel());
+    assertEquals("correction", response.suggestions().get(0).kind());
+    assertEquals("alternative", response.suggestions().get(1).kind());
+  }
+
+  @Test
+  public void sourceOnlySuggestionsDoNotClaimAnOriginalAssessmentOrCorrectionKind() {
+    for (String original : new String[] {null, "", " \t "}) {
+      AiReviewChatWS.AiReviewChatResponse response =
+          candidateResponse("corrections_and_alternatives", original, "Bonjour", "Salut", 2);
+
+      assertNull(response.review());
+      assertNull(response.suggestions().get(0).kind());
+      assertEquals("alternative", response.suggestions().get(1).kind());
+    }
+  }
+
+  @Test
+  public void missingOrUnusableAssessmentsKeepPrimarySuggestionsNeutral() {
+    for (Integer originalScore : new Integer[] {null, -1, 82}) {
+      AiReviewChatWS.AiReviewChatResponse response =
+          candidateResponse(
+              "corrections_and_alternatives", "Bonjour", "Salut", "Coucou", originalScore);
+
+      assertNull(response.review());
+      assertNull(response.suggestions().get(0).kind());
+      assertEquals("alternative", response.suggestions().get(1).kind());
+    }
+  }
+
+  @Test
+  public void unchangedTargetSuppliesItsOwnConfidenceWithoutRepeatingDuplicateCandidates() {
+    AiReviewChatWS.AiReviewChatResponse response =
+        candidateResponse("corrections_only", " Bonjour ", " Bonjour ", " Bonjour ", 2);
+
+    assertEquals(Integer.valueOf(91), response.review().confidenceLevel());
+    assertEquals(2, response.review().score());
+    assertEquals(1, response.suggestions().size());
+    assertEquals("alternative", response.suggestions().getFirst().kind());
+  }
+
+  @Test
+  public void whitespaceChangeDoesNotReuseCandidateConfidenceAsAnAssessmentOfTheOriginal() {
+    AiReviewChatWS.AiReviewChatResponse response =
+        candidateResponse("corrections_only", " Bonjour ", "Bonjour", "", 1);
+
+    assertNull(response.review().confidenceLevel());
+    assertEquals("correction", response.suggestions().getFirst().kind());
+  }
+
+  @Test
+  public void interactiveStylesKeepAssessmentSeparateAndDoNotEnableAlternativesForBatchReview() {
+    String corrections = AiReviewType.interactivePrompt("corrections_only");
+    String alternatives = AiReviewType.interactivePrompt("corrections_and_alternatives");
+    assertEquals(corrections, AiReviewType.interactivePrompt(null));
+    assertTrue(corrections.contains("return it verbatim as target.content"));
+    assertTrue(corrections.contains("user explicitly requests"));
+    assertTrue(alternatives.contains("offer two distinct, natural candidate wordings"));
+    assertTrue(alternatives.contains("Keep the original's rating at 2"));
+    assertTrue(alternatives.contains("Do not force arbitrary paraphrases"));
+    for (String prompt : List.of(corrections, alternatives)) {
+      assertTrue(
+          prompt.contains("not an external\nquality measurement or a calibrated probability"));
+      assertTrue(prompt.contains("required=true for a concrete defect"));
+      assertTrue(
+          prompt.contains("check meaning and structure")
+              || prompt.contains("recheck meaning and structure"));
+    }
+    assertEquals(AiReviewType.PROMPT_ALL, AiReviewType.ALL.getPrompt());
+    assertTrue(AiReviewType.PROMPT_ALL.contains("return it verbatim as target.content"));
+    assertFalse(AiReviewType.PROMPT_ALL.contains("offer two distinct"));
+    assertFalse(AiReviewType.PROMPT_ALL.contains("self-estimated confidence"));
+  }
+
+  private AiReviewChatWS.AiReviewChatResponse candidateResponse(
+      String style, String original, String target, String alternative, Integer originalScore) {
+    var output =
+        new AiReviewType.AiReviewTextUnitVariantOutput(
+            "Hello",
+            new AiReviewType.AiReviewTextUnitVariantOutput.Target(target, "Primary wording.", 91),
+            null,
+            new AiReviewType.AiReviewTextUnitVariantOutput.AltTarget(
+                alternative, "Optional wording.", 84),
+            originalScore == null
+                ? null
+                : new AiReviewType.AiReviewTextUnitVariantOutput.ExistingTargetRating(
+                    "Original assessment.", originalScore),
+            null);
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                new OpenAIClient.ResponsesResponse(
+                    "resp-candidates",
+                    "response",
+                    1712975853L,
+                    "completed",
+                    null,
+                    null,
+                    "gpt-5.6-sol",
+                    List.of(responseOutput(new ObjectMapper().writeValueAsStringUnchecked(output))),
+                    null,
+                    null)));
+    return aiReviewChatWS.chat(
+        new AiReviewChatWS.AiReviewChatRequest(
+            "Hello",
+            original,
+            "fr",
+            null,
+            null,
+            List.of(new AiReviewChatWS.AiReviewChatMessage("user", "Review this translation.")),
+            null,
+            "manual",
+            "review_project",
+            null,
+            "balanced",
+            style));
   }
 
   private OpenAIClient.ResponsesResponse.Output responseOutput(String text) {

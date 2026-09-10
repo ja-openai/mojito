@@ -53,11 +53,15 @@ function renderComposer(overrides: Partial<ComponentProps<typeof AiChatReview>> 
     settings: {
       preset: 'fast',
       automaticDisabled: true,
+      reviewStyle: 'corrections_and_alternatives',
+      showScore: true,
       ready: true,
       isSaving: false,
       error: null,
       onChangePreset: vi.fn(),
       onChangeAutomaticDisabled: vi.fn(),
+      onChangeReviewStyle: vi.fn(),
+      onChangeShowScore: vi.fn(),
       onRetryLoad: vi.fn(),
     },
     isResponding: false,
@@ -166,10 +170,10 @@ describe('AiChatReview', () => {
     expect(screen.getByText('Detailed review.').closest('details')).toBeNull();
     expect(screen.queryByText('Report')).not.toBeInTheDocument();
     expect(screen.queryByText('Confidence')).not.toBeInTheDocument();
-    expect(screen.queryByText('94')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model confidence: 94 out of 100')).toHaveTextContent('94');
   });
 
-  it('keeps follow-up reasoning visible once without confidence scores', () => {
+  it('keeps follow-up reasoning visible once with its own model confidence', () => {
     const { props, rerender } = renderReview('Compte', [
       { content: 'Compte', confidenceLevel: 94 },
     ]);
@@ -203,7 +207,8 @@ describe('AiChatReview', () => {
     expect(screen.getByText('Makes the owner explicit.')).toBeVisible();
     expect(screen.queryByText('A wording alternative.')).not.toBeInTheDocument();
     expect(screen.getByText('Votre compte')).toBeVisible();
-    expect(screen.queryByText('91')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model confidence: 91 out of 100')).toHaveTextContent('91');
+    expect(screen.getByLabelText('Model confidence: 91 out of 100')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
   });
 
@@ -238,7 +243,7 @@ describe('AiChatReview', () => {
       screen.queryByText('The existing translation preserves the meaning.'),
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Compte')).not.toBeInTheDocument();
-    expect(screen.queryByText('94')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model confidence: 94 out of 100')).toHaveTextContent('94');
     expect(screen.queryByRole('button', { name: 'Use' })).not.toBeInTheDocument();
   });
 
@@ -248,7 +253,7 @@ describe('AiChatReview', () => {
     expect(screen.queryByText('No concrete defect was found.')).not.toBeInTheDocument();
     expect(screen.getAllByText('The existing translation preserves the meaning.')).toHaveLength(1);
     expect(screen.getByText('The existing translation preserves the meaning.')).toBeVisible();
-    expect(screen.queryByText('94')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model confidence: 94 out of 100')).toHaveTextContent('94');
     expect(screen.queryByRole('button', { name: 'Use' })).not.toBeInTheDocument();
   });
 
@@ -286,11 +291,11 @@ describe('AiChatReview', () => {
     const { props } = renderReview('Compte', [{ content: 'Compte', confidenceLevel: 94 }, changed]);
 
     expect(screen.queryByText('Compte')).not.toBeInTheDocument();
-    expect(screen.queryByText('94')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Model confidence: 94 out of 100')).not.toBeInTheDocument();
     expect(screen.queryByText('No change suggested')).toBeNull();
     expect(screen.getByText('Votre compte')).toBeVisible();
     expect(screen.getByText('Clarifies whose account is shown.')).toBeVisible();
-    expect(screen.queryByText('91')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model confidence: 91 out of 100')).toHaveTextContent('91');
     expect(screen.getByText('Change suggested')).toBeVisible();
     expect(screen.getAllByText('Clarifies whose account is shown.')).toHaveLength(1);
     const useButtons = screen.getAllByRole('button', { name: 'Use' });
@@ -322,7 +327,7 @@ describe('AiChatReview', () => {
     rerender(<AiChatReview {...props} currentTarget="Votre compte" />);
     expect(screen.queryByRole('button', { name: 'Use' })).not.toBeInTheDocument();
     expect(screen.getByText('No change suggested')).toBeVisible();
-    expect(screen.queryByText('94')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model confidence: 94 out of 100')).toHaveTextContent('94');
     expect(screen.getByText('The existing translation preserves the meaning.')).toBeVisible();
     expect(screen.queryByText('Votre compte')).not.toBeInTheDocument();
 
@@ -345,4 +350,128 @@ describe('AiChatReview', () => {
     fireEvent.click(retry);
     expect(props.onRetryError).toHaveBeenCalledOnce();
   });
+
+  it('shows two optional alternatives without presenting them as corrections', () => {
+    renderReview('Compte', [
+      {
+        content: 'Votre compte',
+        kind: 'alternative',
+        confidenceLevel: 94,
+        explanation: 'Addresses the reader directly.',
+      },
+      {
+        content: 'Mon compte',
+        kind: 'alternative',
+        confidenceLevel: 89,
+        explanation: 'Uses the account owner’s perspective.',
+      },
+    ]);
+    expect(screen.getByText('No correction suggested')).toBeVisible();
+    expect(screen.getByText('No concrete defect was found.')).toBeVisible();
+    expect(screen.getAllByText('Alternative wording')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Use' })).toHaveLength(2);
+    expect(screen.queryByText('Change suggested')).not.toBeInTheDocument();
+    expect(screen.queryByText('Compte')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model confidence: 94 out of 100')).toBeVisible();
+    expect(screen.getByLabelText('Model confidence: 89 out of 100')).toBeVisible();
+  });
+
+  it('distinguishes a correction from optional wording without hiding an identified issue', () => {
+    renderReview(
+      'Compte',
+      [
+        {
+          content: 'Comptes',
+          kind: 'correction',
+          confidenceLevel: 97,
+          explanation: 'Preserves the plural.',
+        },
+        {
+          content: 'Vos comptes',
+          kind: 'alternative',
+          confidenceLevel: 93,
+          explanation: 'Also addresses the reader.',
+        },
+      ],
+      { review: { score: 0, explanation: 'The source refers to multiple accounts.' } },
+    );
+    expect(screen.getByText('Change suggested')).toBeVisible();
+    expect(screen.getByText('Suggested correction')).toBeVisible();
+    expect(screen.getByText('Alternative wording')).toBeVisible();
+    expect(screen.queryByText('No correction suggested')).not.toBeInTheDocument();
+  });
+
+  it('keeps the defect assessment when only an alternative was returned', () => {
+    renderReview('Compte', [{ content: 'Vos comptes', kind: 'alternative', confidenceLevel: 93 }], {
+      review: { score: 0, explanation: 'Check the source plural.' },
+    });
+    expect(screen.getByText('Review needed')).toBeVisible();
+    expect(screen.getByText('Check the source plural.')).toBeVisible();
+  });
+
+  it('does not imply a clean assessment when alternatives have no original review', () => {
+    renderReview(
+      'Compte',
+      [{ content: 'Votre compte', kind: 'alternative', confidenceLevel: 93 }],
+      {
+        review: undefined,
+        content: 'A useful alternative wording.',
+      },
+    );
+    expect(screen.queryByText('No correction suggested')).not.toBeInTheDocument();
+    expect(screen.queryByText('No change suggested')).not.toBeInTheDocument();
+    expect(screen.getByText('Votre compte')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
+  });
+
+  it('shows only a compact score pill in the main result by default', () => {
+    renderReview('Compte', [{ content: 'Compte', confidenceLevel: 94 }]);
+    const score = screen.getByLabelText('Model confidence: 94 out of 100');
+    expect(score).toBeVisible();
+    expect(score).toHaveTextContent(/^94$/);
+    expect(screen.queryByText(/Model confidence:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\/100/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Compte')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'About model confidence' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides all confidence values without changing the result or requesting another review', () => {
+    const { props, rerender } = renderComposer({
+      messages: [
+        {
+          id: 'review',
+          sender: 'assistant',
+          content: 'A useful alternative.',
+          review: { score: 2, explanation: 'No issue identified.' },
+          suggestions: [{ content: 'Votre compte', kind: 'alternative', confidenceLevel: 91 }],
+        },
+      ],
+    });
+    expect(screen.getByLabelText('Model confidence: 91 out of 100')).toBeVisible();
+    rerender(<AiChatReview {...props} settings={{ ...props.settings!, showScore: false }} />);
+    expect(screen.queryByLabelText(/Model confidence:/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'About model confidence' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Votre compte')).toBeVisible();
+    expect(screen.getByText('No correction suggested')).toBeVisible();
+    expect(props.onReview).not.toHaveBeenCalled();
+    expect(props.onSubmit).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, -1, 101, 94.5, Number.NaN])(
+    'omits missing or invalid confidence %s',
+    (confidenceLevel) => {
+      renderReview('Compte', [{ content: 'Compte', confidenceLevel }], {
+        review: { score: 2, explanation: 'No issue identified.' },
+      });
+      expect(screen.queryByLabelText(/Model confidence:/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'About model confidence' }),
+      ).not.toBeInTheDocument();
+    },
+  );
 });

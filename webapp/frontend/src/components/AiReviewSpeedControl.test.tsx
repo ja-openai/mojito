@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -7,6 +7,92 @@ import { AiReviewSpeedControl } from './AiReviewSpeedControl';
 const automaticEnabled = { automaticDisabled: false, onChangeAutomaticDisabled: vi.fn() };
 
 describe('AiReviewSpeedControl', () => {
+  it('explains confidence beside Show score on hover, focus and click without changing preferences', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const onChangeAutomaticDisabled = vi.fn();
+    const onChangeReviewStyle = vi.fn();
+    const onChangeShowScore = vi.fn();
+    render(
+      <AiReviewSpeedControl
+        value="balanced"
+        onChange={onChange}
+        automaticDisabled={false}
+        onChangeAutomaticDisabled={onChangeAutomaticDisabled}
+        onChangeReviewStyle={onChangeReviewStyle}
+        showScore={false}
+        onChangeShowScore={onChangeShowScore}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: 'About model confidence' }),
+    ).not.toBeInTheDocument();
+    const trigger = screen.getByRole('button', { name: 'Review speed: Balanced' });
+    await user.click(trigger);
+    const panel = screen.getByRole('dialog', { name: 'Review speed' });
+    const score = within(panel).getByRole('checkbox', { name: 'Show score' });
+    const info = within(panel).getByRole('button', { name: 'About model confidence' });
+    expect(score).not.toBeChecked();
+    expect(score.closest('label')).not.toContainElement(info);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    await user.hover(info);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('self-reported confidence');
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      'not a translation quality rating or a measured probability',
+    );
+    expect(info).toHaveAccessibleDescription(/self-reported confidence/);
+    await user.unhover(info);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    score.focus();
+    await user.tab();
+    expect(info).toHaveFocus();
+    expect(screen.getByRole('tooltip')).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+
+    await user.click(trigger);
+    await user.click(screen.getByRole('button', { name: 'About model confidence' }));
+    expect(screen.getByRole('tooltip')).toBeVisible();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onChangeAutomaticDisabled).not.toHaveBeenCalled();
+    expect(onChangeReviewStyle).not.toHaveBeenCalled();
+    expect(onChangeShowScore).not.toHaveBeenCalled();
+  });
+
+  it('defaults to alternatives and visible scores and changes each preference independently', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const onChangeAutomaticDisabled = vi.fn();
+    const onChangeReviewStyle = vi.fn();
+    const onChangeShowScore = vi.fn();
+    render(
+      <AiReviewSpeedControl
+        value="balanced"
+        onChange={onChange}
+        automaticDisabled
+        onChangeAutomaticDisabled={onChangeAutomaticDisabled}
+        onChangeReviewStyle={onChangeReviewStyle}
+        onChangeShowScore={onChangeShowScore}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+    const style = screen.getByRole('combobox', { name: 'Review style' });
+    expect(style).toHaveValue('corrections_and_alternatives');
+    const score = screen.getByRole('checkbox', { name: 'Show score' });
+    expect(score).toBeChecked();
+    await user.selectOptions(style, 'corrections_only');
+    expect(onChangeReviewStyle).toHaveBeenCalledExactlyOnceWith('corrections_only');
+    await user.click(score);
+    expect(onChangeShowScore).toHaveBeenCalledExactlyOnceWith(false);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onChangeAutomaticDisabled).not.toHaveBeenCalled();
+    expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked();
+  });
+
   it('keeps speed and automatic review independent and shows the paused state', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

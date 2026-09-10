@@ -26,16 +26,23 @@ describe('requestAiReview', () => {
       localeTag: 'fr',
       sourceDescription: 'Account navigation label',
       tmTextUnitId: 31,
+      presetId: 'balanced' as const,
+      reviewStyle: 'corrections_and_alternatives' as const,
       messages: [{ role: 'user' as const, content: 'Use the glossary term Compte.' }],
+    };
+    const response = {
+      ...review,
+      suggestions: [{ content: 'Mon compte', kind: 'alternative', confidenceLevel: 94 }],
+      review: { score: 2, explanation: 'The current label is valid.', confidenceLevel: 96 },
     };
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(json({ taskId: 42 }, 202))
-      .mockResolvedValueOnce(json({ status: 'completed', response: review }));
+      .mockResolvedValueOnce(json({ status: 'completed', response }));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(requestAiReview(payload, { signal: abortController.signal })).resolves.toEqual(
-      review,
+      response,
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
