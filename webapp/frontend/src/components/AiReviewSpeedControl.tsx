@@ -56,6 +56,7 @@ export function AiReviewSpeedControl({
 }: AiReviewSpeedControlProps) {
   const speeds = allowExtendedPresets ? allSpeeds : allSpeeds.slice(0, 3);
   const value = speeds.some((speed) => speed.value === savedValue) ? savedValue : 'balanced';
+  const automaticUltraFallback = value === 'ultra' && !automaticDisabled;
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   const [panelStyle, setPanelStyle] = useState<CSSProperties>();
@@ -134,9 +135,18 @@ export function AiReviewSpeedControl({
         ref={buttonRef}
         className={`ai-review-speed__button${error ? ' has-error' : ''}`}
         aria-disabled={disabled && !error}
-        title={error ?? (automaticDisabled ? 'Automatic review paused.' : 'Review speed')}
+        title={
+          error ??
+          (automaticDisabled
+            ? 'Automatic review paused.'
+            : automaticUltraFallback
+              ? 'Automatic reviews use Balanced. Ultra is available for manual requests.'
+              : 'Review speed')
+        }
         aria-label={`Review speed: ${selected.label}`}
-        aria-describedby={automaticDisabled ? automaticStatusId : undefined}
+        aria-describedby={
+          automaticDisabled || automaticUltraFallback ? automaticStatusId : undefined
+        }
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
@@ -160,9 +170,9 @@ export function AiReviewSpeedControl({
           <path d="M11.5 2 4 11h5l-.5 7L16 9h-5l.5-7Z" />
         </svg>
         <span>{selected.label}</span>
-        {automaticDisabled ? (
+        {automaticDisabled || automaticUltraFallback ? (
           <span id={automaticStatusId} className="ai-review-speed__automatic-status">
-            Auto off
+            {automaticDisabled ? 'Auto off' : 'Auto: Balanced'}
           </span>
         ) : null}
         <svg
@@ -234,6 +244,12 @@ export function AiReviewSpeedControl({
                 <span>{speeds[speeds.length - 1].label}</span>
               </div>
               <p id={descriptionId}>{preview.description}</p>
+              {allowExtendedPresets && preview.value === 'ultra' ? (
+                <p>
+                  Ultra is temporarily available for manual requests only. Automatic reviews use
+                  Balanced; your saved Ultra selection stays available for Review and Ask.
+                </p>
+              ) : null}
               {!allowExtendedPresets ? (
                 <p>
                   Thorough, Deep, and Ultra are reserved for admins to keep the review queue moving.

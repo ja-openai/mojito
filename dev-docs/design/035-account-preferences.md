@@ -12,6 +12,14 @@ The speed control beside **AI Chat Review** opens a popup with **Fastest**, **Fa
 **Balanced**. An independent **Automatic review** toggle is available to everyone. Balanced with
 automatic review enabled is the account default. Changing speed preserves the automatic-review
 setting; toggling automatic review preserves the preset. The button shows **Auto off** when paused.
+Ultra is temporarily limited to manual requests, including for admins. With Ultra saved and
+automatic review enabled, automatic requests use Balanced and the speed button shows **Auto: Balanced**.
+The saved Ultra selection is preserved for manual Review, Ask, and retry requests. Turning automatic
+review off does not change that selection. The server applies the same fallback before freezing
+request settings; `l10n.ai-review.interactive.ultra-automatic-enabled` defaults to `false`.
+Clients continue sending the selected preset and request type so the server owns that policy.
+The temporary UI explanation reflects the default restriction; update it when re-enabling Ultra
+for automatic review in the browser.
 The backend maps each of the six presets to a model, reasoning effort, and processing tier;
 the frontend exposes no provider model names. All six default
 presets request API Fast mode, separately from effort. See `010-ai-observability.md` for mappings and

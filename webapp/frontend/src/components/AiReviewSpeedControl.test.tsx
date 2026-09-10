@@ -7,6 +7,32 @@ import { AiReviewSpeedControl } from './AiReviewSpeedControl';
 const automaticEnabled = { automaticDisabled: false, onChangeAutomaticDisabled: vi.fn() };
 
 describe('AiReviewSpeedControl', () => {
+  it('explains automatic Balanced fallback without changing the saved Ultra selection', () => {
+    const onChange = vi.fn();
+    const onChangeAutomaticDisabled = vi.fn();
+    const props = {
+      value: 'ultra' as const,
+      allowExtendedPresets: true,
+      onChange,
+      onChangeAutomaticDisabled,
+    };
+    const { rerender } = render(<AiReviewSpeedControl {...props} automaticDisabled={false} />);
+    const trigger = screen.getByRole('button', { name: 'Review speed: Ultra' });
+    expect(trigger).toHaveTextContent('Auto: Balanced');
+    expect(trigger).toHaveAccessibleDescription('Auto: Balanced');
+    fireEvent.click(trigger);
+    expect(
+      screen.getByText(/Ultra is temporarily available for manual requests only/),
+    ).toBeVisible();
+    const automatic = screen.getByRole('checkbox', { name: 'Automatic review' });
+    fireEvent.click(automatic);
+    expect(onChangeAutomaticDisabled).toHaveBeenCalledExactlyOnceWith(true);
+    expect(onChange).not.toHaveBeenCalled();
+    rerender(<AiReviewSpeedControl {...props} automaticDisabled />);
+    expect(trigger).toHaveTextContent('UltraAuto off');
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-valuetext', 'Ultra');
+  });
+
   it('explains confidence beside Show score on hover, focus and click without changing preferences', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

@@ -2016,6 +2016,33 @@ one {{Você tem {$count} arquivo.}}
     },
   );
 
+  it('explains automatic Ultra fallback while preserving Ultra for manual Ask', async () => {
+    fetchUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewPreset: 'ultra' });
+    renderReviewProjectPageView({}, { ...user, role: 'ROLE_ADMIN' });
+    await screen.findByText('No issues found.');
+    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent(
+      'Auto: Balanced',
+    );
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      presetId: 'ultra',
+      requestType: 'automatic',
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      { target: { value: 'Explain the terminology.' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(2));
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'ultra',
+      requestType: 'follow_up',
+    });
+    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent(
+      'Auto: Balanced',
+    );
+    expect(saveUserPreferencesMock).not.toHaveBeenCalled();
+  });
+
   it('stops an automatic request when automatic review is disabled and allows manual Ask', async () => {
     requestAiReviewMock.mockImplementationOnce(() => new Promise(() => undefined));
     saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewAutomaticDisabled: true });
