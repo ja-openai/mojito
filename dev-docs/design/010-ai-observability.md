@@ -161,7 +161,9 @@ through periodic checks. Cancellation propagates to the underlying HTTP request.
 Quartz threads or replica count. `max-in-flight-per-user` defaults to **3 per authenticated user**,
 including admins, shared across instances. A uniquely named, non-expiring database `MBlob` row holds bounded
 attempt reservations. Admission locks this row and the task in a short transaction using NOWAIT,
-then launches HTTP only after commit. Full capacity returns a retryable busy result; there is no
+refreshes their state from the database, then launches HTTP only after commit. Explicit refresh
+prevents request-scoped JPA caches from losing another instance's reservation or completed result.
+Full capacity returns a retryable busy result; there is no
 interactive backlog. This is a request admission limit, not a separate HTTP connection pool.
 
 `l10n.ai-review.execution.timeout-seconds` defaults to **180 seconds overall**, measured from task
