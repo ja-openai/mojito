@@ -877,6 +877,7 @@ export function TextUnitDetailPage() {
       try {
         const integrityResult = await checkTextUnitIntegrityWithRetry({
           tmTextUnitId: request.tmTextUnitId,
+          localeId: request.localeId,
           content: request.target,
         });
 

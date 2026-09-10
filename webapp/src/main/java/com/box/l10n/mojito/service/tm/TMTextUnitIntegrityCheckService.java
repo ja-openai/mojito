@@ -9,6 +9,7 @@ import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.Integr
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.PluralIntegrityCheckerRelaxer;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TextUnitIntegrityChecker;
+import com.box.l10n.mojito.service.locale.LocaleRepository;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,8 @@ public class TMTextUnitIntegrityCheckService {
 
   @Autowired AssetRepository assetRepository;
 
+  @Autowired LocaleRepository localeRepository;
+
   @Autowired TMTextUnitRepository tmTextUnitRepository;
 
   @Autowired PluralIntegrityCheckerRelaxer pluralIntegrityCheckerRelaxer;
@@ -37,8 +40,28 @@ public class TMTextUnitIntegrityCheckService {
    *
    * @throws IntegrityCheckException
    */
-  @Transactional(readOnly = true)
   public void checkTMTextUnitIntegrity(Long tmTextUnitId, String contentToCheck)
+      throws IntegrityCheckException {
+    checkTMTextUnitIntegrityForLocale(tmTextUnitId, contentToCheck, null);
+  }
+
+  /** Resolves target locale from the same persisted locale id used by the mutation. */
+  public void checkTMTextUnitIntegrity(Long tmTextUnitId, String contentToCheck, Long localeId)
+      throws IntegrityCheckException {
+    String targetLocale =
+        localeId == null
+            ? null
+            : localeRepository
+                .findById(localeId)
+                .orElseThrow(
+                    () -> new IllegalArgumentException("Unknown target locale: " + localeId))
+                .getBcp47Tag();
+    checkTMTextUnitIntegrityForLocale(tmTextUnitId, contentToCheck, targetLocale);
+  }
+
+  /** For callers that already obtained the target locale from their authoritative context. */
+  public void checkTMTextUnitIntegrityForLocale(
+      Long tmTextUnitId, String contentToCheck, String targetLocale)
       throws IntegrityCheckException {
     logger.debug("Checking Integrity of the TMTextUnit");
 
@@ -53,7 +76,11 @@ public class TMTextUnitIntegrityCheckService {
     } else {
       for (TextUnitIntegrityChecker textUnitChecker : textUnitCheckers) {
         try {
-          textUnitChecker.check(tmTextUnit.getContent(), contentToCheck);
+          if (targetLocale == null) {
+            textUnitChecker.check(tmTextUnit.getContent(), contentToCheck);
+          } else {
+            textUnitChecker.check(tmTextUnit.getContent(), contentToCheck, targetLocale);
+          }
         } catch (IntegrityCheckException e) {
           if (tmTextUnit.getPluralForm() != null
               && pluralIntegrityCheckerRelaxer.shouldRelaxIntegrityCheck(

@@ -22,6 +22,7 @@ We use `mojito-cli` to configure integrity checkers in a repository.  Integrity 
 |:---------------------------------------|:------------------------------- ---------------|:-------------------------------------|
 | COMPOSITE_FORMAT                       | resw, resx                                     | RESW, RESX                           |
 | MESSAGE_FORMAT                         | properties                                     | Java Properties                      |
+| MF2                                    | json, properties (explicit MF2 catalogs)        | Unicode MessageFormat 2              |
 | FORMATJS                               | json                                           | FormatJS ICU messages                |
 | DOLLAR_TEMPLATE                        | properties, json                               | Python-style dollar templates        |
 | FORMATJS_RICH_TEXT                     | json                                           | Legacy FormatJS apostrophe check      |
@@ -78,13 +79,26 @@ generated files.
 
 ### Translation Integrity Checkers
 
-`FORMATJS` and `DOLLAR_TEMPLATE` are parser-backed, prevention-only checkers. `FORMATJS`
+`MF2`, `FORMATJS`, and `DOLLAR_TEMPLATE` are parser-backed, prevention-only checkers. `FORMATJS`
 validates message syntax, arguments and select branches, rich-text tags, boundary whitespace,
 immutable email and URL literals, and the apostrophe-before-tag rule. `DOLLAR_TEMPLATE` validates
 Python-style `$name` and `${name}` placeholders plus the grammar-neutral tag, whitespace, email,
 and URL rules.
 
-Both checkers report every deterministic target finding from the selected rule bundle. They never
+`MF2` validates the persisted source and candidate target with the common MF2 evaluator: external
+bindings, declarations, selector contracts, and target-locale plural categories. It uses the target
+locale from the save/review/import context. The optional `localeId` in `/api/textunits/check` enables
+locale-specific checks; older requests without it still receive structural checks. Ambiguous wording
+or omitted displayed counts remain advisory and do not block saves. Invalid persisted sources are
+reported separately and cannot be repaired by rejecting their translations.
+
+Enable `MF2` only for repository/extensions explicitly authored as MF2. This setting applies to
+every asset with that extension; it cannot distinguish mixed MF2 and legacy messages in the same
+extension. Do not enable it for a mixed-format catalog based on brace detection. It does not replace
+an MF1 checker for Java MessageFormat. The backend checker uses the existing ICU4J-based common
+evaluator; the standalone MF2 runtime is tested separately.
+
+These checkers report every deterministic target finding from the selected rule bundle. They never
 rewrite a translation: a finding that has a deterministic repair in the neutral conformance corpus
 is still a validation failure, subject to the PM/admin override rules below. Persisted source
 defects are reported by the preflight command but do not reject a target save, because that
@@ -96,7 +110,7 @@ reported by preflight. Because the source cannot be parsed safely, a save agains
 persisted source does not receive the remaining source-to-target structural comparisons; resolve
 that source defect before rollout.
 
-Before enabling either checker, run a bounded read-only sample of active, used, non-rejected
+Before enabling a checker, run a bounded read-only sample of active, used, non-rejected
 current translations:
 
 ```bash
@@ -118,6 +132,7 @@ After resolving the findings, enable the checker through the existing repository
 ```bash
     mojito repo-update -n MyFormatJsRepo -it "json:FORMATJS"
     mojito repo-update -n MyTemplateRepo -it "properties:DOLLAR_TEMPLATE"
+    mojito repo-update -n MyMf2Repo -it "json:MF2"
 ```
 
 `repo-update -it` replaces the repository's complete checker set. Include any unrelated existing

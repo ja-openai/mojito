@@ -725,6 +725,7 @@ describe('useReviewProjectMutations', () => {
     await waitFor(() => {
       expect(checkTextUnitIntegrityWithRetryMock).toHaveBeenCalledWith({
         tmTextUnitId: textUnitTmTextUnitId,
+        localeId: 17,
         content: 'Pagar agora',
       });
     });
@@ -831,6 +832,7 @@ describe('useReviewProjectMutations', () => {
     await waitFor(() => {
       expect(checkTextUnitIntegrityWithRetryMock).toHaveBeenCalledWith({
         tmTextUnitId: textUnitTmTextUnitId,
+        localeId: 17,
         content: 'Pagar agora',
       });
     });

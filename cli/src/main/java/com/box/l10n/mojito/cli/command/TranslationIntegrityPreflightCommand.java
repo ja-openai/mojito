@@ -12,6 +12,7 @@ import com.box.l10n.mojito.translationintegrity.dollartemplate.DollarTemplateTra
 import com.box.l10n.mojito.translationintegrity.dollartemplate.DollarTemplateTranslationIntegrityOptions;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsTranslationIntegrityEvaluator;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsTranslationIntegrityOptions;
+import com.box.l10n.mojito.translationintegrity.messageformat.Mf2TranslationIntegrityEvaluator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -27,7 +28,7 @@ import org.springframework.stereotype.Component;
 @Parameters(
     commandNames = {"translation-integrity-preflight"},
     commandDescription =
-        "Sample active translations with FORMATJS or DOLLAR_TEMPLATE before repository activation")
+        "Sample active translations with FORMATJS, DOLLAR_TEMPLATE or MF2 before repository activation")
 public class TranslationIntegrityPreflightCommand extends Command {
 
   static final int DEFAULT_MAX_TEXT_UNITS = 25;
@@ -58,7 +59,7 @@ public class TranslationIntegrityPreflightCommand extends Command {
       names = {"--checker-type"},
       arity = 1,
       required = true,
-      description = "Candidate checker: FORMATJS or DOLLAR_TEMPLATE")
+      description = "Candidate checker: FORMATJS, DOLLAR_TEMPLATE or MF2")
   IntegrityCheckerType checkerTypeParam;
 
   @Parameter(
@@ -156,7 +157,7 @@ public class TranslationIntegrityPreflightCommand extends Command {
               "source-missing");
         } else {
           TranslationIntegrityEvaluation evaluation =
-              evaluate(textUnit.source(), textUnit.target());
+              evaluate(textUnit.source(), textUnit.target(), textUnit.targetLocale());
           switch (evaluation.disposition()) {
             case PASS, EXEMPT -> passed++;
             case REJECT_TARGET -> {
@@ -206,8 +207,10 @@ public class TranslationIntegrityPreflightCommand extends Command {
     }
   }
 
-  private TranslationIntegrityEvaluation evaluate(String source, String target) {
+  private TranslationIntegrityEvaluation evaluate(
+      String source, String target, String targetLocale) {
     return switch (checkerTypeParam) {
+      case MF2 -> Mf2TranslationIntegrityEvaluator.evaluate(source, target, targetLocale);
       case FORMATJS ->
           new FormatJsTranslationIntegrityEvaluator()
               .evaluate(source, target, FormatJsTranslationIntegrityOptions.web());
@@ -345,8 +348,9 @@ public class TranslationIntegrityPreflightCommand extends Command {
       throw new CommandException("Asset extension must not be blank");
     }
     if (checkerTypeParam != IntegrityCheckerType.FORMATJS
-        && checkerTypeParam != IntegrityCheckerType.DOLLAR_TEMPLATE) {
-      throw new CommandException("Checker type must be FORMATJS or DOLLAR_TEMPLATE");
+        && checkerTypeParam != IntegrityCheckerType.DOLLAR_TEMPLATE
+        && checkerTypeParam != IntegrityCheckerType.MF2) {
+      throw new CommandException("Checker type must be FORMATJS, DOLLAR_TEMPLATE or MF2");
     }
     if (maxTextUnitsParam < 1 || maxTextUnitsParam > MAX_TEXT_UNITS) {
       throw new CommandException("max-text-units must be between 1 and " + MAX_TEXT_UNITS);

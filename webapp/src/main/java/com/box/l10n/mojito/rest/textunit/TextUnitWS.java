@@ -472,7 +472,7 @@ public class TextUnitWS {
     if (!userService.isCurrentUserAdminOrPm()) {
       try {
         tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
-            textUnitDTO.getTmTextUnitId(), textUnitDTO.getTarget());
+            textUnitDTO.getTmTextUnitId(), textUnitDTO.getTarget(), textUnitDTO.getLocaleId());
       } catch (IntegrityCheckException exception) {
         throw new ResponseStatusException(
             HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage(), exception);
@@ -582,7 +582,9 @@ public class TextUnitWS {
     TMTextUnitIntegrityCheckResult result = new TMTextUnitIntegrityCheckResult();
     try {
       tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
-          textUnitCheckBody.getTmTextUnitId(), textUnitCheckBody.getContent());
+          textUnitCheckBody.getTmTextUnitId(),
+          textUnitCheckBody.getContent(),
+          textUnitCheckBody.getLocaleId());
       result.setCheckResult(true);
       resultTag = "success";
     } catch (IntegrityCheckException e) {

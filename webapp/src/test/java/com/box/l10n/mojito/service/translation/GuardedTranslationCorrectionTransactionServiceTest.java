@@ -56,7 +56,7 @@ public class GuardedTranslationCorrectionTransactionServiceTest {
     assertThat(result.stored().includedInLocalizedFile()).isFalse();
 
     verify(fixture.integrityCheckService)
-        .checkTMTextUnitIntegrity(fixture.textUnit.getId(), "caf\u00e9");
+        .checkTMTextUnitIntegrityForLocale(fixture.textUnit.getId(), "caf\u00e9", "fr-FR");
     verify(fixture.tmService)
         .addTMTextUnitCurrentVariantWithResult(
             eq(fixture.current),
@@ -282,7 +282,7 @@ public class GuardedTranslationCorrectionTransactionServiceTest {
     Fixture fixture = new Fixture();
     Mockito.doThrow(new IntegrityCheckException("sensitive target details"))
         .when(fixture.integrityCheckService)
-        .checkTMTextUnitIntegrity(fixture.textUnit.getId(), "replacement");
+        .checkTMTextUnitIntegrityForLocale(fixture.textUnit.getId(), "replacement", "fr-FR");
 
     assertThatThrownBy(
             () -> fixture.service.apply(0, fixture.correction("ancien", "replacement"), 9L))

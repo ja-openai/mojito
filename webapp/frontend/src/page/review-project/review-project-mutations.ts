@@ -612,6 +612,11 @@ export function useReviewProjectMutations(
           try {
             const integrityResult = await checkTextUnitIntegrityWithRetry({
               tmTextUnitId: action.request.tmTextUnitId,
+              localeId:
+                queryClient.getQueryData<ApiReviewProjectDetail>([
+                  ...REVIEW_PROJECT_DETAIL_QUERY_KEY,
+                  projectId,
+                ])?.locale?.id ?? undefined,
               content: action.request.target,
             });
             if (attemptId !== actionAttemptRef.current) {
@@ -694,6 +699,11 @@ export function useReviewProjectMutations(
       if (shouldPreflightIntegrityCheckForAction(action, user.role, skipIntegrityCheck)) {
         void checkTextUnitIntegrityWithRetry({
           tmTextUnitId: action.request.tmTextUnitId,
+          localeId:
+            queryClient.getQueryData<ApiReviewProjectDetail>([
+              ...REVIEW_PROJECT_DETAIL_QUERY_KEY,
+              projectId,
+            ])?.locale?.id ?? undefined,
           content: action.request.target,
         })
           .then((result) => {
@@ -751,7 +761,7 @@ export function useReviewProjectMutations(
       }
       return attempt.operationId;
     },
-    [executeAction, projectId, sessionOwner, user.role],
+    [executeAction, projectId, queryClient, sessionOwner, user.role],
   );
 
   const onRequestSaveDecision = useCallback(

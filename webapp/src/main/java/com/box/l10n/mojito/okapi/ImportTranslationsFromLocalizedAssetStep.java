@@ -150,7 +150,8 @@ public class ImportTranslationsFromLocalizedAssetStep extends AbstractImportTran
 
     for (TextUnitIntegrityChecker textUnitIntegrityChecker : textUnitIntegrityCheckers) {
       try {
-        textUnitIntegrityChecker.check(tmTextUnit.getContent(), target.toString());
+        textUnitIntegrityChecker.check(
+            tmTextUnit.getContent(), target.toString(), repositoryLocale.getLocale().getBcp47Tag());
       } catch (IntegrityCheckException integrityCheckException) {
         TMTextUnitVariantCommentAnnotation tmTextUnitVariantCommentAnnotation =
             new TMTextUnitVariantCommentAnnotation();

@@ -434,6 +434,7 @@ describe('Review Project confidence schedules', () => {
       );
       expect(integrityMock).toHaveBeenLastCalledWith({
         content: changed.currentTmTextUnitVariant?.content,
+        localeId: harness.project.locale?.id,
         tmTextUnitId: changed.tmTextUnit.id,
       });
     },

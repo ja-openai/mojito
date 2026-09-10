@@ -283,7 +283,10 @@ public class TextUnitBatchImporterService {
                                                 .tag("asset", asset.getPath())) {
 
                                           applyIntegrityChecks(
-                                              asset, textUnitsForBatchImport, integrityChecksType);
+                                              asset,
+                                              textUnitsForBatchImport,
+                                              integrityChecksType,
+                                              locale.getBcp47Tag());
                                         }
                                       }
                                       List<ImportResult> addTMTextUnitCurrentVariantResults =
@@ -533,6 +536,14 @@ public class TextUnitBatchImporterService {
       Asset asset,
       List<TextUnitForBatchMatcherImport> textUnitsForBatchImport,
       IntegrityChecksType integrityChecksType) {
+    applyIntegrityChecks(asset, textUnitsForBatchImport, integrityChecksType, null);
+  }
+
+  void applyIntegrityChecks(
+      Asset asset,
+      List<TextUnitForBatchMatcherImport> textUnitsForBatchImport,
+      IntegrityChecksType integrityChecksType,
+      String targetLocale) {
 
     Set<TextUnitIntegrityChecker> textUnitCheckers =
         integrityCheckerFactory.getTextUnitCheckers(asset);
@@ -573,7 +584,10 @@ public class TextUnitBatchImporterService {
 
       for (TextUnitIntegrityChecker textUnitChecker : textUnitCheckers) {
         try {
-          textUnitChecker.check(currentTextUnit.getSource(), textUnitForBatchImport.getContent());
+          textUnitChecker.check(
+              currentTextUnit.getSource(),
+              textUnitForBatchImport.getContent(),
+              targetLocale == null ? currentTextUnit.getTargetLocale() : targetLocale);
         } catch (IntegrityCheckException ice) {
           logger.info(
               "Integrity check failed: tmTextUnitId={}, localeId={}, sourceLength={}, "

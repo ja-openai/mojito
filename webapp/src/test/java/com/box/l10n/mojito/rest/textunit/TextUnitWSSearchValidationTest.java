@@ -8,10 +8,12 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetIntegrityChecker;
+import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
@@ -26,6 +28,7 @@ import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.Integr
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerType;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TranslationIntegrityCheckerException;
+import com.box.l10n.mojito.service.locale.LocaleRepository;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -122,6 +125,19 @@ public class TextUnitWSSearchValidationTest {
   }
 
   @Test
+  public void checkTMTextUnitPassesRequestedLocale() {
+    textUnitWS.meterRegistry = new SimpleMeterRegistry();
+    var service = mock(TMTextUnitIntegrityCheckService.class);
+    textUnitWS.tmTextUnitIntegrityCheckService = service;
+    TextUnitCheckBody body = new TextUnitCheckBody();
+    body.setTmTextUnitId(321L);
+    body.setContent("Bonjour");
+    body.setLocaleId(27L);
+    assertEquals(Boolean.TRUE, textUnitWS.checkTMTextUnit(body).getCheckResult());
+    verify(service).checkTMTextUnitIntegrity(321L, "Bonjour", 27L);
+  }
+
+  @Test
   public void checkTMTextUnitRecordsSuccessMetric() {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TMTextUnitIntegrityCheckService integrityCheckService =
@@ -136,7 +152,7 @@ public class TextUnitWSSearchValidationTest {
 
     assertEquals(Boolean.TRUE, result.getCheckResult());
     assertEquals(1.0, integrityCheckDurationCount(meterRegistry, "success"), 0.0);
-    verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+    verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour", null);
   }
 
   @Test
@@ -146,7 +162,7 @@ public class TextUnitWSSearchValidationTest {
         mock(TMTextUnitIntegrityCheckService.class);
     doThrow(new IntegrityCheckException("Missing placeholder"))
         .when(integrityCheckService)
-        .checkTMTextUnitIntegrity(321L, "Bonjour");
+        .checkTMTextUnitIntegrity(321L, "Bonjour", null);
     textUnitWS.meterRegistry = meterRegistry;
     textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
     TextUnitCheckBody body = new TextUnitCheckBody();
@@ -158,7 +174,7 @@ public class TextUnitWSSearchValidationTest {
     assertEquals(Boolean.FALSE, result.getCheckResult());
     assertEquals("Missing placeholder", result.getFailureDetail());
     assertEquals(1.0, integrityCheckDurationCount(meterRegistry, "failure"), 0.0);
-    verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+    verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour", null);
   }
 
   @Test
@@ -169,7 +185,7 @@ public class TextUnitWSSearchValidationTest {
       TMService tmService = mock(TMService.class);
       doThrow(new IntegrityCheckException("Missing placeholder"))
           .when(integrityCheckService)
-          .checkTMTextUnitIntegrity(321L, "Bonjour");
+          .checkTMTextUnitIntegrity(321L, "Bonjour", 12L);
       textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
       textUnitWS.tmService = tmService;
       textUnitWS.userService = userServiceWithRole(role, true);
@@ -183,7 +199,7 @@ public class TextUnitWSSearchValidationTest {
 
       assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
       assertEquals("Missing placeholder", exception.getReason());
-      verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+      verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour", 12L);
       verifyNoInteractions(tmService);
     }
   }
@@ -199,7 +215,7 @@ public class TextUnitWSSearchValidationTest {
             mock(TMTextUnitIntegrityCheckService.class);
         doThrow(new IntegrityCheckException("Missing placeholder"))
             .when(integrityCheckService)
-            .checkTMTextUnitIntegrity(321L, "Caf\u00e9");
+            .checkTMTextUnitIntegrity(321L, "Caf\u00e9", 12L);
         TMService tmService = mock(TMService.class);
         TMTextUnitVariant variant = new TMTextUnitVariant();
         variant.setId(456L);
@@ -313,6 +329,11 @@ public class TextUnitWSSearchValidationTest {
     TMTextUnitIntegrityCheckService integrityCheckService = new TMTextUnitIntegrityCheckService();
     ReflectionTestUtils.setField(integrityCheckService, "integrityCheckerFactory", checkerFactory);
     ReflectionTestUtils.setField(integrityCheckService, "tmTextUnitRepository", textUnitRepository);
+    Locale locale = new Locale();
+    locale.setBcp47Tag("fr");
+    LocaleRepository localeRepository = mock(LocaleRepository.class);
+    when(localeRepository.findById(12L)).thenReturn(Optional.of(locale));
+    ReflectionTestUtils.setField(integrityCheckService, "localeRepository", localeRepository);
 
     TMService tmService = mock(TMService.class);
     textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
@@ -331,6 +352,74 @@ public class TextUnitWSSearchValidationTest {
     assertTrue(exception.getReason().contains("FORMATJS translation integrity rejected target"));
     verify(checkerRepository).findByRepositoryAndAssetExtension(repository, "json");
     verifyNoInteractions(tmService);
+  }
+
+  @Test
+  public void addTextUnitUsesPersistedTargetLocaleForConfiguredMf2PluralValidation() {
+    String message =
+        ".input {$count :number}\n.match $count\none {{One item}}\n* {{{ $count } items}}";
+    Repository repository = new Repository();
+    Asset asset = new Asset();
+    asset.setRepository(repository);
+    asset.setPath("messages.mf2");
+    TMTextUnit source = new TMTextUnit();
+    source.setAsset(asset);
+    source.setContent(message);
+    AssetIntegrityChecker configuredChecker = new AssetIntegrityChecker();
+    configuredChecker.setRepository(repository);
+    configuredChecker.setAssetExtension("mf2");
+    configuredChecker.setIntegrityCheckerType(IntegrityCheckerType.MF2);
+    AssetIntegrityCheckerRepository checkerRepository = mock(AssetIntegrityCheckerRepository.class);
+    when(checkerRepository.findByRepositoryAndAssetExtension(repository, "mf2"))
+        .thenReturn(Set.of(configuredChecker));
+    IntegrityCheckerFactory checkerFactory = new IntegrityCheckerFactory();
+    ReflectionTestUtils.setField(
+        checkerFactory, "assetIntegrityCheckerRepository", checkerRepository);
+    TMTextUnitRepository textUnitRepository = mock(TMTextUnitRepository.class);
+    when(textUnitRepository.findById(321L)).thenReturn(Optional.of(source));
+    Locale english = new Locale();
+    english.setBcp47Tag("en");
+    Locale arabic = new Locale();
+    arabic.setBcp47Tag("ar");
+    LocaleRepository localeRepository = mock(LocaleRepository.class);
+    when(localeRepository.findById(12L)).thenReturn(Optional.of(english));
+    when(localeRepository.findById(13L)).thenReturn(Optional.of(arabic));
+    TMTextUnitIntegrityCheckService integrityCheckService = new TMTextUnitIntegrityCheckService();
+    ReflectionTestUtils.setField(integrityCheckService, "integrityCheckerFactory", checkerFactory);
+    ReflectionTestUtils.setField(integrityCheckService, "tmTextUnitRepository", textUnitRepository);
+    ReflectionTestUtils.setField(integrityCheckService, "localeRepository", localeRepository);
+    TMService tmService = mock(TMService.class);
+    TMTextUnitVariant variant = new TMTextUnitVariant();
+    variant.setId(456L);
+    TMTextUnitCurrentVariant currentVariant = new TMTextUnitCurrentVariant();
+    currentVariant.setId(789L);
+    currentVariant.setTmTextUnitVariant(variant);
+    when(tmService.addTMTextUnitCurrentVariant(
+            321L, 12L, message, null, TMTextUnitVariant.Status.APPROVED, true))
+        .thenReturn(currentVariant);
+    textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
+    textUnitWS.tmService = tmService;
+    textUnitWS.userService = userServiceWithRole(Role.ROLE_TRANSLATOR, true);
+    TextUnitDTO textUnit = new TextUnitDTO();
+    textUnit.setTmTextUnitId(321L);
+    textUnit.setLocaleId(12L);
+    textUnit.setTarget(message);
+    textUnit.setStatus(TMTextUnitVariant.Status.APPROVED);
+    textUnit.setIncludedInLocalizedFile(true);
+
+    assertEquals(Long.valueOf(456L), textUnitWS.addTextUnit(textUnit).getTmTextUnitVariantId());
+    textUnit.setLocaleId(13L);
+    ResponseStatusException failure =
+        assertThrows(ResponseStatusException.class, () -> textUnitWS.addTextUnit(textUnit));
+
+    assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, failure.getStatusCode());
+    assertTrue(failure.getReason().contains("mf2-plural-category-missing"));
+    verify(localeRepository).findById(12L);
+    verify(localeRepository).findById(13L);
+    verify(tmService)
+        .addTMTextUnitCurrentVariant(
+            321L, 12L, message, null, TMTextUnitVariant.Status.APPROVED, true);
+    verifyNoMoreInteractions(tmService);
   }
 
   private double integrityCheckDurationCount(SimpleMeterRegistry meterRegistry, String result) {

@@ -1827,7 +1827,8 @@ public class TMService {
       List<String> errors = new ArrayList<>();
       for (TextUnitIntegrityChecker checker : checkers) {
         try {
-          checker.check(source.getContent(), translation);
+          checker.check(
+              source.getContent(), translation, repositoryLocale.getLocale().getBcp47Tag());
         } catch (IntegrityCheckException invalid) {
           errors.add(invalid.getMessage());
         }

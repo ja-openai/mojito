@@ -2441,8 +2441,8 @@ public class ReviewProjectService {
         if (isTranslator) {
           Stopwatch integrityCheckStopwatch = Stopwatch.createStarted();
           try {
-            tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
-                tmTextUnit.getId(), normalizedTarget);
+            tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrityForLocale(
+                tmTextUnit.getId(), normalizedTarget, project.getLocale().getBcp47Tag());
             recordSaveDecisionPhase(
                 "integrityCheck",
                 "success",
@@ -2588,8 +2588,8 @@ public class ReviewProjectService {
 
     String normalizedTarget = NormalizationUtils.normalize(target);
     try {
-      tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
-          tmTextUnit.getId(), normalizedTarget);
+      tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrityForLocale(
+          tmTextUnit.getId(), normalizedTarget, project.getLocale().getBcp47Tag());
     } catch (IntegrityCheckException e) {
       throw new AccessDeniedException(TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE);
     }

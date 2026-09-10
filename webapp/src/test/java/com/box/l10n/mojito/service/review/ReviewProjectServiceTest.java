@@ -1013,7 +1013,7 @@ public class ReviewProjectServiceTest {
     try {
       Mockito.doThrow(new IntegrityCheckException("broken placeholder"))
           .when(tmTextUnitIntegrityCheckService)
-          .checkTMTextUnitIntegrity(321L, "Bonjour %");
+          .checkTMTextUnitIntegrityForLocale(321L, "Bonjour %", "ja-JP");
     } catch (IntegrityCheckException e) {
       throw new RuntimeException(e);
     }
@@ -1038,7 +1038,8 @@ public class ReviewProjectServiceTest {
           e.getMessage());
     }
 
-    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(eq(321L), eq("Bonjour %"));
+    verify(tmTextUnitIntegrityCheckService)
+        .checkTMTextUnitIntegrityForLocale(eq(321L), eq("Bonjour %"), eq("ja-JP"));
     verify(tmService, never())
         .addTMTextUnitCurrentVariantWithResult(
             any(),
@@ -1421,7 +1422,8 @@ public class ReviewProjectServiceTest {
     assertEquals("Salut", suggestion.getPreviousTarget());
     assertEquals(ReviewProjectTextUnitSuggestion.Source.FIND_REPLACE, suggestion.getSource());
     assertEquals("manual cleanup", suggestion.getNotes());
-    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+    verify(tmTextUnitIntegrityCheckService)
+        .checkTMTextUnitIntegrityForLocale(321L, "Bonjour", "ja-JP");
     verify(tmService, never())
         .addTMTextUnitCurrentVariantWithResult(
             any(),
@@ -1514,7 +1516,8 @@ public class ReviewProjectServiceTest {
 
     verify(reviewProjectTextUnitSuggestionRepository).delete(suggestion);
     verify(reviewProjectTextUnitSuggestionRepository).flush();
-    verify(tmTextUnitIntegrityCheckService, never()).checkTMTextUnitIntegrity(anyLong(), any());
+    verify(tmTextUnitIntegrityCheckService, never())
+        .checkTMTextUnitIntegrityForLocale(anyLong(), any(), any());
     verify(tmService, never())
         .addTMTextUnitCurrentVariantWithResult(
             any(),

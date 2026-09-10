@@ -48,7 +48,7 @@ public class TMTextUnitIntegrityCheckTransactionTest {
     Mockito.when(unit.getPluralForm()).thenReturn(plural);
     Mockito.when(integrityCheckerFactory.getTextUnitCheckers(asset))
         .thenReturn(Sets.newHashSet(checker));
-    Mockito.doThrow(failure).when(checker).check("{count} items", "articles");
+    Mockito.doThrow(failure).when(checker).check("{count} items", "articles", "fr");
     Mockito.when(plural.getName())
         .thenAnswer(
             invocation -> {
@@ -70,7 +70,7 @@ public class TMTextUnitIntegrityCheckTransactionTest {
         failure,
         assertThrows(
             IntegrityCheckException.class,
-            () -> service.checkTMTextUnitIntegrity(42L, "articles")));
+            () -> service.checkTMTextUnitIntegrityForLocale(42L, "articles", "fr")));
     Mockito.verify(pluralIntegrityCheckerRelaxer)
         .shouldRelaxIntegrityCheck("{count} items", "articles", "other", checker);
     assertFalse(TransactionSynchronizationManager.isActualTransactionActive());

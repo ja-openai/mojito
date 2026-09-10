@@ -778,6 +778,7 @@ describe('TextUnitDetailPage', () => {
     );
     expect(checkTextUnitIntegrityMock).toHaveBeenCalledWith({
       tmTextUnitId: 3,
+      localeId: 17,
       content: nextTarget,
     });
   });

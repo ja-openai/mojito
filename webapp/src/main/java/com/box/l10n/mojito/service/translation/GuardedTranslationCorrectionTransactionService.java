@@ -190,7 +190,8 @@ public class GuardedTranslationCorrectionTransactionService {
           "Replacement would not change the stored target");
     }
     try {
-      integrityCheckService.checkTMTextUnitIntegrity(tmTextUnit.getId(), normalizedReplacement);
+      integrityCheckService.checkTMTextUnitIntegrityForLocale(
+          tmTextUnit.getId(), normalizedReplacement, locale.getBcp47Tag());
     } catch (IntegrityCheckException exception) {
       throw new CorrectionExecutionException(
           "INTEGRITY_CHECK_FAILED", "Replacement failed translation integrity checks");

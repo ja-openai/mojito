@@ -85,7 +85,9 @@ public class AiReviewChatWSTest {
   public void chatAppendsLocalePromptSuffixToSystemPrompt() {
     when(aiTranslateLocalePromptSuffixService.getLocalePromptSuffix("fr-FR"))
         .thenReturn("Use Canadian French terminology.");
-    doNothing().when(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, "Bonjour");
+    doNothing()
+        .when(tmTextUnitIntegrityCheckService)
+        .checkTMTextUnitIntegrityForLocale(42L, "Bonjour", "fr-FR");
     when(openAIClient.getResponses(any(), any()))
         .thenReturn(
             CompletableFuture.completedFuture(
@@ -148,7 +150,8 @@ public class AiReviewChatWSTest {
                 "completed")
             .count());
     verify(aiTranslateLocalePromptSuffixService).getLocalePromptSuffix("fr-FR");
-    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, "Bonjour");
+    verify(tmTextUnitIntegrityCheckService)
+        .checkTMTextUnitIntegrityForLocale(42L, "Bonjour", "fr-FR");
   }
 
   @Test
@@ -529,7 +532,7 @@ public class AiReviewChatWSTest {
         new ObjectMapper()
             .readValueUnchecked(inputJson, AiReviewService.AiReviewTextUnitVariantInput.class);
     assertEquals(" 保存 ", input.existingTarget().content());
-    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, " 保存 ");
+    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrityForLocale(42L, " 保存 ", "ja-JP");
   }
 
   @Test
@@ -573,7 +576,8 @@ public class AiReviewChatWSTest {
             .locale());
     verify(interactiveService).start(prepared, null);
     verify(aiTranslateLocalePromptSuffixService).getLocalePromptSuffix("fr-CA");
-    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, "Bonjour");
+    verify(tmTextUnitIntegrityCheckService)
+        .checkTMTextUnitIntegrityForLocale(42L, "Bonjour", "fr-CA");
   }
 
   @Test

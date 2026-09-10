@@ -175,11 +175,13 @@ non-selector-capable, or annotation-mismatched inputs remain errors.
 The original static Rust-backed prototype remains useful for parser/runtime
 experiments, but it is no longer the Workbench integration path. The current
 backend classifies a final `.mf2` source asset extension directly and uses strict
-source shape for mixed or legacy assets. The remaining backend boundary is to
-make repository or asset configuration authoritative for MF2 classification and
-to enforce MF2 parse and source/target contract validation on every server-side
-mutation path. Frontend diagnostics currently protect the interactive save and
-accept flows, but are not an authoritative asset validator.
+source shape for mixed or legacy assets. The opt-in repository/extension `MF2`
+integrity checker enforces parse and source/target contract validation on the
+existing server save, review, guarded correction and import paths, using the
+target locale while preserving their intentional bypass policies. The remaining
+work is to make configured MF2 classification consistent across the APIs,
+including mixed-format assets, and to verify scoped activation and deployment.
+Frontend diagnostics complement the configured server checks.
 
 ## Phase 4: Native Swift
 
@@ -244,3 +246,25 @@ Before calling any library production-ready:
    platform-owned currency/date/time cases.
 8. After V0 stabilizes, grow the Rust prototype toward editor spans, recovery,
    formatting, and Wasm/LSP packaging.
+
+## September 2026 validation and runtime hardening
+
+The standalone gate now runs production registries against every assertion in
+the pinned official corpus, shared model/format/error fixtures, bounded parser
+mutations and the shared adapter corpus. Exact parts/platform capability
+differences remain explicit non-passes. Native package artifacts and clean
+consumers are separate gates. See `mf2/conformance/coverage-audit.md`,
+`mf2/spec/runtime-limits.md`, and `mf2/packaging/README.md`.
+
+The opt-in `MF2` repository/extension integrity checker uses the common ICU-based
+source/target evaluator. Save, review, guarded correction and both batch/Okapi
+import paths supply the authoritative target locale. Read-only CLI preflight
+supports MF2 and target locale. `/api/textunits/check` accepts optional `localeId`;
+legacy calls without it perform structural checks and do not assume English.
+The frontend supplies the row/project locale for previews of this same gate.
+
+Configuration activation is separate from code support. Existing PM/admin and
+explicit import bypass policies remain; invalid imported targets follow the
+existing retain-for-repair/exclude-from-output policy. Mixed-format assets still
+need authoritative per-message classification metadata, and live rollout needs
+its own scoped preflight and deployment verification.

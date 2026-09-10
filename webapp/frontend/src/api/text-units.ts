@@ -144,6 +144,7 @@ export type ApiPollableTask = {
 
 export type TextUnitIntegrityCheckRequest = {
   tmTextUnitId: number;
+  localeId?: number;
   content: string;
 };
 

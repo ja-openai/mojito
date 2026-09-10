@@ -118,7 +118,8 @@ public class AiReviewChatWS {
             .serviceTier(settings.serviceTier())
             .addUserText(inputPayload)
             .addJsonSchema(AiReviewTextUnitVariantOutput.class);
-    String integrityContextMessage = buildIntegrityContextMessage(request.tmTextUnitId(), target);
+    String integrityContextMessage =
+        buildIntegrityContextMessage(request.tmTextUnitId(), target, localeTag);
     if (hasText(integrityContextMessage)) {
       requestBuilder.addUserText(integrityContextMessage);
     }
@@ -295,13 +296,14 @@ public class AiReviewChatWS {
         : "%s %s".formatted(AiReviewType.PROMPT_ALL, promptSuffix);
   }
 
-  private String buildIntegrityContextMessage(Long tmTextUnitId, String target) {
+  private String buildIntegrityContextMessage(Long tmTextUnitId, String target, String localeTag) {
     if (tmTextUnitId == null || !hasText(target)) {
       return null;
     }
 
     try {
-      tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(tmTextUnitId, target);
+      tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrityForLocale(
+          tmTextUnitId, target, localeTag);
       return null;
     } catch (IntegrityCheckException e) {
       String failureDetail =

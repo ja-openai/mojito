@@ -126,7 +126,7 @@ public class ReviewProjectIdentityRevisionDbTest extends ServiceTestBase {
               return null;
             })
         .when(integrityCheckService)
-        .checkTMTextUnitIntegrity(eq(before.tmTextUnit().id()), eq(draft));
+        .checkTMTextUnitIntegrityForLocale(eq(before.tmTextUnit().id()), eq(draft), eq("fr-FR"));
     var authentication = SecurityContextHolder.getContext().getAuthentication();
     var executor = Executors.newFixedThreadPool(2);
     try {

@@ -534,6 +534,7 @@ export function useWorkbenchEdits({
     (request: SaveTextUnitMutationVars, attemptId: number) => {
       void checkTextUnitIntegrityWithRetry({
         tmTextUnitId: request.tmTextUnitId,
+        localeId: request.localeId,
         content: request.target,
       })
         .then((result) => {

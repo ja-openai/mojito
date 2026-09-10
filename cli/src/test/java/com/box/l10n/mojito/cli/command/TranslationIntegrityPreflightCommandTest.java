@@ -164,6 +164,20 @@ class TranslationIntegrityPreflightCommandTest {
     assertThat(result.truncated()).isTrue();
   }
 
+  @Test
+  void mf2PreflightUsesTargetLocaleForPluralRequirements() {
+    command.checkerTypeParam = IntegrityCheckerType.MF2;
+    String source = ".input {$n :number}\n.match $n\none {{One}}\n* {{{ $n } items}}";
+    when(textUnitClient.searchTextUnits(any()))
+        .thenReturn(List.of(textUnit(1, source, source, "messages.json")));
+    // fr-FR also needs 'many', unlike the English source. The locale comes from each sampled row.
+    var result = command.preflight();
+    assertThat(result.rejectTarget()).isEqualTo(1);
+    assertThat(result.findings())
+        .flatExtracting(TranslationIntegrityPreflightCommand.PreflightFinding::diagnosticCodes)
+        .contains("target:mf2-plural-category-missing");
+  }
+
   private static TextUnit textUnit(long id, String source, String target, String assetPath) {
     return new TextUnit(
         id,

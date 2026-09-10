@@ -43,6 +43,47 @@ public class TMTextUnitIntegrityCheckServiceTest {
 
   @Mock PluralIntegrityCheckerRelaxer pluralIntegrityCheckerRelaxer;
 
+  @Mock com.box.l10n.mojito.service.locale.LocaleRepository localeRepository;
+
+  @Test
+  public void localeIdIsResolvedBeforeConfiguredMf2Validation() {
+    Asset asset = new Asset();
+    TMTextUnit unit = new TMTextUnit();
+    unit.setAsset(asset);
+    String source = ".input {$n :number}\n.match $n\none {{One}}\n* {{{ $n } items}}";
+    unit.setContent(source);
+    com.box.l10n.mojito.entity.Locale locale = new com.box.l10n.mojito.entity.Locale();
+    locale.setBcp47Tag("ar");
+    Mockito.when(localeRepository.findById(2L)).thenReturn(Optional.of(locale));
+    Mockito.when(tmTextUnitRepository.findById(1L)).thenReturn(Optional.of(unit));
+    Mockito.when(integrityCheckerFactory.getTextUnitCheckers(asset))
+        .thenReturn(
+            java.util.Set.of(
+                new com.box.l10n.mojito.service.assetintegritychecker.integritychecker
+                    .Mf2TranslationIntegrityChecker()));
+    org.junit.Assert.assertThrows(
+        IntegrityCheckException.class,
+        () -> integrityCheckService.checkTMTextUnitIntegrity(1L, source, 2L));
+    integrityCheckService.checkTMTextUnitIntegrity(1L, source);
+  }
+
+  @Test
+  public void contextualInvocationPreservesLegacyCheckerBehavior() {
+    Asset asset = new Asset();
+    TMTextUnit unit = new TMTextUnit();
+    unit.setAsset(asset);
+    unit.setContent("Hello {name}");
+    Mockito.when(tmTextUnitRepository.findById(1L)).thenReturn(Optional.of(unit));
+    Mockito.when(integrityCheckerFactory.getTextUnitCheckers(asset))
+        .thenReturn(
+            java.util.Set.of(
+                new com.box.l10n.mojito.service.assetintegritychecker.integritychecker
+                    .FormatJsTranslationIntegrityChecker()));
+    org.junit.Assert.assertThrows(
+        IntegrityCheckException.class,
+        () -> integrityCheckService.checkTMTextUnitIntegrityForLocale(1L, "Bonjour {other}", "fr"));
+  }
+
   @Test
   public void nonWebCallKeepsPluralContextInsideATransaction() {
     Asset asset = Mockito.mock(Asset.class);
