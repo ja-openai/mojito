@@ -19,6 +19,7 @@ export type ReviewProjectFindReplaceRow = {
   name: string;
   locale: string;
   source: string;
+  messageFormat?: string | null;
   sourceComment: string | null;
   originalTarget: string;
   workingTarget: string;
@@ -83,6 +84,7 @@ export function buildReviewProjectFindReplaceRow(
     name: textUnit.tmTextUnit?.name != null ? String(textUnit.tmTextUnit.name) : 'Unmapped',
     locale,
     source: textUnit.tmTextUnit?.content ?? '',
+    messageFormat: textUnit.tmTextUnit?.messageFormat,
     sourceComment: textUnit.tmTextUnit?.comment ?? null,
     originalTarget,
     workingTarget: stagedSuggestion?.target ?? originalTarget,

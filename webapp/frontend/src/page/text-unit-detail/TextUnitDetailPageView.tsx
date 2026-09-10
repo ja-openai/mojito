@@ -347,6 +347,7 @@ export function TextUnitDetailPageView({
                   assisted={visibleTextEditor.enabled && !isMf2}
                   ariaLabel={editorInfo.isSourceOnly ? 'Source text' : 'Translation'}
                   className="text-unit-detail-page__editor-textarea"
+                  source={keyInfo.source}
                   value={editorInfo.target}
                   onChange={onChangeTarget}
                   controlBar={{

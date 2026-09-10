@@ -1,6 +1,6 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createRef, type Ref, useMemo, useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   extractIcuProtectedTextTokens,
@@ -886,6 +886,7 @@ describe('VisibleTextEditor', () => {
       );
 
       const editor = await screen.findByRole('textbox', { name: 'Translation' });
+      act(() => editor.focus());
       expect(await screen.findByRole('listbox', { name: 'MF2 placeholders' })).toBeInTheDocument();
 
       fireEvent.keyDown(editor, { key: 'ArrowDown' });
@@ -923,6 +924,7 @@ describe('VisibleTextEditor', () => {
         />,
       );
 
+      act(() => screen.getByRole('textbox', { name: 'Translation' }).focus());
       fireEvent.click(await screen.findByRole('option', { name: '{$count} source placeholder' }));
 
       expect(handleApply).toHaveBeenCalledWith({
@@ -3017,5 +3019,235 @@ describe('VisibleTextEditor', () => {
 
     expect(screen.queryByText('Enter a non-negative integer.')).not.toBeInTheDocument();
     expect(screen.queryByText('5 tokens found')).not.toBeInTheDocument();
+  });
+});
+
+describe('VisibleTextEditor completion interaction', () => {
+  const options = [
+    { id: 'count', label: '{count}' },
+    { id: 'customer', label: '{customer}' },
+  ];
+  let restoreDom: () => void;
+
+  beforeEach(() => {
+    restoreDom = installProseMirrorHistoryDomMock();
+  });
+
+  afterEach(() => {
+    cleanup();
+    restoreDom();
+  });
+
+  async function focusEditor() {
+    const editor = screen.getByRole('textbox', { name: 'Translation' });
+    act(() => editor.focus());
+    await screen.findByRole('listbox');
+    return editor;
+  }
+
+  it('opens only on focus and associates the active option with the editor', async () => {
+    const scrollIntoView = vi.fn();
+    const scrollDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
+    try {
+      render(
+        <VisibleTextEditor
+          value="{c"
+          onChange={vi.fn()}
+          ariaLabel="Translation"
+          completion={{ options, onApply: vi.fn() }}
+        />,
+      );
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      const editor = await focusEditor();
+      const listbox = screen.getByRole('listbox');
+      const count = screen.getByRole('option', { name: '{count}' });
+      const customer = screen.getByRole('option', { name: '{customer}' });
+
+      expect(editor).toHaveAttribute('aria-autocomplete', 'list');
+      expect(editor).toHaveAttribute('aria-controls', listbox.id);
+      expect(editor).toHaveAttribute('aria-activedescendant', count.id);
+      expect(count).toHaveAttribute('tabindex', '-1');
+      expect(customer).toHaveAttribute('tabindex', '-1');
+
+      fireEvent.keyDown(editor, { key: 'ArrowUp' });
+      expect(editor).toHaveAttribute('aria-activedescendant', customer.id);
+      expect(customer).toHaveAttribute('aria-selected', 'true');
+      expect(scrollIntoView).toHaveBeenLastCalledWith({ block: 'nearest' });
+      expect(scrollIntoView.mock.contexts[scrollIntoView.mock.contexts.length - 1]).toBe(customer);
+      expect(document.activeElement).toBe(editor);
+
+      act(() => editor.blur());
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(editor).not.toHaveAttribute('aria-controls');
+      expect(editor).not.toHaveAttribute('aria-activedescendant');
+      await focusEditor();
+    } finally {
+      restoreDescriptor(Element.prototype, 'scrollIntoView', scrollDescriptor);
+    }
+  });
+
+  it.each([
+    { key: 'Enter', ctrlKey: true },
+    { key: 'Enter', metaKey: true },
+    { key: 'Enter', shiftKey: true },
+    { key: 'Tab', shiftKey: true },
+    { key: 'ArrowDown', ctrlKey: true },
+    { key: 'ArrowUp', metaKey: true },
+    { key: 'ArrowDown', altKey: true },
+    { key: 'ArrowUp', shiftKey: true },
+  ])('passes modified keys to the host: %j', async (key) => {
+    const handleApply = vi.fn();
+    const handleKeyDown = vi.fn((event: KeyboardEvent) => event.preventDefault());
+    render(
+      <VisibleTextEditor
+        value="{c"
+        onChange={vi.fn()}
+        ariaLabel="Translation"
+        onKeyDown={handleKeyDown}
+        completion={{ options, onApply: handleApply }}
+      />,
+    );
+    const editor = await focusEditor();
+
+    fireEvent.keyDown(editor, key);
+
+    expect(handleKeyDown).toHaveBeenCalledOnce();
+    expect(handleApply).not.toHaveBeenCalled();
+    expect(screen.getByRole('option', { name: '{count}' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('accepts a completion with plain Tab and keeps editor focus', async () => {
+    const handleApply = vi.fn();
+    const handleKeyDown = vi.fn();
+    render(
+      <VisibleTextEditor
+        value="{c"
+        onChange={vi.fn()}
+        ariaLabel="Translation"
+        onKeyDown={handleKeyDown}
+        completion={{ options, onApply: handleApply }}
+      />,
+    );
+    const editor = await focusEditor();
+
+    expect(fireEvent.keyDown(editor, { key: 'Tab' })).toBe(false);
+    expect(handleApply).toHaveBeenCalledWith(options[0]);
+    expect(handleKeyDown).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(editor);
+  });
+
+  it.each(['composition', 'isComposing', 'keyCode229'])(
+    'leaves native IME keys uncancelled and bypasses completion and host save (%s)',
+    async (mode) => {
+      const handleApply = vi.fn();
+      const handleChange = vi.fn();
+      const handleKeyDown = vi.fn((event: KeyboardEvent) => event.preventDefault());
+      render(
+        <VisibleTextEditor
+          value="{c"
+          onChange={handleChange}
+          ariaLabel="Translation"
+          onKeyDown={handleKeyDown}
+          completion={{ options, onApply: handleApply }}
+        />,
+      );
+      const editor = await focusEditor();
+      if (mode === 'composition') {
+        fireEvent.compositionStart(editor);
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      }
+
+      for (const key of ['Enter', 'Tab', 'ArrowDown']) {
+        expect(
+          fireEvent.keyDown(editor, {
+            key,
+            isComposing: mode === 'isComposing',
+            keyCode: mode === 'keyCode229' ? 229 : 0,
+          }),
+        ).toBe(true);
+      }
+      expect(handleApply).not.toHaveBeenCalled();
+      expect(handleChange).not.toHaveBeenCalled();
+      expect(handleKeyDown).not.toHaveBeenCalled();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(['readOnly', 'disabled'] as const)('closes when %s changes', async (attribute) => {
+    const handleApply = vi.fn();
+    const props = {
+      value: '{c',
+      onChange: vi.fn(),
+      ariaLabel: 'Translation',
+      completion: { options, onApply: handleApply },
+    };
+    const { rerender } = render(<VisibleTextEditor {...props} />);
+    const editor = await focusEditor();
+    const option = screen.getByRole('option', { name: '{count}' });
+
+    rerender(<VisibleTextEditor {...props} {...{ [attribute]: true }} />);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(editor).not.toHaveAttribute('aria-activedescendant');
+    fireEvent.click(option);
+    fireEvent.keyDown(editor, { key: 'Tab' });
+    expect(handleApply).not.toHaveBeenCalled();
+  });
+
+  it('keeps caller-dismissed completion closed across unrelated transactions and focus changes', async () => {
+    const handleDismiss = vi.fn();
+    const handleKeyDown = vi.fn();
+    function DismissibleEditor() {
+      const [dismissed, setDismissed] = useState(false);
+      const [marksMode, setMarksMode] = useState<'all' | 'off'>('off');
+      return (
+        <>
+          <VisibleTextEditor
+            value="{c"
+            onChange={vi.fn()}
+            ariaLabel="Translation"
+            marksMode={marksMode}
+            onKeyDown={handleKeyDown}
+            completion={
+              dismissed
+                ? undefined
+                : {
+                    options,
+                    onApply: vi.fn(),
+                    onDismiss: () => {
+                      handleDismiss();
+                      setDismissed(true);
+                    },
+                  }
+            }
+          />
+          <button onClick={() => setMarksMode('all')}>Show spaces</button>
+        </>
+      );
+    }
+    render(<DismissibleEditor />);
+    const editor = await focusEditor();
+
+    expect(fireEvent.keyDown(editor, { key: 'Escape' })).toBe(false);
+    expect(handleDismiss).toHaveBeenCalledOnce();
+    expect(handleKeyDown).not.toHaveBeenCalled();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show spaces' }));
+    act(() => editor.blur());
+    act(() => editor.focus());
+    // Let queued ProseMirror decoration/focus positioning run with the dismissed candidates.
+    await act(() => new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve())));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(editor).toHaveAttribute('aria-autocomplete', 'none');
+    expect(fireEvent.keyDown(editor, { key: 'Escape' })).toBe(true);
+    expect(handleKeyDown).toHaveBeenCalledOnce();
+    expect(handleDismiss).toHaveBeenCalledOnce();
   });
 });

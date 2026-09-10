@@ -109,4 +109,54 @@ describe('useProtectedTextTokenGuard', () => {
       },
     ]);
   });
+
+  it.each([
+    {
+      completeValue: 'Hello {name}, {amount}',
+      restoredDraft: 'Hello {name}, {a',
+      completedDraft: 'Hello {name}, {amount}',
+      remainingTokens: ['{name}'],
+    },
+    {
+      completeValue: 'Hello {name}, {name}',
+      restoredDraft: 'Hello {name}, {na',
+      completedDraft: 'Hello {name}, {name}',
+      remainingTokens: ['{name}'],
+    },
+    {
+      completeValue: 'Hello {name} and {name}, {amount}',
+      restoredDraft: 'Hello {name} and {name}, {a',
+      completedDraft: 'Hello {name} and {name}, {amount}',
+      remainingTokens: ['{name}', '{name}'],
+    },
+  ])(
+    'protects surviving tokens after an accepted history restoration: $restoredDraft',
+    ({ completeValue, restoredDraft, completedDraft, remainingTokens }) => {
+      const { result, rerender } = renderHook(
+        ({ value }) => useProtectedTextTokenGuard(value, 'icu'),
+        { initialProps: { value: completeValue } },
+      );
+
+      // A proposed direct mutation must still be rejected; only accepted values can use
+      // surviving-token relocation after the editor has authorized history or token deletion.
+      expect(result.current.validateNextValue(restoredDraft)).toBe(false);
+      rerender({ value: restoredDraft });
+      expect(
+        result.current.protectedTokens.map(({ start, end }) => restoredDraft.slice(start, end)),
+      ).toEqual(remainingTokens);
+      expect(result.current.validateNextValue(restoredDraft.replace('{name}', '{changed}'))).toBe(
+        false,
+      );
+      expect(result.current.validateNextValue(restoredDraft.replace('{name}', ''))).toBe(false);
+      expect(result.current.validateNextValue(`${restoredDraft}m`)).toBe(true);
+
+      rerender({ value: `${restoredDraft}m` });
+      expect(result.current.validateNextValue(completedDraft)).toBe(true);
+      expect(
+        result.current.protectedTokens.map(({ start, end }) => restoredDraft.slice(start, end)),
+      ).toEqual(remainingTokens);
+      rerender({ value: completedDraft });
+      expect(result.current.validateNextValue(restoredDraft)).toBe(false);
+    },
+  );
 });

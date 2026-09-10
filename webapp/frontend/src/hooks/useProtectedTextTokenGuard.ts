@@ -37,28 +37,46 @@ export function useProtectedTextTokenGuard(value: string, mode: ProtectedTextTok
   const validationSnapshot =
     currentSnapshot ??
     (lastParseableSnapshotRef.current?.mode === mode ? lastParseableSnapshotRef.current : null);
+  const relocatedTokens = useMemo(
+    () =>
+      !currentSnapshot && validationSnapshot
+        ? relocateProtectedTextTokens(
+            validationSnapshot.value,
+            validationSnapshot.protectedTokens,
+            value,
+          )
+        : null,
+    [currentSnapshot, validationSnapshot, value],
+  );
+  const acceptedTokenRemoval = !currentSnapshot && validationSnapshot && relocatedTokens === null;
   const protectedTokens = useMemo(() => {
     if (currentSnapshot || !validationSnapshot) {
       return currentProtectedTokens;
     }
 
+    if (relocatedTokens) {
+      return relocatedTokens;
+    }
+
+    // History or an allowed whole-token deletion may restore an incomplete draft without a
+    // newly added token. Keep its surviving tokens protected; validation of proposed edits
+    // still uses strict relocation and cannot use this accepted-value-only fallback.
     return (
       relocateProtectedTextTokens(
         validationSnapshot.value,
         validationSnapshot.protectedTokens,
         value,
+        { allowMissingTokens: true },
       ) ?? currentProtectedTokens
     );
-  }, [currentProtectedTokens, currentSnapshot, validationSnapshot, value]);
+  }, [currentProtectedTokens, currentSnapshot, relocatedTokens, validationSnapshot, value]);
   const validationBase = useMemo(() => {
-    if (currentSnapshot || !validationSnapshot) {
-      return {
-        protectedTokens: currentProtectedTokens,
-        value,
-      };
-    }
-
-    if (validationSnapshot.protectedTokens.length === 0) {
+    if (
+      currentSnapshot ||
+      !validationSnapshot ||
+      acceptedTokenRemoval ||
+      validationSnapshot.protectedTokens.length === 0
+    ) {
       return {
         protectedTokens,
         value,
@@ -66,7 +84,7 @@ export function useProtectedTextTokenGuard(value: string, mode: ProtectedTextTok
     }
 
     return validationSnapshot;
-  }, [currentProtectedTokens, currentSnapshot, protectedTokens, validationSnapshot, value]);
+  }, [acceptedTokenRemoval, currentSnapshot, protectedTokens, validationSnapshot, value]);
 
   useEffect(() => {
     if (currentSnapshot) {

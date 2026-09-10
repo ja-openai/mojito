@@ -810,6 +810,7 @@ export function WorkbenchBody({
                         <TranslationTextEditor
                           assisted={useAssistedTranslationEditor}
                           className="workbench-page__translation-input"
+                          source={row.source}
                           value={translationValue}
                           onFocus={() => {
                             if (!isEditing && row.canEdit) {

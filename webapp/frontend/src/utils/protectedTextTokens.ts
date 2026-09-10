@@ -237,6 +237,7 @@ export function relocateProtectedTextTokens(
   previousValue: string,
   previousTokens: ProtectedTextToken[],
   nextValue: string,
+  { allowMissingTokens = false }: { allowMissingTokens?: boolean } = {},
 ): ProtectedTextToken[] | null {
   const relocatedTokens: ProtectedTextToken[] = [];
   let cursor = 0;
@@ -245,6 +246,9 @@ export function relocateProtectedTextTokens(
     const rawToken = previousValue.slice(token.start, token.end);
     const nextOffset = nextValue.indexOf(rawToken, cursor);
     if (nextOffset < 0) {
+      if (allowMissingTokens) {
+        continue;
+      }
       return null;
     }
 

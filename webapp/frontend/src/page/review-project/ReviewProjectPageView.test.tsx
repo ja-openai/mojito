@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { type ComponentProps } from 'react';
 import { flushSync } from 'react-dom';
 import type * as ReactRouterDom from 'react-router-dom';
@@ -22,6 +23,7 @@ import { REPOSITORIES_QUERY_KEY } from '../../hooks/useRepositories';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import { UserContext } from '../../hooks/useUser';
 import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
+import { installProseMirrorDomMock } from '../../test/proseMirrorDom';
 import {
   type ReviewProjectMutationControls,
   useReviewProjectMutations,
@@ -536,6 +538,40 @@ describe('ReviewProjectPageView', () => {
         textUnitId: textUnit.id,
       }),
     );
+  });
+
+  it('completes a source printf placeholder before accepting the exact translation', async () => {
+    const restoreDom = installProseMirrorDomMock();
+    const user = userEvent.setup();
+    const onRequestSaveDecision = vi.fn();
+    const unit: ApiReviewProjectTextUnit = {
+      ...textUnit,
+      tmTextUnit: { ...textUnit.tmTextUnit!, content: 'Pay %1$s now' },
+      baselineTmTextUnitVariant: { ...textUnit.baselineTmTextUnitVariant!, content: '' },
+    };
+
+    try {
+      renderReviewProjectPageView({
+        project: { ...project, reviewProjectTextUnits: [unit] },
+        mutations: buildMutations({ onRequestSaveDecision }),
+      });
+      const editor = await screen.findByRole('textbox', { name: 'Translation' });
+      editor.focus();
+      await user.keyboard('%');
+
+      expect(await screen.findByRole('listbox', { name: 'Source placeholders' })).toBeVisible();
+      await user.keyboard('{Enter}');
+      expect(onRequestSaveDecision).not.toHaveBeenCalled();
+      await waitFor(() => expect(editor).toHaveTextContent('%1$s'));
+      expect(editor.querySelector('.visible-text-editor__protected-token')).toBeInTheDocument();
+
+      await user.keyboard('{Control>}{Enter}{/Control}');
+      expect(onRequestSaveDecision).toHaveBeenCalledWith(
+        expect.objectContaining({ target: '%1$s', textUnitId: unit.id, status: 'APPROVED' }),
+      );
+    } finally {
+      restoreDom();
+    }
   });
 
   it('blurs the native translation textarea on Escape when Visible Editor is off', async () => {

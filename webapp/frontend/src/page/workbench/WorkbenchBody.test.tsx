@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
+import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
+import { installProseMirrorDomMock } from '../../test/proseMirrorDom';
 import { mapApiTextUnitToRow } from './workbench-helpers';
 import type { WorkbenchRow } from './workbench-types';
 import { WorkbenchBody } from './WorkbenchBody';
@@ -193,6 +195,37 @@ describe('WorkbenchBody', () => {
       expect(protectedToken).toHaveTextContent('price');
       expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
     });
+  });
+
+  it('completes an MF1 placeholder from the active row source without saving', async () => {
+    const restoreDom = installProseMirrorDomMock();
+    const onChangeEditingValue = vi.fn();
+    const onSaveEditing = vi.fn();
+    const translationInputRef = { current: null as VisibleTextEditorHandle | null };
+    const draft = 'Pagar {pr';
+
+    try {
+      renderWorkbenchBody({
+        editingValue: draft,
+        onChangeEditingValue,
+        onSaveEditing,
+        translationInputRef,
+      });
+      const editor = await screen.findByRole('textbox', { name: 'Text editor' });
+      act(() => {
+        translationInputRef.current?.focus();
+        translationInputRef.current?.setSelection({ start: draft.length, end: draft.length });
+      });
+
+      expect(await screen.findByRole('listbox', { name: 'Source placeholders' })).toBeVisible();
+      expect(screen.getByRole('option', { name: '{price} Source placeholder' })).toBeVisible();
+      fireEvent.keyDown(editor, { key: 'Enter' });
+
+      expect(onChangeEditingValue).toHaveBeenLastCalledWith('Pagar {price}');
+      expect(onSaveEditing).not.toHaveBeenCalled();
+    } finally {
+      restoreDom();
+    }
   });
 
   it.each([false, true])(

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,6 +9,7 @@ import type * as GlossariesApi from '../../api/glossaries';
 import type * as TextUnitsApi from '../../api/text-units';
 import type { ApiUserPreferences } from '../../api/userPreferences';
 import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
+import { installProseMirrorDomMock } from '../../test/proseMirrorDom';
 import { buildWorkbenchDetailHash } from '../workbench/workbench-detail-link';
 import type { WorkbenchReturnState } from '../workbench/workbench-types';
 import { TextUnitDetailPage } from './TextUnitDetailPage';
@@ -572,6 +574,54 @@ describe('TextUnitDetailPage', () => {
         searchType: 'exact',
       }),
     );
+  });
+
+  it('completes a source argument and sends its exact spelling through integrity validation', async () => {
+    const restoreDom = installProseMirrorDomMock();
+    const user = userEvent.setup();
+    searchTextUnitsMock.mockResolvedValue([
+      {
+        tmTextUnitId: 3,
+        tmTextUnitVariantId: 30,
+        tmTextUnitCurrentVariantId: 30,
+        localeId: 17,
+        name: 'checkout.pay',
+        source: 'Pay {price} now',
+        target: '',
+        targetLocale: 'pt-PT',
+        used: true,
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+      },
+    ]);
+
+    try {
+      renderTextUnitDetailPage();
+      const editor = await screen.findByRole('textbox', { name: 'Translation' });
+      editor.focus();
+      await user.keyboard('{{pr');
+
+      await user.click(await screen.findByRole('option', { name: '{price} Source placeholder' }));
+      await waitFor(() =>
+        expect(editor.querySelector('.visible-text-editor__protected-token')).toHaveAttribute(
+          'data-raw',
+          '{price}',
+        ),
+      );
+      expect(saveTextUnitMock).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect(saveTextUnitMock).toHaveBeenCalledWith(
+          expect.objectContaining({ tmTextUnitId: 3, target: '{price}' }),
+        ),
+      );
+      expect(checkTextUnitIntegrityMock).toHaveBeenCalledWith(
+        expect.objectContaining({ tmTextUnitId: 3, content: '{price}' }),
+      );
+    } finally {
+      restoreDom();
+    }
   });
 
   it('lazily enables shared Search and preserves the translation draft through collapse and disable', async () => {

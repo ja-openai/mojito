@@ -2,7 +2,7 @@ import './visible-text-editor.css';
 
 import { baseKeymap } from 'prosemirror-commands';
 import { dropCursor } from 'prosemirror-dropcursor';
-import { history, isHistoryTransaction, redo, undo } from 'prosemirror-history';
+import { closeHistory, history, isHistoryTransaction, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import {
   type DOMOutputSpec,
@@ -20,6 +20,7 @@ import {
   forwardRef,
   useCallback,
   useEffect,
+  useId,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -62,7 +63,8 @@ export type VisibleTextEditorHandle = {
   blur: () => void;
   focus: () => void;
   getSelection: () => { start: number; end: number };
-  insertText: (text: string) => void;
+  /** Token offsets are relative to the inserted text. */
+  insertText: (text: string, protectedTokens?: ProtectedTextToken[]) => void;
   redo: () => boolean;
   setSelection: (selection: { start: number; end: number }) => void;
   undo: () => boolean;
@@ -106,6 +108,7 @@ type Props = {
   completion?: {
     ariaLabel?: string;
     onApply: (option: VisibleTextCompletionOption) => void;
+    onDismiss?: () => void;
     options: VisibleTextCompletionOption[];
   };
   dir?: 'ltr' | 'rtl' | 'auto';
@@ -1248,9 +1251,16 @@ function createMarkerWidget(char: string, markerText: string, label: string): HT
   return element;
 }
 
-function replaceSelectionWithRawText(view: EditorView, text: string) {
+function replaceSelectionWithRawText(
+  view: EditorView,
+  text: string,
+  protectedTokens?: ProtectedTextToken[],
+) {
   const { selection } = view.state;
-  const slice = new Slice(fragmentFromRawText(text), 0, 0);
+  const content = protectedTokens
+    ? docFromText(text, protectedTokens).content
+    : fragmentFromRawText(text);
+  const slice = new Slice(content, 0, 0);
   if (selectionCoversOnlyEmptyIcuSyntaxTokens(view.state.doc, selection.from, selection.to)) {
     view.dispatch(view.state.tr.replace(selection.from, selection.from, slice).scrollIntoView());
     return;
@@ -1977,6 +1987,9 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     const selectionSignatureRef = useRef('');
     const completionIndexRef = useRef(0);
     const completionOpenRef = useRef(false);
+    const composingRef = useRef(false);
+    const completionMenuId = useId();
+    const completionMenuRef = useRef<HTMLDivElement | null>(null);
     const [exactValueInsertionId, setExactValueInsertionId] = useState<string | null>(null);
     const [exactValueDraft, setExactValueDraft] = useState('');
     const [exactValueError, setExactValueError] = useState<string | null>(null);
@@ -2045,14 +2058,14 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         }${disabled ? ' visible-text-editor--disabled' : ''}${
           readOnly ? ' visible-text-editor--read-only' : ''
         }${
-          activeIcuFormGroupKey || openControlMenu || (completion?.options.length ?? 0) > 0
+          activeIcuFormGroupKey || openControlMenu || completionPosition
             ? ' visible-text-editor--menu-open'
             : ''
         }${className ? ` ${className}` : ''}`,
       [
         activeIcuFormGroupKey,
         className,
-        completion?.options.length,
+        completionPosition,
         controlBar,
         disabled,
         openControlMenu,
@@ -2060,36 +2073,72 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       ],
     );
 
-    const updateCompletionPosition = () => {
+    const closeCompletion = useCallback(() => {
+      completionOpenRef.current = false;
+      setCompletionPosition(null);
+    }, []);
+
+    const updateCompletionPosition = useCallback(() => {
       const view = viewRef.current;
       const root = rootRef.current;
       const options = completionRef.current?.options ?? [];
-      if (!view || !root || options.length === 0 || disabledRef.current || readOnlyRef.current) {
-        completionOpenRef.current = false;
-        setCompletionPosition(null);
+      if (
+        !view ||
+        !root ||
+        !view.hasFocus() ||
+        options.length === 0 ||
+        disabledRef.current ||
+        readOnlyRef.current ||
+        composingRef.current ||
+        view.composing
+      ) {
+        closeCompletion();
         return;
       }
 
       const coords = view.coordsAtPos(view.state.selection.to);
       const rootRect = root.getBoundingClientRect();
+      const menuWidth = Math.min(384, Math.max(0, rootRect.width - 16), window.innerWidth - 32);
       const left = Math.max(
         8,
-        Math.min(coords.left - rootRect.left, Math.max(8, rootRect.width - 220)),
+        Math.min(coords.left - rootRect.left, Math.max(8, rootRect.width - menuWidth - 8)),
       );
       completionOpenRef.current = true;
       setCompletionPosition({
         left,
         top: Math.max(8, coords.bottom - rootRect.top + 4),
       });
-    };
+    }, [closeCompletion]);
 
-    const applyCompletion = (option: VisibleTextCompletionOption) => {
-      completionRef.current?.onApply(option);
-      completionIndexRef.current = 0;
-      completionOpenRef.current = false;
-      setCompletionIndex(0);
-      setCompletionPosition(null);
-    };
+    const applyCompletion = useCallback(
+      (option: VisibleTextCompletionOption) => {
+        const view = viewRef.current;
+        const currentCompletion = completionRef.current;
+        if (
+          !view ||
+          !view.hasFocus() ||
+          !completionOpenRef.current ||
+          disabledRef.current ||
+          readOnlyRef.current ||
+          composingRef.current ||
+          view.composing ||
+          !currentCompletion?.options.includes(option)
+        ) {
+          return;
+        }
+
+        closeCompletion();
+        completionIndexRef.current = 0;
+        setCompletionIndex(0);
+        view.dispatch(closeHistory(view.state.tr));
+        currentCompletion.onApply(option);
+        if (viewRef.current === view) {
+          view.dispatch(closeHistory(view.state.tr));
+          view.focus();
+        }
+      },
+      [closeCompletion],
+    );
 
     useEffect(() => {
       const mount = mountRef.current;
@@ -2118,6 +2167,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           if (
             transaction.docChanged &&
             !transaction.getMeta(externalValueMetaKey) &&
+            !isHistoryTransaction(transaction) &&
             validateNextValueRef.current &&
             !isWholeProtectedSelectionDeletion(
               view.state.doc,
@@ -2156,12 +2206,44 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         handleDOMEvents: {
           focus() {
             onFocusRef.current?.();
+            window.requestAnimationFrame(updateCompletionPosition);
             return false;
           },
-          keydown(_view, event) {
+          blur() {
+            closeCompletion();
+            return false;
+          },
+          compositionstart() {
+            composingRef.current = true;
+            closeCompletion();
+            return false;
+          },
+          compositionend() {
+            composingRef.current = false;
+            window.requestAnimationFrame(updateCompletionPosition);
+            return false;
+          },
+          keydown(view, event) {
+            if (
+              composingRef.current ||
+              view.composing ||
+              event.isComposing ||
+              event.keyCode === 229
+            ) {
+              closeCompletion();
+              // Leave the browser's composition event intact, but bypass editor and host commands.
+              return true;
+            }
             const options = completionRef.current?.options ?? [];
-            if (options.length > 0 && completionOpenRef.current) {
-              if (event.key === 'ArrowDown') {
+            const unmodified = !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+            if (
+              options.length > 0 &&
+              completionOpenRef.current &&
+              view.hasFocus() &&
+              !disabledRef.current &&
+              !readOnlyRef.current
+            ) {
+              if (unmodified && event.key === 'ArrowDown') {
                 event.preventDefault();
                 setCompletionIndex((current) => {
                   const next = (current + 1) % options.length;
@@ -2170,7 +2252,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
                 });
                 return true;
               }
-              if (event.key === 'ArrowUp') {
+              if (unmodified && event.key === 'ArrowUp') {
                 event.preventDefault();
                 setCompletionIndex((current) => {
                   const next = (current - 1 + options.length) % options.length;
@@ -2179,15 +2261,15 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
                 });
                 return true;
               }
-              if (event.key === 'Enter' || event.key === 'Tab') {
+              if (unmodified && (event.key === 'Enter' || event.key === 'Tab')) {
                 event.preventDefault();
                 applyCompletion(options[Math.min(completionIndexRef.current, options.length - 1)]);
                 return true;
               }
               if (event.key === 'Escape') {
                 event.preventDefault();
-                completionOpenRef.current = false;
-                setCompletionPosition(null);
+                closeCompletion();
+                completionRef.current?.onDismiss?.();
                 return true;
               }
             }
@@ -2204,7 +2286,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         view.destroy();
         viewRef.current = null;
       };
-    }, []);
+    }, [applyCompletion, closeCompletion, updateCompletionPosition]);
 
     useEffect(() => {
       const view = viewRef.current;
@@ -2222,7 +2304,17 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         spellCheck,
       });
       view.setProps({ editable: () => !disabledRef.current && !readOnlyRef.current });
-    }, [ariaLabel, dir, disabled, lang, placeholder, readOnly, spellCheck]);
+      updateCompletionPosition();
+    }, [
+      ariaLabel,
+      dir,
+      disabled,
+      lang,
+      placeholder,
+      readOnly,
+      spellCheck,
+      updateCompletionPosition,
+    ]);
 
     useEffect(() => {
       const view = viewRef.current;
@@ -2312,16 +2404,37 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         return next;
       });
       updateCompletionPosition();
-    }, [completion?.options]);
+    }, [completion?.options, updateCompletionPosition]);
 
-    const insertText = useCallback((text: string) => {
+    useEffect(() => {
       const view = viewRef.current;
-      if (!view || disabledRef.current || readOnlyRef.current) {
+      if (!view) {
         return;
       }
-      replaceSelectionWithRawText(view, text);
-      view.focus();
-    }, []);
+      view.dom.setAttribute('aria-autocomplete', completion ? 'list' : 'none');
+      const selectedOption =
+        completionMenuRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (completionPosition && selectedOption && !disabled && !readOnly) {
+        view.dom.setAttribute('aria-controls', completionMenuId);
+        view.dom.setAttribute('aria-activedescendant', selectedOption.id);
+        selectedOption.scrollIntoView?.({ block: 'nearest' });
+      } else {
+        view.dom.removeAttribute('aria-controls');
+        view.dom.removeAttribute('aria-activedescendant');
+      }
+    }, [completion, completionIndex, completionMenuId, completionPosition, disabled, readOnly]);
+
+    const insertText = useCallback(
+      (text: string, insertedProtectedTokens?: ProtectedTextToken[]) => {
+        const view = viewRef.current;
+        if (!view || disabledRef.current || readOnlyRef.current) {
+          return;
+        }
+        replaceSelectionWithRawText(view, text, insertedProtectedTokens);
+        view.focus();
+      },
+      [],
+    );
 
     const wrapSelection = useCallback((open: string, close: string) => {
       const view = viewRef.current;
@@ -2727,8 +2840,10 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
 
     const completionOptions = completion?.options ?? [];
     const completionElement =
-      completionOptions.length > 0 && completionPosition ? (
+      completionOptions.length > 0 && completionPosition && !disabled && !readOnly ? (
         <div
+          ref={completionMenuRef}
+          id={completionMenuId}
           className="visible-text-editor__completion-menu"
           role="listbox"
           aria-label={completion?.ariaLabel ?? 'Text completions'}
@@ -2740,16 +2855,15 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           {completionOptions.map((option, index) => (
             <button
               key={option.id}
+              id={`${completionMenuId}-${index}`}
               type="button"
+              tabIndex={-1}
               className="visible-text-editor__completion-option"
               role="option"
               aria-selected={index === completionIndex}
               aria-label={option.detail ? `${option.label} ${option.detail}` : option.label}
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                applyCompletion(option);
-                viewRef.current?.focus();
-              }}
+              onClick={() => applyCompletion(option)}
             >
               <span className="visible-text-editor__completion-label">{option.label}</span>
               {option.detail ? (

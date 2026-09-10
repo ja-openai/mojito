@@ -4211,6 +4211,7 @@ function DetailPane({
                       isRejected ? ' review-project-detail__input--rejected' : ''
                     }`}
                     ref={setTranslationRef}
+                    source={source ?? ''}
                     value={draftTarget}
                     onChange={setDraftTarget}
                     ariaLabel="Translation"

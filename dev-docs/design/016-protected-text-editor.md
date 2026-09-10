@@ -157,6 +157,30 @@ The production surfaces should call this user-facing concept “placeholders” 
 UI copy. “Token” remains an implementation term for extracted ranges in code and
 tests.
 
+### Source Placeholder Completion
+
+The shared assisted translation editor offers source-derived ICU arguments and
+platform placeholders for non-MF2 messages in Workbench, Review Project, text-unit
+details, and Review Project find/replace working targets. Typing the beginning of
+a placeholder, such as `{` or `%`, filters suggestions from the current source.
+Choosing a suggestion inserts its exact source spelling as a protected placeholder
+through the normal editing transaction, preserving undo and the canonical raw string.
+Arrow keys select a suggestion; Enter, Tab, or a click inserts it. Escape dismisses
+the current suggestion without removing the typed prefix. Ctrl/Cmd+Enter keeps
+the host's save or accept action. Read-only editors and IME composition do not
+open the suggestion menu.
+
+Suggestions use the existing placeholder extractors. Literal braces,
+quoted ICU text, malformed platform placeholders, HTML tags, and ICU structural
+syntax are not completion candidates. Repository-specific placeholder formats
+still require the backend integration tracked by `EDITOR-01`. ICU suggestions
+stay closed if another part of the target is malformed, so a completion cannot
+be mistaken for a quoted literal or form brace.
+Percent triggers immediately after a number stay literal, such as `100%`.
+Completion is available only while assisted editing is enabled and placeholders
+are locked; the plain textarea and **Edit placeholders** escape hatch remain
+unrestricted.
+
 ### ICU MessageFormat 1
 
 Use `@formatjs/icu-messageformat-parser` in the frontend for ICU placeholder

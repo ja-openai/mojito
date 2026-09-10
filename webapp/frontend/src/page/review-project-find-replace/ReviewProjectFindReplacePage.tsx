@@ -16,6 +16,7 @@ import {
 import { FindReplaceBar } from '../../components/FindReplaceBar';
 import { FloatingStatusMessage } from '../../components/FloatingStatusMessage';
 import { LocalePill } from '../../components/LocalePill';
+import { isMf2Message } from '../../components/mf2/messageFormat';
 import { Pill } from '../../components/Pill';
 import {
   TranslationTextEditor,
@@ -1099,6 +1100,7 @@ function WorkingTargetEditor({
         readOnly={readOnly}
         protectedDiagnostics={tokenGuard.diagnostics}
         protectedTokens={tokenGuard.protectedTokens}
+        source={isMf2Message(row) ? undefined : row.source}
         spellCheck={true}
         validateNextValue={isVisibleTextEditorEnabled ? tokenGuard.validateNextValue : undefined}
         value={row.workingTarget}

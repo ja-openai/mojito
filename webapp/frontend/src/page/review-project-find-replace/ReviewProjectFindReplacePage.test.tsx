@@ -1,18 +1,21 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
 import { UserContext } from '../../hooks/useUser';
+import { installProseMirrorDomMock } from '../../test/proseMirrorDom';
 import { ReviewProjectFindReplacePage } from './ReviewProjectFindReplacePage';
 
 const useReviewProjectDetailMock = vi.hoisted(() => vi.fn());
 const deleteReviewProjectTextUnitSuggestionMock = vi.hoisted(() => vi.fn());
 const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
 const saveReviewProjectTextUnitSuggestionMock = vi.hoisted(() => vi.fn());
+const visibleTextEditorEnabledMock = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock('../../api/review-projects', async () => {
   const actual = await vi.importActual<typeof ReviewProjectsApi>('../../api/review-projects');
@@ -30,7 +33,7 @@ vi.mock('../../hooks/useReviewProjectDetail', () => ({
 }));
 
 vi.mock('../../hooks/useVisibleTextEditorEnabled', () => ({
-  useVisibleTextEditorEnabled: () => false,
+  useVisibleTextEditorEnabled: () => visibleTextEditorEnabledMock(),
 }));
 
 function buildProject(
@@ -88,6 +91,7 @@ function ReviewProjectDestination() {
 
 describe('ReviewProjectFindReplacePage', () => {
   beforeEach(() => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
     useReviewProjectDetailMock.mockReset();
     deleteReviewProjectTextUnitSuggestionMock.mockReset();
     saveReviewProjectTextUnitDecisionMock.mockReset();
@@ -134,6 +138,73 @@ describe('ReviewProjectFindReplacePage', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Back to review project' }));
 
     expect(screen.getByTestId('review-project-location').textContent).toBe('/review-projects/7');
+  });
+
+  it('completes a source placeholder in a working target without staging or accepting', async () => {
+    const restoreDom = installProseMirrorDomMock();
+    const user = userEvent.setup();
+    visibleTextEditorEnabledMock.mockReturnValue(true);
+    const unit = buildTextUnit({ target: '' });
+    useReviewProjectDetailMock.mockReturnValue({
+      data: buildProject([
+        { ...unit, tmTextUnit: { ...unit.tmTextUnit!, content: 'Pay %1$s now' } },
+      ]),
+      error: null,
+      isError: false,
+      isLoading: false,
+    });
+
+    try {
+      renderPage();
+      const editor = await screen.findByRole('textbox', {
+        name: 'Working target message.default-on',
+      });
+      editor.focus();
+      await user.keyboard('%');
+      await user.click(await screen.findByRole('option', { name: '%1$s Source placeholder' }));
+
+      await waitFor(() => expect(editor).toHaveTextContent('%1$s'));
+      expect(editor.querySelector('.visible-text-editor__protected-token')).toBeInTheDocument();
+      expect(saveReviewProjectTextUnitSuggestionMock).not.toHaveBeenCalled();
+      expect(saveReviewProjectTextUnitDecisionMock).not.toHaveBeenCalled();
+    } finally {
+      restoreDom();
+    }
+  });
+
+  it.each([
+    { content: 'Type %s', messageFormat: 'MF2' },
+    { content: '.input {$name :string}\n{{Hello {$name}, type %s}}', messageFormat: undefined },
+  ])('does not offer generic placeholders for MF2 source $content', async (source) => {
+    const restoreDom = installProseMirrorDomMock();
+    const user = userEvent.setup();
+    visibleTextEditorEnabledMock.mockReturnValue(true);
+    const unit = buildTextUnit({ target: '' });
+    useReviewProjectDetailMock.mockReturnValue({
+      data: buildProject([{ ...unit, tmTextUnit: { ...unit.tmTextUnit!, ...source } }]),
+      error: null,
+      isError: false,
+      isLoading: false,
+    });
+
+    try {
+      renderPage();
+      const editor = await screen.findByRole('textbox', {
+        name: 'Working target message.default-on',
+      });
+      editor.focus();
+      await user.keyboard('%');
+
+      await waitFor(() => expect(editor).toHaveTextContent('%'));
+      expect(editor).toHaveAttribute('aria-autocomplete', 'none');
+      expect(
+        screen.queryByRole('listbox', { name: 'Source placeholders' }),
+      ).not.toBeInTheDocument();
+      expect(saveReviewProjectTextUnitSuggestionMock).not.toHaveBeenCalled();
+      expect(saveReviewProjectTextUnitDecisionMock).not.toHaveBeenCalled();
+    } finally {
+      restoreDom();
+    }
   });
 
   it('shows current-to-working diffs after applying a replacement', () => {

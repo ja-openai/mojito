@@ -11,8 +11,12 @@ import {
 } from 'react';
 
 import {
+  getPlaceholderCompletion,
+  getSourcePlaceholderCandidates,
+} from '../utils/placeholderCompletion';
+import {
   buildIcuExactPluralOptionInsertion,
-  extractIcuProtectedTextTokens,
+  extractIcuAndHtmlProtectedTextTokens,
   getIcuFormInsertions,
   getIcuFormOptions,
   getIcuMovableTextRanges,
@@ -26,6 +30,7 @@ import {
   TranslationEditorControlBar,
 } from './TranslationEditorControls';
 import {
+  type VisibleTextCompletionOption,
   VisibleTextEditor,
   type VisibleTextEditorHandle,
   type VisibleTextMarksMode,
@@ -46,6 +51,7 @@ type ControlBarOptions = {
 type Props = {
   assisted: boolean;
   value: string;
+  source?: string;
   onChange: (nextValue: string) => void;
   marksMode?: VisibleTextMarksMode;
   showInvisibles?: boolean;
@@ -99,6 +105,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     {
       assisted,
       value,
+      source = '',
       onChange,
       marksMode,
       showInvisibles,
@@ -131,6 +138,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     const [editorSelection, setEditorSelection] = useState<{ start: number; end: number } | null>(
       null,
     );
+    const [dismissedCompletionKey, setDismissedCompletionKey] = useState<string | null>(null);
     const usesVisibleEditor = assisted;
     const hasControlBar = Boolean(controlBar);
     const enableIcuFormControls = Boolean(controlBar && controlBar.icuForms !== false);
@@ -180,9 +188,86 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     const resolvedProtectedTokens = useMemo(
       () =>
         protectedTokens ??
-        (assisted && !rawMode ? extractIcuProtectedTextTokens(value) : undefined),
+        (assisted && !rawMode ? extractIcuAndHtmlProtectedTextTokens(value) : undefined),
       [assisted, protectedTokens, rawMode, value],
     );
+
+    const sourcePlaceholders = useMemo(
+      () =>
+        assisted && !rawMode && !disabled && !readOnly
+          ? getSourcePlaceholderCandidates(source)
+          : [],
+      [assisted, disabled, rawMode, readOnly, source],
+    );
+    const placeholderCompletion = useMemo(
+      () =>
+        assisted && !rawMode && !disabled && !readOnly
+          ? getPlaceholderCompletion(
+              value,
+              editorSelection,
+              sourcePlaceholders,
+              resolvedProtectedTokens,
+            )
+          : null,
+      [
+        assisted,
+        disabled,
+        editorSelection,
+        rawMode,
+        readOnly,
+        resolvedProtectedTokens,
+        sourcePlaceholders,
+        value,
+      ],
+    );
+    const completionKey = placeholderCompletion
+      ? `${source}\u0000${placeholderCompletion.from}`
+      : null;
+    useEffect(() => {
+      if (completionKey === null) setDismissedCompletionKey(null);
+    }, [completionKey]);
+    useEffect(() => {
+      setDismissedCompletionKey(null);
+    }, [source]);
+    const completionOptions = useMemo<VisibleTextCompletionOption[]>(
+      () =>
+        placeholderCompletion && completionKey !== dismissedCompletionKey
+          ? placeholderCompletion.options.map(({ text }) => ({
+              id: text,
+              label: text,
+              detail: 'Source placeholder',
+            }))
+          : [],
+      [completionKey, dismissedCompletionKey, placeholderCompletion],
+    );
+    const applyPlaceholderCompletion = (option: VisibleTextCompletionOption) => {
+      const editor = visibleEditorRef.current;
+      if (!editor || !assisted || rawMode || disabled || readOnly) return;
+      // Recheck the live selection so a stale menu cannot replace a different range.
+      const current = getPlaceholderCompletion(
+        valueRef.current,
+        editor.getSelection(),
+        sourcePlaceholders,
+        resolvedProtectedTokens,
+      );
+      if (
+        !current ||
+        current.from !== placeholderCompletion?.from ||
+        current.to !== placeholderCompletion.to ||
+        !current.options.some(({ text }) => text === option.id)
+      )
+        return;
+      editor.setSelection({ start: current.from, end: current.to });
+      editor.insertText(option.id, extractIcuAndHtmlProtectedTextTokens(option.id));
+    };
+    const completion = completionOptions.length
+      ? {
+          ariaLabel: 'Source placeholders',
+          onApply: applyPlaceholderCompletion,
+          onDismiss: () => setDismissedCompletionKey(completionKey),
+          options: completionOptions,
+        }
+      : undefined;
 
     const focusCurrentEditor = (nextUsesVisibleEditor = usesVisibleEditorRef.current) => {
       window.requestAnimationFrame(() => {
@@ -297,9 +382,9 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             end: element?.selectionEnd ?? valueRef.current.length,
           };
         },
-        insertText(text: string) {
+        insertText(text: string, tokens?: ProtectedTextToken[]) {
           if (usesVisibleEditorRef.current) {
-            visibleEditorRef.current?.insertText(text);
+            visibleEditorRef.current?.insertText(text, tokens);
             return;
           }
           applyTextareaTextTool({ text });
@@ -341,6 +426,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           ref={visibleEditorRef}
           ariaLabel={ariaLabel}
           className={className}
+          completion={completion}
           dir={dir}
           disabled={disabled}
           lang={lang}
@@ -369,6 +455,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           ref={visibleEditorRef}
           ariaLabel={ariaLabel}
           className={className}
+          completion={completion}
           controlBar={{
             ...controlBar,
             icuExactFormInsertions: rawMode ? [] : scopedIcuExactFormInsertions,
