@@ -274,7 +274,7 @@ public class AiReviewExecutionStore {
   public boolean isActive(long taskId, String token) {
     return tx(
         () -> {
-          PollableTask task = entityManager.find(PollableTask.class, taskId);
+          PollableTask task = readTask(taskId);
           if (task == null || task.getFinishedDate() != null || task.getErrorMessage() != null)
             return false;
           State state = state(task);
@@ -288,7 +288,7 @@ public class AiReviewExecutionStore {
   public Optional<AiReviewChatJob.Result> getStagedResult(long taskId) {
     return tx(
         () -> {
-          PollableTask task = entityManager.find(PollableTask.class, taskId);
+          PollableTask task = readTask(taskId);
           State state = task == null ? null : state(task);
           return Optional.ofNullable(state == null ? null : state.result());
         });
@@ -315,9 +315,19 @@ public class AiReviewExecutionStore {
   private PollableTask lockTask(long id) {
     PollableTask task =
         entityManager.find(PollableTask.class, id, LockModeType.PESSIMISTIC_WRITE, NOWAIT);
+    // OpenEntityManagerInView can retain a task read before another transaction completed it.
+    // Acquiring a lock alone does not refresh an already managed entity.
+    if (task != null) entityManager.refresh(task, LockModeType.PESSIMISTIC_WRITE, NOWAIT);
     if (task != null && !AiReviewChatJobAccess.isReviewChatJob(task)) {
       throw new IllegalArgumentException("Not an interactive AI review task");
     }
+    return task;
+  }
+
+  private PollableTask readTask(long id) {
+    PollableTask task = entityManager.find(PollableTask.class, id);
+    // Retry/cancellation guards must also see commits made after a request's earlier task read.
+    if (task != null) entityManager.refresh(task);
     return task;
   }
 
@@ -326,7 +336,11 @@ public class AiReviewExecutionStore {
         blobs
             .findIdByName(CAPACITY_NAME)
             .orElseThrow(() -> new IllegalStateException("Review capacity record is missing"));
-    return entityManager.find(MBlob.class, id, LockModeType.PESSIMISTIC_WRITE, NOWAIT);
+    MBlob row = entityManager.find(MBlob.class, id, LockModeType.PESSIMISTIC_WRITE, NOWAIT);
+    // Initialization and admission may share a request-bound persistence context across commits.
+    // Always reload the reservations while holding the database lock before updating them.
+    if (row != null) entityManager.refresh(row, LockModeType.PESSIMISTIC_WRITE, NOWAIT);
+    return row;
   }
 
   private synchronized void initializeCapacity() {

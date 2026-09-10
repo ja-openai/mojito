@@ -28,6 +28,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskRepository;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceContext;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -40,6 +41,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -51,9 +53,11 @@ import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.orm.jpa.EntityManagerHolder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /** Exercises independent worker instances against the same real database transactions. */
@@ -65,6 +69,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   @Autowired DataSource dataSource;
   @Autowired DBUtils dbUtils;
   @Autowired PlatformTransactionManager transactions;
+  @Autowired EntityManagerFactory entityManagerFactory;
   @PersistenceContext EntityManager entityManager;
   // Keep the real scheduled sweeper from racing the deliberately controlled test clock.
   @MockitoBean AiReviewDispatchService backgroundDispatcher;
@@ -270,6 +275,71 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
                         .setParameter("name", AiReviewExecutionStore.CAPACITY_NAME)
                         .getSingleResult());
     assertEquals(Long.valueOf(1), rows);
+  }
+
+  @Test
+  public void requestCachedTaskCannotOverwriteAConcurrentTerminalResult() throws Exception {
+    long taskId = task(0, 3600);
+    Claim claim = store.tryClaim(taskId, "provider-process");
+    AiReviewChatJob.Result completed = result("Completed before cancellation");
+
+    try (var request = new RequestEntityManager()) {
+      // OpenEntityManagerInView keeps the authorization read managed across transactions.
+      PollableTask cached = tasks.findById(taskId).orElseThrow();
+      onAnotherThread(
+          () -> {
+            AiReviewExecutionStore completing = worker(outputs);
+            completing.stageResult(taskId, claim.token(), completed);
+            return completing.finishStaged(taskId);
+          });
+      assertNull(cached.getFinishedDate());
+
+      store.cancel(taskId);
+    }
+
+    assertNotNull(tasks.findById(taskId).orElseThrow().getFinishedDate());
+    assertEquals(completed, store.getStagedResult(taskId).orElseThrow());
+  }
+
+  @Test
+  public void requestCachedCapacityCannotLoseAnotherProcessesReservation() throws Exception {
+    AiReviewExecutionStore otherProcess = worker(outputs);
+    initializeWorkers(store, otherProcess);
+    long firstTask = task(0, 3600);
+    long secondTask = task(0, 3600);
+    Claim first;
+
+    try (var request = new RequestEntityManager()) {
+      assertEquals(0, reservations());
+      first = onAnotherThread(() -> otherProcess.tryClaim(firstTask, "other-process"));
+      assertEquals(Disposition.START, first.disposition());
+      assertEquals("The request persistence context still has the old blob", 0, reservations());
+
+      assertEquals(Disposition.WAIT, store.tryClaim(secondTask, "request-process").disposition());
+    }
+
+    assertEquals(1, reservations());
+    assertTrue(capacity().reservations().containsKey(first.token()));
+  }
+
+  @Test
+  public void requestReadsObserveCancellationCommittedByAnotherProcess() throws Exception {
+    long taskId = task(0, 3600);
+    Claim claim = store.tryClaim(taskId, "provider-process");
+
+    try (var request = new RequestEntityManager()) {
+      assertTrue(store.isActive(taskId, claim.token()));
+      onAnotherThread(
+          () -> {
+            worker(outputs).cancel(taskId);
+            return null;
+          });
+
+      boolean active = store.isActive(taskId, claim.token());
+      var staged = store.getStagedResult(taskId);
+      assertFalse(active);
+      assertEquals(409, staged.orElseThrow().error().status());
+    }
   }
 
   @Test
@@ -705,6 +775,28 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
 
   private int reservations() {
     return capacity().reservations().size();
+  }
+
+  private <T> T onAnotherThread(Callable<T> action) throws Exception {
+    try (var executor = Executors.newSingleThreadExecutor()) {
+      return executor.submit(action).get(10, TimeUnit.SECONDS);
+    }
+  }
+
+  private final class RequestEntityManager implements AutoCloseable {
+    private final EntityManager requestEntityManager = entityManagerFactory.createEntityManager();
+
+    RequestEntityManager() {
+      assertFalse(TransactionSynchronizationManager.hasResource(entityManagerFactory));
+      TransactionSynchronizationManager.bindResource(
+          entityManagerFactory, new EntityManagerHolder(requestEntityManager));
+    }
+
+    @Override
+    public void close() {
+      TransactionSynchronizationManager.unbindResource(entityManagerFactory);
+      requestEntityManager.close();
+    }
   }
 
   private AiReviewExecutionStore.Capacity capacity() {
