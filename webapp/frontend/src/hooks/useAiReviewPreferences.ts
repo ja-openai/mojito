@@ -1,8 +1,10 @@
 import type { AiReviewPreset, AiReviewStyle, ApiUserPreferences } from '../api/userPreferences';
+import { useUser } from './useUser';
 import { useSaveUserPreferences, useUserPreferences } from './useUserPreferences';
 
 export type AiReviewSettings = {
   preset: AiReviewPreset;
+  allowExtendedPresets: boolean;
   automaticDisabled: boolean;
   reviewStyle: AiReviewStyle;
   showScore: boolean;
@@ -25,12 +27,17 @@ function resolvePreset(preferences?: ApiUserPreferences): AiReviewPreset {
 }
 
 export function useAiReviewPreferences(): AiReviewSettings {
+  const allowExtendedPresets = useUser().role === 'ROLE_ADMIN';
   const preferences = useUserPreferences();
   const save = useSaveUserPreferences();
-  const preset = resolvePreset(preferences.data);
+  const isPresetAvailable = (preset: AiReviewPreset) =>
+    allowExtendedPresets || ['fastest', 'fast', 'balanced'].includes(preset);
+  const savedPreset = resolvePreset(preferences.data);
+  const preset = isPresetAvailable(savedPreset) ? savedPreset : 'balanced';
   const automaticDisabled = preferences.data?.aiReviewAutomaticDisabled ?? false;
   return {
     preset,
+    allowExtendedPresets,
     automaticDisabled,
     reviewStyle: preferences.data?.aiReviewStyle ?? 'corrections_and_alternatives',
     showScore: preferences.data?.aiReviewShowScore ?? true,
@@ -38,7 +45,9 @@ export function useAiReviewPreferences(): AiReviewSettings {
     isSaving: save.isPending,
     error:
       save.error?.message ?? (preferences.isError ? 'Could not load AI review settings.' : null),
-    onChangePreset: (nextPreset) => save.mutate({ aiReviewPreset: nextPreset }),
+    onChangePreset: (nextPreset) => {
+      if (isPresetAvailable(nextPreset)) save.mutate({ aiReviewPreset: nextPreset });
+    },
     onChangeAutomaticDisabled: (disabled) => save.mutate({ aiReviewAutomaticDisabled: disabled }),
     onChangeReviewStyle: (style) => save.mutate({ aiReviewStyle: style }),
     onChangeShowScore: (showScore) => save.mutate({ aiReviewShowScore: showScore }),

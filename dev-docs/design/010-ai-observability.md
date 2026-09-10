@@ -85,7 +85,8 @@ AiTranslateService_requestsInFlight{mode="no_batch"}
 ## AI Review
 
 Review Project and text-unit details expose one popup beside **AI Chat Review** containing a
-six-speed slider and an independent **Automatic review** toggle. Changing speed preserves whether
+speed slider and an independent **Automatic review** toggle. Fastest, Fast, and Balanced are
+available to all reviewers; Thorough, Deep, and Ultra are admin-only to limit queue contention. Changing speed preserves whether
 automatic review is enabled; toggling automatic review preserves the selected preset. The speed
 button remains available when the section is collapsed and shows **Auto off** when paused.
 Provider model names stay in backend configuration. The six provider presets are:
@@ -122,9 +123,12 @@ These labels describe intended speed/effort choices, not a measured latency or q
 The account saves `aiReviewPreset` and `aiReviewAutomaticDisabled` independently. The speed slider
 PATCHes only the preset; the automatic-review toggle PATCHes only the disabled flag.
 New clients send only a `presetId`; the server resolves the whole model/effort/tier combination.
-Omitted selectors use the saved preset. A request mixing `presetId` with legacy `profileId` or
-`reasoningEffort` is rejected.
-Explicit legacy requests keep their model/effort configuration path, while old queued jobs retain
+Omitted selectors use the saved preset. For non-admins, a saved Thorough, Deep, or Ultra selection
+runs as Balanced without rewriting the stored preference. Explicit requests for those presets are
+rejected before queuing; legacy medium/high requests also require an admin, and a saved legacy
+medium/high effort falls back to low for non-admins. A request mixing `presetId` with legacy
+`profileId` or `reasoningEffort` is rejected.
+Permitted explicit legacy requests keep their model/effort configuration path, while old queued jobs retain
 legacy behavior. Background/legacy review and glossary AI continue using their existing configuration;
 provider Batch omits the online processing tier. New presets share the configured
 `l10n.ai-review.responses.text-verbosity`.

@@ -87,6 +87,7 @@ public class AiReviewInteractiveServiceTest {
 
   @Test
   public void savedReviewStyleIsFrozenAndAnExplicitRequestCanOverrideIt() {
+    when(users.isCurrentUserAdmin()).thenReturn(true);
     authenticate(
         17L,
         objectMapper.readValueUnchecked(
@@ -135,6 +136,7 @@ public class AiReviewInteractiveServiceTest {
 
   @Test
   public void sixPresetsResolveServerModelReasoningAndTierTogether() {
+    when(users.isCurrentUserAdmin()).thenReturn(true);
     authenticate(17L, UserPreferences.defaults());
     for (String[] expected :
         new String[][] {
@@ -170,7 +172,59 @@ public class AiReviewInteractiveServiceTest {
   }
 
   @Test
+  public void nonAdminsCanUseOnlyFastestFastAndBalanced() {
+    authenticate(17L, UserPreferences.defaults());
+    for (String preset : List.of("fastest", "fast", "balanced")) {
+      assertEquals(preset, service.prepare(presetRequest(preset)).settings().profileId());
+    }
+    for (String preset : List.of("thorough", "deep", "ultra")) {
+      assertThrows(AccessDeniedException.class, () -> service.prepare(presetRequest(preset)));
+    }
+    verifyNoInteractions(tasks, usage);
+  }
+
+  @Test
+  public void nonAdminSavedExtendedPresetsUseBalancedWithoutChangingOtherSettings() {
+    for (String preset : List.of("thorough", "deep", "ultra")) {
+      UserPreferences saved =
+          objectMapper.readValueUnchecked(
+              """
+              {"aiReviewPreset":"%s","aiReviewAutomaticDisabled":true,
+               "aiReviewStyle":"corrections_only","aiReviewShowScore":false}
+              """
+                  .formatted(preset),
+              UserPreferences.class);
+      authenticate(17L, saved);
+      Prepared prepared = service.prepare(request(null, "review_project", "manual"));
+      assertEquals("balanced", prepared.settings().profileId());
+      assertEquals("low", prepared.settings().reasoningEffort());
+      assertEquals("corrections_only", prepared.request().reviewStyle());
+      assertEquals(preset, saved.aiReviewPreset());
+      assertThrows(
+          ResponseStatusException.class,
+          () -> service.prepare(request(null, "review_project", "automatic")));
+    }
+    verifyNoInteractions(tasks, usage);
+  }
+
+  @Test
+  public void legacySelectorsCannotBypassTheAdminRestriction() {
+    for (String effort : List.of("medium", "high")) {
+      authenticate(17L, savedPreferences("version_b", false, effort));
+      assertThrows(
+          AccessDeniedException.class, () -> service.prepare(requestWithEffort("fr", effort)));
+      assertEquals("balanced", service.prepare(request(null, null, null)).settings().profileId());
+      for (String profile : List.of("version_a", "version_b")) {
+        assertEquals(
+            "low", service.prepare(request(profile, null, null)).settings().reasoningEffort());
+      }
+    }
+    verifyNoInteractions(tasks, usage);
+  }
+
+  @Test
   public void presetOverrideAndActorAreFrozenForUsageEvenWhenAccountAndConfigurationChange() {
+    when(users.isCurrentUserAdmin()).thenReturn(true);
     authenticate(17L, UserPreferences.defaults());
     var configured = configuration.getInteractive().getPresets().get("ultra");
     configured.setModelName("configured-model");
@@ -277,6 +331,7 @@ public class AiReviewInteractiveServiceTest {
 
   @Test
   public void savedReasoningEffortAppliesToEitherModelAndExplicitRequestChoiceIsFrozen() {
+    when(users.isCurrentUserAdmin()).thenReturn(true);
     authenticate(17L, savedPreferences("version_b", false, "medium"));
     configuration.getInteractive().getVersionA().setReasoningEffort("max");
     configuration.getInteractive().getVersionB().setReasoningEffort("max");

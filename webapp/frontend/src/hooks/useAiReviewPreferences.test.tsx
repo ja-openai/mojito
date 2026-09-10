@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ApiUserPreferences } from '../api/userPreferences';
+import type { ApiUserProfile } from '../api/users';
 import { useAiReviewPreferences } from './useAiReviewPreferences';
 import { UserContext } from './useUser';
 import { userPreferencesQueryKey } from './useUserPreferences';
@@ -21,7 +22,7 @@ const preferences: ApiUserPreferences = {
   aiReviewAutomaticDisabled: true,
 };
 
-function renderPreferences(saved = preferences) {
+function renderPreferences(saved = preferences, role: ApiUserProfile['role'] = 'ROLE_TRANSLATOR') {
   const client = new QueryClient();
   client.setQueryData(userPreferencesQueryKey('alice'), saved);
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -29,7 +30,7 @@ function renderPreferences(saved = preferences) {
       <UserContext.Provider
         value={{
           username: 'alice',
-          role: 'ROLE_TRANSLATOR',
+          role,
           canTranslateAllLocales: true,
           userLocales: [],
         }}
@@ -51,13 +52,76 @@ describe('AI review preferences', () => {
 
     expect(result.current).toMatchObject({
       ready: true,
-      preset: 'deep',
+      preset: 'balanced',
+      allowExtendedPresets: false,
       automaticDisabled: true,
       reviewStyle: 'corrections_and_alternatives',
       showScore: true,
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it.each(['ROLE_TRANSLATOR', 'ROLE_PM', 'ROLE_USER'] as const)(
+    'uses Balanced for restricted saved presets and blocks restricted saves for %s',
+    (role) => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      for (const preset of ['thorough', 'deep', 'ultra'] as const) {
+        const { result, client, unmount } = renderPreferences(
+          { ...preferences, aiReviewPreset: preset },
+          role,
+        );
+        expect(result.current.preset).toBe('balanced');
+        expect(result.current.allowExtendedPresets).toBe(false);
+        act(() => result.current.onChangePreset(preset));
+        expect(client.getQueryData(userPreferencesQueryKey('alice'))).toMatchObject({
+          aiReviewPreset: preset,
+          aiReviewAutomaticDisabled: true,
+        });
+        unmount();
+      }
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['ROLE_TRANSLATOR', 'medium', 'balanced'],
+    ['ROLE_TRANSLATOR', 'high', 'balanced'],
+    ['ROLE_ADMIN', 'medium', 'thorough'],
+    ['ROLE_ADMIN', 'high', 'deep'],
+  ] as const)(
+    'resolves legacy %s/%s preferences to %s without rewriting them',
+    (role, effort, preset) => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      const { result } = renderPreferences(
+        { ...preferences, aiReviewPreset: undefined, aiReviewReasoningEffort: effort },
+        role,
+      );
+      expect(result.current.preset).toBe(preset);
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['thorough', 'deep', 'ultra'] as const)(
+    'keeps %s available to admins',
+    async (preset) => {
+      const savedPreferences = { ...preferences, aiReviewPreset: preset };
+      const fetchMock = vi.fn().mockResolvedValue(Response.json(savedPreferences));
+      vi.stubGlobal('fetch', fetchMock);
+      const { result } = renderPreferences(savedPreferences, 'ROLE_ADMIN');
+      expect(result.current.preset).toBe(preset);
+      expect(result.current.allowExtendedPresets).toBe(true);
+      expect(fetchMock).not.toHaveBeenCalled();
+      act(() => result.current.onChangePreset(preset));
+      await waitFor(() =>
+        expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+          '/api/users/me/preferences',
+          expect.objectContaining({ body: JSON.stringify({ aiReviewPreset: preset }) }),
+        ),
+      );
+    },
+  );
 
   it('publishes only confirmed style and score saves while preserving speed and automatic review', async () => {
     let finishSave!: (response: Response) => void;
@@ -120,7 +184,7 @@ describe('AI review preferences', () => {
       reviewStyle: 'corrections_only',
       showScore: false,
       automaticDisabled: true,
-      preset: 'deep',
+      preset: 'balanced',
     });
   });
 });

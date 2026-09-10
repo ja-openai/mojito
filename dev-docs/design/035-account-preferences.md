@@ -8,7 +8,8 @@ speed control saves the preset and whether automatic reviews are disabled.
 These preferences do not grant repository, locale, or team permissions.
 
 The speed control beside **AI Chat Review** opens a popup with **Fastest**, **Fast**, **Balanced**,
-**Thorough**, **Deep**, and **Ultra**, plus an independent **Automatic review** toggle. Balanced with
+**Thorough**, **Deep**, and **Ultra** for admins. Other users can select **Fastest**, **Fast**, or
+**Balanced**. An independent **Automatic review** toggle is available to everyone. Balanced with
 automatic review enabled is the account default. Changing speed preserves the automatic-review
 setting; toggling automatic review preserves the preset. The button shows **Auto off** when paused.
 The backend maps each of the six presets to a model, reasoning effort, and processing tier;
@@ -74,7 +75,13 @@ off. Lists default to empty. The API validates JSON types, positive integer work
 sizes up to 2147483647, language tags, bounded lists, and existing enabled team IDs.
 Only admins and PMs can change default teams; existing team access rules apply.
 Last successful writes to the same field win; different-field PATCHes are merged.
-`aiReviewPreset` accepts `fastest`, `fast`, `balanced`, `thorough`, `deep`, or `ultra`.
+`aiReviewPreset` accepts `fastest`, `fast`, or `balanced` for everyone; explicitly saving
+`thorough`, `deep`, or `ultra` requires an admin. Explicit legacy `medium`/`high` effort saves also
+require an admin. Existing restricted preferences stay readable, and unrelated PATCHes preserve them.
+For non-admins, the review UI and omitted-selector submissions use Balanced for a restricted saved
+preset (or low for saved legacy reasoning). Direct requests for restricted choices are rejected by
+the server. Admins retain all six choices. Role changes therefore take effect at submission without
+a data migration; previously queued jobs retain their captured settings.
 `aiReviewStyle` accepts `corrections_only` or `corrections_and_alternatives`, defaulting to the latter
 for both new accounts and existing JSON without the field. `aiReviewShowScore` is a boolean that
 defaults to `true`. Style changes affect the next review and invalidate incompatible local results;

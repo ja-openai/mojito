@@ -1341,7 +1341,7 @@ one {{Você tem {$count} arquivo.}}
     });
     const review = await screen.findByRole('button', { name: 'Review' });
     expect(review).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Review speed: Thorough' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
       'aria-disabled',
       'false',
     );
@@ -1352,7 +1352,7 @@ one {{Você tem {$count} arquivo.}}
     fireEvent.click(review);
     await screen.findByText('No issues found.');
     expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
-      presetId: 'thorough',
+      presetId: 'balanced',
       requestType: 'manual',
       reviewStyle: 'corrections_only',
       surface: 'review_project',
@@ -1361,7 +1361,7 @@ one {{Você tem {$count} arquivo.}}
     expect(saveUserPreferencesMock).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Review' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Thorough' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
     expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked();
     fireEvent.change(
       screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
@@ -1372,7 +1372,7 @@ one {{Você tem {$count} arquivo.}}
     fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
     await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(2));
     expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
-      presetId: 'thorough',
+      presetId: 'balanced',
       requestType: 'follow_up',
       reviewStyle: 'corrections_only',
       surface: 'review_project',
@@ -1547,13 +1547,13 @@ one {{Você tem {$count} arquivo.}}
     fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
     const panel = screen.getByRole('dialog', { name: 'Review speed' });
     const slider = within(panel).getByRole('slider', { name: 'Review speed' });
-    fireEvent.change(slider, { target: { value: '4' } });
+    fireEvent.change(slider, { target: { value: '1' } });
     fireEvent.pointerUp(slider);
 
     expect(await within(panel).findByRole('alert')).toHaveTextContent(
       'Could not save review speed.',
     );
-    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'deep' });
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'fast' });
     expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
       'aria-disabled',
       'false',
@@ -1947,67 +1947,74 @@ one {{Você tem {$count} arquivo.}}
     expect(screen.queryByText('Old preset answer')).not.toBeInTheDocument();
   });
 
-  it('saves the selected speed before replacing an automatic review and ignores its old result', async () => {
-    let finishOldReview!: (value: AiReviewResponse) => void;
-    let finishSave!: (value: ApiUserPreferences) => void;
-    requestAiReviewMock.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finishOldReview = resolve;
-        }),
-    );
-    saveUserPreferencesMock.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finishSave = resolve;
-        }),
-    );
-    renderReviewProjectPageView();
-    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
-    const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
-    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ presetId: 'balanced' });
+  it.each([
+    ['ROLE_TRANSLATOR', '1', 'fast', 'Fast', '2'],
+    ['ROLE_ADMIN', '5', 'ultra', 'Ultra', '5'],
+  ] as const)(
+    'saves a permitted speed for %s before replacing an automatic review and ignores its old result',
+    async (role, value, preset, label, max) => {
+      let finishOldReview!: (value: AiReviewResponse) => void;
+      let finishSave!: (value: ApiUserPreferences) => void;
+      requestAiReviewMock.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishOldReview = resolve;
+          }),
+      );
+      saveUserPreferencesMock.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishSave = resolve;
+          }),
+      );
+      renderReviewProjectPageView({}, { ...user, role });
+      await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+      const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
+      expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ presetId: 'balanced' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
-    const slider = screen.getByRole('slider', { name: 'Review speed' });
-    fireEvent.change(slider, { target: { value: '5' } });
-    expect(saveUserPreferencesMock).not.toHaveBeenCalled();
-    fireEvent.pointerUp(slider);
-    await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
-    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'ultra' });
-    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    expect(oldSignal.aborted).toBe(false);
-    expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+      const slider = screen.getByRole('slider', { name: 'Review speed' });
+      expect(slider).toHaveAttribute('max', max);
+      fireEvent.change(slider, { target: { value } });
+      expect(saveUserPreferencesMock).not.toHaveBeenCalled();
+      fireEvent.pointerUp(slider);
+      await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
+      expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: preset });
+      expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
+        'aria-disabled',
+        'true',
+      );
+      expect(oldSignal.aborted).toBe(false);
+      expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
 
-    await act(async () => {
-      finishSave({ ...preferences, aiReviewPreset: 'ultra' });
-      await Promise.resolve();
-    });
-    await screen.findByText('No issues found.');
-    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveAttribute(
-      'aria-disabled',
-      'false',
-    );
-    expect(oldSignal.aborted).toBe(true);
-    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
-      presetId: 'ultra',
-      requestType: 'automatic',
-      surface: 'review_project',
-    });
-
-    await act(async () => {
-      finishOldReview({
-        message: { role: 'assistant', content: 'Old balanced review' },
-        suggestions: [],
+      await act(async () => {
+        finishSave({ ...preferences, aiReviewPreset: preset });
+        await Promise.resolve();
       });
-      await Promise.resolve();
-    });
-    expect(screen.queryByText('Old balanced review')).not.toBeInTheDocument();
-    expect(screen.getByText('No issues found.')).toBeVisible();
-    expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
-  });
+      await screen.findByText('No issues found.');
+      expect(screen.getByRole('button', { name: `Review speed: ${label}` })).toHaveAttribute(
+        'aria-disabled',
+        'false',
+      );
+      expect(oldSignal.aborted).toBe(true);
+      expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+        presetId: preset,
+        requestType: 'automatic',
+        surface: 'review_project',
+      });
+
+      await act(async () => {
+        finishOldReview({
+          message: { role: 'assistant', content: 'Old balanced review' },
+          suggestions: [],
+        });
+        await Promise.resolve();
+      });
+      expect(screen.queryByText('Old balanced review')).not.toBeInTheDocument();
+      expect(screen.getByText('No issues found.')).toBeVisible();
+      expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it('stops an automatic request when automatic review is disabled and allows manual Ask', async () => {
     requestAiReviewMock.mockImplementationOnce(() => new Promise(() => undefined));
