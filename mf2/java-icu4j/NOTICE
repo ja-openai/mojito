@@ -4,7 +4,6 @@ Copyright Mojito contributors.
 This distribution includes code generated from the Unicode Common Locale Data
 Repository (CLDR), copyright Unicode, Inc. and others. The generated data is
 licensed under Unicode-3.0; see UNICODE-LICENSE.txt for the full permission notice.
-Source: https://github.com/unicode-org/cldr
-License text: https://github.com/unicode-org/cldr/blob/release-48/LICENSE
+Source: https://github.com/unicode-org/cldr-json/tree/1aaabe99aa652d6f22ea488cf25baea46aa69b42/cldr-json/cldr-core
+License text: https://github.com/unicode-org/cldr-json/blob/1aaabe99aa652d6f22ea488cf25baea46aa69b42/cldr-json/cldr-core/LICENSE
 Generated data provenance is recorded in the distributed generated CLDR module.
-This notice does not claim the generated data is pinned to that license-source tag.

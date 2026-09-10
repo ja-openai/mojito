@@ -196,3 +196,19 @@ updated the stale backend design description. Browser checks confirmed placehold
 insertion and undo/redo. npm proxy, Maven/framework, Vite bundle/import and React
 test `act(...)` warnings remain; none failed these checks. These local checks do
 not establish deployment or live checker activation.
+
+## License packaging follow-up
+
+A focused license audit found that the packages included the license files but
+used a CLDR copyright notice from an older release, and the Python distribution
+metadata omitted the bundled Unicode data license. The canonical Unicode license
+and all ten package copies now match `cldr-core/LICENSE` at the pinned CLDR JSON
+revision, including its 2004–2026 copyright notice. Their `NOTICE` files link to
+that exact source. Python now declares `Apache-2.0 AND Unicode-3.0`, and the
+artifact gate verifies the expression inside both wheel and source-distribution
+metadata.
+
+All 14 packaging tests, eight fresh runtime builds and consumers, and both
+ICU4J adapter builds passed. All eleven archives contain the corrected notices.
+Kotlin compiler warnings and Python's deliberately disabled byte-compilation
+warnings remain. These builds are local; nothing was published or deployed.

@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from smoke import NOTICES, Smoke
+from smoke import NOTICES, PYTHON_LICENSE_EXPRESSION, Smoke
 
 
 class ArtifactNoticeTest(unittest.TestCase):
@@ -24,21 +24,25 @@ class ArtifactNoticeTest(unittest.TestCase):
         self.smoke.source = self.source
         self.smoke.results = []
 
-    def archive(self, kind, *, missing=None, changed=None):
-        path = self.root / ("package.zip" if kind == "zip" else "package.tar.gz")
+    def archive(self, kind, *, missing=None, changed=None, extra_entries=None):
+        extension = {"zip": ".zip", "wheel": ".whl", "tar": ".tar.gz"}[kind]
+        path = self.root / ("package" + extension)
         values = {
-            name: ("changed" if name == changed else "expected " + name).encode()
+            "package/" + name: (
+                "changed" if name == changed else "expected " + name
+            ).encode()
             for name in NOTICES
             if name != missing
         }
-        if kind == "zip":
+        values.update(extra_entries or {})
+        if kind in ("zip", "wheel"):
             with zipfile.ZipFile(path, "w") as archive:
                 for name, data in values.items():
-                    archive.writestr("package/" + name, data)
+                    archive.writestr(name, data)
         else:
             with tarfile.open(path, "w:gz") as archive:
                 for name, data in values.items():
-                    entry = tarfile.TarInfo("package/" + name)
+                    entry = tarfile.TarInfo(name)
                     entry.size = len(data)
                     archive.addfile(entry, io.BytesIO(data))
         return path
@@ -64,6 +68,47 @@ class ArtifactNoticeTest(unittest.TestCase):
                 ValueError, "UNICODE-LICENSE"
             ):
                 self.smoke.artifact(self.archive(kind, changed="UNICODE-LICENSE.txt"))
+
+    def test_accepts_python_distribution_license_expression(self):
+        for kind, metadata_path in (
+            ("wheel", "mojito_mf2-0.1.0.dist-info/METADATA"),
+            ("tar", "mojito_mf2-0.1.0/PKG-INFO"),
+        ):
+            with self.subTest(kind=kind):
+                path = self.archive(
+                    kind,
+                    extra_entries={
+                        metadata_path: (
+                            f"License-Expression: {PYTHON_LICENSE_EXPRESSION}\n".encode()
+                        )
+                    },
+                )
+                self.smoke.artifact(
+                    path, python_license_expression=PYTHON_LICENSE_EXPRESSION
+                )
+
+    def test_rejects_missing_or_incorrect_python_distribution_expression(self):
+        for kind, metadata_path in (
+            ("wheel", "mojito_mf2-0.1.0.dist-info/METADATA"),
+            ("tar", "mojito_mf2-0.1.0/PKG-INFO"),
+        ):
+            for metadata in (
+                None,
+                b"Name: mojito-mf2\n",
+                b"License-Expression: Apache-2.0\n",
+            ):
+                with self.subTest(kind=kind, metadata=metadata), self.assertRaisesRegex(
+                    ValueError, "License-Expression"
+                ):
+                    path = self.archive(
+                        kind,
+                        extra_entries=(
+                            {} if metadata is None else {metadata_path: metadata}
+                        ),
+                    )
+                    self.smoke.artifact(
+                        path, python_license_expression=PYTHON_LICENSE_EXPRESSION
+                    )
 
 
 class SourceStagingTest(unittest.TestCase):

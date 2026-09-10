@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "MessageFormat 2 parser and formatter for Mojito."
 readme = "README.md"
 requires-python = ">=3.11"
-license = "Apache-2.0"
+license = "Apache-2.0 AND Unicode-3.0"
 license-files = ["LICENSE", "NOTICE", "UNICODE-LICENSE.txt"]
 authors = [
   { name = "Mojito MF2 Contributors" },

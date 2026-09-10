@@ -66,8 +66,15 @@ with the normal build permissions.
 Canonical notices are under `licenses/`. Package roots carry these files so
 ordinary ecosystem package commands include them; the smoke script does not
 inject missing notices into staged packages. Python uses PEP 639 metadata with
-setuptools 77 or newer. The Unicode license is from the official CLDR license
-file; that license-source tag does not assert a generated-data revision.
+setuptools 77 or newer and declares `Apache-2.0 AND Unicode-3.0` to cover both
+the Mojito code and bundled generated CLDR data. The wheel and source-distribution
+metadata are checked as well as the included license files.
+
+The Unicode license is copied byte-for-byte from the `cldr-core/LICENSE` file
+at the immutable CLDR JSON revision in `mf2/cldr/pinned-ref.txt`. `NOTICE` links
+to that same source revision. When updating the data pin, verify its license
+and copyright notice, then update the canonical files and all package copies
+together.
 
 The local archive gate itself has negative tests for missing or altered notices:
 

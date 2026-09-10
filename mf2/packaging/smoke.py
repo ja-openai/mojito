@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from email.parser import BytesParser
 import hashlib
 import json
 import os
@@ -29,6 +30,7 @@ PACKAGES = {
     "php": "php",
 }
 NOTICES = ("LICENSE", "NOTICE", "UNICODE-LICENSE.txt")
+PYTHON_LICENSE_EXPRESSION = "Apache-2.0 AND Unicode-3.0"
 PLURAL = ".input {$n :number}\n.match $n\nfew {{few}}\n* {{other}}"
 IGNORED = shutil.ignore_patterns(
     ".git",
@@ -113,7 +115,7 @@ class Smoke:
             raise RuntimeError(f"{command[0]} failed ({result.returncode}); see {log}")
         return log.read_text()
 
-    def artifact(self, path):
+    def artifact(self, path, *, python_license_expression=None):
         path = Path(path)
         entries = {}
         if path.suffix in {".whl", ".jar", ".zip"}:
@@ -139,6 +141,24 @@ class Smoke:
                 raise ValueError(
                     f"{path.name} does not contain the exact {notice} notice"
                 )
+        if python_license_expression is not None:
+            metadata_entries = [
+                data
+                for name, data in entries.items()
+                if len(Path(name).parts) == 2
+                and (
+                    name.endswith(".dist-info/METADATA")
+                    if path.suffix == ".whl"
+                    else Path(name).name == "PKG-INFO"
+                )
+            ]
+            if len(metadata_entries) != 1 or BytesParser().parsebytes(
+                metadata_entries[0], headersonly=True
+            ).get_all("License-Expression") != [python_license_expression]:
+                raise ValueError(
+                    f"{path.name} must declare License-Expression: "
+                    f"{python_license_expression}"
+                )
         result = {
             "path": str(path),
             "bytes": path.stat().st_size,
@@ -153,7 +173,7 @@ class Smoke:
             "project"
         ]
         assert metadata["name"] == "mojito-mf2" and metadata["version"]
-        assert metadata["license"] == "Apache-2.0" and set(NOTICES) <= set(
+        assert metadata["license"] == PYTHON_LICENSE_EXPRESSION and set(NOTICES) <= set(
             metadata["license-files"]
         )
         self.run(
@@ -167,8 +187,14 @@ class Smoke:
                 self.source,
             ]
         )
-        wheel = self.artifact(next(self.artifacts.glob("*.whl")))
-        self.artifact(next(self.artifacts.glob("*.tar.gz")))
+        wheel = self.artifact(
+            next(self.artifacts.glob("*.whl")),
+            python_license_expression=PYTHON_LICENSE_EXPRESSION,
+        )
+        self.artifact(
+            next(self.artifacts.glob("*.tar.gz")),
+            python_license_expression=PYTHON_LICENSE_EXPRESSION,
+        )
         venv.create(self.consumer / "venv", with_pip=True, symlinks=True)
         python = self.consumer / "venv/bin/python"
         self.run(
