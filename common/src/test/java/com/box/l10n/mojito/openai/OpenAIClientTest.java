@@ -34,6 +34,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Flow;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -260,6 +262,105 @@ public class OpenAIClientTest {
                     "param": null,
                     "code": "model_not_found"
                 }"""));
+  }
+
+  @Test
+  public void cancellingResponsesFutureCancelsTheUnderlyingHttpRequest() {
+    HttpClient httpClient = mock(HttpClient.class);
+    CompletableFuture<HttpResponse<String>> httpResponse = new CompletableFuture<>();
+    when(httpClient.sendAsync(
+            any(HttpRequest.class), any(HttpResponse.BodyHandlers.ofString().getClass())))
+        .thenReturn(httpResponse);
+    OpenAIClient client = OpenAIClient.builder().apiKey(API_KEY).httpClient(httpClient).build();
+
+    CompletableFuture<OpenAIClient.ResponsesResponse> response =
+        client.getResponses(
+            OpenAIClient.ResponsesRequest.builder()
+                .model("test-model")
+                .addUserText("Review")
+                .build(),
+            Duration.ofSeconds(30));
+
+    assertFalse(response.isDone());
+    assertTrue(response.cancel(true));
+    assertTrue(httpResponse.isCancelled());
+  }
+
+  @Test
+  public void transportSettlesOnlyAfterUnderlyingCancellationReturns() {
+    AtomicReference<OpenAIClient.ResponsesCall> call = new AtomicReference<>();
+    AtomicBoolean cancellationReturned = new AtomicBoolean();
+    AtomicBoolean settledInsideCancel = new AtomicBoolean();
+    CompletableFuture<HttpResponse<String>> httpResponse =
+        new CompletableFuture<>() {
+          @Override
+          public boolean cancel(boolean mayInterruptIfRunning) {
+            boolean cancelled = super.cancel(mayInterruptIfRunning);
+            settledInsideCancel.set(call.get().transportSettled().isDone());
+            cancellationReturned.set(true);
+            return cancelled;
+          }
+        };
+    call.set(responsesCall(httpResponse));
+    CompletableFuture<Void> observedSettlement =
+        call.get().transportSettled().thenRun(() -> assertTrue(cancellationReturned.get()));
+
+    assertTrue(call.get().response().cancel(true));
+
+    assertTrue(httpResponse.isCancelled());
+    assertTrue(call.get().transportSettled().isDone());
+    assertFalse(settledInsideCancel.get());
+    observedSettlement.join();
+  }
+
+  @Test
+  public void refusedHttpCancellationKeepsTransportPendingUntilItActuallyCompletes() {
+    CompletableFuture<HttpResponse<String>> httpResponse =
+        new CompletableFuture<>() {
+          @Override
+          public boolean cancel(boolean mayInterruptIfRunning) {
+            return false;
+          }
+        };
+    OpenAIClient.ResponsesCall call = responsesCall(httpResponse);
+
+    assertTrue(call.response().cancel(true));
+
+    assertFalse(httpResponse.isDone());
+    assertFalse(call.transportSettled().isDone());
+    httpResponse.completeExceptionally(new IOException("connection closed"));
+    assertTrue(call.transportSettled().isDone());
+    assertFalse(call.transportSettled().isCompletedExceptionally());
+  }
+
+  @Test
+  public void failedHttpRequestAlsoSettlesTransportNormally() {
+    CompletableFuture<HttpResponse<String>> httpResponse = new CompletableFuture<>();
+    OpenAIClient.ResponsesCall call = responsesCall(httpResponse);
+
+    httpResponse.completeExceptionally(new IOException("connection closed"));
+
+    assertTrue(call.transportSettled().isDone());
+    assertFalse(call.transportSettled().isCompletedExceptionally());
+    assertThrows(CompletionException.class, () -> call.response().join());
+  }
+
+  private OpenAIClient.ResponsesCall responsesCall(
+      CompletableFuture<HttpResponse<String>> httpResponse) {
+    HttpClient httpClient = mock(HttpClient.class);
+    when(httpClient.sendAsync(
+            any(HttpRequest.class), any(HttpResponse.BodyHandlers.ofString().getClass())))
+        .thenReturn(httpResponse);
+    return OpenAIClient.builder()
+        .apiKey(API_KEY)
+        .httpClient(httpClient)
+        .build()
+        .getResponsesCall(
+            OpenAIClient.ResponsesRequest.builder()
+                .model("test-model")
+                .addUserText("Review")
+                .build(),
+            Duration.ofSeconds(30));
   }
 
   @Test
