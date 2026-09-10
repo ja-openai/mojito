@@ -196,12 +196,38 @@ describe('AiReviewSpeedControl', () => {
     expect(button).toHaveFocus();
   });
 
-  it('previews a drag and commits once on pointer release', () => {
+  it.each(['thorough', 'deep', 'ultra'] as const)(
+    'limits review speed to Balanced and displays the restriction for saved %s',
+    (value) => {
+      const onChange = vi.fn();
+      render(<AiReviewSpeedControl {...automaticEnabled} value={value} onChange={onChange} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
+      const slider = screen.getByRole('slider', { name: 'Review speed' });
+      expect(slider).toHaveAttribute('max', '2');
+      expect(slider).toHaveValue('2');
+      expect(slider).toHaveAttribute('aria-valuetext', 'Balanced');
+      expect(screen.getByText(/Thorough, Deep, and Ultra are reserved for admins/)).toBeVisible();
+      expect(onChange).not.toHaveBeenCalled();
+      fireEvent.change(slider, { target: { value: '1' } });
+      fireEvent.keyUp(slider, { key: 'ArrowLeft' });
+      expect(onChange).toHaveBeenCalledExactlyOnceWith('fast');
+    },
+  );
+
+  it('lets admins preview the full range and commits once on pointer release', () => {
     const onChange = vi.fn();
-    render(<AiReviewSpeedControl {...automaticEnabled} value="fastest" onChange={onChange} />);
+    render(
+      <AiReviewSpeedControl
+        {...automaticEnabled}
+        value="fastest"
+        onChange={onChange}
+        allowExtendedPresets
+      />,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Review speed: Fastest' }));
     const slider = screen.getByRole('slider', { name: 'Review speed' });
     expect(slider).toHaveAttribute('max', '5');
+    expect(screen.queryByText(/reserved for admins/)).not.toBeInTheDocument();
     fireEvent.pointerDown(slider);
     fireEvent.change(slider, { target: { value: '1' } });
     fireEvent.change(slider, { target: { value: '5' } });
@@ -218,7 +244,14 @@ describe('AiReviewSpeedControl', () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     const pageShortcut = vi.fn();
-    render(<AiReviewSpeedControl {...automaticEnabled} value="fastest" onChange={onChange} />);
+    render(
+      <AiReviewSpeedControl
+        {...automaticEnabled}
+        value="fastest"
+        onChange={onChange}
+        allowExtendedPresets
+      />,
+    );
     await user.click(screen.getByRole('button', { name: 'Review speed: Fastest' }));
     const slider = screen.getByRole('slider', { name: 'Review speed' });
     expect(slider).toHaveFocus();
@@ -264,7 +297,7 @@ describe('AiReviewSpeedControl', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Review speed: Fastest' }));
     const slider = screen.getByRole('slider');
-    fireEvent.change(slider, { target: { value: '5' } });
+    fireEvent.change(slider, { target: { value: '2' } });
     fireEvent.pointerCancel(slider);
     expect(slider).toHaveValue('0');
     fireEvent.change(slider, { target: { value: '1' } });
@@ -282,7 +315,7 @@ describe('AiReviewSpeedControl', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Review speed: Fastest' }));
     const slider = screen.getByRole('slider');
-    fireEvent.change(slider, { target: { value: '5' } });
+    fireEvent.change(slider, { target: { value: '2' } });
     fireEvent.pointerUp(slider);
     rerender(
       <AiReviewSpeedControl
@@ -317,7 +350,7 @@ describe('AiReviewSpeedControl', () => {
     expect(slider).toHaveAttribute('aria-disabled', 'true');
     expect(slider).toHaveFocus();
     expect(fireEvent.keyDown(slider, { key: 'ArrowRight' })).toBe(false);
-    fireEvent.change(slider, { target: { value: '5' } });
+    fireEvent.change(slider, { target: { value: '2' } });
     fireEvent.pointerUp(slider);
     expect(onChange).not.toHaveBeenCalled();
     expect(slider).toHaveValue('0');

@@ -151,6 +151,18 @@ public class UserPreferencesService {
           "defaultReviewTeamIds",
           objectMapper.valueToTree(reviewTeams(patch.get("defaultReviewTeamIds"))));
     }
+    if (!userService.isCurrentUserAdmin()) {
+      if (patch.has("aiReviewPreset")
+          && Set.of("thorough", "deep", "ultra").contains(aiReviewPreset.textValue())) {
+        throw new AccessDeniedException(
+            "Only administrators can select Thorough, Deep, or Ultra AI review");
+      }
+      if (patch.has("aiReviewReasoningEffort")
+          && Set.of("medium", "high").contains(aiReviewReasoningEffort.textValue())) {
+        throw new AccessDeniedException(
+            "Only administrators can select medium or high AI review reasoning effort");
+      }
+    }
     try {
       UserPreferences preferences = objectMapper.treeToValue(merged, UserPreferences.class);
       if (entity == null) {

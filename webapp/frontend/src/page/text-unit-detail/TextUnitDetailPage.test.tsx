@@ -228,7 +228,7 @@ describe('TextUnitDetailPage', () => {
     });
   });
 
-  it('keeps manual review, follow-up and retry on the selected preset with automatic review disabled', async () => {
+  it('falls back from saved Ultra for manual review, follow-up and retry without rewriting preferences', async () => {
     editorPreference.enabled = false;
     const { queryClient } = renderTextUnitDetailPage('/text-units/3?locale=pt-PT', undefined, {
       ...preferences,
@@ -237,7 +237,7 @@ describe('TextUnitDetailPage', () => {
       aiReviewStyle: 'corrections_only',
     });
     const editor = await screen.findByRole('textbox', { name: 'Translation' });
-    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
       'aria-disabled',
       'false',
     );
@@ -252,7 +252,7 @@ describe('TextUnitDetailPage', () => {
     fireEvent.click(reviewButton);
     await screen.findByText('No issues found.');
     expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
-      presetId: 'ultra',
+      presetId: 'balanced',
       requestType: 'manual',
       reviewStyle: 'corrections_only',
       surface: 'text_unit_detail',
@@ -277,13 +277,13 @@ describe('TextUnitDetailPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(3));
     expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
-      presetId: 'ultra',
+      presetId: 'balanced',
       requestType: 'follow_up',
       reviewStyle: 'corrections_only',
       surface: 'text_unit_detail',
     });
     expect(requestAiReviewMock.mock.calls[2][0]).toMatchObject({
-      presetId: 'ultra',
+      presetId: 'balanced',
       requestType: 'retry',
       reviewStyle: 'corrections_only',
       surface: 'text_unit_detail',
@@ -495,7 +495,7 @@ describe('TextUnitDetailPage', () => {
       aiReviewPreset: 'deep',
       aiReviewAutomaticDisabled: true,
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Deep' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic review' }));
     await waitFor(() =>
       expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked(),
@@ -515,11 +515,11 @@ describe('TextUnitDetailPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(3));
     expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
-      presetId: 'deep',
+      presetId: 'balanced',
       requestType: 'follow_up',
     });
     expect(requestAiReviewMock.mock.calls[2][0]).toMatchObject({
-      presetId: 'deep',
+      presetId: 'balanced',
       requestType: 'retry',
     });
   });
@@ -530,7 +530,7 @@ describe('TextUnitDetailPage', () => {
       aiReviewPreset: 'thorough',
       aiReviewAutomaticDisabled: true,
     });
-    const speedButton = await screen.findByRole('button', { name: 'Review speed: Thorough' });
+    const speedButton = await screen.findByRole('button', { name: 'Review speed: Balanced' });
     expect(requestAiReviewMock).not.toHaveBeenCalled();
     saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewPreset: 'thorough' });
     fireEvent.click(speedButton);
@@ -539,15 +539,15 @@ describe('TextUnitDetailPage', () => {
     expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewAutomaticDisabled: false });
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
     expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
-      presetId: 'thorough',
+      presetId: 'balanced',
       requestType: 'automatic',
     });
   });
 
   it.each([
     ['version_a', 'high', 'fast', 'Fast'],
-    ['version_b', 'medium', 'thorough', 'Thorough'],
-    ['version_b', 'high', 'deep', 'Deep'],
+    ['version_b', 'medium', 'balanced', 'Balanced'],
+    ['version_b', 'high', 'balanced', 'Balanced'],
     ['version_b', 'low', 'balanced', 'Balanced'],
   ] as const)(
     'uses the compatible preset for legacy %s/%s preferences',
@@ -650,10 +650,10 @@ describe('TextUnitDetailPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
     const slider = screen.getByRole('slider', { name: 'Review speed' });
-    fireEvent.change(slider, { target: { value: '3' } });
-    fireEvent.keyUp(slider, { key: 'ArrowRight' });
+    fireEvent.change(slider, { target: { value: '1' } });
+    fireEvent.keyUp(slider, { key: 'ArrowLeft' });
     await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
-    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'thorough' });
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'fast' });
     expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
       'aria-disabled',
       'true',
@@ -665,20 +665,20 @@ describe('TextUnitDetailPage', () => {
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      finishSave({ ...preferences, aiReviewPreset: 'thorough' });
+      finishSave({ ...preferences, aiReviewPreset: 'fast' });
       await Promise.resolve();
     });
     await screen.findByText('No issues found.');
-    expect(screen.getByRole('button', { name: 'Review speed: Thorough' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Review speed: Fast' })).toHaveAttribute(
       'aria-disabled',
       'false',
     );
     expect(queryClient.getQueryData(userPreferencesQueryKey('translator'))).toMatchObject({
-      aiReviewPreset: 'thorough',
+      aiReviewPreset: 'fast',
     });
     expect(oldSignal.aborted).toBe(true);
     expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
-      presetId: 'thorough',
+      presetId: 'fast',
       requestType: 'automatic',
       surface: 'text_unit_detail',
     });

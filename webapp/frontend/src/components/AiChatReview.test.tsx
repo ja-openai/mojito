@@ -52,6 +52,7 @@ function renderComposer(overrides: Partial<ComponentProps<typeof AiChatReview>> 
     onUseSuggestion: vi.fn(),
     settings: {
       preset: 'fast',
+      allowExtendedPresets: false,
       automaticDisabled: true,
       reviewStyle: 'corrections_and_alternatives',
       showScore: true,

@@ -73,6 +73,12 @@ public class AiReviewInteractiveService {
               request.presetId(),
               saved.aiReviewPreset(),
               Set.of("fastest", "fast", "balanced", "thorough", "deep", "ultra"));
+      if (!users.isCurrentUserAdmin() && Set.of("thorough", "deep", "ultra").contains(preset)) {
+        if (request.presetId() != null) {
+          throw new AccessDeniedException("Thorough, Deep, and Ultra reviews require an admin.");
+        }
+        preset = "balanced";
+      }
       var selected = configuration.getInteractive().getPresets().get(preset);
       if (selected == null
           || selected.getModelName() == null
@@ -100,6 +106,12 @@ public class AiReviewInteractiveService {
             request.reasoningEffort(),
             saved.aiReviewReasoningEffort(),
             Set.of("low", "medium", "high"));
+    if (!users.isCurrentUserAdmin() && Set.of("medium", "high").contains(reasoningEffort)) {
+      if (request.reasoningEffort() != null) {
+        throw new AccessDeniedException("Extended AI review reasoning requires an admin.");
+      }
+      reasoningEffort = "low";
+    }
     var selected =
         switch (profile) {
           case "version_a" -> configuration.getInteractive().getVersionA();

@@ -452,6 +452,7 @@ export function TextUnitDetailPageView({
                     aiSettings ? (
                       <AiReviewSpeedControl
                         value={aiSettings.preset}
+                        allowExtendedPresets={aiSettings.allowExtendedPresets}
                         onChange={aiSettings.onChangePreset}
                         reviewStyle={aiSettings.reviewStyle}
                         onChangeReviewStyle={aiSettings.onChangeReviewStyle}

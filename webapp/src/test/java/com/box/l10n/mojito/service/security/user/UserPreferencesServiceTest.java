@@ -90,7 +90,7 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
         {"worksetSize":100,"preferredLocales":["fr-CA","FR-ca","de"],
          "shortcutHelp":"hidden","visibleTextEditorEnabled":true,
          "aiReviewProfile":"version_a","aiReviewAutomaticDisabled":true,
-         "aiReviewReasoningEffort":"high","aiReviewPreset":"ultra"}
+         "aiReviewReasoningEffort":"low","aiReviewPreset":"fast"}
         """);
     UserPreferences saved = patch("{\"reviewProjectSearchEnabled\":true}");
     assertTrue(saved.initialized());
@@ -101,8 +101,8 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
     assertTrue(saved.reviewProjectSearchEnabled());
     assertEquals("version_a", saved.aiReviewProfile());
     assertTrue(saved.aiReviewAutomaticDisabled());
-    assertEquals("high", saved.aiReviewReasoningEffort());
-    assertEquals("ultra", saved.aiReviewPreset());
+    assertEquals("low", saved.aiReviewReasoningEffort());
+    assertEquals("fast", saved.aiReviewPreset());
     assertEquals(saved, preferencesService.getCurrentUserPreferences());
     assertEquals(
         saved,
@@ -217,7 +217,8 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
   }
 
   @Test
-  public void allSixPresetsPersistWithoutOverwritingOtherPreferences() throws Exception {
+  public void adminsCanSaveAllPresetsAndLegacyReasoningEfforts() throws Exception {
+    restoreAuthentication();
     patch("{\"aiReviewAutomaticDisabled\":true,\"preferredLocales\":[\"uk\"]}");
     for (String preset : List.of("fastest", "fast", "balanced", "thorough", "deep", "ultra")) {
       UserPreferences saved = patch("{\"aiReviewPreset\":\"" + preset + "\"}");
@@ -226,10 +227,88 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
       assertEquals(List.of("uk"), saved.preferredLocales());
       assertEquals(saved, preferencesService.getCurrentUserPreferences());
     }
+    for (String effort : List.of("low", "medium", "high")) {
+      UserPreferences saved = patch("{\"aiReviewReasoningEffort\":\"" + effort + "\"}");
+      assertEquals(effort, saved.aiReviewReasoningEffort());
+      assertEquals("ultra", saved.aiReviewPreset());
+      assertEquals(saved, preferencesService.getCurrentUserPreferences());
+    }
+  }
+
+  @Test
+  public void expensiveReviewPreferencesRequireAdminAndRejectedPatchesSaveNothing()
+      throws Exception {
+    restoreAuthentication();
+    User pm =
+        userService.createUserWithRole(
+            "preferences-review-pm-" + UUID.randomUUID(), "test", Role.ROLE_PM);
+    for (User user : List.of(firstUser, secondUser, pm)) {
+      authenticate(user);
+      UserPreferences saved = patch("{\"worksetSize\":50}");
+      String savedJson =
+          preferencesRepository.findByUserId(user.getId()).orElseThrow().getPreferencesJson();
+      for (String selection :
+          List.of(
+              "\"aiReviewPreset\":\"thorough\"",
+              "\"aiReviewPreset\":\"deep\"",
+              "\"aiReviewPreset\":\"ultra\"",
+              "\"aiReviewReasoningEffort\":\"medium\"",
+              "\"aiReviewReasoningEffort\":\"high\"")) {
+        assertThrows(
+            AccessDeniedException.class, () -> patch("{\"worksetSize\":100," + selection + "}"));
+        assertEquals(saved, preferencesService.getCurrentUserPreferences());
+        assertEquals(
+            savedJson,
+            preferencesRepository.findByUserId(user.getId()).orElseThrow().getPreferencesJson());
+      }
+      for (String preset : List.of("fastest", "fast", "balanced")) {
+        UserPreferences updated =
+            patch("{\"aiReviewPreset\":\"" + preset + "\",\"aiReviewReasoningEffort\":\"low\"}");
+        assertEquals(preset, updated.aiReviewPreset());
+        assertEquals("low", updated.aiReviewReasoningEffort());
+        assertEquals(updated, preferencesService.getCurrentUserPreferences());
+      }
+    }
+  }
+
+  @Test
+  public void existingRestrictedPreferencesRemainReadableAndAllowUnrelatedPatches()
+      throws Exception {
+    UserPreferencesEntity entity = new UserPreferencesEntity();
+    entity.setUser(firstUser);
+    for (String preset : List.of("thorough", "deep", "ultra")) {
+      for (String effort : List.of("medium", "high")) {
+        String historicalJson =
+            """
+            {"initialized":true,"worksetSize":50,"preferredLocales":[],
+             "defaultReviewTeamIds":[],"aiReviewPreset":"%s","aiReviewReasoningEffort":"%s"}
+            """
+                .formatted(preset, effort);
+        entity.setPreferencesJson(historicalJson);
+        entity = preferencesRepository.saveAndFlush(entity);
+        UserPreferences restored = preferencesService.getCurrentUserPreferences();
+        assertEquals(preset, restored.aiReviewPreset());
+        assertEquals(effort, restored.aiReviewReasoningEffort());
+        assertEquals(
+            historicalJson,
+            preferencesRepository
+                .findByUserId(firstUser.getId())
+                .orElseThrow()
+                .getPreferencesJson());
+
+        UserPreferences updated = patch("{\"worksetSize\":75,\"aiReviewAutomaticDisabled\":true}");
+        assertEquals(Integer.valueOf(75), updated.worksetSize());
+        assertTrue(updated.aiReviewAutomaticDisabled());
+        assertEquals(preset, updated.aiReviewPreset());
+        assertEquals(effort, updated.aiReviewReasoningEffort());
+        assertEquals(updated, preferencesService.getCurrentUserPreferences());
+      }
+    }
   }
 
   @Test
   public void reviewStyleAndScorePersistIndependentlyOfSpeedAndAutomaticReview() throws Exception {
+    restoreAuthentication();
     patch("{\"aiReviewPreset\":\"deep\",\"aiReviewAutomaticDisabled\":true}");
     UserPreferences saved =
         patch("{\"aiReviewStyle\":\"corrections_only\",\"aiReviewShowScore\":false}");
@@ -291,6 +370,10 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
             "{\"aiReviewStyle\":true}",
             "{\"aiReviewShowScore\":null}",
             "{\"aiReviewShowScore\":\"false\"}",
+            "{\"aiReviewPreset\":\"ultra\",\"aiReviewReasoningEffort\":true}",
+            "{\"aiReviewPreset\":null,\"aiReviewReasoningEffort\":\"high\"}",
+            "{\"aiReviewPreset\":\"deep\",\"aiReviewStyle\":null}",
+            "{\"aiReviewPreset\":\"thorough\",\"aiReviewShowScore\":null}",
             "{\"worksetSize\":100,\"aiReviewStyle\":\"unknown\"}",
             "{\"worksetSize\":100,\"aiReviewPreset\":\"unknown\"}",
             "{\"worksetSize\":100,\"aiReviewReasoningEffort\":\"invalid\"}",

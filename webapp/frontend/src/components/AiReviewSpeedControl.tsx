@@ -8,6 +8,7 @@ import { getAnchoredDropdownPanelStyle } from './dropdownPosition';
 
 export type AiReviewSpeedControlProps = {
   value: AiReviewPreset;
+  allowExtendedPresets?: boolean;
   onChange: (value: AiReviewPreset) => void;
   automaticDisabled: boolean;
   onChangeAutomaticDisabled: (disabled: boolean) => void;
@@ -20,7 +21,7 @@ export type AiReviewSpeedControlProps = {
   onRetry?: () => void;
 };
 
-const speeds: { value: AiReviewPreset; label: string; description: string }[] = [
+const allSpeeds: { value: AiReviewPreset; label: string; description: string }[] = [
   { value: 'fastest', label: 'Fastest', description: 'Prioritize a quick response.' },
   { value: 'fast', label: 'Fast', description: 'Favor a quicker review.' },
   { value: 'balanced', label: 'Balanced', description: 'Allow some time for review.' },
@@ -40,7 +41,8 @@ const rangeKeys = new Set([
 ]);
 
 export function AiReviewSpeedControl({
-  value,
+  value: savedValue,
+  allowExtendedPresets = false,
   onChange,
   automaticDisabled,
   onChangeAutomaticDisabled,
@@ -52,6 +54,8 @@ export function AiReviewSpeedControl({
   error,
   onRetry,
 }: AiReviewSpeedControlProps) {
+  const speeds = allowExtendedPresets ? allSpeeds : allSpeeds.slice(0, 3);
+  const value = speeds.some((speed) => speed.value === savedValue) ? savedValue : 'balanced';
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   const [panelStyle, setPanelStyle] = useState<CSSProperties>();
@@ -64,7 +68,7 @@ export function AiReviewSpeedControl({
   const automaticStatusId = useId();
   const automaticDescriptionId = useId();
   const selected = speeds.find((speed) => speed.value === value)!;
-  const preview = speeds.find((speed) => speed.value === draft)!;
+  const preview = speeds.find((speed) => speed.value === draft) ?? selected;
 
   useEffect(() => {
     setDraft(value);
@@ -195,13 +199,14 @@ export function AiReviewSpeedControl({
                 min={0}
                 max={speeds.length - 1}
                 step={1}
-                value={speeds.findIndex((speed) => speed.value === draft)}
+                value={speeds.findIndex((speed) => speed.value === preview.value)}
                 aria-disabled={disabled}
                 aria-label="Review speed"
                 aria-valuetext={preview.label}
                 aria-describedby={descriptionId}
                 onChange={(event) => {
-                  if (!disabled) setDraft(speeds[event.currentTarget.valueAsNumber].value);
+                  const next = speeds[event.currentTarget.valueAsNumber]?.value;
+                  if (!disabled && next) setDraft(next);
                 }}
                 onPointerDown={(event) => {
                   if (disabled) event.preventDefault();
@@ -226,9 +231,14 @@ export function AiReviewSpeedControl({
               </div>
               <div className="ai-review-speed__stops" aria-hidden="true">
                 <span>Fastest</span>
-                <span>Ultra</span>
+                <span>{speeds[speeds.length - 1].label}</span>
               </div>
               <p id={descriptionId}>{preview.description}</p>
+              {!allowExtendedPresets ? (
+                <p>
+                  Thorough, Deep, and Ultra are reserved for admins to keep the review queue moving.
+                </p>
+              ) : null}
               <div className="ai-review-speed__style">
                 <label>
                   <span>Review style</span>
