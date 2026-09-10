@@ -12,6 +12,34 @@ import org.springframework.boot.context.properties.source.MapConfigurationProper
 public class AiReviewConfigurationPropertiesTest {
 
   @Test
+  public void automaticUltraUsesBalancedWithoutChangingManualPresets() {
+    var interactive = new AiReviewConfigurationProperties().getInteractive();
+
+    assertEquals("balanced", interactive.resolveAutomaticPresetId("ultra", "automatic"));
+    for (String preset : new String[] {"fastest", "fast", "balanced", "thorough", "deep"}) {
+      assertEquals(preset, interactive.resolveAutomaticPresetId(preset, "automatic"));
+    }
+    for (String requestType : new String[] {"manual", "follow_up", "retry", "legacy", null}) {
+      assertEquals("ultra", interactive.resolveAutomaticPresetId("ultra", requestType));
+    }
+    assertEquals(null, interactive.resolveAutomaticPresetId(null, "automatic"));
+    assertEquals("max", interactive.getPresets().get("ultra").getReasoningEffort());
+  }
+
+  @Test
+  public void deploymentCanReenableAutomaticUltra() {
+    AiReviewConfigurationProperties properties =
+        new Binder(
+                new MapConfigurationPropertySource(
+                    Map.of("l10n.ai-review.interactive.ultra-automatic-enabled", "true")))
+            .bind("l10n.ai-review", Bindable.of(AiReviewConfigurationProperties.class))
+            .get();
+
+    assertEquals(
+        "ultra", properties.getInteractive().resolveAutomaticPresetId("ultra", "automatic"));
+  }
+
+  @Test
   public void defaultsUseMaximumReasoningAndStandardProcessing() {
     AiReviewConfigurationProperties properties = new AiReviewConfigurationProperties();
 

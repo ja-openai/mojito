@@ -28,6 +28,7 @@ const editorPreference = vi.hoisted(() => ({ enabled: true }));
 const fetchRepositoriesMock = vi.hoisted(() => vi.fn());
 const fetchUserPreferencesMock = vi.hoisted(() => vi.fn());
 const saveUserPreferencesMock = vi.hoisted(() => vi.fn());
+const currentUserRole = vi.hoisted(() => ({ role: 'ROLE_TRANSLATOR' }));
 vi.mock('../../api/userPreferences', () => ({
   fetchUserPreferences: fetchUserPreferencesMock,
   saveUserPreferences: saveUserPreferencesMock,
@@ -38,7 +39,7 @@ vi.mock('../../api/repositories', () => ({ fetchRepositories: fetchRepositoriesM
 vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({
     username: 'translator',
-    role: 'ROLE_TRANSLATOR',
+    role: currentUserRole.role,
     canTranslateAllLocales: true,
     userLocales: [],
   }),
@@ -182,6 +183,7 @@ function mockMf2TextUnit(messageFormat: string | null | undefined) {
 describe('TextUnitDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentUserRole.role = 'ROLE_TRANSLATOR';
     requestAiReviewMock.mockReset();
     fetchUserPreferencesMock.mockReset();
     fetchUserPreferencesMock.mockResolvedValue(preferences);
@@ -626,6 +628,39 @@ describe('TextUnitDetailPage', () => {
       requestType: 'manual',
       surface: 'text_unit_detail',
     });
+  });
+
+  it('explains automatic Ultra fallback while keeping Ultra selected for manual Ask', async () => {
+    currentUserRole.role = 'ROLE_ADMIN';
+    const saved = { ...preferences, aiReviewPreset: 'ultra' as const };
+    const { queryClient } = renderTextUnitDetailPage(
+      '/text-units/3?locale=pt-PT',
+      undefined,
+      saved,
+    );
+    await screen.findByText('No issues found.');
+    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent(
+      'Auto: Balanced',
+    );
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      presetId: 'ultra',
+      requestType: 'automatic',
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      { target: { value: 'Explain the terminology.' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(2));
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      presetId: 'ultra',
+      requestType: 'follow_up',
+    });
+    expect(queryClient.getQueryData(userPreferencesQueryKey('translator'))).toMatchObject({
+      aiReviewPreset: 'ultra',
+      aiReviewAutomaticDisabled: false,
+    });
+    expect(saveUserPreferencesMock).not.toHaveBeenCalled();
   });
 
   it('saves the selected speed before replacing an automatic review and ignores its old result', async () => {

@@ -27,9 +27,24 @@ public class AiReviewConfigurationProperties {
   }
 
   public static class InteractiveProperties {
+    boolean ultraAutomaticEnabled = false;
     ProfileProperties versionA = new ProfileProperties("gpt-5.6-sol", "low");
     ProfileProperties versionB = new ProfileProperties("gpt-6-astra", "low");
     Map<String, ProfileProperties> presets = defaultPresets();
+
+    public boolean isUltraAutomaticEnabled() {
+      return ultraAutomaticEnabled;
+    }
+
+    public void setUltraAutomaticEnabled(boolean ultraAutomaticEnabled) {
+      this.ultraAutomaticEnabled = ultraAutomaticEnabled;
+    }
+
+    public String resolveAutomaticPresetId(String presetId, String requestType) {
+      return !ultraAutomaticEnabled && "automatic".equals(requestType) && "ultra".equals(presetId)
+          ? "balanced"
+          : presetId;
+    }
 
     private static Map<String, ProfileProperties> defaultPresets() {
       return new LinkedHashMap<>(

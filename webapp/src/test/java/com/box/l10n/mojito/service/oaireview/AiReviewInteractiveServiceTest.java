@@ -75,6 +75,36 @@ public class AiReviewInteractiveServiceTest {
   }
 
   @Test
+  public void automaticUltraFallsBackAndSavedUltraRemainsAvailableManually() {
+    when(users.isCurrentUserAdmin()).thenReturn(true);
+    authenticate(
+        17L,
+        objectMapper.readValueUnchecked("{\"aiReviewPreset\":\"ultra\"}", UserPreferences.class));
+    Prepared automatic = service.prepare(request(null, "review_project", "automatic"));
+    assertEquals("balanced", automatic.settings().profileId());
+    assertEquals("low", automatic.settings().reasoningEffort());
+    Prepared manual = service.prepare(request(null, "review_project", "manual"));
+    assertEquals("ultra", manual.settings().profileId());
+    assertEquals("max", manual.settings().reasoningEffort());
+  }
+
+  @Test
+  public void executionRechecksFrozenAutomaticUltraWithoutChangingManualRequests() {
+    var settings =
+        new AiReviewInteractiveService.Settings("ultra", "gpt-6-astra", "max", "low", "priority");
+    Prepared frozen = new Prepared(request(null, "review_project", "automatic"), 17L, settings);
+    Prepared effective = service.enforceExecutionPolicy(frozen);
+    assertEquals("balanced", effective.settings().profileId());
+    assertEquals("low", effective.settings().reasoningEffort());
+    assertEquals(frozen.userId(), effective.userId());
+    assertEquals("max", frozen.settings().reasoningEffort());
+    Prepared manual = new Prepared(request(null, "review_project", "manual"), 17L, settings);
+    assertEquals(manual, service.enforceExecutionPolicy(manual));
+    configuration.getInteractive().setUltraAutomaticEnabled(true);
+    assertEquals(frozen, service.enforceExecutionPolicy(frozen));
+  }
+
+  @Test
   public void requiresAnAuthenticatedActorBeforeReadingPreferences() {
     when(users.getCurrentUser()).thenReturn(Optional.empty());
 

@@ -45,6 +45,35 @@ function renderPreferences(saved = preferences, role: ApiUserProfile['role'] = '
 afterEach(() => vi.unstubAllGlobals());
 
 describe('AI review preferences', () => {
+  it('preserves saved Ultra when an admin pauses automatic review', async () => {
+    const saved = {
+      ...preferences,
+      aiReviewPreset: 'ultra' as const,
+      aiReviewAutomaticDisabled: false,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(Response.json({ ...saved, aiReviewAutomaticDisabled: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { result, client } = renderPreferences(saved, 'ROLE_ADMIN');
+
+    expect(result.current).toMatchObject({
+      preset: 'ultra',
+      automaticDisabled: false,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    act(() => result.current.onChangeAutomaticDisabled(true));
+    await waitFor(() => expect(result.current.automaticDisabled).toBe(true));
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+      '/api/users/me/preferences',
+      expect.objectContaining({ body: JSON.stringify({ aiReviewAutomaticDisabled: true }) }),
+    );
+    expect(result.current.preset).toBe('ultra');
+    expect(client.getQueryData(userPreferencesQueryKey('alice'))).toMatchObject({
+      aiReviewPreset: 'ultra',
+    });
+  });
+
   it('defaults older account settings to alternatives with scores without rewriting them', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

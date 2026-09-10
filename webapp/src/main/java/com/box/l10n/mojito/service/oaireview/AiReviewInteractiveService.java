@@ -79,6 +79,7 @@ public class AiReviewInteractiveService {
         }
         preset = "balanced";
       }
+      preset = configuration.getInteractive().resolveAutomaticPresetId(preset, type);
       var selected = configuration.getInteractive().getPresets().get(preset);
       if (selected == null
           || selected.getModelName() == null
@@ -142,6 +143,26 @@ public class AiReviewInteractiveService {
             configuration.getResponses().getReasoningEffort(),
             configuration.getResponses().getTextVerbosity(),
             configuration.getResponses().getServiceTier()));
+  }
+
+  /** Apply the temporary automatic limit again to requests frozen by an older deployment. */
+  public Prepared enforceExecutionPolicy(Prepared prepared) {
+    if (!"automatic".equals(prepared.request().requestType())
+        || configuration.getInteractive().isUltraAutomaticEnabled()) return prepared;
+    Settings settings = prepared.settings();
+    if (!"ultra".equals(settings.profileId())
+        && !Set.of("max", "xhigh").contains(settings.reasoningEffort())) return prepared;
+    var balanced = configuration.getInteractive().getPresets().get("balanced");
+    if (balanced == null) throw new IllegalStateException("Balanced review preset is unavailable");
+    return new Prepared(
+        prepared.request(),
+        prepared.userId(),
+        new Settings(
+            "balanced",
+            balanced.getModelName(),
+            balanced.getReasoningEffort(),
+            settings.textVerbosity(),
+            balanced.getServiceTier()));
   }
 
   public Long start(Prepared prepared, Long taskId) {
