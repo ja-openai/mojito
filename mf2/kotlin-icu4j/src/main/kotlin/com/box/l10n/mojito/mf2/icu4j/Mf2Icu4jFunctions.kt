@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.mf2.icu4j
 
+import com.box.l10n.mojito.mf2.truncateInteger
 import com.box.l10n.mojito.mf2.Mf2Error
 import com.box.l10n.mojito.mf2.Mf2FunctionCall
 import com.box.l10n.mojito.mf2.Mf2FunctionRegistry
@@ -33,10 +34,10 @@ object Mf2Icu4jFunctions {
     @JvmStatic
     fun registry(): Mf2FunctionRegistry =
         Mf2FunctionRegistry.portable()
-            .withFunction("number", ::formatNumber)
-            .withFunction("percent", ::formatPercent)
-            .withFunction("integer", ::formatInteger)
-            .withFunction("currency", ::formatCurrency)
+            .withNumericFunction("number", ::formatNumber)
+            .withNumericFunction("percent", ::formatPercent)
+            .withNumericFunction("integer", ::formatInteger)
+            .withNumericFunction("currency", ::formatCurrency)
             .withFunction("date", ::formatDate)
             .withFunction("time", ::formatTime)
             .withFunction("datetime", ::formatDateTime)
@@ -61,7 +62,7 @@ object Mf2Icu4jFunctions {
     private fun formatInteger(call: Mf2FunctionCall): String {
         val value = numericValue(call, "Integer function requires a numeric operand.")
         val format = NumberFormat.getIntegerInstance(locale(call))
-        return applySignDisplay(format.format(value.toLong()), value, call)
+        return applySignDisplay(format.format(truncateInteger(value)), value, call)
     }
 
     private fun formatCurrency(call: Mf2FunctionCall): String {
@@ -380,8 +381,12 @@ object Mf2Icu4jFunctions {
         throw Mf2Error.badOption("$name option must be one of ${allowedValues.joinToString(", ")}.")
     }
 
-    private fun minimumFractionDigits(call: Mf2FunctionCall): Int? =
-        nonNegativeOption(call, "minimumFractionDigits")
+    private fun minimumFractionDigits(call: Mf2FunctionCall): Int? {
+        val minimum = nonNegativeOption(call, "minimumFractionDigits")
+        val maximum = maximumFractionDigits(call)
+        if (minimum != null && maximum != null && minimum > maximum) throw Mf2Error.badOption("minimumFractionDigits must not exceed maximumFractionDigits.")
+        return minimum
+    }
 
     private fun maximumFractionDigits(call: Mf2FunctionCall): Int? =
         nonNegativeOption(call, "maximumFractionDigits")
@@ -401,7 +406,7 @@ object Mf2Icu4jFunctions {
     }
 
     private fun parseNonNegativeInteger(value: String, message: String): Int =
-        value.toIntOrNull()?.takeIf { it >= 0 } ?: throw Mf2Error.badOption(message)
+        value.toIntOrNull()?.takeIf { it in 0..1000 && value.all { ch -> ch in '0'..'9' } } ?: throw Mf2Error.badOption(message)
 
     private fun currencyCode(call: Mf2FunctionCall): String? = resolvedCurrencyCode(call)
 

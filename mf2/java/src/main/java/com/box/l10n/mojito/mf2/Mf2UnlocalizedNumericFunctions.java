@@ -38,19 +38,22 @@ final class Mf2UnlocalizedNumericFunctions {
             throws Mf2Exception {
         double value = Mf2FunctionSupport.parseCallDecimal(call, "Integer function requires a numeric operand.");
         return Mf2PortableFunctions.formatIntegerNumber(
-                (long) value, signDisplayAlways(call));
+                Mf2FunctionSupport.truncateInteger(value), signDisplayAlways(call));
     }
 
     static String selectionOperand(
             double value,
             String functionName,
             int minimumFractionDigits,
-            Integer maximumFractionDigits) {
+            Integer maximumFractionDigits) throws Mf2Exception {
         if (functionName.equals("integer")) {
-            return Long.toString((long) value);
+            if (value < -0x1.0p63 || value >= 0x1.0p63) {
+                throw Mf2FunctionSupport.badSelector("Integer selector is outside the supported signed-64-bit range.");
+            }
+            return Long.toString(Mf2FunctionSupport.truncateInteger(value));
         }
         if (functionName.equals("percent")) {
-            value *= 100.0;
+            value = scaledPercent(value);
         }
         if (functionName.equals("number") || functionName.equals("percent")) {
             return appendMinimumFractionDigits(
@@ -61,22 +64,25 @@ final class Mf2UnlocalizedNumericFunctions {
     }
 
     static String formatDecimalNumber(double value, boolean signDisplayAlways, int minimumFractionDigits) {
-        String formatted = Double.toString(value);
-        if (formatted.endsWith(".0")) {
-            formatted = formatted.substring(0, formatted.length() - 2);
-        }
+        String formatted = BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
         if (signDisplayAlways && value >= 0.0) {
             formatted = "+" + formatted;
         }
         return appendMinimumFractionDigits(formatted, minimumFractionDigits);
     }
 
+    private static double scaledPercent(double value) throws Mf2Exception {
+        double scaled = BigDecimal.valueOf(value).movePointRight(2).doubleValue();
+        if (!Double.isFinite(scaled)) throw Mf2Exception.badOperand("Scaled percent operand is outside the supported range.");
+        return scaled;
+    }
+
     private static String formatPercentNumber(
             double value,
             boolean signDisplayAlways,
             int minimumFractionDigits,
-            Integer maximumFractionDigits) {
-        String formatted = formatDecimalWithMaximumFractionDigits(value * 100.0, maximumFractionDigits);
+            Integer maximumFractionDigits) throws Mf2Exception {
+        String formatted = formatDecimalWithMaximumFractionDigits(scaledPercent(value), maximumFractionDigits);
         if (signDisplayAlways && value >= 0.0) {
             formatted = "+" + formatted;
         }
@@ -125,8 +131,10 @@ final class Mf2UnlocalizedNumericFunctions {
         if (value == null) {
             return 0;
         }
-        return Mf2FunctionSupport.parseNonNegativeOption(
-                value, "minimumFractionDigits option must be a non-negative integer.");
+        int minimum = Mf2FunctionSupport.parseNonNegativeOption(value, "minimumFractionDigits option must be a non-negative integer.");
+        Integer maximum = maximumFractionDigits(call);
+        if (maximum != null && minimum > maximum) throw Mf2FunctionSupport.badOption("minimumFractionDigits must not exceed maximumFractionDigits.");
+        return minimum;
     }
 
     private static Integer maximumFractionDigits(Mf2FunctionRegistry.FunctionCall call)

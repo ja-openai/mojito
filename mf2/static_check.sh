@@ -46,4 +46,4 @@ section "Go static checks"
 )
 
 section "PHP static checks"
-(cd php && find src tests examples -name '*.php' -print -exec php -l {} \;)
+sh check_php_syntax.sh

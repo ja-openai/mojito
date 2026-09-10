@@ -10,8 +10,9 @@ import (
 
 func PortableFunctionRegistry() FunctionRegistry {
 	registry := FunctionRegistry{
-		formatters: map[string]Formatter{},
-		selectors:  map[string]Selector{},
+		formatters:        map[string]Formatter{},
+		numericFormatters: map[string]bool{"number": true, "integer": true, "percent": true},
+		selectors:         map[string]Selector{},
 	}
 	registry.formatters["string"] = func(call FunctionCall) (string, error) { return call.Value, nil }
 	registry.formatters["number"] = formatUnlocalizedNumber
@@ -129,7 +130,11 @@ func formatUnlocalizedPercent(call FunctionCall) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	formatted := formatUnlocalizedDecimalWithMaximumFractionDigits(value*100, maximum)
+	scaled, err := scaledPercent(value)
+	if err != nil {
+		return "", err
+	}
+	formatted := formatUnlocalizedDecimalWithMaximumFractionDigits(scaled, maximum)
 	if signAlways && value >= 0 {
 		formatted = "+" + formatted
 	}
@@ -147,7 +152,11 @@ func selectPercent(match FunctionMatch) (*int, error) {
 	if err := validateNumericVariantKey(match.Key); err != nil {
 		return nil, err
 	}
-	matches, err := exactDecimalKeyMatches(match, value*100)
+	scaled, err := scaledPercent(value)
+	if err != nil {
+		return nil, err
+	}
+	matches, err := exactDecimalKeyMatches(match, scaled)
 	if err != nil {
 		return nil, err
 	}
@@ -158,34 +167,45 @@ func selectPercent(match FunctionMatch) (*int, error) {
 	return nil, nil
 }
 
-func formatUnlocalizedInteger(call FunctionCall) (string, error) {
-	value, err := parseCallDecimal(call, "Integer function requires a numeric operand.")
-	if err != nil {
-		return "", err
+func integerOperandText(value string, source *FunctionSource) (string, bool) {
+	if source != nil && isDecimalSourceFunction(source.Function) {
+		if inherited, ok := numericSourceOperandText(source); ok {
+			value = inherited
+		}
 	}
-	integer := math.Trunc(value)
+	if _, ok := parseDecimalNumber(value); !ok {
+		return "", false
+	}
+	return truncateDecimal(value)
+}
+
+func formatUnlocalizedInteger(call FunctionCall) (string, error) {
+	integer, ok := integerOperandText(call.Value, call.InheritedSource)
+	if !ok {
+		return "", badOperand("Integer function requires a numeric operand within the decimal expansion limit.")
+	}
 	signAlways, err := signDisplayAlways(call)
 	if err != nil {
 		return "", err
 	}
-	if signAlways && integer >= 0 {
-		return "+" + strconv.FormatInt(int64(integer), 10), nil
+	if signAlways && !strings.HasPrefix(integer, "-") {
+		return "+" + integer, nil
 	}
-	return strconv.FormatInt(int64(integer), 10), nil
+	return integer, nil
 }
 
 func selectInteger(match FunctionMatch) (*int, error) {
 	if invalidNumericSelector(match.Function, match.InheritedSource) {
 		return nil, badSelector("Integer selector cannot match this operand.")
 	}
-	value, err := parseMatchDecimal(match, "Integer selector requires a numeric operand.")
-	if err != nil {
-		return nil, err
+	integer, ok := integerOperandText(match.Value, match.InheritedSource)
+	if !ok {
+		return nil, badSelector("Integer selector requires a numeric operand within the decimal expansion limit.")
 	}
 	if err := validateNumericVariantKey(match.Key); err != nil {
 		return nil, err
 	}
-	if match.Key == strconv.FormatInt(int64(math.Trunc(value)), 10) {
+	if match.Key == integer {
 		rank := 2
 		return &rank, nil
 	}
@@ -329,42 +349,57 @@ func numericSourceOperand(source *FunctionSource) (float64, bool) {
 }
 
 func numericSourceOperandText(source *FunctionSource) (string, bool) {
-	if source == nil {
-		return "", false
+	var chain []*FunctionSource
+	operand, ok := "", false
+	for current := source; current != nil; current = current.Inherited {
+		cache := cacheForSource(current)
+		if cache != nil && cache.cacheable && cache.operandResolved {
+			operand, ok = cache.operand, cache.operandOK
+			break
+		}
+		chain = append(chain, current)
 	}
-	operand, ok := numericSourceOperandText(source.Inherited)
-	if !ok {
-		if _, parsed := parseDecimalNumber(source.Value); parsed {
-			operand, ok = source.Value, true
+	for index := len(chain) - 1; index >= 0; index-- {
+		current := chain[index]
+		if !ok {
+			if _, parsed := parseDecimalNumber(current.Value); parsed {
+				operand, ok = current.Value, true
+			}
+		}
+		if isDecimalSourceFunction(current.Function) && ok {
+			switch stringField(current.Function, "name") {
+			case "integer":
+				operand, ok = truncateDecimal(operand)
+			case "offset":
+				add, addErr := sourceOptionValue(current, "add", "")
+				subtract, subtractErr := sourceOptionValue(current, "subtract", "")
+				if addErr != nil || subtractErr != nil {
+					return "", false
+				}
+				if (add == "") == (subtract == "") {
+					operand, ok = "", false
+					break
+				}
+				deltaText := add
+				if deltaText == "" {
+					deltaText = subtract
+				}
+				delta, valid := parseInteger(deltaText)
+				if !valid {
+					operand, ok = "", false
+					break
+				}
+				if subtract != "" {
+					delta = -delta
+				}
+				operand, ok = addIntegerOffsetDecimal(operand, delta)
+			}
+		}
+		if cache := cacheForSource(current); cache != nil && cache.cacheable {
+			cache.operand, cache.operandOK, cache.operandResolved = operand, ok, true
 		}
 	}
-	if !isDecimalSourceFunction(source.Function) || !ok {
-		return operand, ok
-	}
-	switch stringField(source.Function, "name") {
-	case "integer":
-		return truncateDecimal(operand)
-	case "offset":
-		add, addErr := sourceOptionValue(source, "add", "")
-		subtract, subtractErr := sourceOptionValue(source, "subtract", "")
-		if addErr != nil || subtractErr != nil || (add == "") == (subtract == "") {
-			return "", false
-		}
-		deltaText := add
-		if deltaText == "" {
-			deltaText = subtract
-		}
-		delta, deltaOK := parseInteger(deltaText)
-		if !deltaOK {
-			return "", false
-		}
-		if subtract != "" {
-			delta = -delta
-		}
-		return addIntegerOffsetDecimal(operand, delta)
-	default:
-		return operand, true
-	}
+	return operand, ok
 }
 
 const maxExpandedDecimalDigits = 4096
@@ -477,8 +512,8 @@ func appendMinimumFractionDigits(formatted string, minimumFractionDigits int) st
 	} else {
 		formatted += "."
 	}
-	for index := fractionDigits; index < minimumFractionDigits; index++ {
-		formatted += "0"
+	if fractionDigits < minimumFractionDigits {
+		formatted += strings.Repeat("0", minimumFractionDigits-fractionDigits)
 	}
 	return formatted
 }
@@ -488,7 +523,18 @@ func minimumFractionDigits(call FunctionCall) (int, error) {
 	if value == "" {
 		return 0, nil
 	}
-	return parseNonNegativeOption(value, "minimumFractionDigits option must be a non-negative integer.")
+	minimum, err := parseNonNegativeOption(value, "minimumFractionDigits option must be a non-negative integer.")
+	if err != nil {
+		return 0, err
+	}
+	maximum, err := maximumFractionDigits(call)
+	if err != nil {
+		return 0, err
+	}
+	if maximum != nil && minimum > *maximum {
+		return 0, badOption("minimumFractionDigits must not exceed maximumFractionDigits.")
+	}
+	return minimum, nil
 }
 
 func maximumFractionDigits(call FunctionCall) (*int, error) {
@@ -512,7 +558,11 @@ func parseNonNegativeOption(value, message string) (int, error) {
 			return 0, badOption(message)
 		}
 	}
-	return strconv.Atoi(value)
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed > 1000 {
+		return 0, badOption(message)
+	}
+	return parsed, nil
 }
 
 func signDisplayAlways(call FunctionCall) (bool, error) {
@@ -548,4 +598,20 @@ func parseInteger(value string) (int64, bool) {
 	}
 	parsed, err := strconv.ParseInt(value, 10, 64)
 	return parsed, err == nil
+}
+
+// Shift the shortest decimal representation before converting back to binary floating point.
+func scaledPercent(value float64) (float64, error) {
+	text := strconv.FormatFloat(value, 'g', -1, 64)
+	exponent := 2
+	if index := strings.IndexAny(text, "eE"); index >= 0 {
+		old, _ := strconv.Atoi(text[index+1:])
+		exponent += old
+		text = text[:index]
+	}
+	scaled, err := strconv.ParseFloat(text+"e"+strconv.Itoa(exponent), 64)
+	if err != nil || math.IsInf(scaled, 0) || math.IsNaN(scaled) {
+		return 0, badOperand("Scaled percent operand is outside the supported range.")
+	}
+	return scaled, nil
 }

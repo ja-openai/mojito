@@ -1,0 +1,9 @@
+{
+  "name": "match-trailing-empty-brace",
+  "source": ".input {$x :string} .match $x * {{ok}} {",
+  "expectedDiagnostics": [
+    {
+      "code": "invalid-variant-key"
+    }
+  ]
+}

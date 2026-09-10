@@ -20,6 +20,7 @@ public final class ParseBenchmark {
                 : Path.of("../conformance/fixtures/source-to-model");
         int iterations = args.length > 1 ? Integer.parseInt(args[1]) : 100_000;
         int warmupIterations = args.length > 2 ? Integer.parseInt(args[2]) : 10_000;
+        if (iterations <= 0 || warmupIterations < 0) throw new IllegalArgumentException("Iterations must be positive; warmup must be nonnegative.");
         List<String> sources = loadSources(fixtureDir);
         if (sources.isEmpty()) {
             System.err.println("No source fixtures found.");
@@ -64,7 +65,21 @@ public final class ParseBenchmark {
                     .filter(path -> path.getFileName().toString().endsWith(".json"))
                     .sorted(Comparator.comparing(path -> path.getFileName().toString()))
                     .toList()) {
-                sources.add(string(object(JsonParser.parse(fixturePath)).get("source")));
+                Map<String, Object> fixture = object(JsonParser.parse(fixturePath));
+                String source = string(fixture.get("source"));
+                List<String> expected = new ArrayList<>();
+                for (Object item : (List<?>) fixture.getOrDefault("expectedDiagnostics", List.of())) {
+                    expected.add(string(object(item).get("code")));
+                }
+                if (fixture.get("expectedError") instanceof Map<?, ?>) {
+                    expected.add(string(object(fixture.get("expectedError")).get("code")));
+                }
+                Mf2ParseResult result = Mf2Parser.parseToModel(source);
+                List<String> actual = result.diagnostics().stream().map(diagnostic -> diagnostic.code()).toList();
+                if (result.hasDiagnostics() != !expected.isEmpty() || !actual.containsAll(expected)) {
+                    throw new IllegalStateException(fixturePath + ": expected parser diagnostics " + expected + ", got " + actual);
+                }
+                sources.add(source);
             }
         }
         return sources;

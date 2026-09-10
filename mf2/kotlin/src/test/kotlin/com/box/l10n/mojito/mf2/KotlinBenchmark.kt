@@ -5,6 +5,7 @@ import java.nio.file.Path
 import kotlin.system.exitProcess
 
 object KotlinBenchmark {
+    private val functions = Mf2FunctionRegistry.portable()
     @JvmStatic
     fun main(args: Array<String>) {
         exitProcess(run(args))
@@ -14,6 +15,7 @@ object KotlinBenchmark {
         val fixtureDir = if (args.isNotEmpty()) Path.of(args[0]) else Path.of("../conformance/fixtures/source-to-model")
         val iterations = args.getOrNull(1)?.toInt() ?: 100_000
         val warmupIterations = args.getOrNull(2)?.toInt() ?: 10_000
+        require(iterations > 0 && warmupIterations >= 0) { "Iterations must be positive; warmup must be nonnegative." }
         val cases = loadCases(fixtureDir)
         if (cases.isEmpty()) {
             System.err.println("No format cases found.")
@@ -54,11 +56,14 @@ object KotlinBenchmark {
                 val message = KotlinJsonSupport.obj(fixture["expectedModel"])
                 for (rawCase in KotlinJsonSupport.arrayOrEmpty(fixture["formatCases"])) {
                     val formatCase = KotlinJsonSupport.obj(rawCase)
-                    cases += Case(
+                    val item = Case(
                         message,
                         KotlinJsonSupport.objOrEmpty(formatCase["arguments"]),
                         KotlinJsonSupport.stringOrDefault(formatCase["locale"], "en"),
+                        Mf2BidiIsolation.fromName(KotlinJsonSupport.stringOrDefault(formatCase["bidiIsolation"], "none")),
                     )
+                    check(item.format() == formatCase["expected"]) { "$fixturePath: benchmark preflight output mismatch" }
+                    cases += item
                 }
             }
         }
@@ -69,9 +74,10 @@ object KotlinBenchmark {
         val message: Mf2Model,
         val arguments: Map<String, Any?>,
         val locale: String,
+        val bidiIsolation: Mf2BidiIsolation,
     ) {
         fun format(): String {
-            val result = Mf2Formatter.formatMessage(message, arguments, locale)
+            val result = Mf2Formatter.formatMessage(message, arguments, locale, bidiIsolation, functions)
             if (result.hasErrors) {
                 throw Mf2Error("format-error", result.errors.toString())
             }

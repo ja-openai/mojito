@@ -61,6 +61,19 @@ const functions = createIntlFunctionRegistry(FunctionRegistry);
 const result = formatMessage(model, { delta: -1 }, { locale: "fr", functions });
 ```
 
+The Intl number adapter supports `notation=standard|scientific|engineering|compact`,
+the website's legacy `:number style=percent`, integer padding, and significant
+digits. Integer/significant digit sizes are 1–21; fraction digit sizes are 0–100.
+Direct options override inherited numeric options, subject to numeric type
+boundaries; `:percent`, `:currency`, and `:integer` keep their fixed styles.
+
+Nonstandard notation, significant-digit options, and legacy number percent style
+currently support **formatting only**. A numeric selector using these effective
+options reports `bad-option` and `bad-selector` and chooses the fallback. Standard
+notation, fraction-digit options, and the standard `:percent` function retain the
+existing selection support. Custom formatter/selector overrides take ownership of
+the replaced function's selection policy.
+
 The Intl date/time adapter uses `dateStyle`, `timeStyle`, and `timeZone` as the
 canonical option names. Legacy `length`, `precision`, `dateLength`,
 `timePrecision`, and shared `style` aliases are accepted for parity with the
@@ -100,3 +113,9 @@ npm run bench:format
 npm run bench:parse
 npm run bench:plural
 ```
+
+Function callback annotations and source records are detached read-only snapshots.
+Edit the caller's catalog between format calls to change behavior; do not mutate
+callback metadata. Numeric/source-option caches use weak, per-call ownership and
+exclude variable-dependent histories. See `../spec/runtime-limits.md` for limits,
+direction handling and the remaining application-level budgets.

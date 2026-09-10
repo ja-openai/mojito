@@ -1,0 +1,202 @@
+{
+  "functions/number.json#41/parts": {
+    "testSha256": "c07f3f992ad1c47d47d92418f3097fa6e238e81649add8e9fec5fcee1f527278",
+    "actual": [
+      {
+        "type": "string",
+        "value": "42"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "syntax.json#50/parts": {
+    "testSha256": "5062f5da58f2c8ff27debd1c785d6357f05965b5dfda99d8254bbd25029811b6",
+    "actual": [
+      {
+        "type": "markup",
+        "kind": "open",
+        "name": "tag",
+        "options": {
+          "foo": {
+            "type": "literal",
+            "value": "bar"
+          }
+        }
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "syntax.json#56/parts": {
+    "testSha256": "b90e16b7cf4c59acba62a1bf27e49e7877fe31a3164893b313fac3697876fdd4",
+    "actual": [
+      {
+        "type": "markup",
+        "kind": "close",
+        "name": "tag",
+        "options": {
+          "foo": {
+            "type": "literal",
+            "value": "bar"
+          }
+        }
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "syntax.json#104/parts": {
+    "testSha256": "74f01393951dbdd0cc4c76b0f601c4916fd04b906aa1bccbb70bb6f083db3dd1",
+    "actual": [
+      {
+        "type": "markup",
+        "kind": "standalone",
+        "name": "tag",
+        "options": {
+          "foo": {
+            "type": "literal",
+            "value": "bar"
+          }
+        }
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "syntax.json#105/parts": {
+    "testSha256": "1d0cb4a04cd182f7b8be09dd571db592ee2e7937c3e6840f0a7ab478a2609128",
+    "actual": [
+      {
+        "type": "markup",
+        "kind": "open",
+        "name": "tag",
+        "options": {
+          "a:foo": {
+            "type": "literal",
+            "value": "foo"
+          },
+          "b:bar": {
+            "name": "bar",
+            "type": "variable"
+          }
+        }
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#1/parts": {
+    "testSha256": "4873c1f542fb627bd620f015cdd7d38b4bc0a2099926edf327b73faf23227013",
+    "actual": [
+      {
+        "type": "markup",
+        "kind": "open",
+        "name": "tag",
+        "options": {
+          "u:id": {
+            "type": "literal",
+            "value": "x"
+          }
+        }
+      },
+      {
+        "type": "text",
+        "value": "content"
+      },
+      {
+        "type": "markup",
+        "kind": "close",
+        "name": "ns:tag",
+        "options": {
+          "u:id": {
+            "type": "literal",
+            "value": "x"
+          }
+        }
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#2/parts": {
+    "testSha256": "f006c860bff746e8c65df2c02629f9b27fd4c7b051acb3ab8657fbfa4740a4ae",
+    "actual": [
+      {
+        "type": "markup",
+        "kind": "open",
+        "name": "tag",
+        "options": {
+          "u:dir": {
+            "type": "literal",
+            "value": "rtl"
+          }
+        }
+      },
+      {
+        "type": "text",
+        "value": "content"
+      },
+      {
+        "type": "markup",
+        "kind": "close",
+        "name": "ns:tag"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#3/parts": {
+    "testSha256": "928812cee52805dbb90527aaf64300c657b5d9864f20842d1ba6cacc3a556f14",
+    "actual": [
+      {
+        "type": "text",
+        "value": "hello "
+      },
+      {
+        "type": "string",
+        "value": "world",
+        "dir": "ltr"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#4/parts": {
+    "testSha256": "b12963e42a463ca580d3e6cece37481c7294f47d96aa9ce42450413fd513e0c6",
+    "actual": [
+      {
+        "type": "text",
+        "value": "hello "
+      },
+      {
+        "type": "string",
+        "value": "world",
+        "dir": "rtl"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#5/parts": {
+    "testSha256": "668137ded223f5acb0670029400d65b15e2e05af8dcc586a79d5cc3f2df1ddb6",
+    "actual": [
+      {
+        "type": "text",
+        "value": "hello "
+      },
+      {
+        "type": "string",
+        "value": "world",
+        "dir": "auto"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#6/parts": {
+    "testSha256": "d276585fea1f88993722dad22b75a5dbef5876ef14453919cde7349c82d0961e",
+    "actual": [
+      {
+        "type": "text",
+        "value": "hello "
+      },
+      {
+        "type": "string",
+        "value": "world",
+        "dir": "ltr"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "name": "duplicate-canonical-declaration",
+  "model": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "café",
+        "value": {
+          "type": "expression",
+          "arg": {
+            "type": "literal",
+            "value": "NFC"
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "café",
+        "value": {
+          "type": "expression",
+          "arg": {
+            "type": "literal",
+            "value": "NFD"
+          }
+        }
+      }
+    ],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": {
+          "type": "variable",
+          "name": "café"
+        }
+      },
+      "/",
+      {
+        "type": "expression",
+        "arg": {
+          "type": "variable",
+          "name": "café"
+        }
+      }
+    ]
+  },
+  "expectedError": {
+    "code": "duplicate-declaration"
+  }
+}

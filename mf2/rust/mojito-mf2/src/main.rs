@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::hint::black_box;
+use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::OnceLock;
@@ -53,6 +54,7 @@ struct FormatErrorFixture {
     model: MessageModel,
     #[serde(default = "default_locale")]
     locale: String,
+    #[serde(default)]
     arguments: BTreeMap<String, serde_json::Value>,
     expected_error: ExpectedDiagnostic,
 }
@@ -67,7 +69,12 @@ struct ExpectedDiagnostic {
 struct FormatCase {
     #[serde(default = "default_locale")]
     locale: String,
+    #[serde(default)]
+    bidi_isolation: Option<String>,
+    #[serde(default)]
     arguments: BTreeMap<String, serde_json::Value>,
+    #[serde(default)]
+    expected: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -77,6 +84,7 @@ struct ExpectedFormatCase {
     locale: String,
     #[serde(default)]
     bidi_isolation: Option<String>,
+    #[serde(default)]
     arguments: BTreeMap<String, serde_json::Value>,
     expected: String,
 }
@@ -86,6 +94,7 @@ struct ExpectedFormatCase {
 struct PartsCase {
     #[serde(default = "default_locale")]
     locale: String,
+    #[serde(default)]
     arguments: BTreeMap<String, serde_json::Value>,
     expected: Vec<FormattedPart>,
 }
@@ -97,6 +106,7 @@ struct FallbackCase {
     locale: String,
     #[serde(default)]
     bidi_isolation: Option<String>,
+    #[serde(default)]
     arguments: BTreeMap<String, serde_json::Value>,
     expected: String,
     expected_errors: Vec<ExpectedDiagnostic>,
@@ -107,6 +117,7 @@ struct FallbackCase {
 struct FallbackPartsCase {
     #[serde(default = "default_locale")]
     locale: String,
+    #[serde(default)]
     arguments: BTreeMap<String, serde_json::Value>,
     expected: Vec<FormattedPart>,
     expected_errors: Vec<ExpectedDiagnostic>,
@@ -135,6 +146,8 @@ struct LocaleLookupChainCase {
 #[serde(rename_all = "camelCase")]
 struct SourceOnlyFixture {
     source: String,
+    #[serde(default)]
+    expected_diagnostics: Vec<ExpectedDiagnostic>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -181,6 +194,7 @@ fn main() {
     };
 
     match command.as_str() {
+        "official-bridge" => official_bridge(),
         "compile" => {
             let path = next_required_arg(&mut args);
             compile(&read_to_string(&path));
@@ -629,7 +643,20 @@ fn check_format_error_fixtures(fixture_root: &Path) -> usize {
 
     let mut checked_cases = 0usize;
     for fixture_path in json_fixture_paths(&fixture_dir) {
-        let fixture: FormatErrorFixture = read_json_fixture(&fixture_path);
+        let json: serde_json::Value = read_json_fixture(&fixture_path);
+        let fixture: FormatErrorFixture = match serde_json::from_value(json.clone()) {
+            Ok(fixture) => fixture,
+            Err(error) => {
+                if json["expectedError"]["code"] != "invalid-model" {
+                    fail(format!(
+                        "{}: unexpected model decode failure: {error}",
+                        fixture_path.display()
+                    ));
+                }
+                checked_cases += 1;
+                continue;
+            }
+        };
         let actual_code = match format_message_for_locale(
             &fixture.model,
             &fixture.arguments,
@@ -748,8 +775,28 @@ fn bench_parse(path: &str, iterations_arg: Option<String>, warmup_arg: Option<St
         process::exit(2);
     }
 
+    for fixture in &sources {
+        let result = parse_to_model(&fixture.source);
+        let actual: Vec<_> = result
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.code.as_str())
+            .collect();
+        let expected: Vec<_> = fixture
+            .expected_diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.code.as_str())
+            .collect();
+        if actual != expected || result.model.is_some() != expected.is_empty() {
+            fail(format!(
+                "Parser benchmark preflight mismatch: expected diagnostics {:?} and model={}, got {:?} and model={}",
+                expected, expected.is_empty(), actual, result.model.is_some()
+            ));
+        }
+    }
+
     for index in 0..warmup_iterations {
-        let result = parse_to_model(&sources[index % sources.len()]);
+        let result = parse_to_model(&sources[index % sources.len()].source);
         black_box(result);
     }
 
@@ -758,7 +805,7 @@ fn bench_parse(path: &str, iterations_arg: Option<String>, warmup_arg: Option<St
     let mut diagnostics = 0usize;
     let mut models = 0usize;
     for index in 0..iterations {
-        let source = &sources[index % sources.len()];
+        let source = &sources[index % sources.len()].source;
         let result = parse_to_model(source);
         bytes += black_box(source.len());
         diagnostics += black_box(result.diagnostics.len());
@@ -870,7 +917,7 @@ fn bench(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>)
             fixture
                 .format_cases
                 .iter()
-                .map(move |case| (model.clone(), case.locale.clone(), case.arguments.clone()))
+                .map(move |case| (model.clone(), case))
         })
         .collect();
 
@@ -879,25 +926,32 @@ fn bench(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>)
         process::exit(2);
     }
 
+    // Validate every case before warmup/timing, even when iterations is smaller
+    // than the corpus. A fast but incorrect formatter is not a benchmark result.
+    for (model, case) in &cases {
+        let output = format_bench_case(model, case);
+        let expected = case
+            .expected
+            .as_deref()
+            .unwrap_or_else(|| fail("Benchmark case is missing its expected output"));
+        if output != expected {
+            fail(format!(
+                "Benchmark preflight mismatch: expected {:?}, got {:?}",
+                expected, output
+            ));
+        }
+    }
+
     for index in 0..warmup_iterations {
-        let (model, locale, arguments) = &cases[index % cases.len()];
-        let output = value_or_first_error(
-            format_message_for_locale(model, arguments, locale, BidiIsolation::None)
-                .expect("format succeeds"),
-        )
-        .expect("format has no recoverable errors");
-        black_box(output);
+        let (model, case) = &cases[index % cases.len()];
+        black_box(format_bench_case(model, case));
     }
 
     let started = Instant::now();
     let mut bytes = 0usize;
     for index in 0..iterations {
-        let (model, locale, arguments) = &cases[index % cases.len()];
-        let output = value_or_first_error(
-            format_message_for_locale(model, arguments, locale, BidiIsolation::None)
-                .expect("format succeeds"),
-        )
-        .expect("format has no recoverable errors");
+        let (model, case) = &cases[index % cases.len()];
+        let output = format_bench_case(model, case);
         bytes += black_box(output.len());
     }
     let seconds = started.elapsed().as_secs_f64();
@@ -908,20 +962,35 @@ fn bench(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>)
     );
 }
 
-fn parse_iterations(value: &str, label: &str) -> usize {
-    value.parse::<usize>().unwrap_or_else(|error| {
-        eprintln!("Invalid {label} count: {error}");
-        process::exit(2);
-    })
+fn format_bench_case(model: &MessageModel, case: &FormatCase) -> String {
+    value_or_first_error(
+        format_message_for_locale(
+            model,
+            &case.arguments,
+            &case.locale,
+            BidiIsolation::from_name(case.bidi_isolation.as_deref()),
+        )
+        .expect("format succeeds"),
+    )
+    .expect("format has no recoverable errors")
 }
 
-fn read_sources(dir: &Path) -> Vec<String> {
+fn parse_iterations(value: &str, label: &str) -> usize {
+    let count = value.parse::<usize>().unwrap_or_else(|error| {
+        eprintln!("Invalid {label} count: {error}");
+        process::exit(2);
+    });
+    if label == "iteration" && count == 0 {
+        eprintln!("Invalid iteration count: must be positive");
+        process::exit(2);
+    }
+    count
+}
+
+fn read_sources(dir: &Path) -> Vec<SourceOnlyFixture> {
     json_fixture_paths(dir)
         .into_iter()
-        .map(|path| {
-            let fixture: SourceOnlyFixture = read_json_fixture(&path);
-            fixture.source
-        })
+        .map(|path| read_json_fixture(&path))
         .collect()
 }
 
@@ -976,4 +1045,88 @@ fn usage_and_exit() -> ! {
         "Usage:\n  mojito-mf2 compile <source-or-fixture.json>\n  mojito-mf2 format-first-case <fixture.json>\n  mojito-mf2 editor-json <request.json>\n  mojito-mf2 plural-json <locale>\n  mojito-mf2 conformance [source-fixture-dir]\n  mojito-mf2 unicode-tests [unicode-test-dir] [baseline-json]\n  mojito-mf2 bench <fixture-dir> [iterations] [warmup-iterations]\n  mojito-mf2 bench-parse <fixture-dir> [iterations] [warmup-iterations]"
     );
     process::exit(2);
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OfficialBridgeRequest {
+    source: String,
+    #[serde(default)]
+    arguments: BTreeMap<String, serde_json::Value>,
+    #[serde(default = "default_locale")]
+    locale: String,
+    #[serde(default)]
+    bidi_isolation: Option<String>,
+    #[serde(default)]
+    registry: Option<String>,
+}
+
+fn official_bridge() {
+    let stdin = io::stdin();
+    let mut stdout = io::BufWriter::new(io::stdout().lock());
+    for line in stdin.lock().lines() {
+        let response = match line {
+            Ok(line) => match serde_json::from_str::<OfficialBridgeRequest>(&line) {
+                Ok(request) => official_bridge_response(request),
+                Err(error) => serde_json::json!({"transportError": error.to_string()}),
+            },
+            Err(error) => serde_json::json!({"transportError": error.to_string()}),
+        };
+        if serde_json::to_writer(&mut stdout, &response).is_err() || writeln!(stdout).is_err() {
+            return;
+        }
+    }
+}
+
+fn official_bridge_response(request: OfficialBridgeRequest) -> serde_json::Value {
+    let parsed = parse_to_model(&request.source);
+    let mut response = serde_json::json!({"diagnostics": parsed.diagnostics.iter().map(|error| &error.code).collect::<Vec<_>>(), "errors": [], "parts": []});
+    let Some(model) = parsed.model else {
+        return response;
+    };
+    let registry = if request.registry.as_deref() == Some("platform") {
+        #[cfg(feature = "icu4x")]
+        {
+            FunctionRegistry::icu4x()
+        }
+        #[cfg(not(feature = "icu4x"))]
+        {
+            return serde_json::json!({"transportError": "platform registry requires the icu4x Cargo feature"});
+        }
+    } else {
+        FunctionRegistry::default()
+    };
+    let registry = unicode_tests::with_official_test_functions(registry);
+    let arguments = arguments_from_json(&request.arguments);
+    let isolation = if request.bidi_isolation.as_deref() == Some("default") {
+        BidiIsolation::Default
+    } else {
+        BidiIsolation::None
+    };
+    let options = FormatOptions::new(&request.locale)
+        .with_functions(&registry)
+        .with_bidi_isolation(isolation);
+    match format_message_with_options(&model, &arguments, &options) {
+        Ok(result) => {
+            response["value"] = result.value.into();
+            response["errors"] = serde_json::json!(result
+                .errors
+                .iter()
+                .map(|error| &error.code)
+                .collect::<Vec<_>>());
+        }
+        Err(error) => response["errors"] = serde_json::json!([error.code]),
+    }
+    match format_message_to_parts_with_options(&model, &arguments, &options) {
+        Ok(result) => {
+            response["parts"] = serde_json::to_value(result.parts).expect("parts are JSON values");
+            response["partsErrors"] = serde_json::json!(result
+                .errors
+                .iter()
+                .map(|error| &error.code)
+                .collect::<Vec<_>>());
+        }
+        Err(error) => response["partsErrors"] = serde_json::json!([error.code]),
+    }
+    response
 }

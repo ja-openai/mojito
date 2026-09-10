@@ -84,7 +84,7 @@ public extension MF2Message {
         onMissingArgument: MF2RecoveryHandler? = nil,
         onFormatError: MF2RecoveryHandler? = nil
     ) throws -> MF2FormatResult {
-        let result = try formatToParts(
+        let (result, isolation) = try formatPartsWithMetadata(
             arguments: arguments,
             locale: locale,
             functions: functions,
@@ -92,7 +92,7 @@ public extension MF2Message {
             onFormatError: onFormatError
         )
         return MF2FormatResult(
-            value: result.parts.stringValue(bidiIsolation: bidiIsolation),
+            value: result.parts.stringValue(bidiIsolation: bidiIsolation, expressionIsolation: isolation),
             errors: result.errors
         )
     }
@@ -104,12 +104,24 @@ public extension MF2Message {
         onMissingArgument: MF2RecoveryHandler? = nil,
         onFormatError: MF2RecoveryHandler? = nil
     ) throws -> MF2PartsResult {
+        try formatPartsWithMetadata(
+            arguments: arguments, locale: locale, functions: functions,
+            onMissingArgument: onMissingArgument, onFormatError: onFormatError
+        ).0
+    }
+
+    private func formatPartsWithMetadata(
+        arguments: [String: MF2Value], locale: String, functions: MF2FunctionRegistry,
+        onMissingArgument: MF2RecoveryHandler?, onFormatError: MF2RecoveryHandler?
+    ) throws -> (MF2PartsResult, [Bool]) {
         try validate()
         var context = MF2FormatContext(
             values: Dictionary(
-                uniqueKeysWithValues: arguments.map { (MF2NameKey($0.key), $0.value) }
-            ),
+                arguments.sorted { $0.key.utf8.lexicographicallyPrecedes($1.key.utf8) }.map {
+                    (MF2NameKey($0.key), $0.value)
+                }, uniquingKeysWith: { _, last in last }),
             locale: locale,
+            localeIsLTR: localeIsLTR(locale) == true,
             functions: functions,
             fallback: true,
             onMissingArgument: onMissingArgument,
@@ -123,7 +135,7 @@ public extension MF2Message {
         case let .select(_, selectors, variants):
             parts = try context.formatToParts(selectors: selectors, variants: variants)
         }
-        return MF2PartsResult(parts: parts, errors: context.errors)
+        return (MF2PartsResult(parts: parts, errors: context.errors), context.expressionIsolation)
     }
 
     private var declarations: [MF2Declaration] {
@@ -149,6 +161,9 @@ public extension MF2Message {
     private func validate(declarations: [MF2Declaration]) throws {
         var names: Set<MF2NameKey> = []
         for declaration in declarations {
+            switch declaration {
+            case let .input(_, value), let .local(_, value): try validate(expression: value)
+            }
             if case let .input(name, value) = declaration {
                 try validateInputDeclaration(name: name, value: value)
             }
@@ -186,8 +201,26 @@ public extension MF2Message {
             if case let .text(text) = part, text.isEmpty {
                 throw MF2Error.invalidPatternText
             }
+            if case let .expression(expression) = part { try validate(expression: expression) }
             if case let .markup(markup) = part {
+                try validate(attributes: markup.attributes)
                 try validate(markup: markup)
+            }
+        }
+    }
+
+    private func validate(expression: MF2Expression) throws {
+        guard expression.arg != nil || expression.function != nil else {
+            throw MF2Error.invalidModel("An expression requires an argument or function.")
+        }
+        try validate(attributes: expression.attributes)
+    }
+
+    private func validate(attributes: [String: MF2AttributeValue]) throws {
+        for value in attributes.values {
+            switch value {
+            case .present(true), .literal(.literal): break
+            default: throw MF2Error.invalidModel("Attributes must be literal strings or true.")
             }
         }
     }
@@ -219,7 +252,9 @@ private struct MF2FormatContext {
     var selectorAnnotations: [MF2NameKey: MF2SelectorAnnotation] = [:]
     var failedLocals: Set<MF2NameKey> = []
     var errors: [MF2Error] = []
+    var expressionIsolation: [Bool] = []
     var locale: String
+    var localeIsLTR: Bool
     var functions: MF2FunctionRegistry
     var fallback = false
     var onMissingArgument: MF2RecoveryHandler?
@@ -266,13 +301,13 @@ private struct MF2FormatContext {
                         errors.append(.unresolvedVariable(selector.name))
                     }
                     let annotation = selectorAnnotations[key]
-                    if let annotation, functions.hasSelector(annotation.function) {
-                        if !failedLocals.contains(key) {
+                    if let annotation, !annotation.isString {
+                        if !failedLocals.contains(key), functions.hasFormatter(annotation.function) {
                             errors.append(.badOperand("Selector operand is not available."))
                         }
                         errors.append(.badSelector("Selector operand is not available."))
                     }
-                    return MF2SelectorValue(
+                    let result = MF2SelectorValue(
                         rendered: "",
                         rawValue: .string(""),
                         normalizedRendered: annotation?.isString == true ? normalizeStringKey("") : nil,
@@ -281,6 +316,8 @@ private struct MF2FormatContext {
                         function: annotation?.function,
                         source: nil
                     )
+                    result.state.failed = true
+                    return result
                 }
                 throw MF2Error.missingArgument(selector.name)
             }
@@ -344,12 +381,16 @@ private struct MF2FormatContext {
                     let value = rendered.value == fallbackValue(source) ? nil : rendered.value
                     output.append(.fallback(source: source, value: value))
                 } else {
+                    expressionIsolation.append(
+                        !(localeIsLTR && rendered.bidi.direction == "ltr" && !rendered.bidi.forceIsolation))
                     output.append(.expression(
                         rendered.value,
-                        attributes: expression.attributes
-                    ))
+                            attributes: expression.attributes,
+                            direction: rendered.bidi.publicDirection
+                        ))
                 }
             case let .markup(markup):
+                if markup.options["u:dir"] != nil { errors.append(.badOption("u:dir is not valid on markup.")) }
                 output.append(.markup(
                     kind: markup.kind,
                     name: markup.name,
@@ -382,7 +423,9 @@ private struct MF2FormatContext {
                 if !failedLocals.contains(key) {
                     errors.append(error)
                 }
-                if expression.function != nil {
+                if let function = expression.function, !functions.hasFormatter(function) {
+                    errors.append(.unknownFunction(function.name))
+                } else if let function = expression.function, function.name != "string" {
                     errors.append(.badOperand("Function operand is not available."))
                 }
                 let source = fallbackSource(expression)
@@ -407,14 +450,26 @@ private struct MF2FormatContext {
 
         switch expression.function?.name {
         case .none:
-            return MF2ExpressionOutput(value: value, hadError: false, source: source)
+            if source == nil, case .number = rawValue {
+                return try formatExpressionOutput(
+                    MF2Expression(
+                        arg: expression.arg, function: MF2Function(name: "number"), attributes: expression.attributes))
+            }
+            return MF2ExpressionOutput(
+                value: value, hadError: false, source: source, bidi: source?.bidi ?? MF2ResolvedBidi())
         case .some(_):
             guard let function = expression.function else {
                 return MF2ExpressionOutput(value: value, hadError: false)
             }
             try recordFunctionResolutionErrors(function, source: source)
-            let optionValues = values
+            let optionValues = function.options.values.reduce(into: [MF2NameKey: MF2Value]()) { result, option in
+                if case let .variable(name) = option {
+                    let key = MF2NameKey(name)
+                    result[key] = values[key]
+                }
+            }
             do {
+                let bidi = resolveBidi(function: function, source: source)
                 return try MF2ExpressionOutput(
                     value: functions.format(MF2FunctionCall(
                         value: value,
@@ -436,6 +491,7 @@ private struct MF2FormatContext {
                         value: source?.value ?? value,
                         function: function,
                         inheritedSource: source,
+                        bidi: bidi,
                         optionResolver: { optionName, defaultValue in
                             try Self.optionValue(
                                 function: function,
@@ -444,7 +500,8 @@ private struct MF2FormatContext {
                                 values: optionValues
                             )
                         }
-                    )
+                    ),
+                    bidi: bidi
                 )
             } catch let error as MF2Error {
                 guard fallback else {
@@ -523,7 +580,7 @@ private struct MF2FormatContext {
         selectorAnnotations[MF2NameKey(selectorName)]?.exactMatch ?? true
     }
 
-    private func selectionKey(
+    private mutating func selectionKey(
         selectorName: String,
         value: MF2Value,
         source: MF2FunctionSource?
@@ -538,11 +595,15 @@ private struct MF2FormatContext {
         ) else {
             return nil
         }
-        return selectPluralCategory(
-            locale: locale,
-            value: selectionValue,
-            numberSelect: annotation.numberSelect
-        )
+        let category = selectPluralCategory(
+            locale: locale, value: selectionValue, numberSelect: annotation.numberSelect)
+        if category == nil {
+            errors.append(
+                .badSelector(
+                    "CLDR selection requires an absolute value at most 9007199254740991 and fraction operands that fit signed 64-bit integers."
+                ))
+        }
+        return category
     }
 
     private mutating func variantMatchRank(
@@ -570,10 +631,13 @@ private struct MF2FormatContext {
             if (selector.exactMatch && literalKeyMatches(value, selector: selector)) || value == selector.selectionKey {
                 return 1
             }
-            guard let function = selector.function else {
-                return nil
+            guard let function = selector.function, !selector.state.failed else { return nil }
+            let optionValues = function.options.values.reduce(into: [MF2NameKey: MF2Value]()) { result, option in
+                if case let .variable(name) = option {
+                    let key = MF2NameKey(name)
+                    result[key] = values[key]
+                }
             }
-            let optionValues = values
             do {
                 return try functions.select(MF2FunctionMatch(
                     value: selector.rendered,
@@ -595,6 +659,7 @@ private struct MF2FormatContext {
                 guard fallback else {
                     throw error
                 }
+                if error.code != "bad-variant-key" { selector.state.failed = true }
                 errors.append(fallbackError(error))
                 if error.code != "bad-selector", error.code != "bad-variant-key" {
                     errors.append(.badSelector("Selector failed to match."))
@@ -602,6 +667,31 @@ private struct MF2FormatContext {
                 return nil
             }
         }
+    }
+
+    private mutating func resolveBidi(function: MF2Function, source: MF2FunctionSource?) -> MF2ResolvedBidi {
+        var bidi = source?.bidi ?? MF2ResolvedBidi()
+        bidi.forceIsolation = false
+        if bidi.direction == nil, localeIsLTR, functions.isProductionNumericFormatter(function) {
+            bidi.direction = "ltr"
+        }
+        guard let option = function.options["u:dir"] else { return bidi }
+        let value: String?
+        switch option {
+        case let .literal(literal): value = literal
+        case let .variable(name):
+            switch values[MF2NameKey(name)] {
+            case let .string(string)?: value = string
+            case .none: errors.append(.unresolvedVariable(name)); value = nil
+            default: value = nil
+            }
+        }
+        if value == "inherit" { return bidi }
+        if let value, ["auto", "ltr", "rtl"].contains(value) {
+            return MF2ResolvedBidi(direction: value, explicitDirection: true, forceIsolation: true)
+        }
+        errors.append(.badOption("u:dir option must be auto, ltr, rtl, or inherit."))
+        return bidi
     }
 
     private mutating func recordFunctionResolutionErrors(
@@ -648,25 +738,18 @@ private struct MF2FormatContext {
 }
 
 private func collectSelectorAnnotations(for declarations: [MF2Declaration]) -> [MF2NameKey: MF2SelectorAnnotation] {
-    var expressions: [MF2NameKey: MF2Expression] = [:]
+    var annotations: [MF2NameKey: MF2SelectorAnnotation] = [:]
     for declaration in declarations {
-        expressions[MF2NameKey(declaration.name)] = declaration.value
+        if let function = declaration.value.function {
+            annotations[MF2NameKey(declaration.name)] = MF2SelectorAnnotation(function: function)
+        }
     }
-    var annotations = expressions.compactMapValues { expression in
-        expression.function.map(MF2SelectorAnnotation.init(function:))
-    }
-
-    var changed = true
-    while changed {
-        changed = false
-        for (name, expression) in expressions where annotations[name] == nil {
-            guard case let .variable(source)? = expression.arg,
-                  let annotation = annotations[MF2NameKey(source)]
-            else {
-                continue
-            }
-            annotations[name] = annotation
-            changed = true
+    // Local forward references are rejected before this pass. Input annotations
+    // are seeded above so aliases need only one pass in declaration order.
+    for declaration in declarations {
+        let name = MF2NameKey(declaration.name)
+        if annotations[name] == nil, case let .variable(source)? = declaration.value.arg {
+            annotations[name] = annotations[MF2NameKey(source)]
         }
     }
 
@@ -677,7 +760,7 @@ private struct MF2NameKey: Hashable {
     private let value: String
 
     init(_ value: String) {
-        self.value = value
+        self.value = value.precomposedStringWithCanonicalMapping
     }
 
     static func == (left: MF2NameKey, right: MF2NameKey) -> Bool {
@@ -741,7 +824,10 @@ private extension MF2Variant {
     }
 }
 
+private final class MF2SelectorState { var failed = false }
+
 private struct MF2SelectorValue {
+    let state = MF2SelectorState()
     let rendered: String
     let rawValue: MF2Value
     let normalizedRendered: String?
@@ -756,12 +842,17 @@ private struct MF2ExpressionOutput {
     let hadError: Bool
     let source: MF2FunctionSource?
     let fallbackSource: String?
+    let bidi: MF2ResolvedBidi
 
-    init(value: String, hadError: Bool, source: MF2FunctionSource? = nil, fallbackSource: String? = nil) {
+    init(
+        value: String, hadError: Bool, source: MF2FunctionSource? = nil, fallbackSource: String? = nil,
+        bidi: MF2ResolvedBidi = MF2ResolvedBidi()
+    ) {
         self.value = value
         self.hadError = hadError
         self.source = source
         self.fallbackSource = fallbackSource
+        self.bidi = bidi
     }
 }
 
@@ -804,7 +895,7 @@ private func fallbackSource(_ expression: MF2Expression) -> String {
         return expressionArgumentSource(arg)
     }
     if let function = expression.function {
-        return functionSource(function)
+        return ":" + function.name
     }
     return ""
 }
@@ -924,7 +1015,7 @@ private extension MF2Variant {
 public enum MF2FormattedPart: Equatable, Decodable {
     case text(String)
     case fallback(source: String, value: String?)
-    case expression(String, attributes: [String: MF2AttributeValue])
+    case expression(String, attributes: [String: MF2AttributeValue], direction: String? = nil)
     case markup(
         kind: String,
         name: String,
@@ -940,6 +1031,8 @@ public enum MF2FormattedPart: Equatable, Decodable {
         case name
         case options
         case attributes
+        case direction
+        case dir
     }
 
     public init(from decoder: Decoder) throws {
@@ -959,7 +1052,9 @@ public enum MF2FormattedPart: Equatable, Decodable {
                 attributes: try container.decodeIfPresent(
                     [String: MF2AttributeValue].self,
                     forKey: .attributes
-                ) ?? [:]
+                ) ?? [:],
+                direction: try container.decodeIfPresent(String.self, forKey: .dir)
+                    ?? container.decodeIfPresent(String.self, forKey: .direction)
             )
         case "markup":
             self = .markup(
@@ -990,27 +1085,30 @@ public enum MF2BidiIsolation: String, Decodable {
 }
 
 private extension Array where Element == MF2FormattedPart {
-    func stringValue(bidiIsolation: MF2BidiIsolation = .none) -> String {
-        map { part in
+    func stringValue(bidiIsolation: MF2BidiIsolation = .none, expressionIsolation: [Bool]) -> String {
+        var expressionIndex = 0
+        return map { part in
             switch part {
             case let .text(value):
-                value
+                return value
             case let .fallback(source, value):
-                value ?? fallbackValue(source)
-            case let .expression(value, _):
-                isolateExpression(value, bidiIsolation: bidiIsolation)
+                return value ?? fallbackValue(source)
+            case let .expression(value, _, direction):
+                let isolate = expressionIsolation[expressionIndex]
+                expressionIndex += 1
+                return isolateExpression(value, bidiIsolation: isolate ? bidiIsolation : .none, direction: direction)
             case .markup:
-                ""
+                return ""
             }
         }.joined()
     }
 }
 
-private func isolateExpression(_ value: String, bidiIsolation: MF2BidiIsolation) -> String {
+private func isolateExpression(_ value: String, bidiIsolation: MF2BidiIsolation, direction: String?) -> String {
     switch bidiIsolation {
     case .none:
         value
     case .default:
-        "\u{2068}\(value)\u{2069}"
+        "\(direction == "ltr" ? "\u{2066}" : direction == "rtl" ? "\u{2067}" : "\u{2068}")\(value)\u{2069}"
     }
 }

@@ -187,7 +187,7 @@ fn format_datetime_with_styles(
 }
 
 fn parse_decimal(value: &str) -> Result<Decimal, ()> {
-    Decimal::from_str(value).map_err(|_| ())
+    Decimal::from_str(&portable_functions::direct_decimal_operand(value)?).map_err(|_| ())
 }
 
 fn parse_call_decimal(call: &FunctionCall<'_>) -> Result<Decimal, ()> {
@@ -202,10 +202,17 @@ fn apply_fraction_digit_options(
     value: &mut Decimal,
     call: &FunctionCall<'_>,
 ) -> Result<(), Diagnostic> {
-    if let Some(maximum) = non_negative_i16_option(call, "maximumFractionDigits")? {
+    let maximum = non_negative_i16_option(call, "maximumFractionDigits")?;
+    let minimum = non_negative_i16_option(call, "minimumFractionDigits")?;
+    if minimum.unwrap_or(0) > maximum.unwrap_or(1000) {
+        return Err(bad_option(
+            "minimumFractionDigits must not exceed maximumFractionDigits.",
+        ));
+    }
+    if let Some(maximum) = maximum {
         value.round(-maximum);
     }
-    if let Some(minimum) = non_negative_i16_option(call, "minimumFractionDigits")? {
+    if let Some(minimum) = minimum {
         value.absolute.pad_end(-minimum);
     }
     Ok(())
@@ -244,6 +251,9 @@ fn non_negative_i16_option(
             "{option_name} option is outside the supported integer range."
         ))
     })?;
+    if parsed > 1000 {
+        return Err(bad_option("Fraction digits must not exceed 1000."));
+    }
     Ok(Some(parsed))
 }
 
@@ -286,21 +296,21 @@ fn parse_temporal_value<T>(
 }
 
 fn parse_temporal_source<T>(
-    source: Option<FunctionSourceRef<'_>>,
+    mut source: Option<FunctionSourceRef<'_>>,
     parse: fn(&str) -> Result<T, ()>,
 ) -> Result<T, ()> {
-    let Some(source) = source else {
-        return Err(());
-    };
-    if matches!(
-        source.function().name.as_str(),
-        "date" | "time" | "datetime"
-    ) {
-        if let Ok(value) = parse(source.value()) {
-            return Ok(value);
+    while let Some(current) = source {
+        if matches!(
+            current.function().name.as_str(),
+            "date" | "time" | "datetime"
+        ) {
+            if let Ok(value) = parse(current.value()) {
+                return Ok(value);
+            }
         }
+        source = current.inherited_source();
     }
-    parse_temporal_source(source.inherited_source(), parse)
+    Err(())
 }
 
 fn parse_datetime_value(value: &str) -> Result<DateTime<Iso>, ()> {

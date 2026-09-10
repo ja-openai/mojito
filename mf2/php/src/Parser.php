@@ -212,9 +212,11 @@ final class Parser
                 continue;
             }
             $key = $this->takeWhile(static fn(int $cp): bool => !is_syntax_whitespace($cp) && $cp !== codepoint('{'));
-            if ($key !== '') {
-                $keys[] = ['type' => 'literal', 'value' => $key];
+            if ($key === '') {
+                $this->pushDiagnostic('invalid-variant-key', 'Expected a variant key or quoted pattern.', $this->index, $this->index + 1);
+                return null;
             }
+            $keys[] = ['type' => 'literal', 'value' => $key];
         }
         return $keys;
     }
@@ -305,7 +307,7 @@ final class Parser
             return '';
         }
         $cp = $this->peekCodePoint();
-        if ($cp === codepoint('{') || $cp === codepoint('}') || $cp === codepoint('\\')) {
+        if ($cp === codepoint('{') || $cp === codepoint('}') || $cp === codepoint('|') || $cp === codepoint('\\')) {
             return $this->advanceCodePoint();
         }
         return '\\';
@@ -342,6 +344,7 @@ final class Parser
         $this->advanceCodePoint();
         $contentStart = $this->index;
         $inQuote = false;
+        $quotedClosingBrace = -1;
         while (!$this->isDone()) {
             $cp = $this->peekCodePoint();
             if ($inQuote) {
@@ -352,11 +355,7 @@ final class Parser
                     }
                     continue;
                 }
-                if ($cp === codepoint('}')) {
-                    $content = substr($this->source, $contentStart, $this->index - $contentStart);
-                    $this->advanceCodePoint();
-                    return $content;
-                }
+                if ($cp === codepoint('}') && $quotedClosingBrace < 0) $quotedClosingBrace = $this->index;
                 if ($cp === codepoint('|')) {
                     $inQuote = false;
                 }
@@ -374,6 +373,10 @@ final class Parser
                 return $content;
             }
             $this->advanceCodePoint();
+        }
+        if ($quotedClosingBrace >= 0) {
+            $this->index = $quotedClosingBrace + 1;
+            return substr($this->source, $contentStart, $quotedClosingBrace - $contentStart);
         }
         $this->pushDiagnostic('unclosed-placeholder', 'Placeholder is missing a closing brace.', $start, strlen($this->source));
         return null;

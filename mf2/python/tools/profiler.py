@@ -21,22 +21,24 @@ def main(argv: list[str] | None = None) -> int:
     iterations = int(args[1]) if len(args) > 1 else 100_000
     warmup_iterations = int(args[2]) if len(args) > 2 else 10_000
     limit = int(args[3]) if len(args) > 3 else 30
+    if iterations <= 0 or warmup_iterations < 0:
+        raise ValueError("Iterations must be positive and warmup must be non-negative")
     cases = _load_cases(fixture_dir)
     if not cases:
         print("No format cases found.", file=sys.stderr)
         return 2
 
     for index in range(warmup_iterations):
-        model, locale, arguments = cases[index % len(cases)]
-        format_message(model, arguments, locale)
+        model, locale, arguments, bidi = cases[index % len(cases)]
+        format_message(model, arguments, locale, bidi_isolation=bidi)
 
     byte_count = 0
 
     def run() -> None:
         nonlocal byte_count
         for index in range(iterations):
-            model, locale, arguments = cases[index % len(cases)]
-            output = format_message(model, arguments, locale)
+            model, locale, arguments, bidi = cases[index % len(cases)]
+            output = format_message(model, arguments, locale, bidi_isolation=bidi)
             byte_count += len(output.value.encode("utf-8"))
 
     profile = cProfile.Profile()

@@ -24,8 +24,8 @@ tools, and shared examples:
 - `spec/`: project-level drafts for registry functions that are not part of
   the MF2 core grammar
 - `third_party/message-format-wg/test/`: vendored Unicode MessageFormat WG
-  official tests, consumed directly by the Rust, Java, JavaScript, Go, and PHP
-  `unicode-tests` scoreboard runners
+  official tests, checked through production-registry bridges in all eight
+  runtimes; see `conformance/README.md` for assertion-level coverage
 
 The contract is:
 
@@ -223,9 +223,9 @@ Current guidance:
   catalog entry.
 - Do not duplicate behavior by special-casing fixtures; unsupported complex
   messages must fall back to the generic runtime path.
-- Track memory alongside throughput. The JavaScript simple-message fast path is
-  intentionally a small `WeakMap` cache, measured at roughly hundreds of bytes
-  per retained model in a stress smoke, with near-zero per-call heap growth.
+- Track memory alongside throughput. JavaScript currently validates each model
+  on every call and formats strings through structured parts. It has no compiled
+  message cache; proposed caches need fresh correctness and retained-memory measurements.
 
 ## Current Slice
 
@@ -318,10 +318,13 @@ The current conformance slice covers:
 Rust, Swift, Python, Java, Kotlin, JavaScript, Go, and PHP currently parse MF2 source
 into the official data model for this slice and run the shared source-to-model,
 formatting, parts, fallback, invalid-source, model-validation, and locale-key
-fixtures. Rust, Java, JavaScript, Go, and PHP also wire all 461 vendored Unicode
-MessageFormat WG tests. Java, Go, and PHP pass all 461; the dependency-free Rust
-and JavaScript core runners pass 429 and explicitly skip the 32 platform
-currency/date/time cases, with 0 tests not wired.
+fixtures. All eight also run the pinned 462-case Unicode suite through
+production registries. The gate evaluates 761 individual assertions and records
+exact capability differences separately from passes. The public parts API
+preserves expression strings and model metadata; it does not promise the
+upstream resolved numeric subparts or resolved markup-option API. See
+`conformance/coverage-audit.md` and `packaging/README.md` for maintained gates,
+capabilities and artifact checks.
 
 ## V0 Target
 

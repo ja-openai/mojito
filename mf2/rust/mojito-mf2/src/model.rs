@@ -59,7 +59,7 @@ pub struct Expression {
 }
 
 impl Expression {
-    pub(crate) fn variable(name: impl Into<String>) -> Self {
+    pub fn variable(name: impl Into<String>) -> Self {
         Self {
             expression_type: ExpressionType::Expression,
             arg: Some(ExpressionArg::Variable { name: name.into() }),
@@ -68,7 +68,7 @@ impl Expression {
         }
     }
 
-    pub(crate) fn literal(value: impl Into<String>) -> Self {
+    pub fn literal(value: impl Into<String>) -> Self {
         Self {
             expression_type: ExpressionType::Expression,
             arg: Some(ExpressionArg::Literal {
@@ -77,6 +77,10 @@ impl Expression {
             function: None,
             attributes: None,
         }
+    }
+
+    pub fn function(function: FunctionRef) -> Self {
+        Self::function_only().with_function(function)
     }
 
     pub(crate) fn function_only() -> Self {
@@ -88,12 +92,12 @@ impl Expression {
         }
     }
 
-    pub(crate) fn with_function(mut self, function: FunctionRef) -> Self {
+    pub fn with_function(mut self, function: FunctionRef) -> Self {
         self.function = Some(function);
         self
     }
 
-    pub(crate) fn with_attributes(mut self, attributes: BTreeMap<String, AttributeValue>) -> Self {
+    pub fn with_attributes(mut self, attributes: BTreeMap<String, AttributeValue>) -> Self {
         self.attributes = if attributes.is_empty() {
             None
         } else {
@@ -126,7 +130,7 @@ pub struct VariableRef {
 }
 
 impl VariableRef {
-    pub(crate) fn new(name: impl Into<String>) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
             variable_type: VariableType::Variable,
             name: name.into(),
@@ -150,7 +154,7 @@ pub struct FunctionRef {
 }
 
 impl FunctionRef {
-    pub(crate) fn new(name: impl Into<String>, options: BTreeMap<String, ExpressionArg>) -> Self {
+    pub fn new(name: impl Into<String>, options: BTreeMap<String, ExpressionArg>) -> Self {
         Self {
             function_type: FunctionType::Function,
             name: name.into(),
@@ -182,7 +186,7 @@ pub struct Markup {
 }
 
 impl Markup {
-    pub(crate) fn new(kind: impl Into<String>, name: impl Into<String>) -> Self {
+    pub fn new(kind: impl Into<String>, name: impl Into<String>) -> Self {
         Self {
             markup_type: MarkupType::Markup,
             kind: kind.into(),
@@ -192,7 +196,7 @@ impl Markup {
         }
     }
 
-    pub(crate) fn with_options(mut self, options: BTreeMap<String, ExpressionArg>) -> Self {
+    pub fn with_options(mut self, options: BTreeMap<String, ExpressionArg>) -> Self {
         self.options = if options.is_empty() {
             None
         } else {
@@ -201,7 +205,7 @@ impl Markup {
         self
     }
 
-    pub(crate) fn with_attributes(mut self, attributes: BTreeMap<String, AttributeValue>) -> Self {
+    pub fn with_attributes(mut self, attributes: BTreeMap<String, AttributeValue>) -> Self {
         self.attributes = if attributes.is_empty() {
             None
         } else {
@@ -237,4 +241,118 @@ pub enum VariantKey {
     Literal { value: String },
     #[serde(rename = "*")]
     CatchAll,
+}
+
+// Keep the source model spelling intact while resolving canonically equivalent
+// variable names together. The common already-normalized model stays borrowed.
+impl MessageModel {
+    pub(crate) fn normalized_variable_names(&self) -> std::borrow::Cow<'_, Self> {
+        use unicode_normalization::UnicodeNormalization;
+        fn needs(name: &str) -> bool {
+            !name.is_ascii() && !name.nfc().eq(name.chars())
+        }
+        fn arg_needs(arg: &ExpressionArg) -> bool {
+            matches!(arg, ExpressionArg::Variable { name } if needs(name))
+        }
+        fn expression_needs(value: &Expression) -> bool {
+            value.arg.as_ref().is_some_and(arg_needs)
+                || value
+                    .function
+                    .as_ref()
+                    .and_then(|f| f.options.as_ref())
+                    .is_some_and(|options| options.values().any(arg_needs))
+        }
+        fn pattern_needs(pattern: &Pattern) -> bool {
+            pattern.iter().any(|part| match part {
+                PatternPart::Expression(value) => expression_needs(value),
+                PatternPart::Markup(value) => value
+                    .options
+                    .as_ref()
+                    .is_some_and(|options| options.values().any(arg_needs)),
+                _ => false,
+            })
+        }
+        let needed = self
+            .declarations()
+            .iter()
+            .any(|declaration| match declaration {
+                Declaration::Input { name, value } | Declaration::Local { name, value } => {
+                    needs(name) || expression_needs(value)
+                }
+            })
+            || match self {
+                Self::Message { pattern, .. } => pattern_needs(pattern),
+                Self::Select {
+                    selectors,
+                    variants,
+                    ..
+                } => {
+                    selectors.iter().any(|selector| needs(&selector.name))
+                        || variants.iter().any(|variant| pattern_needs(&variant.value))
+                }
+            };
+        if !needed {
+            return std::borrow::Cow::Borrowed(self);
+        }
+        fn normalize(name: &mut String) {
+            *name = name.nfc().collect();
+        }
+        fn normalize_arg(arg: &mut ExpressionArg) {
+            if let ExpressionArg::Variable { name } = arg {
+                normalize(name);
+            }
+        }
+        fn normalize_expression(value: &mut Expression) {
+            if let Some(arg) = value.arg.as_mut() {
+                normalize_arg(arg);
+            }
+            if let Some(options) = value.function.as_mut().and_then(|f| f.options.as_mut()) {
+                for arg in options.values_mut() {
+                    normalize_arg(arg);
+                }
+            }
+        }
+        fn normalize_pattern(pattern: &mut Pattern) {
+            for part in pattern {
+                match part {
+                    PatternPart::Expression(value) => normalize_expression(value),
+                    PatternPart::Markup(value) => {
+                        if let Some(options) = value.options.as_mut() {
+                            for arg in options.values_mut() {
+                                normalize_arg(arg);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let mut normalized = self.clone();
+        let (Self::Message { declarations, .. } | Self::Select { declarations, .. }) =
+            &mut normalized;
+        for declaration in declarations {
+            match declaration {
+                Declaration::Input { name, value } | Declaration::Local { name, value } => {
+                    normalize(name);
+                    normalize_expression(value);
+                }
+            }
+        }
+        match &mut normalized {
+            Self::Message { pattern, .. } => normalize_pattern(pattern),
+            Self::Select {
+                selectors,
+                variants,
+                ..
+            } => {
+                for selector in selectors {
+                    normalize(&mut selector.name);
+                }
+                for variant in variants {
+                    normalize_pattern(&mut variant.value);
+                }
+            }
+        }
+        std::borrow::Cow::Owned(normalized)
+    }
 }

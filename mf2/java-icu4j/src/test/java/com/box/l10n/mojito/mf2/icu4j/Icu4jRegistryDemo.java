@@ -44,6 +44,10 @@ public final class Icu4jRegistryDemo {
 
     public static void main(String[] args) throws Exception {
         boolean quiet = args.length > 0 && args[0].equals("--quiet");
+        for (double operand : new double[]{1e19, -1e19, 0x1.0p63, Math.nextDown(-0x1.0p63)}) {
+            var result = parse("{$x :integer}").format(Map.of("x", operand), Mf2FormatOptions.builder().functions(Mf2Icu4jFunctions.registry()).build());
+            if (result.errors().stream().noneMatch(error -> error.code().equals("bad-operand"))) throw new AssertionError("integer range: " + operand);
+        }
         Mf2Message message = parse(SOURCE);
         Map<String, Object> arguments = Map.of(
                 "amount", AMOUNT,

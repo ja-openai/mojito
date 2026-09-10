@@ -1,0 +1,211 @@
+{
+  "files": {
+    "LICENSE": {
+      "assertions": {
+        "errors": 0,
+        "output": 0,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "fbcc4d0631d6e1cb9d4a7750a6510605205a70c7bd74f957d1f998ff0f1e849d",
+      "tests": 0
+    },
+    "test/README.md": {
+      "assertions": {
+        "errors": 0,
+        "output": 0,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "a63ed3a844cef749adbf8346be2c016940700b47e92f8789ae5007a072c2f398",
+      "tests": 0
+    },
+    "test/schemas/v0/tests.schema.json": {
+      "assertions": {
+        "errors": 0,
+        "output": 0,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "02ca6b26a8c859f91c82b76dc2b99d4d680666cb72e1e8449b07e8e0b3cfec99",
+      "tests": 0
+    },
+    "test/tests/bidi.json": {
+      "assertions": {
+        "errors": 27,
+        "output": 24,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "fa3ebcd416dbdadab63731ee7a18a25b531773e4cc159dbe22da4ca1cba64afb",
+      "tests": 27
+    },
+    "test/tests/data-model-errors.json": {
+      "assertions": {
+        "errors": 23,
+        "output": 1,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "6b8d8527b5248af76bca3f61d7c58c3339c91b05555f2fc11727efc81b94e615",
+      "tests": 23
+    },
+    "test/tests/fallback.json": {
+      "assertions": {
+        "errors": 8,
+        "output": 8,
+        "parts": 3,
+        "partsErrors": 3
+      },
+      "sha256": "9654322cdaed27660b53d91e7142795aa62ce2da87a99e7ce6a471549139c010",
+      "tests": 8
+    },
+    "test/tests/functions/currency.json": {
+      "assertions": {
+        "errors": 12,
+        "output": 1,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "12c38d70bfea75c016427ad9623122dd19efdd1cb848b72fcf54dd72292abdea",
+      "tests": 12
+    },
+    "test/tests/functions/date.json": {
+      "assertions": {
+        "errors": 7,
+        "output": 2,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "8b8c76dd1e44b625e97185a04b73f6b416b98931bc1d532325b50f1ff9bfe219",
+      "tests": 7
+    },
+    "test/tests/functions/datetime.json": {
+      "assertions": {
+        "errors": 7,
+        "output": 3,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "f7f15c40eba40e972a2d84bf9f7e54a12f4d5b7a65ae9b316e8fe7cc2aae20cd",
+      "tests": 7
+    },
+    "test/tests/functions/integer.json": {
+      "assertions": {
+        "errors": 13,
+        "output": 13,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "bc6f05c8df8252e656cff58f70bdc976fd813f306ab063aac87c474c6f8b58c1",
+      "tests": 13
+    },
+    "test/tests/functions/number.json": {
+      "assertions": {
+        "errors": 41,
+        "output": 39,
+        "parts": 1,
+        "partsErrors": 1
+      },
+      "sha256": "13fe17281e72a65d0cee73f923077db3d9d2c513cf7b0f2258f657d09b57cc9e",
+      "tests": 41
+    },
+    "test/tests/functions/offset.json": {
+      "assertions": {
+        "errors": 16,
+        "output": 9,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "e9e3057e12d11028d41c387858e6262c3a1a698018b9f69401d9d37e296e81d5",
+      "tests": 16
+    },
+    "test/tests/functions/percent.json": {
+      "assertions": {
+        "errors": 13,
+        "output": 4,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "6167bccb70e03c209cc86ea0244197c8138a18271696868ca996c04382756654",
+      "tests": 13
+    },
+    "test/tests/functions/string.json": {
+      "assertions": {
+        "errors": 10,
+        "output": 7,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "399c7f8529e044e334ba91c33691eacd4bc0b63a8127e3714901b6e24ca04618",
+      "tests": 10
+    },
+    "test/tests/functions/time.json": {
+      "assertions": {
+        "errors": 6,
+        "output": 2,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "8215b8f822de2750256baf125229c3b80d1f2206e2a5cb8551b6996181e96a50",
+      "tests": 6
+    },
+    "test/tests/pattern-selection.json": {
+      "assertions": {
+        "errors": 22,
+        "output": 22,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "510a7e054f7d86eee645877bbfe8739bcd7ccabfa4290c8fbd93d64e3a89dadc",
+      "tests": 22
+    },
+    "test/tests/syntax-errors.json": {
+      "assertions": {
+        "errors": 133,
+        "output": 0,
+        "parts": 0,
+        "partsErrors": 0
+      },
+      "sha256": "26a090b1eb1fdda98d578362c7a49184350a5f80fd919ad54a1735e00786909b",
+      "tests": 133
+    },
+    "test/tests/syntax.json": {
+      "assertions": {
+        "errors": 114,
+        "output": 114,
+        "parts": 10,
+        "partsErrors": 10
+      },
+      "sha256": "4311db5ee6cfc307fa0505a7484ce7cf9e326dd770cc1c85772a35b3fdbdb810",
+      "tests": 114
+    },
+    "test/tests/u-options.json": {
+      "assertions": {
+        "errors": 10,
+        "output": 10,
+        "parts": 6,
+        "partsErrors": 6
+      },
+      "sha256": "6931deea81ec7c2a282e48428fee3250b3b27ee74690573e3c2ed23747d1f64a",
+      "tests": 10
+    }
+  },
+  "schemaVersion": 1,
+  "totals": {
+    "assertionCount": 761,
+    "assertions": {
+      "errors": 462,
+      "output": 259,
+      "parts": 20,
+      "partsErrors": 20
+    },
+    "files": 19,
+    "testFiles": 16,
+    "tests": 462
+  },
+  "upstream": {
+    "repository": "https://github.com/unicode-org/message-format-wg",
+    "revision": "5c4ddb27e726fd7881c1787a632efba83ab0d850"
+  }
+}

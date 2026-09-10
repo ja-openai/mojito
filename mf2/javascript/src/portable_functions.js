@@ -1,6 +1,7 @@
 import { registerNumericSelectors } from "./numeric_selectors.js";
 import { formatOffset } from "./offset_function.js";
 import { registerUnlocalizedNumericFormatters } from "./unlocalized_numeric_functions.js";
+import { markNumericFunctions } from "./numeric_registry_metadata.js";
 
 // Portable here means dependency-free and intentionally not locale-pretty.
 // Locale-native formatting belongs in explicit platform adapters such as Intl.
@@ -11,5 +12,5 @@ export function createPortableFunctionRegistry(FunctionRegistry) {
   registerUnlocalizedNumericFormatters(formatters);
   formatters.set("offset", formatOffset);
   registerNumericSelectors(selectors);
-  return new FunctionRegistry(formatters, selectors);
+  return markNumericFunctions(new FunctionRegistry(formatters, selectors), ["number", "integer", "percent"]);
 }

@@ -11,6 +11,7 @@ object KotlinConformance {
     }
 
     fun run(args: Array<String>): Int {
+        KotlinRuntimeRegressionTests.run()
         val fixtureDir = if (args.isNotEmpty()) {
             Path.of(args[0])
         } else {

@@ -2,48 +2,36 @@
 set -eu
 
 cd "$(dirname "$0")"
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != --worktree ]; }; then
+  echo "Usage: sh mf2/check.sh [--worktree]" >&2
+  exit 2
+fi
 
-sh cldr/check_generated.sh
+sh cldr/check_generated.sh "$@"
 sh static_check.sh
 sh conformance/check_all_languages_test.sh
-(cd cldr && sh validate_plural_rules.sh)
-(cd cldr && sh validate_number_data.sh)
-(cd cldr && sh validate_relative_time_data.sh)
-(cd conformance && python3 validate_relative_time_fixture.py)
-(cd rust/mojito-mf2 && cargo test)
-(cd rust/mojito-mf2 && cargo test --features icu4x --test icu4x)
-(cd rust/mojito-mf2 && cargo run -- conformance ../../conformance/fixtures/source-to-model)
-(cd rust/mojito-mf2 && cargo run -- unicode-tests)
-(cd rust/mojito-mf2 && cargo run --example translate_demo)
-(cd rust/mojito-mf2 && cargo run --example inline_translate_demo)
-(cd swift/MessageFormat2 && swift run MessageFormat2Conformance)
+python3 -m unittest discover -s conformance -p 'test_official_harness.py'
+python3 -m unittest discover -s packaging -p 'test_*.py'
+sh cldr/validate_plural_rules.sh
+sh cldr/validate_number_data.sh
+sh cldr/validate_relative_time_data.sh
+python3 conformance/validate_relative_time_fixture.py
+
+# One maintained selector owns native, shared, hostile-parser, direct official
+# and production-adapter checks for each runtime. Artifact installs are separate.
+for runtime in python javascript java kotlin go rust swift php; do
+  sh packaging/check_runtime.sh "$runtime"
+done
+
+(cd rust/mojito-mf2 && cargo run --locked --example translate_demo && cargo run --locked --example inline_translate_demo)
 (cd swift/MessageFormat2 && swift run MessageFormat2TranslateDemo)
-(cd swift/MessageFormat2 && swift run MessageFormat2FoundationDemo)
-(cd python && sh run.sh conformance)
-(cd python && sh run.sh test)
 (cd python && sh run.sh demo)
-(cd kotlin && sh run.sh conformance)
 (cd kotlin && sh run.sh demo)
-(cd kotlin && sh run.sh jdk-check)
-(cd kotlin-icu4j && sh run.sh check)
-(cd go && env GOPATH="${GOPATH:-/private/tmp/mojito-mf2-go-gopath}" GOMODCACHE="${GOMODCACHE:-/private/tmp/mojito-mf2-go-modcache}" GOCACHE="${GOCACHE:-/private/tmp/mojito-mf2-go-cache}" GOTOOLCHAIN="${GOTOOLCHAIN:-local}" go test ./...)
-(cd go && env GOPATH="${GOPATH:-/private/tmp/mojito-mf2-go-gopath}" GOMODCACHE="${GOMODCACHE:-/private/tmp/mojito-mf2-go-modcache}" GOCACHE="${GOCACHE:-/private/tmp/mojito-mf2-go-cache}" GOTOOLCHAIN="${GOTOOLCHAIN:-local}" go run ./cmd/demo)
-(cd php && php tests/conformance.php)
-(cd php && php tests/unicode_tests.php)
-(cd php && php tests/intl_functions.php)
+(cd go && go run ./cmd/demo)
 (cd php && php examples/demo.php)
-(cd javascript && npm run check)
-(cd javascript && npm run unicode-tests)
 (cd javascript && npm run demo)
 if [ -d react/node_modules ]; then
   (cd react && npm run check)
 fi
-(cd java && sh run.sh conformance)
-(cd java && sh run.sh unicode-tests)
-(cd java && sh run.sh demo)
-(cd java && sh run.sh inline-demo)
-(cd java && sh run.sh public-api-demo)
-(cd java && sh run.sh datetime-demo)
-(cd java && sh run.sh jdk-check)
-(cd java-icu4j && sh run.sh check)
-(cd reference && sh check.sh)
+(cd java && sh run.sh --no-prepare demo && sh run.sh --no-prepare inline-demo && sh run.sh --no-prepare public-api-demo && sh run.sh --no-prepare datetime-demo)
+sh reference/check.sh

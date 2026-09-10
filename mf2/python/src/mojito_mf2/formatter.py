@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from copy import deepcopy
 from decimal import Decimal, DecimalException, localcontext
 import unicodedata
 from typing import Any, Callable, cast
 
 from .errors import MF2Error
+from ._locale_direction import locale_is_ltr
 from ._portable_functions import (
     _MAX_DECIMAL_INTEGER_MAGNITUDE,
     _MAX_DECIMAL_TEXT_LENGTH,
@@ -92,7 +94,7 @@ def format_message(
     on_missing_argument: MF2RecoveryHandler | None = None,
     on_format_error: MF2RecoveryHandler | None = None,
 ) -> FormatResult:
-    result = format_message_to_parts(
+    result, isolation = _format_parts_with_metadata(
         model,
         arguments,
         locale,
@@ -101,7 +103,7 @@ def format_message(
         on_format_error,
     )
     return FormatResult(
-        value=_parts_to_string(result.parts, bidi_isolation),
+        value=_parts_to_string(result.parts, bidi_isolation, isolation),
         errors=result.errors,
     )
 
@@ -114,10 +116,21 @@ def format_message_to_parts(
     on_missing_argument: MF2RecoveryHandler | None = None,
     on_format_error: MF2RecoveryHandler | None = None,
 ) -> PartsResult:
+    return _format_parts_with_metadata(model, arguments, locale, functions, on_missing_argument, on_format_error)[0]
+
+
+def _format_parts_with_metadata(
+    model: MF2MessageModel,
+    arguments: MF2Arguments | None = None,
+    locale: str = "en",
+    functions: FunctionRegistry | None = None,
+    on_missing_argument: MF2RecoveryHandler | None = None,
+    on_format_error: MF2RecoveryHandler | None = None,
+) -> tuple[PartsResult, list[bool]]:
     model_data = cast(dict[str, Any], model)
-    _validate_model(model_data)
+    model_data = _validate_model(model_data)
     context = _FormatContext(
-        dict(arguments or {}),
+        {unicodedata.normalize("NFC", name): value for name, value in (arguments or {}).items()},
         locale,
         functions or _DEFAULT_FUNCTION_REGISTRY,
         fallback=True,
@@ -135,10 +148,12 @@ def format_message_to_parts(
         )
     else:
         raise MF2Error("unsupported-message-type", f"Unsupported message type: {message_type}")
-    return PartsResult(parts=parts, errors=context.errors)
+    return PartsResult(parts=parts, errors=context.errors), context.expression_isolation
 
 
-def _validate_model(model: dict[str, Any]) -> None:
+def _validate_model(model: dict[str, Any]) -> dict[str, Any]:
+    _validate_model_shape(model)
+    model = _normalize_model_bindings(model)
     _validate_declarations(model.get("declarations", []))
     if model.get("type") == "message":
         _validate_pattern(model.get("pattern", []))
@@ -149,6 +164,139 @@ def _validate_model(model: dict[str, Any]) -> None:
         )
         for variant in model.get("variants", []):
             _validate_pattern(variant.get("value", []))
+    return model
+
+
+class _ReadOnlyFunctionDict(dict):
+    """A detached read-only callback annotation; compatible with dict readers."""
+    def _immutable(self, *args: Any, **kwargs: Any) -> Any:
+        raise TypeError("MF2 callback function annotations are read-only snapshots.")
+
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = __ior__ = _immutable
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> dict[str, Any]:
+        return {key: deepcopy(value, memo) for key, value in self.items()}
+
+
+def _normalize_model_bindings(model: dict[str, Any]) -> dict[str, Any]:
+    """Use canonical variable identity without changing the caller's catalog."""
+    def arg(value: dict[str, Any]) -> dict[str, Any]:
+        if value.get("type") == "variable":
+            return {**value, "name": unicodedata.normalize("NFC", value["name"])}
+        return value
+
+    def part(value: Any) -> Any:
+        if isinstance(value, str):
+            return value
+        result = dict(value)
+        if result.get("type") == "expression" and "arg" in result:
+            result["arg"] = arg(result["arg"])
+        if result.get("type") == "expression" and "function" in result:
+            result["function"] = part(result["function"])
+        if result.get("type") in ("function", "markup") and "options" in result:
+            result["options"] = {name: arg(option) for name, option in result["options"].items()}
+        if result.get("type") == "function":
+            result = deepcopy(result)
+            if "options" in result:
+                result["options"] = _ReadOnlyFunctionDict({name: _ReadOnlyFunctionDict(option) for name, option in result["options"].items()})
+            return _ReadOnlyFunctionDict(result)
+        return result
+
+    normalized = {**model, "declarations": [
+        {**item, "name": unicodedata.normalize("NFC", item["name"]), "value": part(item["value"])}
+        for item in model["declarations"]
+    ]}
+    if model["type"] == "message":
+        normalized["pattern"] = [part(item) for item in model["pattern"]]
+    else:
+        normalized["selectors"] = [arg(item) for item in model["selectors"]]
+        normalized["variants"] = [{**item, "value": [part(value) for value in item["value"]]} for item in model["variants"]]
+    return normalized
+
+
+def _require_model(condition: bool) -> None:
+    if not condition:
+        raise MF2Error("invalid-model", "Message model does not match the MF2 data model schema.")
+
+
+def _validate_arg_shape(arg: Any, allowed: tuple[str, ...] = ("literal", "variable")) -> None:
+    _require_model(isinstance(arg, dict))
+    kind = arg.get("type")
+    _require_model(kind in allowed)
+    _require_model(isinstance(arg.get("value" if kind == "literal" else "name"), str))
+
+
+def _validate_metadata_shape(node: dict[str, Any], fields: tuple[str, ...] = ("options", "attributes")) -> None:
+    for field in fields:
+        if field not in node:
+            continue
+        values = node[field]
+        _require_model(isinstance(values, dict))
+        for name, value in values.items():
+            _require_model(isinstance(name, str))
+            if field == "attributes" and value is True:
+                continue
+            _validate_arg_shape(value, ("literal",) if field == "attributes" else ("literal", "variable"))
+
+
+def _validate_expression_shape(expression: Any) -> None:
+    _require_model(isinstance(expression, dict))
+    _require_model(expression.get("type") == "expression")
+    _require_model("arg" in expression or "function" in expression)
+    if "arg" in expression:
+        _validate_arg_shape(expression["arg"])
+    if "function" in expression:
+        function = expression["function"]
+        _require_model(isinstance(function, dict))
+        _require_model(function.get("type") == "function" and isinstance(function.get("name"), str))
+        _validate_metadata_shape(function, ("options",))
+    _validate_metadata_shape(expression, ("attributes",))
+
+
+def _validate_pattern_shape(pattern: Any) -> None:
+    _require_model(isinstance(pattern, list))
+    for part in pattern:
+        if isinstance(part, str):
+            continue
+        _require_model(isinstance(part, dict))
+        if part.get("type") == "markup":
+            _require_model(isinstance(part.get("name"), str))
+            _validate_markup(part)
+            _validate_metadata_shape(part)
+        else:
+            _validate_expression_shape(part)
+
+
+def _validate_model_shape(model: Any) -> None:
+    # Validate only the standardized fields; extension metadata remains allowed.
+    # The schema has bounded nesting, so this does not recurse through user data.
+    _require_model(isinstance(model, dict))
+    _require_model(model.get("type") in ("message", "select"))
+    declarations = model.get("declarations")
+    _require_model(isinstance(declarations, list))
+    for declaration in declarations:
+        _require_model(isinstance(declaration, dict))
+        _require_model(declaration.get("type") in ("input", "local"))
+        _require_model(isinstance(declaration.get("name"), str))
+        _validate_expression_shape(declaration.get("value"))
+    if model["type"] == "message":
+        _validate_pattern_shape(model.get("pattern"))
+        return
+    selectors, variants = model.get("selectors"), model.get("variants")
+    _require_model(isinstance(selectors, list) and isinstance(variants, list))
+    for selector in selectors:
+        _validate_arg_shape(selector, ("variable",))
+    for variant in variants:
+        _require_model(isinstance(variant, dict))
+        keys = variant.get("keys")
+        _require_model(isinstance(keys, list))
+        for key in keys:
+            _require_model(isinstance(key, dict))
+            if key.get("type") == "*":
+                _require_model("value" not in key or isinstance(key["value"], str))
+            else:
+                _validate_arg_shape(key, ("literal",))
+        _validate_pattern_shape(variant.get("value"))
 
 
 def _validate_declarations(declarations: list[dict[str, Any]]) -> None:
@@ -302,6 +450,8 @@ class _FormatContext:
         self.failed_bindings: set[str] = set()
         self.failed_selectors: set[int] = set()
         self.errors: list[MF2Error] = []
+        self.expression_isolation: list[bool] = []
+        self.known_ltr_locale = locale_is_ltr(locale) is True
         self.fallback = fallback
         self.on_missing_argument = on_missing_argument or _default_recovery
         self.on_format_error = on_format_error or _default_recovery
@@ -365,8 +515,8 @@ class _FormatContext:
                     )
                     self.failed_selectors.add(id(selector_value))
                     selector_values.append(selector_value)
-                    if annotation is not None and self.functions.has_selector(annotation.function):
-                        if name not in self.failed_bindings:
+                    if annotation is not None and not annotation.is_string:
+                        if name not in self.failed_bindings and self.functions.has_selector(annotation.function):
                             self.errors.append(
                                 MF2Error("bad-operand", "Selector operand is not available.")
                             )
@@ -448,12 +598,15 @@ class _FormatContext:
                         fallback_part["value"] = rendered.value
                     parts.append(fallback_part)
                 else:
+                    self.expression_isolation.append(rendered.force_isolation or not (
+                        rendered.resolved_direction == "ltr" and self.known_ltr_locale
+                    ))
                     expression_part: MF2ExpressionPart = {
                         "type": "expression",
                         "value": rendered.value,
                     }
                     if attributes := part.get("attributes"):
-                        expression_part["attributes"] = attributes
+                        expression_part["attributes"] = deepcopy(attributes)
                     if rendered.direction is not None:
                         expression_part["direction"] = rendered.direction
                     parts.append(expression_part)
@@ -471,9 +624,9 @@ class _FormatContext:
                     "name": part.get("name", ""),
                 }
                 if options := part.get("options"):
-                    markup_part["options"] = options
+                    markup_part["options"] = deepcopy(options)
                 if attributes := part.get("attributes"):
-                    markup_part["attributes"] = attributes
+                    markup_part["attributes"] = deepcopy(attributes)
                 parts.append(markup_part)
             else:
                 raise MF2Error("unsupported-pattern-part", f"Unsupported pattern part: {part_type}")
@@ -501,9 +654,11 @@ class _FormatContext:
                     error = _unresolved_variable(name)
                     if name not in self.failed_bindings:
                         self.errors.append(error)
-                    if expression.get("function") is not None:
+                    if function is not None:
                         self.errors.append(
                             MF2Error("bad-operand", "Function operand is not available.")
+                            if self.functions.has_formatter(function)
+                            else MF2Error("unknown-function", "Function is not defined by this registry.")
                         )
                     fallback_source = _fallback_source(expression)
                     value = self._recover_missing_argument(
@@ -539,16 +694,23 @@ class _FormatContext:
             except MF2Error as error:
                 return self._format_error_output(expression, error)
 
+        if function is None and source is None and isinstance(raw_value, (int, float, Decimal)) and not isinstance(raw_value, bool):
+            # Native numbers retain their type through an unannotated variable.
+            # Let the selected registry supply its normal localized display.
+            function = _ReadOnlyFunctionDict({"type": "function", "name": "number"})
         if function is None:
+            direction, resolved_direction, force_isolation = _source_direction(source)
             return _ExpressionOutput(
                 value=value,
                 had_error=False,
                 source=source,
-                direction=_bidi_direction_from_source(source),
+                direction=direction,
+                resolved_direction=resolved_direction,
+                force_isolation=force_isolation,
             )
         self._record_function_resolution_errors(function, source)
         try:
-            direction = _bidi_direction_for_function(function, source)
+            direction, resolved_direction, force_isolation = self._resolve_direction(function, source)
             source_value = value if source is None else source.value
             return _ExpressionOutput(
                 value=self.functions.format(
@@ -567,8 +729,17 @@ class _FormatContext:
                     function,
                     source,
                     lambda name, default: self._option_value(function, name, default),
+                    # A later input declaration can transform a variable used
+                    # by an earlier option resolver. Cache only literal-only
+                    # histories so those dynamic callbacks keep their behavior.
+                    _memo={} if (source is None or source._memo is not None) and all(
+                        option.get("type") == "literal" for option in function.get("options", {}).values()
+                    ) else None,
+                    _direction_info=(direction, resolved_direction, force_isolation),
                 ),
                 direction=direction,
+                resolved_direction=resolved_direction,
+                force_isolation=force_isolation,
             )
         except MF2Error as error:
             return self._format_error_output(expression, error)
@@ -635,6 +806,8 @@ class _FormatContext:
         option_name: str,
         default: str | None,
     ) -> str | None:
+        if option_name == "u:dir":
+            return default  # Resolved by the message context before the handler.
         option = function.get("options", {}).get(option_name)
         if option is None:
             return default
@@ -651,6 +824,29 @@ class _FormatContext:
                 "Function option exceeds the supported rendering range.",
             )
         return default
+
+    def _resolve_direction(self, function: dict[str, Any], source: FunctionSource | None) -> tuple[str | None, str | None, bool]:
+        public_direction, resolved_direction, _ = _source_direction(source)
+        force = False  # A new annotation defaults to u:dir=inherit.
+        option = function.get("options", {}).get("u:dir")
+        if option is not None:
+            try:
+                value = option.get("value") if option.get("type") == "literal" else self._argument(option["name"])
+                if value not in ("ltr", "rtl", "auto", "inherit"):
+                    raise MF2Error("bad-option", "u:dir option must be auto, ltr, rtl, or inherit.")
+                if value != "inherit":
+                    public_direction = value
+                    resolved_direction = None if value == "auto" else value
+                    force = True
+            except MF2Error as error:
+                if not self.fallback:
+                    raise
+                if error.code != "bad-option":
+                    self.errors.append(_unresolved_variable(option["name"]) if error.code == "missing-argument" else _fallback_error(error))
+                self.errors.append(MF2Error("bad-option", "Invalid u:dir option was ignored."))
+        if public_direction is None and resolved_direction is None and self.known_ltr_locale and function.get("name") in self.functions._production_numeric_formatters:
+            resolved_direction = "ltr"
+        return public_direction, resolved_direction, force
 
     def _argument(self, name: str) -> Any:
         if not self._has_value(name):
@@ -868,6 +1064,8 @@ class _ExpressionOutput:
     source: FunctionSource | None = None
     fallback_source: str | None = None
     direction: str | None = None
+    resolved_direction: str | None = None
+    force_isolation: bool = False
 
 
 def _default_recovery(context: MF2RecoveryContext) -> str:
@@ -936,7 +1134,7 @@ def _fallback_source(expression: dict[str, Any]) -> str:
         return _expression_arg_source(arg)
     function = expression.get("function")
     if function is not None:
-        return _function_source(function)
+        return f":{function.get('name', '')}"
     return ""
 
 
@@ -994,8 +1192,9 @@ def _render_value_or_error(value: Any, code: str, message: str) -> str:
         raise MF2Error(code, message) from error
 
 
-def _parts_to_string(parts: list[MF2FormattedPart], bidi_isolation: str = "none") -> str:
+def _parts_to_string(parts: list[MF2FormattedPart], bidi_isolation: str = "none", expression_isolation: list[bool] | None = None) -> str:
     output = []
+    expression_index = 0
     for part in parts:
         part_type = part.get("type")
         if part_type == "text":
@@ -1006,10 +1205,11 @@ def _parts_to_string(parts: list[MF2FormattedPart], bidi_isolation: str = "none"
             output.append(
                 _isolate_expression(
                     part.get("value", ""),
-                    bidi_isolation,
+                    bidi_isolation if expression_isolation is None or expression_isolation[expression_index] else "none",
                     part.get("direction"),
                 )
             )
+            expression_index += 1
     return "".join(output)
 
 
@@ -1022,28 +1222,5 @@ def _isolate_expression(
     return value
 
 
-def _bidi_direction_for_function(
-    function: dict[str, Any], source: FunctionSource | None
-) -> str | None:
-    option = function.get("options", {}).get("u:dir")
-    if option is not None:
-        if option.get("type") != "literal":
-            raise MF2Error("bad-option", "u:dir option must be a literal.")
-        return _parse_bidi_direction(str(option.get("value", "")))
-    return _bidi_direction_from_source(source)
-
-
-def _bidi_direction_from_source(source: FunctionSource | None) -> str | None:
-    for current in _iter_source_chain(source):
-        option = current.function.get("options", {}).get("u:dir")
-        if option is not None:
-            if option.get("type") != "literal":
-                raise MF2Error("bad-option", "u:dir option must be a literal.")
-            return _parse_bidi_direction(str(option.get("value", "")))
-    return None
-
-
-def _parse_bidi_direction(value: str) -> str:
-    if value in {"auto", "ltr", "rtl"}:
-        return value
-    raise MF2Error("bad-option", "u:dir option must be auto, ltr, or rtl.")
+def _source_direction(source: FunctionSource | None) -> tuple[str | None, str | None, bool]:
+    return source._direction_info if source is not None and source._direction_info is not None else (None, None, False)

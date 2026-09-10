@@ -21,7 +21,13 @@ func selectPluralCategory(
         return nil
     }
 
-    guard let operands = NumberOperands(raw) else {
+    let fraction = raw.split(separator: ".", maxSplits: 1).dropFirst().first.map(String.init) ?? ""
+    guard fraction.isEmpty || Int64(fraction) != nil else { return nil }
+    // Generated CLDR operands currently use binary64 and signed integer fields.
+    // Keep their integer conversion and arithmetic within the exact binary64 range.
+    guard let number = Double(raw), number.isFinite, abs(number) <= 9_007_199_254_740_991,
+        let operands = NumberOperands(raw)
+    else {
         return nil
     }
     switch numberSelect {

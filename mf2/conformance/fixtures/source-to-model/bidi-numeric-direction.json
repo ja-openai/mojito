@@ -1,0 +1,119 @@
+{
+  "name": "bidi-numeric-direction",
+  "source": "Count {1 :number} / {1 :string}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Count ",
+      {
+        "type": "expression",
+        "arg": {
+          "type": "literal",
+          "value": "1"
+        },
+        "function": {
+          "type": "function",
+          "name": "number"
+        }
+      },
+      " / ",
+      {
+        "type": "expression",
+        "arg": {
+          "type": "literal",
+          "value": "1"
+        },
+        "function": {
+          "type": "function",
+          "name": "string"
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count 1 / \u20681\u2069"
+    },
+    {
+      "locale": "fr",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count 1 / \u20681\u2069"
+    },
+    {
+      "locale": "az-IR",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count \u20681\u2069 / \u20681\u2069"
+    },
+    {
+      "locale": "az-Latn-IR",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count 1 / \u20681\u2069"
+    },
+    {
+      "locale": "sd",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count \u20681\u2069 / \u20681\u2069"
+    },
+    {
+      "locale": "sd-IN",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count 1 / \u20681\u2069"
+    },
+    {
+      "locale": "en-Arab",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count \u20681\u2069 / \u20681\u2069"
+    },
+    {
+      "locale": "und",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count \u20681\u2069 / \u20681\u2069"
+    },
+    {
+      "locale": "en-Zzzz",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count \u20681\u2069 / \u20681\u2069"
+    },
+    {
+      "locale": "xx",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Count \u20681\u2069 / \u20681\u2069"
+    }
+  ],
+  "partsCases": [
+    {
+      "arguments": {},
+      "expected": [
+        {
+          "type": "text",
+          "value": "Count "
+        },
+        {
+          "type": "expression",
+          "value": "1"
+        },
+        {
+          "type": "text",
+          "value": " / "
+        },
+        {
+          "type": "expression",
+          "value": "1"
+        }
+      ]
+    }
+  ]
+}

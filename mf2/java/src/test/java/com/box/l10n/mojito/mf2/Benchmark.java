@@ -20,6 +20,7 @@ public final class Benchmark {
                 : Path.of("../conformance/fixtures/source-to-model");
         int iterations = args.length > 1 ? Integer.parseInt(args[1]) : 100_000;
         int warmupIterations = args.length > 2 ? Integer.parseInt(args[2]) : 10_000;
+        if (iterations <= 0 || warmupIterations < 0) throw new IllegalArgumentException("Iterations must be positive; warmup must be nonnegative.");
         List<Case> cases = loadCases(fixtureDir);
         if (cases.isEmpty()) {
             System.err.println("No format cases found.");
@@ -54,20 +55,22 @@ public final class Benchmark {
                 Mf2Message message = Mf2ModelDecoder.fromJson(fixture.get("expectedModel"));
                 for (Object rawCase : arrayOrEmpty(fixture.get("formatCases"))) {
                     Map<String, Object> formatCase = object(rawCase);
-                    cases.add(new Case(
-                            message,
-                            objectOrEmpty(formatCase.get("arguments")),
-                            stringOrDefault(formatCase.get("locale"), "en")));
+                    Case item = new Case(message, objectOrEmpty(formatCase.get("arguments")),
+                            Mf2FormatOptions.builder().locale(stringOrDefault(formatCase.get("locale"), "en"))
+                                    .bidiIsolation(Mf2BidiIsolation.fromName(stringOrDefault(formatCase.get("bidiIsolation"), "none")))
+                                    .functions(Mf2FunctionRegistry.portable()).build());
+                    if (!item.format().equals(formatCase.get("expected"))) throw new IllegalStateException(fixturePath + ": benchmark preflight output mismatch");
+                    cases.add(item);
                 }
             }
         }
         return cases;
     }
 
-    private record Case(Mf2Message message, Map<String, Object> arguments, String locale) {
+    private record Case(Mf2Message message, Map<String, Object> arguments, Mf2FormatOptions options) {
         String format() throws Mf2Exception {
             Mf2FormatResult result = message.format(
-                    arguments, Mf2FormatOptions.builder().locale(locale).build());
+                    arguments, options);
             if (result.hasErrors()) {
                 throw new Mf2Exception("format-error", result.errors().toString());
             }

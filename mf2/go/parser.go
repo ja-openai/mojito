@@ -235,9 +235,11 @@ func (p *parser) parseVariantKeys(start int) ([]any, bool) {
 			continue
 		}
 		key := p.takeWhile(func(r rune) bool { return !isSyntaxWhitespace(r) && r != '{' })
-		if key != "" {
-			keys = append(keys, map[string]any{"type": "literal", "value": key})
+		if key == "" {
+			p.pushDiagnostic("invalid-variant-key", "Expected a variant key or quoted pattern.", p.index, p.index+1)
+			return nil, false
 		}
+		keys = append(keys, map[string]any{"type": "literal", "value": key})
 	}
 	return keys, true
 }
@@ -321,7 +323,7 @@ func (p *parser) parseEscape() string {
 		return ""
 	}
 	r := p.peekRune()
-	if r == '{' || r == '}' || r == '\\' {
+	if r == '{' || r == '}' || r == '|' || r == '\\' {
 		return p.advanceRune()
 	}
 	return "\\"
@@ -358,6 +360,7 @@ func (p *parser) consumeBracedContent() (string, bool) {
 	p.advanceRune()
 	contentStart := p.index
 	inQuote := false
+	quotedClosingBrace := -1
 	for !p.isDone() {
 		r := p.peekRune()
 		if inQuote {
@@ -368,10 +371,8 @@ func (p *parser) consumeBracedContent() (string, bool) {
 				}
 				continue
 			}
-			if r == '}' {
-				content := p.source[contentStart:p.index]
-				p.advanceRune()
-				return content, true
+			if r == '}' && quotedClosingBrace < 0 {
+				quotedClosingBrace = p.index
 			}
 			if r == '|' {
 				inQuote = false
@@ -390,6 +391,10 @@ func (p *parser) consumeBracedContent() (string, bool) {
 			return content, true
 		}
 		p.advanceRune()
+	}
+	if quotedClosingBrace >= 0 {
+		p.index = quotedClosingBrace + 1
+		return p.source[contentStart:quotedClosingBrace], true
 	}
 	p.pushDiagnostic("unclosed-placeholder", "Placeholder is missing a closing brace.", start, len(p.source))
 	return "", false

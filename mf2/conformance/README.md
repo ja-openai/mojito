@@ -3,23 +3,37 @@
 This directory owns the shared MF2 test corpus for Mojito and the runtime
 libraries.
 
-The official Unicode MessageFormat WG test suite is vendored separately under
-`../third_party/message-format-wg/test`. Rust, Java, JavaScript, Go, and PHP
-read the upstream test shape directly, currently wiring
-syntax success/error, bidi syntax, data-model error, `:string` function,
-`:number`, `:percent`, `:currency`, date/time/datetime validation, `:offset`,
-`:integer`, `u:` options, fallback, and pattern-selection checks. The checked-in
-baselines live in `unicode-official-baseline.json` and
-`unicode-official-baseline-core.json`; update the appropriate file in the same
-commit when official pass/skip/not-wired counts intentionally change. All 461
-currently vendored official tests are wired by those five runners. Java, Go,
-and PHP pass 461; the dependency-free Rust and JavaScript core runners pass 429
-and explicitly skip the 32 currency/date/time cases owned by platform adapters.
-Python, Swift, and Kotlin do not yet consume the official suite directly.
-The shared source corpus currently contains 72 models and 850 output cases.
+The official Unicode MessageFormat WG suite is vendored under
+`../third_party/message-format-wg/test`, pinned to
+`5c4ddb27e726fd7881c1787a632efba83ab0d850`: **462 tests in 16 files**.
+`check_official.py` executes their original source and arguments through a
+production-registry bridge in every runtime. Each run checks **761 assertions**:
+462 error lists, 259 strings, 20 parts results and 20 parts error lists.
+Missing results, crashes, timeouts and changed error multiplicity fail the gate.
+Only the upstream `test:*` functions are test hooks; standard functions use the
+actual portable or platform registry.
 
-See `coverage-audit.md` for the exact layer/runtime matrix, the platform-adapter
-and ICU differential coverage, and the remaining gaps.
+Known capability differences are individual assertions in
+`official-dispositions/`: each pins the merged upstream test hash, exact actual
+result and reason. Changed failures and unexpected passes fail the gate.
+Differences are reported separately and never counted as passes. The older
+`unicode-tests` runners and aggregate baseline files remain smoke checks; their
+counts do not establish complete string, error or parts coverage.
+
+The shared corpus contains **80 models, 877 output cases, 12 parts cases,
+7 fallback cases, 1 fallback-parts case, 28 invalid-source cases,
+33 format-error cases and 10 locale-key cases**. `check_adapters.py` also runs
+all 47 reference-derived selection/provenance cases through real platform
+registries. Go has no platform registry; Rust ICU4X has no currency formatter.
+
+Run a complete runtime gate from the repository root:
+
+```sh
+sh mf2/packaging/check_runtime.sh python # or javascript/java/kotlin/go/rust/swift/php
+```
+
+See `coverage-audit.md` for the exact layer/runtime matrix and remaining gaps.
+Artifact build and clean-consumer checks live in `../packaging/`.
 
 ## Contract
 

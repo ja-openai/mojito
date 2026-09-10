@@ -1,8 +1,8 @@
 {
-  "passed": 461,
+  "passed": 462,
   "skipped": 0,
   "notWired": 0,
-  "total": 461,
+  "total": 462,
   "files": {
     "tests/syntax.json": {
       "passed": 114,
@@ -21,7 +21,7 @@
       "skipped": 0
     },
     "tests/functions/string.json": {
-      "passed": 9,
+      "passed": 10,
       "skipped": 0
     },
     "tests/functions/number.json": {

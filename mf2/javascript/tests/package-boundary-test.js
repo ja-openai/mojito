@@ -70,7 +70,7 @@ assert.deepEqual(formatMessageToPartsFromRoot(badInteger.model, { name: "abc" },
 ]);
 const badBidiDirection = parseToModel("Value {42 :number u:dir=sideways}");
 const badBidiDirectionResult = formatMessage(badBidiDirection.model);
-assert.equal(badBidiDirectionResult.value, "Value {|42|}");
+assert.equal(badBidiDirectionResult.value, "Value 42");
 assert.deepEqual(badBidiDirectionResult.errors.map((error) => error.code), ["bad-option"]);
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
@@ -511,5 +511,77 @@ assert.equal("canonicalLocaleKey" in core, false);
 assert.equal("selectCardinal" in core, false);
 assert.equal("localeLookupChain" in core, false);
 assert.equal("createIntlFunctionRegistry" in core, false);
+
+// Review regressions exercise public package exports and host adapters.
+for (const functions of [FunctionRegistry.portable(), intlRegistry]) {
+  for (const name of ["number", "integer", "percent"]) {
+    const model = parseToModel(`{$n :${name}}`).model;
+    for (const n of ["1e-324", "-1e-400", "1e-2147483648"]) {
+      const result = formatMessage(model, { n }, { functions });
+      assert.deepEqual(result.errors.map(({ code }) => code), ["bad-operand"], `${name}/${n}`);
+    }
+    for (const n of ["0e-2147483648", "-0e-999", "5e-324", Number.MIN_VALUE]) {
+      assert.deepEqual(formatMessage(model, { n }, { functions }).errors, [], `${name}/${n}`);
+    }
+  }
+}
+for (const source of [".input {$x :string} .match $x * {{ok}} {x}", ".input {$x :string} .match $x * {{ok}} {"]) {
+  assert.deepEqual(parseToModel(source).diagnostics.map(({ code }) => code), ["invalid-variant-key"]);
+}
+for (const value of ["2026-02-31", "2026-02-31T12:00:00", "2026-02-31T12:00:00Z", "2026-02-31T12:00:00+02:00", "1900-02-29", "2026-04-31"]) {
+  const result = formatMessage(parseToModel("{$d :date}").model, { d: value }, { functions: intlRegistry });
+  assert.deepEqual(result.errors.map(({ code }) => code), ["bad-operand"], value);
+}
+for (const value of ["2024-02-29", "2000-02-29", "2026-04-30T12:00:00Z"]) {
+  assert.deepEqual(formatMessage(parseToModel("{$d :date}").model, { d: value }, { functions: intlRegistry }).errors, []);
+}
+const detachedPartsModel = parseToModel("{x @title=original} {#tag option=original @title=original /}").model;
+const detachedPartsOriginal = structuredClone(detachedPartsModel);
+const detachedParts = formatMessageToPartsFromRoot(detachedPartsModel).parts;
+const independentParts = formatMessageToPartsFromRoot(detachedPartsModel).parts;
+detachedParts[0].attributes.title.value = "changed";
+detachedParts[2].options.option.value = "changed";
+detachedParts[2].attributes.title.value = "changed";
+assert.deepEqual(detachedPartsModel, detachedPartsOriginal);
+assert.deepEqual(formatMessageToPartsFromRoot(detachedPartsModel).parts, independentParts);
+for (const model of [null, [], {}, { type: "message", pattern: [] }, { type: "message", declarations: [], pattern: [null] }]) {
+  assert.throws(() => formatMessage(model), { code: "invalid-model" });
+}
+const numericBidiModel = parseToModel("{1 :number}").model;
+assert.equal(formatMessage(numericBidiModel, {}, { bidiIsolation: "default" }).value, "1");
+assert.deepEqual(formatMessageToPartsFromRoot(numericBidiModel).parts, [{ type: "expression", value: "1" }]);
+const customNumericBidi = FunctionRegistry.portable().withFunction("number", () => "custom");
+assert.equal(formatMessage(numericBidiModel, {}, { functions: customNumericBidi, bidiIsolation: "default" }).value, "\u2068custom\u2069");
+const inheritedNumericBidi = parseToModel(".local $n = {1 :number u:dir=ltr} {{{$n}}}").model;
+assert.equal(formatMessage(inheritedNumericBidi, {}, { bidiIsolation: "default" }).value, "\u20661\u2069");
+
+// Direction belongs to the message context; custom handlers cannot consume it.
+{
+  const seen = [];
+  const registry = FunctionRegistry.portable().withFunction("custom", call => {
+    seen.push(call.optionValue("u:dir", null));
+    return call.value;
+  });
+  const result = formatMessage(parseToModel("{text :custom u:dir=$dir}").model, { dir: "rtl" }, { functions: registry, bidiIsolation: "default" });
+  assert.equal(result.value, "\u2067text\u2069");
+  assert.deepEqual(seen, [null]);
+}
+
+// Runtime metadata is a read-only snapshot; catalog edits between calls remain valid.
+{
+  const source = '.input {$n :number maximumFractionDigits=0}\n.local $warm = {$n :number}\n.local $mutate = {$n :mutate}\n{{{$n :number}}}';
+  const model = parseToModel(source).model;
+  const original = structuredClone(model);
+  const registry = FunctionRegistry.portable().withFunction('mutate', call => {
+    assert.throws(() => { call.inheritedSource.function.options.maximumFractionDigits.value = '2'; }, TypeError);
+    assert.throws(() => { call.function.name = 'number'; }, TypeError);
+    assert.throws(() => { call.inheritedSource.value = '9'; }, TypeError);
+    return call.value;
+  });
+  assert.equal(formatMessage(model, { n: 1.234 }, { functions: registry }).value, '1');
+  assert.deepEqual(model, original);
+  model.declarations[0].value.function.options.maximumFractionDigits.value = '2';
+  assert.equal(formatMessage(model, { n: 1.234 }, { functions: registry }).value, '1.23');
+}
 
 console.log("MF2 JavaScript package boundary test passed");

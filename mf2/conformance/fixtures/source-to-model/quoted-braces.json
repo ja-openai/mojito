@@ -1,0 +1,30 @@
+{
+  "name": "quoted-braces",
+  "source": "{{{|{|} {|}|}}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": {
+          "type": "literal",
+          "value": "{"
+        }
+      },
+      " ",
+      {
+        "type": "expression",
+        "arg": {
+          "type": "literal",
+          "value": "}"
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "expected": "{ }"
+    }
+  ]
+}

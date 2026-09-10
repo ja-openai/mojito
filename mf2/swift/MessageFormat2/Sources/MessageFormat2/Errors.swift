@@ -13,6 +13,7 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
     case invalidInputDeclaration(String)
     case invalidPatternText
     case invalidMarkupKind
+    case invalidModel(String)
     case badOperand(String)
     case badOption(String)
     case badSelector(String)
@@ -44,6 +45,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "invalid-pattern-text"
         case .invalidMarkupKind:
             "invalid-markup-kind"
+        case .invalidModel:
+            "invalid-model"
         case .badOperand:
             "bad-operand"
         case .badOption:
@@ -81,6 +84,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "Pattern text parts must be non-empty."
         case .invalidMarkupKind:
             "Markup kind must be open, standalone, or close."
+        case let .invalidModel(message):
+            message
         case let .badOperand(message):
             message
         case let .badOption(message):

@@ -1,0 +1,29 @@
+{
+  "name": "fraction-limit",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": {
+          "type": "literal",
+          "value": "1"
+        },
+        "function": {
+          "type": "function",
+          "name": "number",
+          "options": {
+            "minimumFractionDigits": {
+              "type": "literal",
+              "value": "1001"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "expectedError": {
+    "code": "bad-option"
+  }
+}

@@ -1,8 +1,9 @@
 # MF2 Conformance and Differential Coverage Audit
 
-Audited: 2026-08-27; adversarial follow-up: 2026-08-28. The differential
-investigation started from revision `50cecdfd93`; the current counts below
-include the confirmed regression cases admitted during that investigation.
+Audited again on 2026-09-08/09 with public-API adversarial probes, production
+registry bridges, package consumers and cross-runtime regressions. Historical
+differential findings below remain useful, but only the current gates and
+case-specific dispositions establish current coverage.
 
 Normative claims below refer to the Unicode
 [MessageFormat specification](https://www.unicode.org/reports/tr35/tr35-messageFormat.html)
@@ -34,13 +35,38 @@ documented once rather than copied into per-language snapshots.
 
 | Suite | Cases | Runtimes | What is asserted |
 | --- | ---: | --- | --- |
-| Shared source fixtures | 72 models; 850 output; 11 parts; 4 fallback; 1 fallback-parts; 26 invalid-source; 24 format-error; 10 locale-key | Rust, Swift, Python, Java, Kotlin, JavaScript, Go, PHP | Parsed interchange model, resolved string output, structured parts, fallback values/parts and errors, parser diagnostics, runtime error codes, locale lookup |
-| Official Unicode MessageFormat WG data | 461 tests in 16 test files | Rust, Java, JavaScript, Go, PHP | Syntax success/error, bidi syntax, data-model errors, standard function output/selection/fallback behavior. Java/Go/PHP pass 461; dependency-free Rust/JavaScript core pass 429 and explicitly skip 32 platform currency/date/time cases; every runner has 0 not-wired |
-| Generated all-locale plural fixtures | Included in the 850 shared output cases | All eight shared runners | Public parse-and-format output for every generated CLDR cardinal and ordinal locale/category; generation uses ICU4J category results |
-| Selection-operand and resolved-value differential fixtures | 37 common-source selection cases, 5 ICU4J-specific selection cases (4 percent, 1 offset provenance), 4 adapter declaration-chain/offset cases, 1 common currency-provenance case, and 1 adapter currency-override case | ICU4J gates 43 selection/resolved-value cases and separately agrees with the adapter override; optional ICU4C passes 36 common selection cases with 1 expected unsupported and records the currency case as a second expected unsupported; the Python/Babel, JavaScript/Intl, and PHP/Intl adapter-loader target is 47 | Final branch/output through public formatting: all plural categories, integer/decimal operands, visible fractions, negatives, zero, grouped millions, exact keys and precedence, the canonical-integer subset plus one explicit Mojito decimal policy, inherited/filtered options, semantic-value provenance through number/integer/percent/offset chains, integer truncation, percent scaling, offsets, and the currency-type barrier versus explicit replacement |
+| Shared source fixtures | 80 models; 877 output; 12 parts; 7 fallback; 1 fallback-parts; 28 invalid-source; 33 format-error; 10 locale-key | Rust, Swift, Python, Java, Kotlin, JavaScript, Go, PHP | Parsed interchange model, resolved string output, structured parts, fallback values/parts and errors, parser diagnostics, runtime error codes, locale lookup |
+| Official Unicode MessageFormat WG data | 462 tests in 16 files; 761 assertions per registry run | All eight via production bridges | Exact 462 error lists, 259 outputs, 20 parts results and 20 parts error lists. Missing responses/crashes/deadlines fail; standard functions are production implementations. Individual API/capability differences are explicit non-passes. |
+| Generated all-locale plural fixtures | Included in the 877 shared output cases | All eight shared runners | Public parse-and-format output for every generated CLDR cardinal and ordinal locale/category; generation uses ICU4J category results |
+| Selection-operand and resolved-value differential fixtures | 37 common-source selection cases, 5 ICU4J-specific selection cases (4 percent, 1 offset provenance), 4 adapter declaration-chain/offset cases, 1 common currency-provenance case, and 1 adapter currency-override case | ICU4J gates 43 selection/resolved-value cases and separately agrees with the adapter override; optional ICU4C passes 36 common selection cases with 1 expected unsupported and records the currency case as a second expected unsupported; all seven platform registries now load the same 47-case corpus; six pass all 47 and Rust records one unsupported currency case | Final branch/output through public formatting: all plural categories, integer/decimal operands, visible fractions, negatives, zero, grouped millions, exact keys and precedence, the canonical-integer subset plus one explicit Mojito decimal policy, inherited/filtered options, semantic-value provenance through number/integer/percent/offset chains, integer truncation, percent scaling, offsets, and the currency-type barrier versus explicit replacement |
 | Invalid-key recovery differential | 1 output-only ICU row plus 1 shared fallback case | ICU4J, ICU4C, all eight Mojito runtimes | ICU proves continuation to the later valid exact variant; shared conformance additionally requires exactly `bad-variant-key` |
 | Platform adapter tests and demos | Runtime-specific | Java JDK/ICU4J, Kotlin JDK/ICU4J, Python/Babel, JavaScript/Intl, PHP/Intl, Swift Foundation, Rust ICU4X | Host-backed number, integer, percent, currency, date, time, datetime, timezone, and relative-time behavior where implemented |
 | Language unit/package tests | Runtime-specific | All implementations | Package boundaries, parser and formatter invariants, callbacks, registry behavior, code generation, and runtime-specific edge cases |
+
+### Direct official results and capability boundaries
+
+| Registry | Passed assertions / evaluated | Recorded differences |
+| --- | ---: | --- |
+| All eight portable registries | 717 / 761 | 11 parts API differences; 32 unsupported currency/date/time/datetime error assertions; 1 intentionally unlocalized French number output |
+| Python Babel, JS Intl, Java JDK, Kotlin JDK, Swift Foundation, PHP Intl | 750 / 761 | 11 parts API differences |
+| Rust ICU4X | 738 / 761 | Same 11 parts differences plus 12 unsupported currency assertions |
+| Go platform | Not implemented | No platform conformance claim |
+
+Every disposition pins the original merged upstream case hash and exact actual
+result. A changed failure, missing assertion, stale exception or unexpected pass
+fails. The public parts API retains expression strings and original model
+metadata; it does not expose upstream resolved numeric subparts, resolved markup
+options, `u:id`, locale or standalone bidi-isolation parts. Those differences
+are evaluated rather than normalized into fictitious passes.
+
+The legacy `unicode-tests` pass/skip baselines count exercised cases and retain
+historical test-registry behavior. They must not be cited as proof that every
+upstream assertion or production platform function passed.
+
+The shared gate also runs **413 deterministic scanner mutations** around the
+42-character parser nontermination input, with a 20-second batch deadline and
+process-group cleanup. This is a bounded regression corpus, not exhaustive
+fuzzing or a latency guarantee for arbitrary inputs.
 
 The shared fixtures also cover string selection and NFC comparison, fallback
 variants, declaration chains, bidi isolation, markup and parts, malformed
@@ -122,12 +148,43 @@ sh conformance/check_all_languages.sh
 | Recursive JavaScript source traversal leaked a host stack error on a 7,000-declaration chain | All inherited-source walks used by the public formatter are iterative; the package test runs the deep chain through portable and Intl registries and separately verifies that a host `RangeError` is returned as an `MF2Error` |
 | Generated CLDR drift was not part of the maintained full gate | `check.sh` generates into a temporary root and compares exact working-tree and Git-index path/content sets without rewriting either copy |
 
+### September safety, API and formatting regressions
+
+- Every scanner terminates on a missing variant key; quoted braces and escaped
+  pipes retain their literal meaning. A frontend wrapper regression exercises
+  the original 42-character input below the editor's size guards.
+- Swift JSON, relative-time conversion and week multiplication return typed
+  failures instead of process traps. Rust/Swift portable decimal arithmetic
+  preserves ordinary percentages, large supported integers and plural operands.
+- Precision and decimal expansion are rejected before excessive padding or
+  arithmetic. Go pads with one bounded repeat. Host limits remain explicit;
+  see `../spec/runtime-limits.md`.
+- Imported model validation covers required field/element shapes. Python/JS/Go/
+  Kotlin returned parts cannot mutate the original catalog. Canonical-equivalent
+  binding names resolve consistently; duplicate normalized declarations fail.
+- JVM time styles, Babel date timezone rollover, fixed-unit relative time,
+  partial short/narrow CLDR patterns and invalid currency codes are covered.
+  JS Intl rejects impossible calendar dates before host normalization.
+- `u:dir` accepts literals and variables, including `inherit`; invalid options
+  emit diagnostics and are ignored. Plain aliases retain direction/isolation;
+  a new annotation defaults to inherited direction without forced isolation.
+  Private metadata carries production numeric direction and never leaks into
+  the public parts schema or custom handler's resolved option lookup.
+- Literal-only declaration histories memoize semantic values/options per format
+  call. Long chain checks cover stack use, copying and arithmetic replay.
+  Variable-dependent histories retain existing dynamic resolver behavior and
+  are not claimed to have linear cost.
+- JS Intl implements the showcase's advanced number display options. Selection
+  with significant digits, nonstandard notation or legacy `:number style=percent`
+  is explicitly rejected when the core cannot represent its semantics, rather
+  than silently selecting an incorrect branch.
+
 ### Intentional or Runtime-Policy Differences
 
 | Difference | Representative observation | Disposition |
 | --- | --- | --- |
 | Portable output versus localized display | The portable Russian number case emits `1.5`; ICU emits localized `1,5` | Compare selection/semantic outcomes at the portable layer and host output at adapter layers; do not change portable snapshots to ICU display |
-| NFC and canonical-name preservation | Mojito normalizes string comparison keys but preserves source/model/output code points; ICU4J normalized one decomposed literal while ICU4C preserved it | Preserve Mojito's explicit model contract; document the output-layer difference once |
+| NFC names versus text | Binding/argument names normalize to NFC during evaluation; original parsed models and literal output keep their code points | Canonical equivalents are one binding; duplicate normalized declarations fail. Literal text normalization is a separate output contract. |
 | Boolean and null host values | ICU4J, ICU4C, JSON, and host runtimes do not expose identical bool/null operand types or coercions | No shared expectation is inferred from a harness conversion or broad output mismatch alone |
 | Default/tie rounding | Host libraries can differ on binary `1.005` and unspecified rounding defaults | The shared max-fraction regression uses non-tie `1.29`; host-specific tie behavior stays in adapter tests |
 | Exact serialization outside TR35's canonical-integer subset | TR35 requires canonical integer spelling only when the resolved value is an integer and none of `minimumFractionDigits`, `minimumIntegerDigits`, `minimumSignificantDigits`, or `maximumSignificantDigits` is set; other cases are implementation-defined | The option-free integer case is normative. Direct offset result `-0.9` matching key `-0.9` is one deliberate Mojito cross-runtime policy (ICU4J 78.3 falls back); no broader decimal/option permutation matrix is claimed |
@@ -185,27 +242,33 @@ locale-version differences. `reference/check.sh` is a count-asserting ICU4J
 gate and runs the ICU4C extension when available; set
 `MF2_REQUIRE_ICU4C=1` to require that optional toolchain.
 
-## Remaining Coverage Gaps
+## Remaining Coverage Boundaries
 
-- Python, Swift, and Kotlin do not run the official Unicode testdata directly.
-- Official runners do not yet provide uniform `expParts` verification; broad
-  direct runners and full platform-function coverage are not available in every
-  language.
-- ICU differentials do not expose parsed models, formatted parts, selection
-  operands, or diagnostics.
-- Cross-runtime arbitrary-precision, numeric-overflow, and offset-boundary
-  behavior is not claimed by the ordinary finite-value fixtures.
-- Java, Kotlin, Swift, and Rust gate focused adapter invariants instead of
-  loading every JSON adapter row.
+- Parts intentionally use the documented narrower API, with exact upstream
+  differences maintained as non-passes.
 - Go has no platform formatting adapter. Rust ICU4X has no currency or
   relative-time adapter and uses portable percent behavior.
-- Date/time/currency/timezone parity is limited to each supported host contract;
-  the draft datetime surface is not claimed as complete cross-runtime parity.
+- ICU differentials expose strings, not parsed models, formatted parts,
+  intermediate operands or Mojito diagnostics.
+- Numeric host representations and limits differ. Supported bounded profiles
+  are documented; arbitrary precision and universal host output parity are not
+  claimed. Variable-dependent declaration histories remain a complexity limit.
+- Source/model/output/diagnostic budgets beyond current numeric and application
+  guards still need a shared configurable API before accepting arbitrary-size
+  untrusted catalogs. Broad production load, concurrency and retention budgets
+  are separate from the maintained development smoke tests.
+- Configured MF2 asset integrity now runs on authoritative server save/import
+  paths with locale context; activation and asset classification remain explicit
+  repository policy. See the runtime review remediation note and tracker MF2-03.
 
-Run all maintained layers with:
+Run all maintained runtime, data and reference layers from the repository root:
 
 ```sh
-sh conformance/check_all_languages.sh
-sh reference/check.sh
-sh check.sh
+sh mf2/check.sh
+# During development, validate generated working-tree files without staging:
+sh mf2/check.sh --worktree
+python3 mf2/packaging/smoke.py --runtime all --output /tmp/mf2-packages
 ```
+
+CI uses strict generated/index freshness. Package smokes build real artifacts
+and clean consumers; no command publishes or deploys them.

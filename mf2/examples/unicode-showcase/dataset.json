@@ -433,27 +433,22 @@
         "kind": "unicode-example",
         "retrieved": "2026-09-02"
       },
-      "notes": "One input reused through four formatted locals. Uses the website’s legacy style=percent spelling. Run with num=3.1415927. Locale formatting is validated with Mojito’s Intl registry; the editor’s portable preview does not implement every number option.",
+      "notes": "One input reused through four formatted locals. Uses the website’s legacy style=percent spelling. Run with num=3.1415927. Locale formatting is validated with Mojito’s Intl registry; the editor’s portable preview does not implement every number option. The Intl adapter supports all four formatting examples. Scientific notation, significant-digit options, and legacy style=percent are formatting-only; selecting through these options reports bad-option/bad-selector and uses the fallback.",
       "cases": [
         {
           "locale": "en",
           "args": {
             "num": 3.1415927
           },
-          "expected": "The number in scientific notation is 3.1415927E0. As a percentage, it's 314%.\nFormatted with at least four integer digits and four fractional digits, it's\n0,003.1416. Formatted with at most six significant digits, it's 3.14159.",
-          "knownGap": "unsupported-number-options"
+          "expected": "The number in scientific notation is 3.1415927E0. As a percentage, it's 314%.\nFormatted with at least four integer digits and four fractional digits, it's\n0,003.1416. Formatted with at most six significant digits, it's 3.14159."
         },
         {
           "locale": "fr",
           "args": {
             "num": 3.1415927
           },
-          "expected": "En notation scientifique : 3,1415927E0. En pourcentage : 314 %.\nAvec au moins quatre chiffres entiers et quatre décimales : 0 003,1416.\nAvec au plus six chiffres significatifs : 3,14159.",
-          "knownGap": "unsupported-number-options"
+          "expected": "En notation scientifique : 3,1415927E0. En pourcentage : 314 %.\nAvec au moins quatre chiffres entiers et quatre décimales : 0 003,1416.\nAvec au plus six chiffres significatifs : 3,14159."
         }
-      ],
-      "knownLimitations": [
-        "The current Mojito Intl adapter ignores notation, legacy style=percent, minimumIntegerDigits, and significant-digit options in this official example. Validation records the mismatch against native Intl reference formatting."
       ]
     },
     {

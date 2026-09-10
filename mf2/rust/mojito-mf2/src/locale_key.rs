@@ -129,3 +129,43 @@ mod tests {
         }
     }
 }
+
+pub(crate) fn locale_is_ltr(locale: &str) -> Option<bool> {
+    use crate::locale_direction_data::*;
+    fn direction(key: &str, ltr: &str, rtl: &str) -> Option<bool> {
+        let token = format!(" {key} ");
+        if ltr.contains(&token) {
+            Some(true)
+        } else if rtl.contains(&token) {
+            Some(false)
+        } else {
+            None
+        }
+    }
+    let canonical = canonical_locale_key(locale);
+    let mut parts = canonical.split('-');
+    let language = parts.next().filter(|language| !language.is_empty())?;
+    let rest: Vec<_> = parts.collect();
+    if let Some(script) = rest
+        .iter()
+        .find(|part| part.len() == 4 && part.bytes().all(|byte| byte.is_ascii_alphabetic()))
+    {
+        return direction(script, LTR_SCRIPTS, RTL_SCRIPTS);
+    }
+    let region = rest.iter().find(|part| {
+        (part.len() == 2 && part.bytes().all(|byte| byte.is_ascii_alphabetic()))
+            || (part.len() == 3 && part.bytes().all(|byte| byte.is_ascii_digit()))
+    });
+    if let Some(region) = region {
+        if let Some(result) = direction(
+            &format!("{language}-{region}"),
+            LTR_REGION_OVERRIDES,
+            RTL_REGION_OVERRIDES,
+        ) {
+            return Some(result);
+        }
+    } else if language == "und" {
+        return None;
+    }
+    direction(language, LTR_LANGUAGES, RTL_LANGUAGES)
+}

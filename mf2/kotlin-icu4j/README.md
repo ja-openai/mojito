@@ -43,3 +43,6 @@ Run:
 sh run.sh demo
 sh run.sh check
 ```
+
+`:integer` uses the core signed-64-bit conversion bound (`-2^63 <= value < 2^63` after numeric
+conversion). Out-of-range operands report `bad-operand` instead of silently clamping.

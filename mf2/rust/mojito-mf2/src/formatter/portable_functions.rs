@@ -20,130 +20,105 @@ fn passthrough_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
 }
 
 fn format_unlocalized_number(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
-    let value = parse_call_decimal(&call)
-        .map_err(|_| bad_operand("Number function requires a numeric operand."))?;
-    let mut formatted = format_unlocalized_decimal_with_maximum_fraction_digits(
-        value,
-        maximum_fraction_digits(&call)?,
-    );
-    if sign_display_always(&call)? && value >= 0.0 {
+    format_numeric(call, "number")
+}
+
+fn format_unlocalized_percent(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    format_numeric(call, "percent")
+}
+
+fn format_unlocalized_integer(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    format_numeric(call, "integer")
+}
+
+fn format_numeric(call: FunctionCall<'_>, function: &str) -> Result<String, Diagnostic> {
+    let operand = numeric_source_operand(call.inherited_source())
+        .or_else(|_| direct_decimal_operand(call.value()))
+        .map_err(|_| bad_operand("Numeric function requires a supported decimal operand."))?;
+    let (minimum, maximum) = if function == "integer" {
+        (0, None)
+    } else {
+        (
+            minimum_fraction_digits(&call)?,
+            maximum_fraction_digits(&call)?,
+        )
+    };
+    validate_fraction_range(minimum, maximum)?;
+    let mut formatted = numeric_selection_operand(&operand, function, minimum, maximum)
+        .ok_or_else(|| bad_operand("Numeric result exceeds the supported decimal range."))?;
+    if sign_display_always(&call)? && !formatted.starts_with('-') {
         formatted.insert(0, '+');
     }
-    append_minimum_fraction_digits(&mut formatted, minimum_fraction_digits(&call)?);
+    if function == "percent" {
+        formatted.push('%');
+    }
     Ok(formatted)
 }
 
 fn select_number(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
-    if invalid_numeric_selector(call.function(), call.inherited_source())? {
-        return Err(bad_selector("Number selector cannot match this operand."));
-    }
-    let value = parse_match_decimal(&call)
-        .map_err(|_| bad_selector("Number selector requires a numeric operand."))?;
-    let value = numeric_match_value(value, &call)?;
-    let Ok(key) = parse_decimal_number(call.key()) else {
-        return Ok(None);
-    };
-    Ok(exact_decimal_key_matches(value, key, &call)?.then_some(2))
+    select_numeric(call)
 }
-
-fn format_unlocalized_percent(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
-    let value = parse_call_decimal(&call)
-        .map_err(|_| bad_operand("Percent function requires a numeric operand."))?;
-    Ok(format_unlocalized_percent_number(
-        value,
-        sign_display_always(&call)?,
-        minimum_fraction_digits(&call)?,
-        maximum_fraction_digits(&call)?,
-    ))
-}
-
 fn select_percent(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
-    if invalid_numeric_selector(call.function(), call.inherited_source())? {
-        return Err(bad_selector("Percent selector cannot match this operand."));
-    }
-    let value = parse_match_decimal(&call)
-        .map_err(|_| bad_selector("Percent selector requires a numeric operand."))?;
-    let value = numeric_match_value(value, &call)?;
-    let Ok(key) = parse_decimal_number(call.key()) else {
-        return Ok(None);
-    };
-    Ok(exact_decimal_key_matches(value, key, &call)?.then_some(2))
+    select_numeric(call)
 }
-
-fn format_unlocalized_integer(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
-    let value = parse_call_decimal(&call)
-        .map_err(|_| bad_operand("Integer function requires a numeric operand."))?;
-    Ok(format_integer_number(
-        value.trunc() as i64,
-        sign_display_always(&call)?,
-    ))
-}
-
 fn select_integer(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
+    select_numeric(call)
+}
+fn select_offset(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
+    select_numeric(call)
+}
+
+fn select_numeric(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
     if invalid_numeric_selector(call.function(), call.inherited_source())? {
-        return Err(bad_selector("Integer selector cannot match this operand."));
+        return Err(bad_selector("Numeric selector cannot match this operand."));
     }
-    let value = parse_match_decimal(&call)
-        .map_err(|_| bad_selector("Integer selector requires a numeric operand."))?;
-    let Ok(key) = parse_offset_number(call.key()) else {
+    let operand = numeric_source_operand(call.inherited_source())
+        .or_else(|_| direct_decimal_operand(call.value()))
+        .map_err(|_| bad_selector("Numeric selector requires a supported decimal operand."))?;
+    let minimum = match_fraction_digits(&call, "minimumFractionDigits")?.unwrap_or(0);
+    let maximum = match_fraction_digits(&call, "maximumFractionDigits")?;
+    validate_fraction_range(minimum, maximum)?;
+    let formatted = numeric_selection_operand(&operand, &call.function().name, minimum, maximum)
+        .ok_or_else(|| {
+            bad_selector("Numeric selection operand exceeds the supported decimal range.")
+        })?;
+    let Ok(key) = direct_decimal_operand(call.key()) else {
         return Ok(None);
     };
-    Ok((value.trunc() as i64 == key).then_some(2))
+    // Integer exact keys use their canonical spelling; fractional operands compare numerically.
+    let canonical_only = !formatted.contains('.')
+        && !has_numeric_option(&call, "minimumFractionDigits")?
+        && !has_numeric_option(&call, "minimumIntegerDigits")?
+        && !has_numeric_option(&call, "minimumSignificantDigits")?
+        && !has_numeric_option(&call, "maximumSignificantDigits")?;
+    Ok((if canonical_only {
+        formatted == call.key()
+    } else {
+        direct_decimal_operand(&formatted).ok().as_ref() == Some(&key)
+    })
+    .then_some(2))
 }
 
 fn format_offset(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     let operand = numeric_source_operand(call.inherited_source())
         .or_else(|_| direct_decimal_operand(call.value()))
-        .map_err(|_| bad_operand("Offset function requires a numeric operand."))?;
-    let offset = offset_delta(&call)?;
-    let result = add_integer_offset(&operand, offset)
-        .map_err(|_| bad_operand("Offset function requires a numeric operand."))?;
-    let value = parse_decimal_number(&result)
-        .map_err(|_| bad_operand("Offset result is outside the supported numeric range."))?;
-    if sign_display_always(&call)? && value >= 0.0 {
+        .map_err(|_| bad_operand("Offset function requires a supported decimal operand."))?;
+    let result = add_integer_offset(&operand, offset_delta(&call)?)
+        .map_err(|_| bad_operand("Offset result exceeds the supported decimal range."))?;
+    if sign_display_always(&call)? && !result.starts_with('-') {
         Ok(format!("+{result}"))
     } else {
         Ok(result)
     }
 }
 
-fn select_offset(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
-    let value = parse_match_decimal(&call)
-        .map_err(|_| bad_selector("Offset selector requires a numeric operand."))?;
-    let Ok(key) = parse_decimal_number(call.key()) else {
-        return Ok(None);
-    };
-    Ok(exact_decimal_key_matches(value, key, &call)?.then_some(2))
-}
-
-fn exact_decimal_key_matches(
-    value: f64,
-    key: f64,
-    call: &FunctionMatch<'_>,
-) -> Result<bool, Diagnostic> {
-    if value.fract() == 0.0
-        && !has_numeric_option(call, "minimumFractionDigits")?
-        && !has_numeric_option(call, "minimumIntegerDigits")?
-        && !has_numeric_option(call, "minimumSignificantDigits")?
-        && !has_numeric_option(call, "maximumSignificantDigits")?
-    {
-        let canonical = if value == 0.0 {
-            "0".to_string()
-        } else {
-            value.to_string()
-        };
-        return Ok(call.key() == canonical);
+fn validate_fraction_range(minimum: usize, maximum: Option<usize>) -> Result<(), Diagnostic> {
+    if maximum.is_some_and(|maximum| minimum > maximum) {
+        return Err(bad_option(
+            "minimumFractionDigits must not exceed maximumFractionDigits.",
+        ));
     }
-    Ok(value == key)
-}
-
-fn numeric_match_value(value: f64, call: &FunctionMatch<'_>) -> Result<f64, Diagnostic> {
-    let minimum = match_fraction_digits(call, "minimumFractionDigits")?.unwrap_or(0);
-    let maximum = match_fraction_digits(call, "maximumFractionDigits")?;
-    let operand = numeric_selection_operand(value, &call.function().name, minimum, maximum)
-        .ok_or_else(|| bad_option("Numeric fraction digits exceed the supported range."))?;
-    parse_decimal_number(&operand)
-        .map_err(|_| bad_selector("Numeric selector could not resolve its selection operand."))
+    Ok(())
 }
 
 fn match_fraction_digits(
@@ -176,30 +151,38 @@ fn parse_offset_number(value: &str) -> Result<i64, std::num::ParseIntError> {
     value.parse::<i64>()
 }
 
-fn direct_decimal_operand(value: &str) -> Result<String, ()> {
-    if parse_decimal_number(value).is_ok() {
-        Ok(value.to_string())
-    } else {
-        parse_offset_number(value)
-            .map(|value| value.to_string())
-            .map_err(|_| ())
-    }
+pub(super) fn direct_decimal_operand(value: &str) -> Result<String, ()> {
+    Ok(format_scaled_decimal(parse_scaled_decimal(value)?))
 }
 
 pub(super) fn numeric_source_operand(source: Option<FunctionSourceRef<'_>>) -> Result<String, ()> {
-    let Some(source) = source else {
-        return Err(());
-    };
-    if !is_decimal_source_function(source.function()) {
-        return numeric_source_operand(source.inherited_source());
+    let mut chain = Vec::new();
+    let mut current = source;
+    let mut operand = Err(());
+    while let Some(source) = current {
+        if source.source.cacheable_numeric_source {
+            if let Some(cached) = source.source.numeric_operand.get() {
+                operand = cached.clone();
+                break;
+            }
+        }
+        chain.push(source);
+        current = source.inherited_source();
     }
-    let operand = numeric_source_operand(source.inherited_source())
-        .or_else(|_| direct_decimal_operand(source.value()))?;
-    match source.function().name.as_str() {
-        "integer" => truncate_decimal_operand(&operand),
-        "offset" => add_integer_offset(&operand, source_offset_delta(source)?),
-        _ => Ok(operand),
+    for source in chain.into_iter().rev() {
+        if is_decimal_source_function(source.function()) {
+            let value = operand.or_else(|_| direct_decimal_operand(source.value()))?;
+            operand = match source.function().name.as_str() {
+                "integer" => truncate_decimal_operand(&value),
+                "offset" => add_integer_offset(&value, source_offset_delta(source)?),
+                _ => Ok(value),
+            };
+        }
+        if source.source.cacheable_numeric_source {
+            let _ = source.source.numeric_operand.set(operand.clone());
+        }
     }
+    operand
 }
 
 fn source_offset_delta(source: FunctionSourceRef<'_>) -> Result<i64, ()> {
@@ -248,6 +231,9 @@ fn add_integer_offset(value: &str, delta: i64) -> Result<String, ()> {
         .bytes()
         .map(|byte| byte - b'0')
         .collect();
+    if delta_digits.len() + decimal.scale > MAX_EXPANDED_DECIMAL_DIGITS {
+        return Err(());
+    }
     delta_digits.resize(delta_digits.len() + decimal.scale, 0);
     let delta_negative = delta < 0;
 
@@ -268,11 +254,17 @@ fn add_integer_offset(value: &str, delta: i64) -> Result<String, ()> {
             }
         }
     }
+    if decimal.digits.len() > MAX_EXPANDED_DECIMAL_DIGITS {
+        return Err(());
+    }
     Ok(format_scaled_decimal(decimal))
 }
 
 fn parse_scaled_decimal(value: &str) -> Result<ScaledDecimal, ()> {
-    direct_decimal_operand(value)?;
+    if value.len() > MAX_EXPANDED_DECIMAL_DIGITS * 2 + 32 || !is_well_formed_decimal_literal(value)
+    {
+        return Err(());
+    }
     let (negative, unsigned) = if let Some(unsigned) = value.strip_prefix('-') {
         (true, unsigned)
     } else {
@@ -292,6 +284,11 @@ fn parse_scaled_decimal(value: &str) -> Result<ScaledDecimal, ()> {
         .chain(fraction.bytes())
         .map(|byte| byte - b'0')
         .collect();
+    if digits.len() > MAX_EXPANDED_DECIMAL_DIGITS
+        || exponent.unsigned_abs() > MAX_EXPANDED_DECIMAL_DIGITS as u32
+    {
+        return Err(());
+    }
     if digits.iter().all(|digit| *digit == 0) {
         return Ok(ScaledDecimal {
             negative: false,
@@ -300,17 +297,18 @@ fn parse_scaled_decimal(value: &str) -> Result<ScaledDecimal, ()> {
         });
     }
 
+    trim_leading_zeroes(&mut digits);
     let scale = i64::try_from(fraction.len()).map_err(|_| ())? - i64::from(exponent);
     let scale = if scale < 0 {
         let zeroes = usize::try_from(-scale).map_err(|_| ())?;
-        if zeroes > MAX_EXPANDED_DECIMAL_DIGITS {
+        if digits.len() + zeroes > MAX_EXPANDED_DECIMAL_DIGITS {
             return Err(());
         }
         digits.resize(digits.len() + zeroes, 0);
         0
     } else {
         let scale = usize::try_from(scale).map_err(|_| ())?;
-        if scale > MAX_EXPANDED_DECIMAL_DIGITS {
+        if scale >= MAX_EXPANDED_DECIMAL_DIGITS {
             return Err(());
         }
         scale
@@ -416,18 +414,6 @@ fn format_scaled_decimal(decimal: ScaledDecimal) -> String {
     digits
 }
 
-fn parse_call_decimal(call: &FunctionCall<'_>) -> Result<f64, ()> {
-    parse_source_decimal(call.inherited_source()).or_else(|_| parse_decimal_number(call.value()))
-}
-
-fn parse_match_decimal(call: &FunctionMatch<'_>) -> Result<f64, ()> {
-    parse_source_decimal(call.inherited_source()).or_else(|_| parse_decimal_number(call.value()))
-}
-
-fn parse_source_decimal(source: Option<FunctionSourceRef<'_>>) -> Result<f64, ()> {
-    parse_decimal_number(&numeric_source_operand(source)?)
-}
-
 pub(super) fn parse_decimal_number(value: &str) -> Result<f64, ()> {
     if !is_well_formed_decimal_literal(value) {
         return Err(());
@@ -486,75 +472,69 @@ fn is_well_formed_decimal_literal(value: &str) -> bool {
     index == bytes.len()
 }
 
-fn format_integer_number(value: i64, sign_display_always: bool) -> String {
-    if sign_display_always && value >= 0 {
-        format!("+{value}")
-    } else {
-        value.to_string()
-    }
-}
-
-fn format_unlocalized_percent_number(
-    value: f64,
-    sign_display_always: bool,
-    minimum_fraction_digits: usize,
-    maximum_fraction_digits: Option<usize>,
-) -> String {
-    let mut formatted = format_unlocalized_decimal_with_maximum_fraction_digits(
-        value * 100.0,
-        maximum_fraction_digits,
-    );
-    if sign_display_always && value >= 0.0 {
-        formatted.insert(0, '+');
-    }
-    append_minimum_fraction_digits(&mut formatted, minimum_fraction_digits);
-    formatted.push('%');
-    formatted
-}
-
-fn format_unlocalized_decimal_with_maximum_fraction_digits(
-    value: f64,
-    digits: Option<usize>,
-) -> String {
-    let Some(digits) = digits else {
-        return value.to_string();
-    };
-    let mut formatted = format!("{:.*}", digits, value);
-    if formatted.contains('.') {
-        while formatted.ends_with('0') {
-            formatted.pop();
-        }
-        if formatted.ends_with('.') {
-            formatted.pop();
-        }
-    }
-    formatted
-}
-
 pub(super) fn numeric_selection_operand(
-    mut value: f64,
+    value: &str,
     function_name: &str,
     minimum_fraction_digits: usize,
     maximum_fraction_digits: Option<usize>,
 ) -> Option<String> {
     if minimum_fraction_digits > MAX_FRACTION_DIGITS
-        || maximum_fraction_digits.is_some_and(|digits| digits > MAX_FRACTION_DIGITS)
+        || maximum_fraction_digits
+            .is_some_and(|digits| digits > MAX_FRACTION_DIGITS || digits < minimum_fraction_digits)
     {
         return None;
     }
     if function_name == "integer" {
-        return Some((value.trunc() as i64).to_string());
+        return truncate_decimal_operand(value).ok();
     }
+    let mut decimal = parse_scaled_decimal(value).ok()?;
     if function_name == "percent" {
-        value *= 100.0;
+        if decimal.scale >= 2 {
+            decimal.scale -= 2;
+        } else {
+            let length = decimal.digits.len() + 2 - decimal.scale;
+            if length > MAX_EXPANDED_DECIMAL_DIGITS {
+                return None;
+            }
+            decimal.digits.resize(length, 0);
+            decimal.scale = 0;
+        }
     }
     if function_name == "number" || function_name == "percent" {
-        let mut formatted =
-            format_unlocalized_decimal_with_maximum_fraction_digits(value, maximum_fraction_digits);
-        append_minimum_fraction_digits(&mut formatted, minimum_fraction_digits);
-        return Some(formatted);
+        if let Some(maximum) = maximum_fraction_digits {
+            if decimal.scale > maximum {
+                let removed = decimal.scale - maximum;
+                let retained = decimal.digits.len().saturating_sub(removed);
+                let round_up = removed <= decimal.digits.len()
+                    && (decimal.digits[retained] > 5
+                        || (decimal.digits[retained] == 5
+                            && (decimal.digits[retained + 1..]
+                                .iter()
+                                .any(|digit| *digit != 0)
+                                || (retained > 0 && decimal.digits[retained - 1] % 2 == 1))));
+                decimal.digits.truncate(retained);
+                if decimal.digits.is_empty() {
+                    decimal.digits.push(0);
+                }
+                if round_up {
+                    decimal.digits = add_magnitudes(&decimal.digits, &[1]);
+                }
+                decimal.scale = maximum;
+            }
+        }
     }
-    Some(value.to_string())
+    let mut formatted = format_scaled_decimal(decimal);
+    let existing_fraction = formatted
+        .split_once('.')
+        .map_or(0, |(_, fraction)| fraction.len());
+    if formatted.bytes().filter(u8::is_ascii_digit).count()
+        + minimum_fraction_digits.saturating_sub(existing_fraction)
+        > MAX_EXPANDED_DECIMAL_DIGITS
+    {
+        return None;
+    }
+    append_minimum_fraction_digits(&mut formatted, minimum_fraction_digits);
+    Some(formatted)
 }
 
 fn append_minimum_fraction_digits(formatted: &mut String, minimum_fraction_digits: usize) {
@@ -639,23 +619,49 @@ fn match_numeric_option_value(
 }
 
 pub(super) fn inherited_numeric_option_value(
-    source: Option<FunctionSourceRef<'_>>,
+    mut source: Option<FunctionSourceRef<'_>>,
     name: &str,
     target_function: &str,
 ) -> Result<Option<String>, Diagnostic> {
-    let Some(source) = source else {
-        return Ok(None);
-    };
-    if numeric_option_is_discarded(target_function, name)
-        || !is_numeric_function(source.function())
-        || numeric_option_is_discarded(&source.function().name, name)
-    {
+    if numeric_option_is_discarded(target_function, name) {
         return Ok(None);
     }
-    if let Some(value) = source.option_value(name)? {
-        return Ok(Some(value));
+    let mut pending = Vec::new();
+    let mut value = None;
+    while let Some(current) = source {
+        if current.source.cacheable_numeric_source {
+            if let Some(cached) = current
+                .source
+                .numeric_options
+                .lock()
+                .unwrap_or_else(|error| error.into_inner())
+                .get(name)
+            {
+                value = cached.clone();
+                break;
+            }
+            pending.push(current);
+        }
+        if !is_numeric_function(current.function())
+            || numeric_option_is_discarded(&current.function().name, name)
+        {
+            break;
+        }
+        if let Some(resolved) = current.option_value(name)? {
+            value = Some(resolved);
+            break;
+        }
+        source = current.inherited_source();
     }
-    inherited_numeric_option_value(source.inherited_source(), name, &source.function().name)
+    for source in pending {
+        source
+            .source
+            .numeric_options
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .insert(name.to_string(), value.clone());
+    }
+    Ok(value)
 }
 
 fn numeric_option_is_discarded(function_name: &str, option_name: &str) -> bool {

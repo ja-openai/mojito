@@ -6,14 +6,17 @@ import { formatMessage, parseToModel } from "../src/index.js";
 const fixtureDir = process.argv[2] ?? "../conformance/fixtures/source-to-model";
 const iterations = Number(process.argv[3] ?? 100_000);
 const warmupIterations = Number(process.argv[4] ?? 10_000);
+if (!Number.isSafeInteger(iterations) || iterations <= 0 || !Number.isSafeInteger(warmupIterations) || warmupIterations < 0) throw new Error("Iterations must be positive and warmup must be non-negative integers.");
 
 const cases = [];
-for (const file of await readdir(fixtureDir)) {
+for (const file of (await readdir(fixtureDir)).sort()) {
   if (!file.endsWith(".json")) continue;
   const fixture = JSON.parse(await readFile(join(fixtureDir, file), "utf8"));
   const parsed = parseToModel(fixture.source);
   if (parsed.hasDiagnostics) throw new Error(`${file}: parser diagnostics ${JSON.stringify(parsed.diagnostics)}`);
   for (const formatCase of fixture.formatCases ?? []) {
+    const actual = formatMessage(parsed.model, formatCase.arguments ?? {}, { locale: formatCase.locale ?? "en", bidiIsolation: formatCase.bidiIsolation ?? "none" });
+    if (actual.value !== formatCase.expected || actual.errors.length) throw new Error(`${file}: unexpected format result in benchmark preflight`);
     cases.push({
       model: parsed.model,
       arguments: formatCase.arguments ?? {},
@@ -25,7 +28,6 @@ for (const file of await readdir(fixtureDir)) {
 
 if (cases.length === 0) throw new Error("No format cases found.");
 
-const memoryBefore = process.memoryUsage().rss;
 for (let index = 0; index < warmupIterations; index += 1) {
   const item = cases[index % cases.length];
   formatMessage(item.model, item.arguments, {
@@ -33,15 +35,16 @@ for (let index = 0; index < warmupIterations; index += 1) {
     bidiIsolation: item.bidiIsolation,
   });
 }
+const memoryBefore = process.memoryUsage().rss;
 const cpuBefore = process.cpuUsage();
 const timeBefore = process.hrtime.bigint();
 let checksum = 0;
 for (let index = 0; index < iterations; index += 1) {
   const item = cases[index % cases.length];
-  checksum += formatMessage(item.model, item.arguments, {
+  checksum += Buffer.byteLength(formatMessage(item.model, item.arguments, {
     locale: item.locale,
     bidiIsolation: item.bidiIsolation,
-  }).value.length;
+  }).value, "utf8");
 }
 const elapsedNs = Number(process.hrtime.bigint() - timeBefore);
 const cpu = process.cpuUsage(cpuBefore);

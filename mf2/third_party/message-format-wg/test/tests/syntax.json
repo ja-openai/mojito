@@ -129,7 +129,7 @@
       "exp": ""
     },
     {
-      "description": "message -> simple-message -> simple-start pattern -> placeholder -> markup -> \"{\" \"#\" identifier \"}\"",
+      "description": "message -> simple-message -> simple-start pattern -> placeholder -> markup -> \"{\" \"#\" identifier \"}\"", 
       "src": "{#tag}",
       "exp": "",
       "expParts": [
@@ -300,7 +300,7 @@
       "expErrors": [{ "type": "unknown-function" }]
     },
     {
-      "description": "message -> simple-message -> simple-start pattern -> placeholder -> markup -> \"{\" s \"#\" identifier \"}\"",
+      "description": "message -> simple-message -> simple-start pattern -> placeholder -> markup -> \"{\" s \"#\" identifier \"}\"", 
       "src": "{ #a}",
       "exp": ""
     },

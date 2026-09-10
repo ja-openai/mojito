@@ -14,14 +14,14 @@ final class IntlFunctions
 
     public static function registry(): FunctionRegistry
     {
-        return FunctionRegistry::portable()
-            ->withFunction('number', self::formatNumber(...))
-            ->withFunction('percent', self::formatPercent(...))
-            ->withFunction('integer', self::formatInteger(...))
-            ->withFunction('currency', self::formatCurrency(...))
+        return Internal\enable_source_memoization(FunctionRegistry::portable()
+            ->withNumericFunction('number', self::formatNumber(...))
+            ->withNumericFunction('percent', self::formatPercent(...))
+            ->withNumericFunction('integer', self::formatInteger(...))
+            ->withNumericFunction('currency', self::formatCurrency(...))
             ->withFunction('date', self::formatDate(...))
             ->withFunction('time', self::formatTime(...))
-            ->withFunction('datetime', self::formatDateTime(...));
+            ->withFunction('datetime', self::formatDateTime(...)));
     }
 
     private static function formatNumber(array $call): string
@@ -174,6 +174,8 @@ final class IntlFunctions
     private static function setOptionalFractionDigits(\NumberFormatter $formatter, array $call): void
     {
         $minimum = self::nonNegativeOption($call, 'minimumFractionDigits');
+        $maximum = self::nonNegativeOption($call, 'maximumFractionDigits');
+        if ($minimum !== null && $maximum !== null && $minimum > $maximum) throw MF2Error::badOption('minimumFractionDigits must not exceed maximumFractionDigits.');
         if ($minimum !== null) {
             $formatter->setAttribute(\NumberFormatter::MIN_FRACTION_DIGITS, $minimum);
         }
@@ -237,7 +239,7 @@ final class IntlFunctions
         if (preg_match('/^\d+$/', $value) !== 1) {
             throw MF2Error::badOption("{$name} option must be auto or a non-negative integer.");
         }
-        return (int) $value;
+        return Internal\parse_non_negative_option($value, "{$name} option must be auto or a non-negative integer.");
     }
 
     private static function dateStyle(array $call, string $fallback, string ...$optionNames): int
@@ -273,6 +275,7 @@ final class IntlFunctions
 
     private static function style(string $value, bool $date): int
     {
+        if (!$date && $value === 'second') return \IntlDateFormatter::MEDIUM;
         return match ($value) {
             'short' => \IntlDateFormatter::SHORT,
             'medium' => \IntlDateFormatter::MEDIUM,

@@ -1,0 +1,148 @@
+{
+  "name": "bidi-option-resolution",
+  "source": ".local $n = {1 :number u:dir=$dir}\n{{{$n} / {$n :number} / {$n :number u:dir=inherit}}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": {
+            "type": "literal",
+            "value": "1"
+          },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "u:dir": {
+                "type": "variable",
+                "name": "dir"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": {
+          "type": "variable",
+          "name": "n"
+        }
+      },
+      " / ",
+      {
+        "type": "expression",
+        "arg": {
+          "type": "variable",
+          "name": "n"
+        },
+        "function": {
+          "type": "function",
+          "name": "number"
+        }
+      },
+      " / ",
+      {
+        "type": "expression",
+        "arg": {
+          "type": "variable",
+          "name": "n"
+        },
+        "function": {
+          "type": "function",
+          "name": "number",
+          "options": {
+            "u:dir": {
+              "type": "literal",
+              "value": "inherit"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {
+        "dir": "ltr"
+      },
+      "bidiIsolation": "default",
+      "expected": "\u20661\u2069 / 1 / 1"
+    },
+    {
+      "locale": "en",
+      "arguments": {
+        "dir": "rtl"
+      },
+      "bidiIsolation": "default",
+      "expected": "\u20671\u2069 / \u20671\u2069 / \u20671\u2069"
+    },
+    {
+      "locale": "en",
+      "arguments": {
+        "dir": "auto"
+      },
+      "bidiIsolation": "default",
+      "expected": "\u20681\u2069 / \u20681\u2069 / \u20681\u2069"
+    },
+    {
+      "locale": "en",
+      "arguments": {
+        "dir": "inherit"
+      },
+      "bidiIsolation": "default",
+      "expected": "1 / 1 / 1"
+    },
+    {
+      "locale": "ar",
+      "arguments": {
+        "dir": "ltr"
+      },
+      "bidiIsolation": "default",
+      "expected": "\u20661\u2069 / \u20661\u2069 / \u20661\u2069"
+    },
+    {
+      "locale": "ar",
+      "arguments": {
+        "dir": "inherit"
+      },
+      "bidiIsolation": "default",
+      "expected": "\u20681\u2069 / \u20681\u2069 / \u20681\u2069"
+    }
+  ],
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {
+        "dir": "sideways"
+      },
+      "bidiIsolation": "default",
+      "expected": "1 / 1 / 1",
+      "expectedErrors": [
+        {
+          "code": "bad-option"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "1 / 1 / 1",
+      "expectedErrors": [
+        {
+          "code": "unresolved-variable"
+        },
+        {
+          "code": "bad-option"
+        }
+      ]
+    }
+  ]
+}

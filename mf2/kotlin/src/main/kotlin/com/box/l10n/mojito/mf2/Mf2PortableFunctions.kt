@@ -101,8 +101,8 @@ internal object Mf2PortableFunctions {
     }
 
     fun parseNonNegativeOption(value: String, message: String): Int {
-        if (!value.all { it.isDigit() }) throw Mf2Error.badOption(message)
-        return value.toIntOrNull() ?: throw Mf2Error.badOption(message)
+        if (value.isEmpty() || !value.all { it in '0'..'9' }) throw Mf2Error.badOption(message)
+        return value.toIntOrNull()?.takeIf { it <= 1000 } ?: throw Mf2Error.badOption(message)
     }
 
     private fun validateOffsetOptions(add: String?, subtract: String?) {

@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         default="generated/experimental-number",
         help="Output directory.",
     )
-    parser.add_argument("--cldr-ref", default="main", help="unicode-org/cldr-json git ref.")
+    parser.add_argument("--cldr-ref", default=(Path(__file__).resolve().parents[1] / "pinned-ref.txt").read_text().strip(), help="unicode-org/cldr-json git ref (defaults to the checked-in immutable revision).")
     parser.add_argument(
         "--clean",
         action="store_true",

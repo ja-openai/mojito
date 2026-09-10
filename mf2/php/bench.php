@@ -18,6 +18,7 @@ if (($args[0] ?? '') === '--format' || ($args[0] ?? '') === '--parse') {
 $fixtureDir = (string) ($args[0] ?? __DIR__ . '/../conformance/fixtures/source-to-model');
 $iterations = (int) ($args[1] ?? 100000);
 $warmupIterations = (int) ($args[2] ?? 10000);
+if ($iterations <= 0 || $warmupIterations < 0) throw new InvalidArgumentException('Iterations must be positive; warmup must be nonnegative.');
 
 if ($mode === 'parse') {
     run_parse_benchmark($fixtureDir, $iterations, $warmupIterations);
@@ -37,6 +38,8 @@ function run_format_benchmark(string $fixtureDir, int $iterations, int $warmupIt
             exit(1);
         }
         foreach ($fixture['formatCases'] ?? [] as $case) {
+            $preflight = format_message($parse['model'], $case['arguments'] ?? [], ['locale' => $case['locale'] ?? 'en', 'bidiIsolation' => $case['bidiIsolation'] ?? 'none']);
+            if ($preflight['hasErrors'] || $preflight['value'] !== $case['expected']) throw new RuntimeException(basename($path) . ': benchmark preflight output mismatch');
             $cases[] = [
                 'model' => $parse['model'],
                 'arguments' => $case['arguments'] ?? [],
@@ -96,6 +99,13 @@ function run_parse_benchmark(string $fixtureDir, int $iterations, int $warmupIte
     foreach (fixture_paths($fixtureDir) as $path) {
         $fixture = read_json($path);
         if (isset($fixture['source']) && is_string($fixture['source'])) {
+            $expected = array_map(static fn(array $item): string => $item['code'], $fixture['expectedDiagnostics'] ?? []);
+            if (isset($fixture['expectedError']['code'])) $expected[] = $fixture['expectedError']['code'];
+            $result = parse_to_model($fixture['source']);
+            $actual = array_map(static fn(array $item): string => $item['code'], $result['diagnostics']);
+            if ($result['hasDiagnostics'] !== ($expected !== []) || array_diff($expected, $actual) !== []) {
+                throw new RuntimeException(basename($path) . ': benchmark preflight parser diagnostics mismatch');
+            }
             $sources[] = $fixture['source'];
         }
     }

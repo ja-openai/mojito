@@ -1,0 +1,53 @@
+{
+  "name": "offset-zero-fractions",
+  "source": "{$n :offset add=0}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": {
+          "type": "variable",
+          "name": "n"
+        },
+        "function": {
+          "type": "function",
+          "name": "offset",
+          "options": {
+            "add": {
+              "type": "literal",
+              "value": "0"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "arguments": {
+        "n": "0.29"
+      },
+      "expected": "0.29"
+    },
+    {
+      "arguments": {
+        "n": "-0.29"
+      },
+      "expected": "-0.29"
+    },
+    {
+      "arguments": {
+        "n": "0.00029"
+      },
+      "expected": "0.00029"
+    },
+    {
+      "arguments": {
+        "n": "-0.00029"
+      },
+      "expected": "-0.00029"
+    }
+  ]
+}

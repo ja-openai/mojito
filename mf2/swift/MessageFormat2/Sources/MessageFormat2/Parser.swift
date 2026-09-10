@@ -326,7 +326,7 @@ private final class MF2SourceParser {
                 continue
             }
             if peek() == "|" {
-                guard let split = parseQuotedLiteral(text(from: index, to: source.count)) else {
+                guard let split = parseQuotedLiteral(source, offset: index, includeRest: false) else {
                     pushDiagnostic(
                         code: "unclosed-quoted-literal",
                         message: "Quoted variant key is missing closing '|'.",
@@ -342,9 +342,16 @@ private final class MF2SourceParser {
             let key = takeWhile { ch in
                 !isSyntaxWhitespace(ch) && ch != "{"
             }
-            if !key.isEmpty {
-                keys.append(["type": "literal", "value": key])
+            guard !key.isEmpty else {
+                pushDiagnostic(
+                    code: "invalid-variant-key",
+                    message: "Expected a variant key before the pattern.",
+                    start: index,
+                    end: index + 1
+                )
+                return nil
             }
+            keys.append(["type": "literal", "value": key])
         }
         return keys
     }
@@ -448,7 +455,7 @@ private final class MF2SourceParser {
         guard let ch = peek() else {
             return "\\"
         }
-        if ch == "{" || ch == "}" || ch == "\\" {
+        if ch == "{" || ch == "}" || ch == "|" || ch == "\\" {
             index += 1
             return String(ch)
         }
@@ -505,11 +512,6 @@ private final class MF2SourceParser {
                     }
                     continue
                 }
-                if ch == "}" {
-                    let content = text(from: contentStart, to: index)
-                    index += 1
-                    return content
-                }
                 if ch == "|" {
                     inQuote = false
                 }
@@ -529,7 +531,7 @@ private final class MF2SourceParser {
             index += 1
         }
         pushDiagnostic(
-            code: "unclosed-placeholder",
+            code: inQuote ? "unclosed-quoted-literal" : "unclosed-placeholder",
             message: "Placeholder is missing a closing brace.",
             start: start,
             end: source.count
@@ -1147,10 +1149,10 @@ private final class MF2SourceParser {
             return nil
         }
         index += 1
-        let scan = scanName(text(from: 0, to: source.count), offset: index)
+        let scan = scanName(source, offset: index)
         if scan.name.isEmpty {
             pushDiagnostic(
-                code: variableNameDiagnosticCode(text(from: 0, to: source.count), offset: index),
+                code: variableNameDiagnosticCode(source, offset: index),
                 message: "Variable is missing a name.",
                 start: start,
                 end: index
@@ -1312,20 +1314,23 @@ private struct Split {
 }
 
 private func parseQuotedLiteral(_ input: String) -> Split? {
-    let chars = Array(input)
-    guard chars.first == "|" else {
+    parseQuotedLiteral(Array(input), offset: 0, includeRest: true)
+}
+
+private func parseQuotedLiteral(_ chars: [Character], offset: Int, includeRest: Bool) -> Split? {
+    guard offset < chars.count, chars[offset] == "|" else {
         return nil
     }
     var output = ""
-    var index = 1
+    var index = offset + 1
     while index < chars.count {
         let ch = chars[index]
         index += 1
         if ch == "|" {
             return Split(
                 value: output,
-                rest: String(chars[index..<chars.count]),
-                consumed: index
+                rest: includeRest ? String(chars[index..<chars.count]) : "",
+                consumed: index - offset
             )
         }
         if ch == "\\" {
@@ -1382,7 +1387,10 @@ private func isUnquotedLiteralChar(_ ch: Character) -> Bool {
 }
 
 private func variableNameDiagnosticCode(_ input: String, offset: Int = 0) -> String {
-    let chars = Array(input)
+    variableNameDiagnosticCode(Array(input), offset: offset)
+}
+
+private func variableNameDiagnosticCode(_ chars: [Character], offset: Int) -> String {
     if offset >= chars.count {
         return "missing-variable-name"
     }
@@ -1401,7 +1409,10 @@ private func splitName(_ input: String) -> Split {
 }
 
 private func scanName(_ input: String, offset: Int) -> Split {
-    let chars = Array(input)
+    scanName(Array(input), offset: offset)
+}
+
+private func scanName(_ chars: [Character], offset: Int) -> Split {
     var scan = offset
     if scan < chars.count, isBidiMarker(chars[scan]) {
         scan += 1
@@ -1412,7 +1423,7 @@ private func scanName(_ input: String, offset: Int) -> Split {
     }
     let first = chars[nameStart]
     if let codePoint = firstScalarValue(first), codePoint <= 0x7F,
-       let asciiScan = scanAsciiName(input, offset: offset, nameStart: nameStart)
+        let asciiScan = scanAsciiName(chars, offset: offset, nameStart: nameStart)
     {
         return asciiScan
     }
@@ -1430,8 +1441,7 @@ private func scanName(_ input: String, offset: Int) -> Split {
     return Split(name: String(chars[nameStart..<nameEnd]), endIndex: scan)
 }
 
-private func scanAsciiName(_ input: String, offset: Int, nameStart: Int) -> Split? {
-    let chars = Array(input)
+private func scanAsciiName(_ chars: [Character], offset: Int, nameStart: Int) -> Split? {
     let first = chars[nameStart]
     if !isAsciiNameStart(first) {
         return Split(name: "", endIndex: offset)
@@ -1541,7 +1551,7 @@ private func isSyntaxWhitespace(_ ch: Character) -> Bool {
 }
 
 private func isWhitespace(_ ch: Character) -> Bool {
-    ch.unicodeScalars.allSatisfy { CharacterSet.whitespacesAndNewlines.contains($0) }
+    ch.unicodeScalars.allSatisfy { $0.properties.isWhitespace }
 }
 
 private func isControl(_ ch: Character) -> Bool {

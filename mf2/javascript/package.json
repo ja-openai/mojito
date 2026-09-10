@@ -13,7 +13,10 @@
   "sideEffects": false,
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "UNICODE-LICENSE.txt"
   ],
   "exports": {
     ".": {
@@ -46,7 +49,7 @@
     "bench:format": "node tools/benchmark.js",
     "bench:parse": "node tools/parse-benchmark.js",
     "bench:plural": "node --expose-gc tools/plural-benchmark.js",
-    "check": "node tests/package-boundary-test.js && npm run check:types && node tools/conformance.js ../conformance/fixtures/source-to-model",
+    "check": "node tests/package-boundary-test.js && node --test tests/intl-number-options.test.js && npm run check:types && node tools/conformance.js ../conformance/fixtures/source-to-model",
     "check:types": "tsc -p tsconfig.types.json",
     "demo": "node examples/demo.js",
     "demo:intl": "node examples/intl-demo.js",
@@ -55,5 +58,8 @@
   },
   "devDependencies": {
     "typescript": "~5.6.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

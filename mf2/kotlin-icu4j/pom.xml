@@ -13,6 +13,14 @@
   <description>Opt-in ICU4J formatter registry for the Mojito MF2 Kotlin runtime.</description>
   <url>https://github.com/box/mojito</url>
 
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
   <properties>
     <icu4j.version>78.3</icu4j.version>
     <java.version>21</java.version>
@@ -39,6 +47,14 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource><directory>src/main/resources</directory></resource>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <targetPath>META-INF</targetPath>
+        <includes><include>LICENSE</include><include>NOTICE</include><include>UNICODE-LICENSE.txt</include></includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.jetbrains.kotlin</groupId>

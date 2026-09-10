@@ -1,0 +1,41 @@
+{
+  "name": "bidi-invalid-option-recovery",
+  "source": "Value {42 :number u:dir=sideways}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Value ",
+      {
+        "type": "expression",
+        "arg": {
+          "type": "literal",
+          "value": "42"
+        },
+        "function": {
+          "type": "function",
+          "name": "number",
+          "options": {
+            "u:dir": {
+              "type": "literal",
+              "value": "sideways"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "bidiIsolation": "default",
+      "expected": "Value 42",
+      "expectedErrors": [
+        {
+          "code": "bad-option"
+        }
+      ]
+    }
+  ]
+}

@@ -108,3 +108,9 @@ copy_generated "$TMP_DIR/all/php/CldrPluralRules.php" \
 gofmt -w \
   "$DESTINATION_ROOT/cldr/generated/all/go/cldr_plural_rules.go" \
   "$DESTINATION_ROOT/go/cldr_plural_rules.go"
+
+PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/cldr/generator/generate_locale_directions.py" \
+  --destination-root "$DESTINATION_ROOT" \
+  --plural-data "$TMP_DIR/all/plural_rules.json"
+gofmt -w "$DESTINATION_ROOT/go/locale_direction_data.go"
+rustfmt "$DESTINATION_ROOT/rust/mojito-mf2/src/locale_direction_data.rs"

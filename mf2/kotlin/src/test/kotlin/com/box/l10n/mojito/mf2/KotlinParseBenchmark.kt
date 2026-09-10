@@ -14,6 +14,7 @@ object KotlinParseBenchmark {
         val fixtureDir = if (args.isNotEmpty()) Path.of(args[0]) else Path.of("../conformance/fixtures/source-to-model")
         val iterations = args.getOrNull(1)?.toInt() ?: 100_000
         val warmupIterations = args.getOrNull(2)?.toInt() ?: 10_000
+        require(iterations > 0 && warmupIterations >= 0) { "Iterations must be positive; warmup must be nonnegative." }
         val sources = loadSources(fixtureDir)
         if (sources.isEmpty()) {
             System.err.println("No source fixtures found.")
@@ -57,7 +58,19 @@ object KotlinParseBenchmark {
             return stream
                 .filter { it.fileName.toString().endsWith(".json") }
                 .sorted(Comparator.comparing { it.fileName.toString() })
-                .map { KotlinJsonSupport.string(KotlinJsonSupport.obj(KotlinJsonSupport.parse(it))["source"]) }
+                .map { path ->
+                    val fixture = KotlinJsonSupport.obj(KotlinJsonSupport.parse(path))
+                    val source = KotlinJsonSupport.string(fixture["source"])
+                    val expected = KotlinJsonSupport.arrayOrEmpty(fixture["expectedDiagnostics"])
+                        .map { KotlinJsonSupport.string(KotlinJsonSupport.obj(it)["code"]) }.toMutableList()
+                    if (fixture["expectedError"] is Map<*, *>) expected += KotlinJsonSupport.string(KotlinJsonSupport.obj(fixture["expectedError"])["code"])
+                    val result = Mf2Parser.parseToModel(source)
+                    val actual = result.diagnostics.map { it.code }
+                    check(result.hasDiagnostics == expected.isNotEmpty() && actual.containsAll(expected)) {
+                        "$path: expected parser diagnostics $expected, got $actual"
+                    }
+                    source
+                }
                 .toList()
         }
     }

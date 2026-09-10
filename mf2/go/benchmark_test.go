@@ -5,73 +5,128 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"testing"
 )
 
+var benchmarkChecksum int
+
 func BenchmarkFormatSharedFixtures(b *testing.B) {
-	var cases []struct {
+	b.StopTimer()
+	type formatCase struct {
 		model     Model
 		arguments map[string]any
-		locale    string
+		options   Options
+		expected  string
 	}
-	for _, path := range benchmarkFixturePaths(b, "../conformance/fixtures/source-to-model") {
+	var cases []formatCase
+	for _, path := range benchmarkFixturePaths(b) {
 		fixture := readBenchmarkFixture(path)
 		parse := ParseToModel(fixture["source"].(string))
 		if parse.HasDiagnostics {
-			continue
+			b.Fatalf("%s: unexpected parse diagnostics: %v", path, parse.Diagnostics)
 		}
-		for _, rawCase := range arrayValue(fixture["formatCases"]) {
-			item := asObject(rawCase)
-			cases = append(cases, struct {
-				model     Model
-				arguments map[string]any
-				locale    string
-			}{parse.Model, mapValue(item["arguments"]), stringValue(item["locale"])})
+		for _, raw := range arrayValue(fixture["formatCases"]) {
+			item := asObject(raw)
+			c := formatCase{parse.Model, mapValue(item["arguments"]), Options{Locale: stringValue(item["locale"]), BidiIsolation: stringValue(item["bidiIsolation"]), Functions: PortableFunctionRegistry()}, stringValue(item["expected"])}
+			result := FormatMessage(c.model, c.arguments, c.options)
+			if result.HasErrors() || result.Value != c.expected {
+				b.Fatalf("%s: preflight expected %q, got %q / %v", path, c.expected, result.Value, result.Errors)
+			}
+			cases = append(cases, c)
 		}
 	}
 	if len(cases) == 0 {
 		b.Fatal("no format benchmark cases")
 	}
+	for index := 0; index < benchmarkWarmup(b); index++ {
+		c := cases[index%len(cases)]
+		result := FormatMessage(c.model, c.arguments, c.options)
+		if result.HasErrors() {
+			b.Fatal(result.Errors)
+		}
+	}
 	b.ReportAllocs()
+	b.ResetTimer()
+	b.StartTimer()
 	checksum := 0
 	for index := 0; index < b.N; index++ {
-		item := cases[index%len(cases)]
-		output := FormatMessage(item.model, item.arguments, Options{Locale: item.locale})
-		if output.HasErrors() {
-			b.Fatal(output.Errors)
+		c := cases[index%len(cases)]
+		result := FormatMessage(c.model, c.arguments, c.options)
+		if result.HasErrors() {
+			b.Fatal(result.Errors)
 		}
-		checksum += len(output.Value)
+		checksum += len(result.Value)
 	}
-	if checksum == 0 {
-		b.Fatal("empty checksum")
-	}
+	b.StopTimer()
+	benchmarkChecksum = checksum
+	b.ReportMetric(float64(checksum), "checksum")
 }
 
 func BenchmarkParseSharedFixtures(b *testing.B) {
+	b.StopTimer()
 	var sources []string
-	for _, path := range benchmarkFixturePaths(b, "../conformance/fixtures/source-to-model") {
+	for _, path := range benchmarkFixturePaths(b) {
 		fixture := readBenchmarkFixture(path)
-		sources = append(sources, fixture["source"].(string))
+		source := fixture["source"].(string)
+		result := ParseToModel(source)
+		expected := expectedCodes(fixture["expectedDiagnostics"])
+		if code := stringValue(asObject(fixture["expectedError"])["code"]); code != "" {
+			expected = append(expected, code)
+		}
+		actual := make([]string, 0, len(result.Diagnostics))
+		for _, diagnostic := range result.Diagnostics {
+			actual = append(actual, diagnostic.Code)
+		}
+		if result.HasDiagnostics != (len(expected) > 0) || !containsAll(actual, expected) {
+			b.Fatalf("%s: expected parse diagnostics %v, got %v", path, expected, actual)
+		}
+		sources = append(sources, source)
 	}
 	if len(sources) == 0 {
 		b.Fatal("no parse benchmark sources")
 	}
+	for index := 0; index < benchmarkWarmup(b); index++ {
+		ParseToModel(sources[index%len(sources)])
+	}
 	b.ReportAllocs()
-	checksum := 0
+	b.ResetTimer()
+	b.StartTimer()
+	parsed, diagnostics, bytes := 0, 0, 0
 	for index := 0; index < b.N; index++ {
-		result := ParseToModel(sources[index%len(sources)])
-		if result.HasDiagnostics {
-			b.Fatal(result.Diagnostics)
+		source := sources[index%len(sources)]
+		result := ParseToModel(source)
+		if !result.HasDiagnostics {
+			parsed++
 		}
-		checksum += len(arrayField(map[string]any(result.Model), "declarations"))
+		diagnostics += len(result.Diagnostics)
+		bytes += len(source)
 	}
-	if checksum < 0 {
-		b.Fatal("unreachable")
-	}
+	b.StopTimer()
+	benchmarkChecksum = parsed + diagnostics + bytes
+	b.ReportMetric(float64(parsed), "parsed")
+	b.ReportMetric(float64(diagnostics), "diagnostics")
+	b.ReportMetric(float64(bytes), "source-bytes")
 }
 
-func benchmarkFixturePaths(b *testing.B, root string) []string {
+func benchmarkWarmup(b *testing.B) int {
 	b.Helper()
+	raw := os.Getenv("MF2_BENCH_WARMUP")
+	if raw == "" {
+		return 10000
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < 0 {
+		b.Fatal("MF2_BENCH_WARMUP must be a nonnegative integer")
+	}
+	return value
+}
+func benchmarkFixturePaths(b *testing.B) []string {
+	b.Helper()
+	root := os.Getenv("MF2_BENCH_FIXTURES")
+	if root == "" {
+		root = "../conformance/fixtures/source-to-model"
+	}
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		b.Fatal(err)
@@ -85,7 +140,6 @@ func benchmarkFixturePaths(b *testing.B, root string) []string {
 	sort.Strings(paths)
 	return paths
 }
-
 func readBenchmarkFixture(path string) map[string]any {
 	data, err := os.ReadFile(path)
 	if err != nil {

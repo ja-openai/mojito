@@ -1,0 +1,22 @@
+{
+  "name": "invalid-model-attribute-false",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": {
+          "type": "literal",
+          "value": "x"
+        },
+        "attributes": {
+          "title": false
+        }
+      }
+    ]
+  },
+  "expectedError": {
+    "code": "invalid-model"
+  }
+}

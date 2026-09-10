@@ -1,5 +1,17 @@
 export const MAX_FRACTION_DIGITS = 100;
 
+// Weak keys keep this state owned by one format call. Only literal-only
+// histories opt in; variable option resolvers may observe later inputs.
+const sourceMemos = new WeakMap();
+export function memoizeFunctionSource(source) {
+  if ((!source.inherited || sourceMemos.has(source.inherited))
+      && Object.values(source.function.options ?? {}).every(option => option.type === "literal")) {
+    sourceMemos.set(source, new Map());
+  }
+  return Object.freeze(source);
+}
+export function sourceMemo(source) { return sourceMemos.get(source); }
+
 export function functionOptionLiteral(functionRef, name, fallback) {
   const option = functionRef.options?.[name];
   return option?.type === "literal" ? option.value : fallback;
@@ -20,17 +32,22 @@ export function numericSelectUsesVariable(functionRef) {
 }
 
 export function inheritedExactNumericSource(source, targetFunction) {
+  if (targetFunction === "percent") return false;
   let current = source;
-  let target = targetFunction;
+  const visited = [];
+  let found = false;
   while (current != null) {
-    if (target === "percent" || !isNumericFunction(current.function)) return false;
+    const memo = sourceMemo(current);
+    if (memo?.has("exact_select")) { found = memo.get("exact_select"); break; }
+    visited.push(current);
+    if (!isNumericFunction(current.function)) break;
     const sourceFunction = current.function.name;
-    if (sourceFunction === "percent") return false;
-    if (sourceOptionValue(current, "select", null) === "exact") return true;
-    target = sourceFunction;
+    if (sourceFunction === "percent") break;
+    if (sourceOptionValue(current, "select", null) === "exact") { found = true; break; }
     current = current.inherited;
   }
-  return false;
+  for (const item of visited) sourceMemo(item)?.set("exact_select", found);
+  return found;
 }
 
 export function isDecimalSourceFunction(functionRef) {
@@ -42,6 +59,9 @@ export function parseDecimalNumber(value) {
   if (!/^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/.test(text)) return null;
   const parsed = Number(text);
   if (!Number.isFinite(parsed)) return null;
+  // A nonzero decimal below binary64's range must not become an exact zero.
+  // Exponent digits do not make a zero coefficient nonzero (0e-999 is valid).
+  if (parsed === 0 && /[1-9]/.test(text.split(/[eE]/, 1)[0])) return null;
   return Number.isInteger(parsed) && !Number.isSafeInteger(parsed) ? null : parsed;
 }
 
@@ -54,13 +74,20 @@ export function parseInteger(value) {
 export function numericSourceOperand(source) {
   if (source == null) return null;
   const chain = [];
-  for (let current = source; current != null; current = current.inherited) chain.push(current);
   let operand = null;
+  for (let current = source; current != null; current = current.inherited) {
+    const memo = sourceMemo(current);
+    if (memo?.has("numeric_operand")) { operand = memo.get("numeric_operand"); break; }
+    chain.push(current);
+  }
   for (let index = chain.length - 1; index >= 0; index -= 1) {
     const current = chain[index];
     if (operand == null) operand = current.value;
     const name = current.function?.name;
-    if (!isDecimalSourceFunction(current.function)) continue;
+    if (!isDecimalSourceFunction(current.function)) {
+      sourceMemo(current)?.set("numeric_operand", operand);
+      continue;
+    }
     const parsed = parseDecimalNumber(operand);
     if (parsed == null) return null;
     if (name === "integer") operand = String(Math.trunc(parsed));
@@ -72,6 +99,7 @@ export function numericSourceOperand(source) {
       operand = addIntegerOffset(operand, add == null ? -delta : delta);
       if (operand == null) return null;
     }
+    sourceMemo(current)?.set("numeric_operand", operand);
   }
   return String(operand);
 }

@@ -3892,7 +3892,7 @@
     "zu"
   ],
   "metadata": {
-    "cldrRef": "main",
+    "cldrRef": "1aaabe99aa652d6f22ea488cf25baea46aa69b42",
     "generator": "mf2/cldr/generator/generate_plural_rules.py",
     "source": "unicode-org/cldr-json cldr-core supplemental plurals/ordinals"
   },

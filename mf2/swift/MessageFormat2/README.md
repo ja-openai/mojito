@@ -91,3 +91,58 @@ swift run MessageFormat2FoundationDemo
 swift run -c release MessageFormat2Conformance --bench ../../conformance/fixtures/source-to-model
 swift run -c release MessageFormat2Conformance --bench-parse ../../conformance/fixtures/source-to-model
 ```
+
+### Exact numbers and model interchange
+
+The portable number, integer, percent, and offset functions retain decimal
+coefficients as text. They accept up to 4096 expanded decimal digits and at most
+1000 requested fraction digits; a minimum greater than the maximum is a
+`bad-option` error. Maximum fraction digits use half-even rounding. Integer
+formatting truncates toward zero, without a machine-integer range restriction.
+Use `.number("9007199254740993")` or a string argument for exact decimal values.
+JSON decoding preserves native `Int` and `UInt64` values, and otherwise accepts
+binary64 values within its exact integer range; larger JSON numbers must be
+supplied as strings. Unsupported JSON values throw `DecodingError`.
+
+Foundation number formatting and generated CLDR plural selection are limited to
+absolute values at most 9007199254740991. CLDR fractional operands must also fit
+signed 64-bit integers. Foundation also rejects nonzero decimals that underflow
+to binary64 zero, and relative week counts that overflow their day conversion.
+Unsupported formatting/selection returns `bad-operand`
+or `bad-selector`; exact-key selection (`select=exact`) and portable formatting
+retain larger values.
+
+The model types have public initializers and support `Codable`. Encoding preserves
+the supported semantic model, including attributes and markup. Unknown extension
+properties are ignored when decoding and are not retained when encoding. Formatting
+validates imported and directly constructed models before invoking functions.
+Canonically equivalent Unicode variable names resolve to the same binding.
+
+Expression parts include an optional `direction` associated value, defaulting to
+`nil`. Existing `.expression(value, attributes: ...)` construction remains valid;
+pattern matches should bind or ignore the third value. Explicit `u:dir` values
+control string isolation and are retained in expression parts.
+
+The conformance executable includes public-API regression checks and an
+`official-bridge` JSON-lines mode for the shared upstream assertion runner. Both
+portable and Foundation modes use production functions; only the upstream
+`test:*` namespace is implemented by test helpers.
+
+Default bidirectional isolation uses pinned CLDR locale direction and private
+production-formatter metadata. Numeric output in a known left-to-right locale
+needs no extra isolation unless its resolved value requires it. Plain variable
+aliases preserve isolation; a new function annotation defaults to `inherit` and
+retains direction without forcing isolation. Replacing a
+numeric formatter with `withFunction` removes that guarantee; custom formatters
+and unknown locale directions keep isolation. This metadata is private and does
+not alter the public parts JSON contract.
+
+`u:dir` accepts literal or variable `auto`, `ltr`, `rtl`, and `inherit` values.
+Invalid values report `bad-option` and leave the formatted value intact. Function
+handlers do not receive `u:dir` through resolved option access; the source model
+remains available for inspection.
+
+Long declaration chains share source history, release it iteratively, and
+propagate selector annotations in declaration order. Numeric history and inherited
+options are memoized only within a format call, for histories with literal options.
+Histories with variable options remain uncached.

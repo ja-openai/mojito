@@ -130,7 +130,7 @@ its `Input`, `DecimalPlaces`, `FailsFormat`, and `FailsSelect` values are determ
    or a string matching the `number-literal` production, then
    1. Let `Input` be the numerical value of `arg`.
 1. Else,
-   1. Emit "bad-input" _Resolution Error_.
+   1. Emit "bad-operand" _Resolution Error_.
    1. Use a _fallback value_ as the _resolved value_ of the _expression_.
       Further steps of this algorithm are not followed.
 1. If the `decimalPlaces` _option_ is set, then

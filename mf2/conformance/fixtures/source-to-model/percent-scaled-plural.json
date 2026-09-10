@@ -1,0 +1,62 @@
+{
+  "name": "percent-scaled-plural",
+  "source": ".input {$n :percent}\n.match $n\nmany {{many}}\n* {{other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": {
+            "type": "variable",
+            "name": "n"
+          },
+          "function": {
+            "type": "function",
+            "name": "percent"
+          }
+        }
+      }
+    ],
+    "selectors": [
+      {
+        "type": "variable",
+        "name": "n"
+      }
+    ],
+    "variants": [
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "many"
+          }
+        ],
+        "value": [
+          "many"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "*"
+          }
+        ],
+        "value": [
+          "other"
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "ru",
+      "arguments": {
+        "n": 0.29
+      },
+      "expected": "many"
+    }
+  ]
+}

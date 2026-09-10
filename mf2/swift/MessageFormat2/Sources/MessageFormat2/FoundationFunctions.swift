@@ -14,7 +14,7 @@ func makeFoundationFunctionRegistry() -> MF2FunctionRegistry {
         registry = registry.withFunction("relativeTime", formatter: formatFoundationRelativeTime)
     #endif
 
-    return registry
+    return registry.withProductionNumericFunctions(["number", "integer", "percent", "currency"])
 }
 
 private func formatFoundationNumber(_ call: MF2FunctionCall) throws -> String {
@@ -162,19 +162,23 @@ private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String 
     private func dateComponents(value: Int, unit: String) throws -> DateComponents {
         switch unit {
         case "second":
-            DateComponents(second: value)
+            return DateComponents(second: value)
         case "minute":
-            DateComponents(minute: value)
+            return DateComponents(minute: value)
         case "hour":
-            DateComponents(hour: value)
+            return DateComponents(hour: value)
         case "day":
-            DateComponents(day: value)
+            return DateComponents(day: value)
         case "week":
-            DateComponents(day: value * 7)
+            let (days, overflow) = value.multipliedReportingOverflow(by: 7)
+            guard !overflow else {
+                throw MF2Error.badOperand("Relative week count exceeds the supported integer range.")
+            }
+            return DateComponents(day: days)
         case "month":
-            DateComponents(month: value)
+            return DateComponents(month: value)
         case "year":
-            DateComponents(year: value)
+            return DateComponents(year: value)
         default:
             throw MF2Error.badOption("Relative time function requires unit second, minute, hour, day, week, month, or year.")
         }
@@ -182,7 +186,8 @@ private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String 
 #endif
 
 private func parseFoundationNumber(_ call: MF2FunctionCall, message: String) throws -> Double {
-    if let parsed = try resolvedNumericSourceValue(call.inheritedSource) {
+    if let exact = try resolvedNumericSourceText(call.inheritedSource), let parsed = parseFoundationNumberLiteral(exact)
+    {
         return parsed
     }
     if let parsed = parseFoundationNumberLiteral(call.value) {
@@ -192,12 +197,14 @@ private func parseFoundationNumber(_ call: MF2FunctionCall, message: String) thr
 }
 
 private func parseFoundationNumberLiteral(_ value: String) -> Double? {
-    guard let range = value.range(
-        of: #"^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$"#,
-        options: .regularExpression
-    ), range == value.startIndex..<value.endIndex,
-          let parsed = Double(value),
-          parsed.isFinite
+    guard let exact = DecimalOperand(value),
+        let range = value.range(
+            of: #"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$"#,
+            options: .regularExpression
+        ), range == value.startIndex..<value.endIndex,
+        let parsed = Double(value),
+        parsed.isFinite, abs(parsed) <= 9_007_199_254_740_991,
+        parsed != 0 || exact.canonical == "0"
     else {
         return nil
     }
@@ -214,8 +221,10 @@ private func parseFoundationInteger(_ value: String, error: MF2Error) throws -> 
 }
 
 private func parseFoundationInteger(_ call: MF2FunctionCall, error: MF2Error) throws -> Int {
-    if let source = try resolvedNumericSourceValue(call.inheritedSource) {
-        return Int(source.rounded(.towardZero))
+    if let source = try resolvedNumericSourceText(call.inheritedSource) {
+        let truncated = try portableNumericOperand(source, function: "integer", minimum: 0, maximum: nil)
+        guard let integer = Int(truncated) else { throw error }
+        return integer
     }
     if let direct = try? parseFoundationInteger(call.value, error: error) {
         return direct
@@ -275,8 +284,8 @@ private func nonNegativeIntegerOption(_ value: String?, _ name: String) throws -
     guard let value else {
         return nil
     }
-    guard value.range(of: #"^\d+$"#, options: .regularExpression) == value.startIndex..<value.endIndex,
-          let parsed = Int(value)
+    guard value.range(of: #"^[0-9]+$"#, options: .regularExpression) == value.startIndex..<value.endIndex,
+        let parsed = Int(value), parsed <= 1000
     else {
         throw MF2Error.badOption("\(name) option must be a non-negative integer.")
     }
@@ -325,13 +334,14 @@ private func foundationDate(_ call: MF2FunctionCall, timeZone: TimeZone, message
 }
 
 private func parseSourceDate(_ source: MF2FunctionSource?, timeZone: TimeZone) -> Date? {
-    guard let source else {
-        return nil
+    var current = source
+    while let source = current {
+        if source.function.name == "date" || source.function.name == "time" || source.function.name == "datetime" {
+            return parseFoundationDate(source.value, timeZone: timeZone)
+        }
+        current = source.inheritedSource
     }
-    if source.function.name == "date" || source.function.name == "time" || source.function.name == "datetime" {
-        return parseFoundationDate(source.value, timeZone: timeZone)
-    }
-    return parseSourceDate(source.inheritedSource, timeZone: timeZone)
+    return nil
 }
 
 private func parseFoundationDate(_ value: String, timeZone: TimeZone) -> Date? {
@@ -344,7 +354,7 @@ private func parseFoundationDate(_ value: String, timeZone: TimeZone) -> Date? {
 }
 
 private func parseISO8601Date(_ value: String) -> Date? {
-    guard value.range(of: #"(Z|[+-]\d{2}:\d{2})$"#, options: .regularExpression) != nil else {
+    guard value.range(of: #"(Z|[+-][0-9]{2}:[0-9]{2})$"#, options: .regularExpression) != nil else {
         return nil
     }
     let formatter = ISO8601DateFormatter()

@@ -397,7 +397,11 @@ fn format_with_registry(
 }
 
 fn official_function_registry() -> FunctionRegistry {
-    FunctionRegistry::default()
+    with_official_test_functions(FunctionRegistry::default())
+}
+
+pub(super) fn with_official_test_functions(registry: FunctionRegistry) -> FunctionRegistry {
+    registry
         .with_function("test:function", official_test_function)
         .with_function("test:select", official_test_select_resolver)
         .with_function("test:format", official_test_format_resolver)

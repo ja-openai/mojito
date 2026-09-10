@@ -121,7 +121,7 @@ public final class Mf2Parser {
             return null;
         }
         skipSyntaxWhitespace();
-        if (peekChar() != '=') {
+        if (isDone() || peekChar() != '=') {
             pushDiagnostic(
                     "missing-local-equals",
                     ".local declarations must include '='.",
@@ -234,7 +234,7 @@ public final class Mf2Parser {
         List<Mf2Message.VariantKey> keys = new ArrayList<>();
         while (!isDone() && !startsWith("{{") && peekChar() != '\n') {
             boolean skippedSpace = skipSyntaxGap();
-            if (startsWith("{{") || peekChar() == '\n' || isDone()) {
+            if (isDone() || startsWith("{{") || peekChar() == '\n') {
                 break;
             }
             if (!keys.isEmpty() && !skippedSpace) {
@@ -266,9 +266,11 @@ public final class Mf2Parser {
                 continue;
             }
             String key = takeWhile(ch -> !isSyntaxWhitespace(ch) && ch != '{');
-            if (!key.isEmpty()) {
-                keys.add(new Mf2Message.LiteralVariantKey(key));
+            if (key.isEmpty()) {
+                pushDiagnostic("invalid-variant-key", "Expected a variant key or quoted pattern.", index, index + 1);
+                return null;
             }
+            keys.add(new Mf2Message.LiteralVariantKey(key));
         }
         return keys;
     }
@@ -287,6 +289,7 @@ public final class Mf2Parser {
         int contentStart = index;
         int scan = index;
         int placeholderDepth = 0;
+        boolean inQuote = false;
         while (scan < source.length()) {
             if (placeholderDepth == 0 && source.startsWith("}}", scan)) {
                 String content = source.substring(contentStart, scan);
@@ -307,9 +310,11 @@ public final class Mf2Parser {
                 }
                 continue;
             }
-            if (codePoint == '{') {
+            if (placeholderDepth > 0 && codePoint == '|') {
+                inQuote = !inQuote;
+            } else if (!inQuote && codePoint == '{') {
                 placeholderDepth++;
-            } else if (codePoint == '}' && placeholderDepth > 0) {
+            } else if (!inQuote && codePoint == '}' && placeholderDepth > 0) {
                 placeholderDepth--;
             }
             scan += Character.charCount(codePoint);
@@ -375,7 +380,7 @@ public final class Mf2Parser {
             return;
         }
         char ch = peekChar();
-        if (ch == '{' || ch == '}' || ch == '\\') {
+        if (ch == '{' || ch == '}' || ch == '|' || ch == '\\') {
             text.append(advanceChar());
         } else {
             text.append('\\');
@@ -407,7 +412,7 @@ public final class Mf2Parser {
 
     private String consumeBracedContent() {
         int start = index;
-        if (peekChar() != '{') {
+        if (isDone() || peekChar() != '{') {
             pushDiagnostic(
                     "missing-placeholder",
                     "Expected a placeholder starting with '{'.",
@@ -418,6 +423,7 @@ public final class Mf2Parser {
         advanceChar();
         int contentStart = index;
         boolean inQuote = false;
+        int quotedClosingBrace = -1;
         while (!isDone()) {
             char ch = peekChar();
             if (inQuote) {
@@ -428,11 +434,7 @@ public final class Mf2Parser {
                     }
                     continue;
                 }
-                if (ch == '}') {
-                    String content = source.substring(contentStart, index);
-                    advanceChar();
-                    return content;
-                }
+                if (ch == '}' && quotedClosingBrace < 0) quotedClosingBrace = index;
                 if (ch == '|') {
                     inQuote = false;
                 }
@@ -450,6 +452,10 @@ public final class Mf2Parser {
                 return content;
             }
             advanceChar();
+        }
+        if (quotedClosingBrace >= 0) {
+            index = quotedClosingBrace + 1;
+            return source.substring(contentStart, quotedClosingBrace);
         }
         pushDiagnostic(
                 "unclosed-placeholder",
@@ -996,7 +1002,7 @@ public final class Mf2Parser {
 
     private String parseVariableName() {
         int start = index;
-        if (peekChar() != '$') {
+        if (isDone() || peekChar() != '$') {
             pushDiagnostic(
                     "missing-variable",
                     "Expected a variable starting with '$'.",

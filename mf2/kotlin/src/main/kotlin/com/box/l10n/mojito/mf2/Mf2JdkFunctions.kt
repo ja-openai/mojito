@@ -49,7 +49,7 @@ internal object Mf2JdkFunctions {
         val value = Mf2PortableFunctions.parseCallDecimal(call, "Integer function requires a numeric operand.")
         val format = NumberFormat.getIntegerInstance(locale(call.locale))
         format.isGroupingUsed = false
-        return applySignDisplay(format.format(value.toLong()), value, call)
+        return applySignDisplay(format.format(truncateInteger(value)), value, call)
     }
 
     private fun formatCurrency(call: Mf2FunctionCall): String {
@@ -84,9 +84,15 @@ internal object Mf2JdkFunctions {
         val time = timeFrom(call.rawValue, call.value, zone)
             ?: parseSourceLocalTime(call.inheritedSource, zone)
             ?: throw Mf2Error.badOperand("Datetime and time functions require a datetime operand.")
-        return DateTimeFormatter.ofLocalizedTime(timeStyle(timeStyleOption(call)))
-            .withLocale(locale(call.locale))
-            .format(time)
+        val style = timeStyle(timeStyleOption(call))
+        val formatter = DateTimeFormatter.ofLocalizedTime(style).withLocale(locale(call.locale))
+        if (style == FormatStyle.LONG || style == FormatStyle.FULL) {
+            val zoned = zonedDateTimeFrom(call.rawValue, call.value, zone)
+                ?: parseSourceZonedDateTime(call.inheritedSource, zone)
+                ?: time.atDate(LocalDate.of(1970, 1, 1)).atZone(zone)
+            return formatter.format(zoned)
+        }
+        return formatter.format(time)
     }
 
     private fun formatDateTime(call: Mf2FunctionCall): String {
@@ -109,9 +115,13 @@ internal object Mf2JdkFunctions {
         return Mf2PortableFunctions.parseNonNegativeOption(value, "fractionDigits option must be auto or a non-negative integer.")
     }
 
-    private fun minimumFractionDigits(call: Mf2FunctionCall): Int? =
-        call.optionValue("minimumFractionDigits", null)
-            ?.let { Mf2PortableFunctions.parseNonNegativeOption(it, "minimumFractionDigits option must be a non-negative integer.") }
+    private fun minimumFractionDigits(call: Mf2FunctionCall): Int? {
+        val minimum = call.optionValue("minimumFractionDigits", null)
+            ?.let { Mf2PortableFunctions.parseNonNegativeOption(it, "minimumFractionDigits option must be a non-negative integer.") } ?: return null
+        val maximum = maximumFractionDigits(call)
+        if (maximum != null && minimum > maximum) throw Mf2Error.badOption("minimumFractionDigits must not exceed maximumFractionDigits.")
+        return minimum
+    }
 
     private fun maximumFractionDigits(call: Mf2FunctionCall): Int? =
         call.optionValue("maximumFractionDigits", null)
@@ -166,7 +176,10 @@ internal object Mf2JdkFunctions {
 
     private fun timeStyle(value: String): FormatStyle =
         when (value) {
-            "full", "long", "medium", "short", "second" -> FormatStyle.MEDIUM
+            "full" -> FormatStyle.FULL
+            "long" -> FormatStyle.LONG
+            "short" -> FormatStyle.SHORT
+            "medium", "second" -> FormatStyle.MEDIUM
             else -> throw Mf2Error.badOption("Time style option must be full, long, medium, short, or second.")
         }
 
@@ -210,18 +223,30 @@ internal object Mf2JdkFunctions {
         }
 
     private fun parseSourceLocalDate(source: Mf2FunctionSource?, zone: ZoneId): LocalDate? {
-        if (source == null) return null
-        return dateFrom(source.value, source.value, zone) ?: parseSourceLocalDate(source.inherited, zone)
+        var current = source
+        while (current != null) {
+            dateFrom(current.value, current.value, zone)?.let { return it }
+            current = current.inherited
+        }
+        return null
     }
 
     private fun parseSourceLocalTime(source: Mf2FunctionSource?, zone: ZoneId): LocalTime? {
-        if (source == null) return null
-        return timeFrom(source.value, source.value, zone) ?: parseSourceLocalTime(source.inherited, zone)
+        var current = source
+        while (current != null) {
+            timeFrom(current.value, current.value, zone)?.let { return it }
+            current = current.inherited
+        }
+        return null
     }
 
     private fun parseSourceZonedDateTime(source: Mf2FunctionSource?, zone: ZoneId): ZonedDateTime? {
-        if (source == null) return null
-        return zonedDateTimeFrom(source.value, source.value, zone) ?: parseSourceZonedDateTime(source.inherited, zone)
+        var current = source
+        while (current != null) {
+            zonedDateTimeFrom(current.value, current.value, zone)?.let { return it }
+            current = current.inherited
+        }
+        return null
     }
 
     private fun parseLocalDate(value: String): LocalDate? =

@@ -192,7 +192,11 @@ class Parser {
         continue;
       }
       const key = this.takeWhile((codePoint) => !isSyntaxWhitespace(codePoint) && codePoint !== code("{"));
-      if (key !== "") keys.push({ type: "literal", value: key });
+      if (key === "") {
+        this.pushDiagnostic("invalid-variant-key", "Expected a variant key or a quoted pattern.", this.index, this.index + 1);
+        return null;
+      }
+      keys.push({ type: "literal", value: key });
     }
     return keys;
   }
@@ -265,7 +269,7 @@ class Parser {
       return "";
     }
     const codePoint = this.peekCodePoint();
-    if (codePoint === code("{") || codePoint === code("}") || codePoint === code("\\")) return this.advanceCodePoint();
+    if (codePoint === code("{") || codePoint === code("}") || codePoint === code("\\") || codePoint === code("|")) return this.advanceCodePoint();
     return "\\";
   }
 
@@ -303,11 +307,6 @@ class Parser {
           if (!this.isDone()) this.advanceCodePoint();
           continue;
         }
-        if (codePoint === code("}")) {
-          const content = this.source.slice(contentStart, this.index);
-          this.advanceCodePoint();
-          return content;
-        }
         if (codePoint === code("|")) inQuote = false;
         this.advanceCodePoint();
         continue;
@@ -324,7 +323,7 @@ class Parser {
       }
       this.advanceCodePoint();
     }
-    this.pushDiagnostic("unclosed-placeholder", "Placeholder is missing a closing brace.", start, this.source.length);
+    this.pushDiagnostic(inQuote ? "unclosed-quoted-literal" : "unclosed-placeholder", inQuote ? "Quoted literal is missing closing '|'." : "Placeholder is missing a closing brace.", start, this.source.length);
     return null;
   }
 

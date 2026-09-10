@@ -22,6 +22,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     iterations = int(args[1]) if len(args) > 1 else 100_000
     warmup_iterations = int(args[2]) if len(args) > 2 else 10_000
+    if iterations <= 0 or warmup_iterations < 0:
+        raise ValueError("Iterations must be positive and warmup must be non-negative")
     if mode == "parse":
         return _run_parse_benchmark(fixture_dir, iterations, warmup_iterations)
 
@@ -31,14 +33,14 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     for index in range(warmup_iterations):
-        model, locale, arguments = cases[index % len(cases)]
-        format_message(model, arguments, locale)
+        model, locale, arguments, bidi = cases[index % len(cases)]
+        format_message(model, arguments, locale, bidi_isolation=bidi)
 
     started = time.perf_counter()
     byte_count = 0
     for index in range(iterations):
-        model, locale, arguments = cases[index % len(cases)]
-        output = format_message(model, arguments, locale)
+        model, locale, arguments, bidi = cases[index % len(cases)]
+        output = format_message(model, arguments, locale, bidi_isolation=bidi)
         byte_count += len(output.value.encode("utf-8"))
     seconds = time.perf_counter() - started
     print(
@@ -87,19 +89,23 @@ def _run_parse_benchmark(fixture_dir: Path, iterations: int, warmup_iterations: 
     return 0
 
 
-def _load_cases(fixture_dir: Path) -> list[tuple[dict[str, Any], str, dict[str, Any]]]:
-    cases: list[tuple[dict[str, Any], str, dict[str, Any]]] = []
+def _load_cases(fixture_dir: Path) -> list[tuple[dict[str, Any], str, dict[str, Any], str]]:
+    cases: list[tuple[dict[str, Any], str, dict[str, Any], str]] = []
     for fixture_path in sorted(fixture_dir.glob("*.json")):
         with fixture_path.open(encoding="utf-8") as file:
             fixture = json.load(file)
         for format_case in fixture.get("formatCases", []):
-            cases.append(
-                (
-                    fixture["expectedModel"],
-                    format_case.get("locale", "en"),
-                    format_case.get("arguments", {}),
-                )
+            case = (
+                fixture["expectedModel"],
+                format_case.get("locale", "en"),
+                format_case.get("arguments", {}),
+                format_case.get("bidiIsolation", "none"),
             )
+            model, locale, arguments, bidi = case
+            result = format_message(model, arguments, locale, bidi_isolation=bidi)
+            if result.errors or result.value != format_case["expected"]:
+                raise ValueError(f"{fixture_path}: unexpected format result in benchmark preflight")
+            cases.append(case)
     return cases
 
 
@@ -109,8 +115,12 @@ def _load_sources(fixture_dir: Path) -> list[str]:
         with fixture_path.open(encoding="utf-8") as file:
             fixture = json.load(file)
         source = fixture.get("source")
-        if isinstance(source, str):
-            sources.append(source)
+        if not isinstance(source, str):
+            raise ValueError(f"{fixture_path}: benchmark source must be a string")
+        result = parse_to_model(source)
+        if bool(result.diagnostics) != bool(fixture.get("expectedDiagnostics")):
+            raise ValueError(f"{fixture_path}: unexpected parse result in benchmark preflight")
+        sources.append(source)
     return sources
 
 

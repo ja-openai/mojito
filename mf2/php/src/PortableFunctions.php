@@ -9,7 +9,7 @@ use Mojito\MessageFormat2\MF2Error;
 
 function portable_function_registry(): FunctionRegistry
 {
-    return new FunctionRegistry(
+    return enable_source_memoization(new FunctionRegistry(
         [
             'string' => static fn(array $call): string => $call['value'],
             'number' => __NAMESPACE__ . '\\format_number',
@@ -23,7 +23,39 @@ function portable_function_registry(): FunctionRegistry
             'integer' => __NAMESPACE__ . '\\select_integer',
             'offset' => __NAMESPACE__ . '\\select_offset',
         ],
-    );
+        ['number' => true, 'integer' => true, 'percent' => true],
+    ));
+}
+
+// Registry eligibility contains no resolved values. Custom registry copies are not
+// registered: their callbacks may retain and edit PHP's copy-on-write source arrays.
+function source_memo_registries(): \WeakMap
+{
+    static $registries;
+    return $registries ??= new \WeakMap();
+}
+
+function enable_source_memoization(FunctionRegistry $registry): FunctionRegistry
+{
+    source_memo_registries()[$registry] = true;
+    return $registry;
+}
+
+final class SourceMemo
+{
+    private array $options = [];
+    private array $operand = [false, null];
+    private array $exact = [false, false];
+
+    public function option(string $name): ?array { return $this->options[$name] ?? null; }
+    public function rememberOption(string $name, array $result): void
+    {
+        if (count($this->options) < 64) $this->options[$name] = $result;
+    }
+    public function operand(): array { return $this->operand; }
+    public function rememberOperand(?string $value): void { $this->operand = [true, $value]; }
+    public function exact(): array { return $this->exact; }
+    public function rememberExact(bool $value): void { $this->exact = [true, $value]; }
 }
 
 function function_option_literal(array $functionRef, string $name, mixed $fallback): mixed
@@ -60,17 +92,25 @@ function numeric_select_uses_variable(?array $functionRef): bool
 
 function inherited_exact_numeric_source(?array $source, string $targetFunction): bool
 {
-    if ($source === null || $targetFunction === 'percent' || !is_numeric_function($source['function'])) {
-        return false;
+    if ($targetFunction === 'percent') return false;
+    $visited = [];
+    $found = false;
+    while ($source !== null) {
+        $memo = $source['_memo'] ?? null;
+        if ($memo !== null && $memo->exact()[0]) {
+            $found = $memo->exact()[1];
+            break;
+        }
+        if ($memo !== null) $visited[] = $memo;
+        if (!is_numeric_function($source['function']) || ($source['function']['name'] ?? '') === 'percent') break;
+        if (source_option_value($source, 'select', null) === 'exact') {
+            $found = true;
+            break;
+        }
+        $source = $source['inherited'];
     }
-    $sourceFunction = (string) ($source['function']['name'] ?? '');
-    if ($sourceFunction === 'percent') {
-        return false;
-    }
-    if (source_option_value($source, 'select', null) === 'exact') {
-        return true;
-    }
-    return inherited_exact_numeric_source($source['inherited'], $sourceFunction);
+    foreach ($visited as $memo) $memo->rememberExact($found);
+    return $found;
 }
 
 function invalid_numeric_selector(array $functionRef, ?array $source): bool
@@ -103,7 +143,7 @@ function select_number(array $match): ?int
 function format_percent(array $call): string
 {
     $value = parse_call_decimal($call, 'Percent function requires a numeric operand.');
-    $formatted = format_decimal_with_maximum_fraction_digits($value * 100, maximum_fraction_digits($call));
+    $formatted = format_decimal_with_maximum_fraction_digits(scaled_percent($value), maximum_fraction_digits($call));
     if (sign_display_always($call) && $value >= 0) {
         $formatted = '+' . $formatted;
     }
@@ -122,9 +162,11 @@ function select_percent(array $match): ?int
 
 function format_integer(array $call): string
 {
-    $value = parse_call_decimal($call, 'Integer function requires a numeric operand.');
-    $integer = (int) ($value < 0 ? ceil($value) : floor($value));
-    return sign_display_always($call) && $integer >= 0 ? '+' . $integer : (string) $integer;
+    $operand = (is_decimal_source_function($call['inheritedSource']['function'] ?? null)
+        ? numeric_source_operand_text($call['inheritedSource']) : null) ?? $call['value'];
+    $integer = parse_decimal_number($operand) === null ? null : truncate_decimal_operand(value_to_string($operand));
+    if ($integer === null) throw MF2Error::badOperand('Integer function requires a bounded numeric operand.');
+    return sign_display_always($call) && !str_starts_with($integer, '-') ? '+' . $integer : $integer;
 }
 
 function select_integer(array $match): ?int
@@ -162,6 +204,11 @@ function select_offset(array $match): ?int
 
 function numeric_match_operand(array $match, float $value, string $functionName): string
 {
+    if ($functionName === 'integer') {
+        $operand = (is_decimal_source_function($match['inheritedSource']['function'] ?? null)
+            ? numeric_source_operand_text($match['inheritedSource']) : null) ?? $match['value'];
+        return truncate_decimal_operand(value_to_string($operand)) ?? throw MF2Error::badSelector('Integer selector requires a bounded numeric operand.');
+    }
     $minimum = $match['optionValue']('minimumFractionDigits', '0');
     $maximum = $match['optionValue']('maximumFractionDigits', null);
     $minimumDigits = parse_non_negative_option(
@@ -211,6 +258,7 @@ function numeric_selection_operand(array $resolvedValue, array $functionRef, cal
     if ($value === null) {
         return null;
     }
+    if (($functionRef['name'] ?? '') === 'integer') return truncate_decimal_operand(value_to_string($input));
     $minimum = $optionValue('minimumFractionDigits', '0');
     $maximum = $optionValue('maximumFractionDigits', null);
     $minimumDigits = parse_non_negative_option(
@@ -228,10 +276,10 @@ function numeric_selection_operand(array $resolvedValue, array $functionRef, cal
 function numeric_operand_with_options(float $value, string $functionName, int $minimumDigits, ?int $maximumDigits): string
 {
     if ($functionName === 'integer') {
-        return (string) (int) ($value < 0 ? ceil($value) : floor($value));
+        return truncate_decimal_operand(value_to_string($value)) ?? throw MF2Error::badSelector('Integer selector requires a bounded numeric operand.');
     }
     if ($functionName === 'percent') {
-        $value *= 100;
+        $value = scaled_percent($value);
     }
     if (in_array($functionName, ['number', 'percent'], true)) {
         return append_minimum_fraction_digits(
@@ -288,23 +336,34 @@ function numeric_source_operand(?array $source): ?float
 
 function numeric_source_operand_text(?array $source): ?string
 {
-    if ($source === null) {
-        return null;
+    $chain = [];
+    $operand = null;
+    while ($source !== null) {
+        $memo = $source['_memo'] ?? null;
+        if ($memo !== null && $memo->operand()[0]) {
+            $operand = $memo->operand()[1];
+            break;
+        }
+        $chain[] = $source;
+        $source = $source['inherited'];
     }
-    $operand = numeric_source_operand_text($source['inherited']);
-    if ($operand === null) {
-        $operand = parse_decimal_number($source['value']) === null
-            ? null
-            : value_to_string($source['value']);
+    for ($index = count($chain) - 1; $index >= 0; --$index) {
+        $current = $chain[$index];
+        if ($operand === null) {
+            $operand = parse_decimal_number($current['value']) === null
+                ? null
+                : value_to_string($current['value']);
+        }
+        if (is_decimal_source_function($current['function']) && $operand !== null) {
+            $operand = match ($current['function']['name'] ?? '') {
+                'integer' => truncate_decimal_operand($operand),
+                'offset' => apply_source_offset($current, $operand),
+                default => canonical_decimal_operand($operand),
+            };
+        }
+        ($current['_memo'] ?? null)?->rememberOperand($operand);
     }
-    if (!is_decimal_source_function($source['function']) || $operand === null) {
-        return $operand;
-    }
-    return match ($source['function']['name'] ?? '') {
-        'integer' => truncate_decimal_operand($operand),
-        'offset' => apply_source_offset($source, $operand),
-        default => canonical_decimal_operand($operand),
-    };
+    return $operand;
 }
 
 function apply_source_offset(array $source, string $operand): ?string
@@ -319,7 +378,7 @@ function apply_source_offset(array $source, string $operand): ?string
     } catch (\Throwable) {
         return null;
     }
-    if ($delta === null) {
+    if ($delta === null || $subtract !== null && $delta === PHP_INT_MIN) {
         return null;
     }
     return add_integer_offset_decimal($operand, $add !== null ? $delta : -$delta);
@@ -527,7 +586,10 @@ function append_minimum_fraction_digits(string $formatted, int $minimumFractionD
 function minimum_fraction_digits(array $call): int
 {
     $value = $call['optionValue']('minimumFractionDigits', null);
-    return $value === null ? 0 : parse_non_negative_option($value, 'minimumFractionDigits option must be a non-negative integer.');
+    $minimum = $value === null ? 0 : parse_non_negative_option($value, 'minimumFractionDigits option must be a non-negative integer.');
+    $maximum = maximum_fraction_digits($call);
+    if ($maximum !== null && $minimum > $maximum) throw MF2Error::badOption('minimumFractionDigits must not exceed maximumFractionDigits.');
+    return $minimum;
 }
 
 function maximum_fraction_digits(array $call): ?int
@@ -538,7 +600,7 @@ function maximum_fraction_digits(array $call): ?int
 
 function parse_non_negative_option(mixed $value, string $message): int
 {
-    if (preg_match('/^\d+$/', value_to_string($value)) !== 1) {
+    if (preg_match('/^[0-9]+$/D', value_to_string($value)) !== 1 || (float) $value > 1000) {
         throw MF2Error::badOption($message);
     }
     return (int) $value;
@@ -557,8 +619,8 @@ function offset_delta(array $call): int
         throw MF2Error::badOption('Offset function requires exactly one of add or subtract.');
     }
     $value = parse_integer($add ?? $subtract);
-    if ($value === null) {
-        throw MF2Error::badOption($add !== null ? 'Offset add option must be an integer.' : 'Offset subtract option must be an integer.');
+    if ($value === null || $subtract !== null && $value === PHP_INT_MIN) {
+        throw MF2Error::badOption('Offset option is outside the supported signed integer range.');
     }
     return $add !== null ? $value : -$value;
 }
@@ -578,5 +640,18 @@ function parse_integer(mixed $value): ?int
     if (preg_match('/^[+-]?\d+$/', $text) !== 1) {
         return null;
     }
+    $negative = str_starts_with($text, '-');
+    $digits = ltrim(ltrim($text, '+-'), '0');
+    $maximum = $negative ? substr((string) PHP_INT_MIN, 1) : (string) PHP_INT_MAX;
+    if (strlen($digits) > strlen($maximum) || strlen($digits) === strlen($maximum) && strcmp($digits, $maximum) > 0) return null;
     return (int) $text;
+}
+
+function scaled_percent(float $value): float
+{
+    $text = strtolower((string) json_encode($value, JSON_THROW_ON_ERROR));
+    $parts = explode('e', $text, 2);
+    $scaled = (float) ($parts[0] . 'e' . ((int) ($parts[1] ?? 0) + 2));
+    if (!is_finite($scaled)) throw MF2Error::badOperand('Scaled percent operand is outside the supported range.');
+    return $scaled;
 }

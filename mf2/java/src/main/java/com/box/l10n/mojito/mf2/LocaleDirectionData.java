@@ -1,0 +1,11 @@
+// Generated from pinned Unicode CLDR by mf2/cldr/update_generated.sh; do not edit by hand.
+package com.box.l10n.mojito.mf2;
+
+final class LocaleDirectionData {
+  static final String LTR_SCRIPTS = " Aghb Ahom Armn Bali Bamu Bass Batk Beng Berf Bhks Bopo Brah Bugi Buhd Cakm Cans Cari Cham Cher Copt Cpmn Cyrl Deva Diak Dogr Dsrt Dupl Egyp Elba Ethi Geor Glag Gong Gonm Goth Gran Grek Gujr Gukh Guru Hanb Hang Hani Hano Hans Hant Hira Hluw Hmng Hmnp Ital Jamo Java Jpan Kali Kana Kawi Khmr Khoj Kits Knda Kore Krai Kthi Lana Laoo Latn Lepc Limb Lina Linb Lisu Lyci Mahj Maka Marc Medf Mlym Modi Mong Mroo Mtei Mult Mymr Nagm Nand Newa Nshu Ogam Olck Onao Orya Osge Osma Pauc Perm Phag Plrd Rjng Runr Saur Sgnw Shaw Shrd Sidd Sind Sinh Sora Soyo Sund Sunu Sylo Tagb Takr Tale Talu Taml Tang Tavt Tayo Telu Tfng Tglg Thai Tibt Tirh Tnsa Todr Tols Toto Tutg Ugar Vaii Vith Wara Wcho Xpeo Xsux Yiii Zanb ";
+  static final String LTR_LANGUAGES = " af ak am an as asa ast az be bem bez bg bho blo bm bn bo br brx bs ca ce ceb cgg chr cs csw cv cy da de doi dsb dz ee el en eo es et eu ff fi fil fo fr fur fy ga gd gl gsw gu guw gv ha haw hi hnj hr hsb hu hy ia id ie ig ii io is it iu ja jbo jgo jmc jv jw ka kab kaj kcg kde kea kk kkj kl km kn ko kok ksb ksh ku kw ky lag lb lg lij lkt lld ln lo lt lv mas mg mgo mk ml mn mo mr ms mt my naq nb nd ne nl nn nnh no nr nso ny nyn om or os osa pa pap pcm pl prg pt rm ro rof ru rwk sah saq sat sc scn se seh ses sg sgs shi si sk sl sma smj smn sms sn so sq sr ss ssy st su sv sw ta te teo th ti tig tk tl tn to tpi tr ts tzm uk und uz ve vec vi vo vun wa wae wo xh xog yo yue zh zu ";
+  static final String LTR_REGION_OVERRIDES = " sd-IN ug-KZ ug-MN ";
+  static final String RTL_SCRIPTS = " Adlm Arab Armi Avst Chrs Cprt Elym Gara Hatr Hebr Hung Khar Lydi Mand Mani Mend Merc Mero Narb Nbat Nkoo Orkh Ougr Palm Phli Phlp Phnx Prti Rohg Samr Sarb Sidt Sogd Sogo Syrc Thaa Yezi ";
+  static final String RTL_LANGUAGES = " ar ars bal ckb dv fa he ks nqo ps sd sdh syr ug ur yi ";
+  static final String RTL_REGION_OVERRIDES = " az-IQ az-IR ha-CM ha-SD kk-AF kk-CN kk-IR kk-MN ku-IQ ku-IR ku-LB ky-CN ms-CC pa-PK und-AE und-AF und-BH und-CC und-DZ und-EG und-EH und-IL und-IQ und-IR und-JO und-KM und-KW und-LB und-LY und-MA und-MR und-MV und-OM und-PK und-PS und-QA und-SA und-SD und-SS und-SY und-TD und-TN und-YE uz-AF ";
+}

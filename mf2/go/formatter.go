@@ -1,6 +1,7 @@
 package mf2
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
@@ -62,8 +63,11 @@ type Formatter func(FunctionCall) (string, error)
 type Selector func(FunctionMatch) (*int, error)
 
 type FunctionRegistry struct {
-	formatters map[string]Formatter
-	selectors  map[string]Selector
+	formatters        map[string]Formatter
+	selectors         map[string]Selector
+	numericFormatters map[string]bool
+	customFormatters  map[string]bool
+	customSelectors   map[string]bool
 }
 
 type FunctionCall struct {
@@ -86,6 +90,7 @@ type FunctionMatch struct {
 }
 
 type FunctionSource struct {
+	cache       *sourceCache
 	Value       string
 	Function    map[string]any
 	OptionValue func(string, string) (string, error)
@@ -97,7 +102,16 @@ func DefaultFunctionRegistry() FunctionRegistry {
 }
 
 func (r FunctionRegistry) WithFunction(name string, formatter Formatter) FunctionRegistry {
-	next := FunctionRegistry{formatters: map[string]Formatter{}, selectors: r.selectors}
+	next := FunctionRegistry{formatters: map[string]Formatter{}, selectors: r.selectors, numericFormatters: map[string]bool{}, customFormatters: map[string]bool{}, customSelectors: r.customSelectors}
+	for key, value := range r.customFormatters {
+		next.customFormatters[key] = value
+	}
+	next.customFormatters[name] = true
+	for key, value := range r.numericFormatters {
+		if key != name {
+			next.numericFormatters[key] = value
+		}
+	}
 	for key, value := range r.formatters {
 		next.formatters[key] = value
 	}
@@ -106,7 +120,11 @@ func (r FunctionRegistry) WithFunction(name string, formatter Formatter) Functio
 }
 
 func (r FunctionRegistry) WithSelector(name string, selector Selector) FunctionRegistry {
-	next := FunctionRegistry{formatters: r.formatters, selectors: map[string]Selector{}}
+	next := FunctionRegistry{formatters: r.formatters, selectors: map[string]Selector{}, numericFormatters: r.numericFormatters, customFormatters: r.customFormatters, customSelectors: map[string]bool{}}
+	for key, value := range r.customSelectors {
+		next.customSelectors[key] = value
+	}
+	next.customSelectors[name] = true
 	for key, value := range r.selectors {
 		next.selectors[key] = value
 	}
@@ -129,6 +147,10 @@ func (r FunctionRegistry) Format(call FunctionCall) (string, error) {
 	if formatter == nil {
 		return "", unsupportedFunction(stringField(call.Function, "name"))
 	}
+	if r.customFormatters[stringField(call.Function, "name")] {
+		call.Function = detachedFunction(call.Function)
+		call.InheritedSource = detachedFunctionSource(call.InheritedSource)
+	}
 	return formatter(call)
 }
 
@@ -137,17 +159,26 @@ func (r FunctionRegistry) Select(match FunctionMatch) (*int, error) {
 	if selector == nil {
 		return nil, nil
 	}
+	if r.customSelectors[stringField(match.Function, "name")] {
+		match.Function = detachedFunction(match.Function)
+		match.InheritedSource = detachedFunctionSource(match.InheritedSource)
+	}
 	return selector(match)
 }
 
 func FormatMessage(model Model, arguments map[string]any, options Options) FormatResult {
-	result := FormatMessageToParts(model, arguments, options)
-	return FormatResult{Value: partsToString(result.Parts, bidiIsolation(options)), Errors: result.Errors}
+	result, isolation := renderMessage(model, arguments, options)
+	return FormatResult{Value: renderPartsToString(result.Parts, bidiIsolation(options), isolation), Errors: result.Errors}
 }
 
 func FormatMessageToParts(model Model, arguments map[string]any, options Options) PartsResult {
+	result, _ := renderMessage(model, arguments, options)
+	return result
+}
+
+func renderMessage(model Model, arguments map[string]any, options Options) (PartsResult, []bool) {
 	if err := validateModel(model); err != nil {
-		return PartsResult{Errors: []Error{asMF2Error(err)}}
+		return PartsResult{Errors: []Error{asMF2Error(err)}}, nil
 	}
 	context := newFormatContext(
 		arguments,
@@ -170,10 +201,20 @@ func FormatMessageToParts(model Model, arguments map[string]any, options Options
 	if err != nil {
 		context.errors = append(context.errors, asMF2Error(err))
 	}
-	return PartsResult{Parts: parts, Errors: context.errors}
+	return PartsResult{Parts: parts, Errors: context.errors}, context.expressionIsolation
+}
+
+type bidiState struct {
+	resolvedDirection string
+	direction         string
+	force             bool
 }
 
 type formatContext struct {
+	sourceBidi          map[*FunctionSource]bidiState
+	expressionIsolation []bool
+	localeIsLTR         bool
+	failedSelectors     map[int]bool
 	arguments           map[string]any
 	locals              map[string]resolvedValue
 	failedLocals        map[string]bool
@@ -196,11 +237,13 @@ func (r resolvedValue) rendered() string {
 }
 
 type expressionOutput struct {
-	value          string
-	hadError       bool
-	source         *FunctionSource
-	direction      string
-	fallbackSource string
+	resolvedDirection string
+	forceIsolation    bool
+	value             string
+	hadError          bool
+	source            *FunctionSource
+	direction         string
+	fallbackSource    string
 }
 
 func newFormatContext(
@@ -211,14 +254,18 @@ func newFormatContext(
 	onMissingArgument RecoveryHandler,
 	onFormatError RecoveryHandler,
 ) *formatContext {
-	if arguments == nil {
-		arguments = map[string]any{}
+	snapshot := make(map[string]any, len(arguments))
+	for name, value := range arguments {
+		snapshot[normalizeStringKey(name)] = value
 	}
+	arguments = snapshot
 	return &formatContext{
+		sourceBidi:        map[*FunctionSource]bidiState{},
 		arguments:         arguments,
 		locals:            map[string]resolvedValue{},
 		failedLocals:      map[string]bool{},
 		locale:            locale,
+		localeIsLTR:       localeIsLtr(locale),
 		functions:         functions,
 		fallback:          fallback,
 		onMissingArgument: onMissingArgument,
@@ -240,7 +287,7 @@ func (c *formatContext) applyDeclarations(declarations []any) error {
 			if err != nil {
 				return err
 			}
-			name := stringField(declaration, "name")
+			name := normalizeStringKey(stringField(declaration, "name"))
 			if output.hadError {
 				c.failedLocals[name] = true
 				delete(c.locals, name)
@@ -258,7 +305,7 @@ func (c *formatContext) applyInputDeclaration(input map[string]any) error {
 	if !ok || !c.functions.HasFormatter(functionRef) || !c.functions.HasSelector(functionRef) {
 		return nil
 	}
-	name := stringField(input, "name")
+	name := normalizeStringKey(stringField(input, "name"))
 	if !c.hasValue(name) {
 		if !c.fallback {
 			return missingArgument(name)
@@ -271,6 +318,7 @@ func (c *formatContext) applyInputDeclaration(input map[string]any) error {
 	if err := c.recordFunctionResolutionErrors(functionRef, inputValue.source); err != nil {
 		return err
 	}
+	bidi := c.resolveBidi(functionRef, inputValue.source)
 	rendered := inputValue.rendered()
 	formatted, err := c.functions.Format(FunctionCall{
 		Value:    rendered,
@@ -294,11 +342,12 @@ func (c *formatContext) applyInputDeclaration(input map[string]any) error {
 	if inputValue.source != nil {
 		sourceValue = inputValue.source.Value
 	}
-	c.locals[name] = resolvedValue{rawValue: formatted, source: c.functionSource(sourceValue, functionRef, inputValue.source)}
+	c.locals[name] = resolvedValue{rawValue: formatted, source: c.functionSource(sourceValue, functionRef, inputValue.source, bidi)}
 	return nil
 }
 
 func (c *formatContext) formatSelectToParts(selectors []any, variants []any) ([]Part, error) {
+	c.failedSelectors = map[int]bool{}
 	selectorValues := make([]selectorValue, 0, len(selectors))
 	for _, raw := range selectors {
 		value, err := c.selectorValue(asObject(raw))
@@ -338,7 +387,7 @@ func (c *formatContext) formatSelectToParts(selectors []any, variants []any) ([]
 }
 
 func (c *formatContext) selectorValue(selector map[string]any) (selectorValue, error) {
-	name := stringField(selector, "name")
+	name := normalizeStringKey(stringField(selector, "name"))
 	annotation, hasAnnotation := c.selectorAnnotations[name]
 	if !c.hasValue(name) {
 		if !c.fallback {
@@ -347,7 +396,7 @@ func (c *formatContext) selectorValue(selector map[string]any) (selectorValue, e
 		if !c.failedLocals[name] {
 			c.errors = append(c.errors, unresolvedVariable(name))
 		}
-		if hasAnnotation && c.functions.HasSelector(annotation.function) {
+		if hasAnnotation && !annotation.isString() {
 			if !c.failedLocals[name] {
 				c.errors = append(c.errors, badOperand("Selector operand is not available."))
 			}
@@ -358,9 +407,7 @@ func (c *formatContext) selectorValue(selector map[string]any) (selectorValue, e
 			normalized = "\x00"
 		}
 		function := map[string]any(nil)
-		if hasAnnotation {
-			function = annotation.function
-		}
+
 		return selectorValue{rendered: "", normalizedRendered: normalized, exactMatch: false, function: function}, nil
 	}
 	value := c.value(name)
@@ -375,6 +422,9 @@ func (c *formatContext) selectorValue(selector map[string]any) (selectorValue, e
 	selectionKey := ""
 	if hasAnnotation {
 		selectionKey = selectionKeyFor(c.locale, annotation, value)
+		if annotation.isNumeric() && annotation.numberSelect != "exact" && selectionKey == "" {
+			c.errors = append(c.errors, badSelector("Numeric plural operand is outside the supported range."))
+		}
 	}
 	var function map[string]any
 	if hasAnnotation {
@@ -415,9 +465,10 @@ func (c *formatContext) formatPatternToParts(pattern []any) ([]Part, error) {
 				}
 				parts = append(parts, part)
 			} else {
+				c.expressionIsolation = append(c.expressionIsolation, !(c.localeIsLTR && !output.forceIsolation && output.resolvedDirection == "ltr"))
 				expressionPart := Part{"type": "expression", "value": output.value}
 				if attrs := asObject(object["attributes"]); len(attrs) > 0 {
-					expressionPart["attributes"] = attrs
+					expressionPart["attributes"] = detachedModelFields(attrs)
 				}
 				if output.direction != "" {
 					expressionPart["direction"] = output.direction
@@ -434,10 +485,10 @@ func (c *formatContext) formatPatternToParts(pattern []any) ([]Part, error) {
 			}
 			markup := Part{"type": "markup", "kind": stringField(object, "kind"), "name": stringField(object, "name")}
 			if options := asObject(object["options"]); len(options) > 0 {
-				markup["options"] = options
+				markup["options"] = detachedModelFields(options)
 			}
 			if attrs := asObject(object["attributes"]); len(attrs) > 0 {
-				markup["attributes"] = attrs
+				markup["attributes"] = detachedModelFields(attrs)
 			}
 			parts = append(parts, markup)
 		default:
@@ -460,7 +511,7 @@ func (c *formatContext) formatExpressionOutput(expression map[string]any) (expre
 			value = stringField(arg, "value")
 			rawValue = value
 		case "variable":
-			name := stringField(arg, "name")
+			name := normalizeStringKey(stringField(arg, "name"))
 			if !c.hasValue(name) {
 				if !c.fallback {
 					return expressionOutput{}, missingArgument(name)
@@ -469,8 +520,12 @@ func (c *formatContext) formatExpressionOutput(expression map[string]any) (expre
 				if !c.failedLocals[name] {
 					c.errors = append(c.errors, err)
 				}
-				if _, hasFunction := objectField(expression, "function"); hasFunction {
-					c.errors = append(c.errors, badOperand("Function operand is not available."))
+				if function, hasFunction := objectField(expression, "function"); hasFunction {
+					if c.functions.HasFormatter(function) {
+						c.errors = append(c.errors, badOperand("Function operand is not available."))
+					} else {
+						c.errors = append(c.errors, mf2Error("unknown-function", "Unknown function."))
+					}
 				}
 				source := fallbackSource(expression)
 				return expressionOutput{
@@ -488,16 +543,21 @@ func (c *formatContext) formatExpressionOutput(expression map[string]any) (expre
 		}
 	}
 	functionRef, hasFunction := objectField(expression, "function")
+	if !hasFunction && source == nil {
+		switch rawValue.(type) {
+		case float32, float64, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+			functionRef = map[string]any{"type": "function", "name": "number"}
+			hasFunction = true
+		}
+	}
 	if !hasFunction {
-		return expressionOutput{value: value, source: source, direction: bidiDirectionFromSource(source)}, nil
+		bidi := c.sourceBidi[source]
+		return expressionOutput{value: value, source: source, direction: bidi.direction, forceIsolation: bidi.force, resolvedDirection: bidi.resolvedDirection}, nil
 	}
 	if err := c.recordFunctionResolutionErrors(functionRef, source); err != nil {
 		return expressionOutput{}, err
 	}
-	direction, err := bidiDirectionForFunction(functionRef, source)
-	if err != nil {
-		return expressionOutput{}, err
-	}
+	bidi := c.resolveBidi(functionRef, source)
 	formatted, err := c.functions.Format(FunctionCall{
 		Value:    value,
 		RawValue: rawValue,
@@ -526,9 +586,11 @@ func (c *formatContext) formatExpressionOutput(expression map[string]any) (expre
 		sourceValue = source.Value
 	}
 	return expressionOutput{
-		value:     formatted,
-		source:    c.functionSource(sourceValue, functionRef, source),
-		direction: direction,
+		value:             formatted,
+		source:            c.functionSource(sourceValue, functionRef, source, bidi),
+		direction:         bidi.direction,
+		forceIsolation:    bidi.force,
+		resolvedDirection: bidi.resolvedDirection,
 	}, nil
 }
 
@@ -572,7 +634,7 @@ func (c *formatContext) optionValue(functionRef map[string]any, optionName, fall
 	case "literal":
 		return stringField(option, "value"), nil
 	case "variable":
-		name := stringField(option, "name")
+		name := normalizeStringKey(stringField(option, "name"))
 		if !c.hasValue(name) {
 			return "", missingArgument(name)
 		}
@@ -583,6 +645,9 @@ func (c *formatContext) optionValue(functionRef map[string]any, optionName, fall
 }
 
 func (c *formatContext) resolvedOptionValue(functionRef map[string]any, source *FunctionSource, optionName, fallback string) (string, error) {
+	if optionName == "u:dir" {
+		return fallback, nil
+	}
 	if hasOwn(asObject(functionRef["options"]), optionName) {
 		return c.optionValue(functionRef, optionName, fallback)
 	}
@@ -590,17 +655,45 @@ func (c *formatContext) resolvedOptionValue(functionRef map[string]any, source *
 }
 
 func inheritedNumericOptionValue(targetFunction string, source *FunctionSource, optionName, fallback string) (string, error) {
-	if source == nil || numericOptionIsDiscarded(targetFunction, optionName) {
-		return fallback, nil
+	type visit struct {
+		cache *sourceCache
+		key   string
 	}
-	sourceFunction := stringField(source.Function, "name")
-	if !inheritsNumericOptionsFrom(targetFunction, sourceFunction) || numericOptionIsDiscarded(sourceFunction, optionName) {
-		return fallback, nil
+	var visited []visit
+	result := cachedOption{}
+	for source != nil && !numericOptionIsDiscarded(targetFunction, optionName) {
+		cache := cacheForSource(source)
+		key := targetFunction + ":" + optionName
+		if cache != nil && cache.cacheable {
+			if cached, found := cache.options[key]; found {
+				result = cached
+				break
+			}
+			visited = append(visited, visit{cache, key})
+		}
+		sourceFunction := stringField(source.Function, "name")
+		if !inheritsNumericOptionsFrom(targetFunction, sourceFunction) || numericOptionIsDiscarded(sourceFunction, optionName) {
+			break
+		}
+		if hasOwn(asObject(source.Function["options"]), optionName) {
+			value, err := sourceOptionValue(source, optionName, "")
+			if err != nil {
+				return "", err
+			}
+			result = cachedOption{value: value, found: true}
+			break
+		}
+		targetFunction, source = sourceFunction, source.Inherited
 	}
-	if hasOwn(asObject(source.Function["options"]), optionName) {
-		return sourceOptionValue(source, optionName, fallback)
+	for _, item := range visited {
+		if len(item.cache.options) < 64 {
+			item.cache.options[item.key] = result
+		}
 	}
-	return inheritedNumericOptionValue(sourceFunction, source.Inherited, optionName, fallback)
+	if result.found {
+		return result.value, nil
+	}
+	return fallback, nil
 }
 
 func inheritsNumericOptionsFrom(targetFunction, sourceFunction string) bool {
@@ -662,13 +755,16 @@ func (c *formatContext) recordSelectorResolutionErrors(annotation selectorAnnota
 	return nil
 }
 
-func (c *formatContext) functionSource(value string, functionRef map[string]any, inherited *FunctionSource) *FunctionSource {
-	return &FunctionSource{
+func (c *formatContext) functionSource(value string, functionRef map[string]any, inherited *FunctionSource, bidi bidiState) *FunctionSource {
+	source := &FunctionSource{
 		Value:       value,
 		Function:    functionRef,
 		OptionValue: func(name, fallback string) (string, error) { return c.optionValue(functionRef, name, fallback) },
 		Inherited:   inherited,
 	}
+	source.cache = makeSourceCache(source)
+	c.sourceBidi[source] = bidi
+	return source
 }
 
 func (c *formatContext) validateVariant(variant map[string]any, selectorValues []selectorValue, signatures map[string]bool) error {
@@ -676,7 +772,7 @@ func (c *formatContext) validateVariant(variant map[string]any, selectorValues [
 	if len(keys) != len(selectorValues) {
 		return mf2Error("variant-key-count-mismatch", "Variant key count must match selector count.")
 	}
-	signature := strings.Join(variantKeySignature(keys, selectorValues), "\x1f")
+	signature := variantSignatureKey(keys, selectorValues)
 	if signatures[signature] {
 		return mf2Error("duplicate-variant", "Select variants must have unique key tuples.")
 	}
@@ -691,7 +787,7 @@ func (c *formatContext) variantMatchRank(variant map[string]any, selectorValues 
 	}
 	rank := make([]int, 0, len(keys))
 	for index, rawKey := range keys {
-		itemRank, ok, err := c.keyMatchRank(asObject(rawKey), selectorValues[index])
+		itemRank, ok, err := c.keyMatchRank(asObject(rawKey), selectorValues[index], index)
 		if err != nil || !ok {
 			return nil, false, err
 		}
@@ -700,7 +796,7 @@ func (c *formatContext) variantMatchRank(variant map[string]any, selectorValues 
 	return rank, true, nil
 }
 
-func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue) (int, bool, error) {
+func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue, index int) (int, bool, error) {
 	if stringField(key, "type") == "*" {
 		return 0, true, nil
 	}
@@ -708,7 +804,7 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 	if (selector.exactMatch && literalKeyMatches(value, selector)) || (selector.selectionKey != "" && value == selector.selectionKey) {
 		return 1, true, nil
 	}
-	if selector.function == nil {
+	if c.failedSelectors[index] || selector.function == nil {
 		return 0, false, nil
 	}
 	rank, err := c.functions.Select(FunctionMatch{
@@ -729,7 +825,10 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 		recoverable := fallbackError(err)
 		c.errors = append(c.errors, recoverable)
 		if recoverable.Code != "bad-variant-key" {
-			c.errors = append(c.errors, mf2Error("bad-selector", "Selector failed to match."))
+			c.failedSelectors[index] = true
+			if recoverable.Code != "bad-selector" {
+				c.errors = append(c.errors, badSelector("Selector failed to match."))
+			}
 		}
 		return 0, false, nil
 	}
@@ -740,6 +839,9 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 }
 
 func validateModel(model Model) error {
+	if !validModelShape(model) {
+		return mf2Error("invalid-model", "Message model does not match the shared model schema.")
+	}
 	declarations := arrayField(map[string]any(model), "declarations")
 	if err := validateDeclarations(declarations); err != nil {
 		return err
@@ -751,6 +853,35 @@ func validateModel(model Model) error {
 		if err := validateSelectorAnnotations(declarations, arrayField(map[string]any(model), "selectors")); err != nil {
 			return err
 		}
+		annotations := selectorAnnotations(declarations)
+		var selectors []selectorValue
+		for _, raw := range arrayField(map[string]any(model), "selectors") {
+			annotation := annotations[normalizeStringKey(stringField(asObject(raw), "name"))]
+			normalized := "\x00"
+			if annotation.isString() {
+				normalized = ""
+			}
+			selectors = append(selectors, selectorValue{normalizedRendered: normalized})
+		}
+		signatures := map[string]bool{}
+		fallback := false
+		for _, raw := range arrayField(map[string]any(model), "variants") {
+			variant := asObject(raw)
+			keys := arrayField(variant, "keys")
+			if len(keys) != len(selectors) {
+				return mf2Error("variant-key-count-mismatch", "Variant key count must match selector count.")
+			}
+			signature := variantSignatureKey(keys, selectors)
+			if signatures[signature] {
+				return mf2Error("duplicate-variant", "Select variants must have unique key tuples.")
+			}
+			signatures[signature] = true
+			fallback = fallback || isFallbackVariant(variant)
+		}
+		if !fallback {
+			return mf2Error("missing-fallback-variant", "Select messages must include a catch-all fallback variant.")
+		}
+
 		for _, raw := range arrayField(map[string]any(model), "variants") {
 			if err := validatePattern(arrayField(asObject(raw), "value")); err != nil {
 				return err
@@ -764,7 +895,7 @@ func validateDeclarations(declarations []any) error {
 	names := map[string]bool{}
 	for _, raw := range declarations {
 		declaration := asObject(raw)
-		name := stringField(declaration, "name")
+		name := normalizeStringKey(stringField(declaration, "name"))
 		if stringField(declaration, "type") == "input" {
 			if err := validateInputDeclaration(declaration); err != nil {
 				return err
@@ -785,7 +916,7 @@ func validateLocalReferences(declarations []any) error {
 		if stringField(declaration, "type") != "local" {
 			continue
 		}
-		name := stringField(declaration, "name")
+		name := normalizeStringKey(stringField(declaration, "name"))
 		forbidden[name] = true
 		if expressionReferencesAny(asObject(declaration["value"]), forbidden) {
 			return mf2Error("duplicate-declaration", "Local declaration $"+name+" must not reference itself or later local declarations.")
@@ -807,12 +938,12 @@ func expressionReferencesAny(expression map[string]any, names map[string]bool) b
 }
 
 func argReferencesAny(arg map[string]any, names map[string]bool) bool {
-	return stringField(arg, "type") == "variable" && names[stringField(arg, "name")]
+	return stringField(arg, "type") == "variable" && names[normalizeStringKey(stringField(arg, "name"))]
 }
 
 func validateInputDeclaration(declaration map[string]any) error {
 	arg := asObject(asObject(declaration["value"])["arg"])
-	if stringField(arg, "type") == "variable" && stringField(arg, "name") == stringField(declaration, "name") {
+	if stringField(arg, "type") == "variable" && normalizeStringKey(stringField(arg, "name")) == normalizeStringKey(stringField(declaration, "name")) {
 		return nil
 	}
 	return mf2Error("invalid-input-declaration", "Input declaration $"+stringField(declaration, "name")+" must bind the same variable name.")
@@ -845,7 +976,7 @@ func validateMarkup(markup map[string]any) error {
 func validateSelectorAnnotations(declarations []any, selectors []any) error {
 	annotations := selectorAnnotations(declarations)
 	for _, selector := range selectors {
-		name := stringField(asObject(selector), "name")
+		name := normalizeStringKey(stringField(asObject(selector), "name"))
 		if _, ok := annotations[name]; !ok {
 			return mf2Error("missing-selector-annotation", "Selector $"+name+" must reference a declaration with a function.")
 		}
@@ -859,31 +990,27 @@ type selectorAnnotation struct {
 }
 
 func selectorAnnotations(declarations []any) map[string]selectorAnnotation {
-	expressions := map[string]map[string]any{}
+	aliases := map[string][]string{}
 	annotations := map[string]selectorAnnotation{}
+	var pending []string
 	for _, raw := range declarations {
 		declaration := asObject(raw)
-		name := stringField(declaration, "name")
+		name := normalizeStringKey(stringField(declaration, "name"))
 		value := asObject(declaration["value"])
-		expressions[name] = value
-		if functionRef, ok := objectField(value, "function"); ok {
-			annotations[name] = newSelectorAnnotation(functionRef)
+		if function, ok := objectField(value, "function"); ok {
+			annotations[name] = newSelectorAnnotation(function)
+			pending = append(pending, name)
+		} else if arg := asObject(value["arg"]); stringField(arg, "type") == "variable" {
+			source := normalizeStringKey(stringField(arg, "name"))
+			aliases[source] = append(aliases[source], name)
 		}
 	}
-	changed := true
-	for changed {
-		changed = false
-		for name, expression := range expressions {
-			if _, exists := annotations[name]; exists {
-				continue
-			}
-			arg := asObject(expression["arg"])
-			if stringField(arg, "type") != "variable" {
-				continue
-			}
-			if annotation, ok := annotations[stringField(arg, "name")]; ok {
-				annotations[name] = annotation
-				changed = true
+	for index := 0; index < len(pending); index++ {
+		source := pending[index]
+		for _, alias := range aliases[source] {
+			if _, exists := annotations[alias]; !exists {
+				annotations[alias] = annotations[source]
+				pending = append(pending, alias)
 			}
 		}
 	}
@@ -939,17 +1066,29 @@ func selectionKeyFor(locale string, annotation selectorAnnotation, value resolve
 			if err != nil {
 				return ""
 			}
-			operand = strconv.FormatFloat(parsed*100, 'f', -1, 64)
+			scaled, err := scaledPercent(parsed)
+			if err != nil {
+				return ""
+			}
+			operand = strconv.FormatFloat(scaled, 'f', -1, 64)
 		}
 	}
 	return selectPluralCategory(locale, operand, annotation.numberSelect)
 }
 
 func selectPluralCategory(locale string, value any, selectType string) string {
+	if !supportedPluralOperand(valueToString(value)) {
+		return ""
+	}
 	if selectType == "ordinal" {
 		return selectOrdinal(locale, value)
 	}
 	return selectCardinal(locale, value)
+}
+
+func variantSignatureKey(keys []any, selectors []selectorValue) string {
+	encoded, _ := json.Marshal(variantKeySignature(keys, selectors))
+	return string(encoded)
 }
 
 func variantKeySignature(keys []any, selectorValues []selectorValue) []string {
@@ -1010,7 +1149,7 @@ func fallbackSource(expression map[string]any) string {
 		return expressionArgSource(arg)
 	}
 	if functionRef, ok := objectField(expression, "function"); ok {
-		return functionSource(functionRef)
+		return ":" + stringField(functionRef, "name")
 	}
 	return ""
 }
@@ -1068,6 +1207,11 @@ func quoteLiteralSource(value string) string {
 }
 
 func partsToString(parts []Part, bidiIsolation string) string {
+	return renderPartsToString(parts, bidiIsolation, nil)
+}
+
+func renderPartsToString(parts []Part, bidiIsolation string, isolation []bool) string {
+	expressionIndex := 0
 	var output strings.Builder
 	for _, part := range parts {
 		switch part["type"] {
@@ -1080,7 +1224,12 @@ func partsToString(parts []Part, bidiIsolation string) string {
 				output.WriteString(fallbackValue(valueToString(part["source"])))
 			}
 		case "expression":
-			output.WriteString(isolateExpression(valueToString(part["value"]), bidiIsolation, valueToString(part["direction"])))
+			mode := bidiIsolation
+			if isolation != nil && !isolation[expressionIndex] {
+				mode = "none"
+			}
+			expressionIndex++
+			output.WriteString(isolateExpression(valueToString(part["value"]), mode, valueToString(part["direction"])))
 		}
 	}
 	return output.String()
@@ -1104,33 +1253,42 @@ func bidiMarker(direction string) string {
 	}
 }
 
-func bidiDirectionForFunction(functionRef map[string]any, source *FunctionSource) (string, error) {
-	if value := functionOptionLiteral(functionRef, "u:dir", ""); value != "" {
-		return parseBidiDirection(value)
+func (c *formatContext) resolveBidi(function map[string]any, source *FunctionSource) bidiState {
+	inherited := c.sourceBidi[source].direction
+	resolved := c.sourceBidi[source].resolvedDirection
+	if inherited == "" && resolved == "" && c.localeIsLTR && c.functions.numericFormatters[stringField(function, "name")] {
+		resolved = "ltr"
 	}
-	return bidiDirectionFromSource(source), nil
-}
-
-func bidiDirectionFromSource(source *FunctionSource) string {
-	if source == nil {
-		return ""
+	option, exists := asObject(function["options"])["u:dir"]
+	if !exists {
+		return bidiState{direction: inherited, resolvedDirection: resolved}
 	}
-	if value := functionOptionLiteral(source.Function, "u:dir", ""); value != "" {
-		direction, err := parseBidiDirection(value)
-		if err == nil {
-			return direction
+	value := asObject(option)
+	var raw any
+	if stringField(value, "type") == "variable" {
+		name := normalizeStringKey(stringField(value, "name"))
+		if !c.hasValue(name) {
+			c.errors = append(c.errors, unresolvedVariable(name), badOption("u:dir option must resolve to ltr, rtl, auto, or inherit."))
+			return bidiState{direction: inherited, resolvedDirection: resolved}
+		}
+		raw = c.value(name).rawValue
+	} else {
+		raw = value["value"]
+	}
+	if text, ok := raw.(string); ok {
+		if text == "inherit" {
+			return bidiState{direction: inherited, resolvedDirection: resolved}
+		}
+		if text == "ltr" || text == "rtl" || text == "auto" {
+			resolved = text
+			if text == "auto" {
+				resolved = ""
+			}
+			return bidiState{direction: text, force: true, resolvedDirection: resolved}
 		}
 	}
-	return bidiDirectionFromSource(source.Inherited)
-}
-
-func parseBidiDirection(value string) (string, error) {
-	switch value {
-	case "auto", "ltr", "rtl":
-		return value, nil
-	default:
-		return "", badOption("u:dir option must be auto, ltr, or rtl.")
-	}
+	c.errors = append(c.errors, badOption("u:dir option must resolve to ltr, rtl, auto, or inherit."))
+	return bidiState{direction: inherited, resolvedDirection: resolved}
 }
 
 func valueToString(value any) string {
@@ -1151,9 +1309,6 @@ func valueToString(value any) string {
 	case float64:
 		if math.IsInf(typed, 0) || math.IsNaN(typed) {
 			return strconv.FormatFloat(typed, 'f', -1, 64)
-		}
-		if math.Trunc(typed) == typed {
-			return strconv.FormatInt(int64(typed), 10)
 		}
 		return strconv.FormatFloat(typed, 'f', -1, 64)
 	case float32:
@@ -1238,4 +1393,21 @@ func hasOwn[T any](values map[string]T, name string) bool {
 func hasOwnAny(values map[string]any, name string) bool {
 	_, ok := values[name]
 	return ok
+}
+
+func supportedPluralOperand(value string) bool {
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil || math.IsNaN(parsed) || math.IsInf(parsed, 0) || math.Abs(parsed) >= math.Ldexp(1, strconv.IntSize-1) {
+		return false
+	}
+	mantissa := strings.SplitN(strings.ToLower(value), "e", 2)[0]
+	if dot := strings.IndexByte(mantissa, '.'); dot >= 0 {
+		fraction := mantissa[dot+1:]
+		if fraction != "" {
+			if _, err := strconv.Atoi(fraction); err != nil {
+				return false
+			}
+		}
+	}
+	return true
 }

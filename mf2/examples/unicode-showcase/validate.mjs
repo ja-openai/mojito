@@ -104,10 +104,11 @@ try {
         [],
         `${message.id}/${test.locale}: runtime`,
       );
-      const knownMismatch = Boolean(
-        test.knownGap && result.value !== test.expected,
-      );
-      if (test.expected !== undefined && !test.knownGap)
+      // Every recorded expected output is an assertion. A fixed showcase option
+      // cannot remain hidden behind a stale known-gap exemption.
+      assert.equal(test.knownGap, undefined, `${message.id}: stale known gap`);
+      const knownMismatch = false;
+      if (test.expected !== undefined)
         assert.equal(
           result.value,
           test.expected,

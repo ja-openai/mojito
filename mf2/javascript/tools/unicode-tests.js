@@ -150,8 +150,8 @@ function checkRuntimeTest(defaults, test) {
   }
 }
 
-function officialFunctionRegistry() {
-  return FunctionRegistry.defaults()
+export function officialFunctionRegistry(base = FunctionRegistry.defaults()) {
+  return base
     .withFunction("test:function", officialTestFunction)
     .withFunction("test:select", officialTestSelectResolver)
     .withFunction("test:format", officialTestFormatResolver)

@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate CLDR plural rule implementations.")
     parser.add_argument("--locales", default="all", help="Comma-separated locales or 'all'.")
     parser.add_argument("--out", default="generated/all", help="Output directory.")
-    parser.add_argument("--cldr-ref", default="main", help="unicode-org/cldr-json git ref.")
+    parser.add_argument("--cldr-ref", default=(Path(__file__).resolve().parents[1] / "pinned-ref.txt").read_text().strip(), help="unicode-org/cldr-json git ref (defaults to the checked-in immutable revision).")
     parser.add_argument(
         "--targets",
         default="all",

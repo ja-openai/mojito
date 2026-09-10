@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from decimal import Decimal, DecimalException, ROUND_DOWN, localcontext
 from typing import Any
 
@@ -10,7 +10,6 @@ try:
         format_date,
         format_datetime,
         format_time,
-        format_timedelta,
         get_timezone,
     )
     from babel.numbers import format_currency, format_decimal, format_percent
@@ -34,7 +33,7 @@ __all__ = ["babel_function_registry"]
 
 
 def babel_function_registry() -> FunctionRegistry:
-    return (
+    registry = (
         FunctionRegistry.portable()
         .with_function("number", _format_number)
         .with_function("percent", _format_percent)
@@ -45,6 +44,8 @@ def babel_function_registry() -> FunctionRegistry:
         .with_function("datetime", _format_datetime)
         .with_function("relativeTime", _format_relative_time)
     )
+    registry._production_numeric_formatters = frozenset({"number", "integer", "percent", "currency"})
+    return registry
 
 
 def _format_number(call: FunctionCall) -> str:
@@ -52,12 +53,17 @@ def _format_number(call: FunctionCall) -> str:
         call, "Number function requires a numeric operand."
     )
     try:
+        locale = _babel_locale(call)
         with localcontext() as context:
-            context.prec = _decimal_precision(value, _maximum_fraction_digits(call))
+            # Babel still quantizes to the locale pattern's maximum precision
+            # when decimal_quantization=False (POSIX uses six places).
+            context.prec = _decimal_precision(
+                value, _fraction_precision(call, locale.decimal_formats[None].frac_prec[1])
+            )
             rendered = format_decimal(
                 value,
                 format=_decimal_pattern(call),
-                locale=_babel_locale(call),
+                locale=locale,
                 decimal_quantization=_maximum_fraction_digits(call) is not None,
             )
     except DecimalException as error:
@@ -72,12 +78,15 @@ def _format_percent(call: FunctionCall) -> str:
         call, "Percent function requires a numeric operand."
     )
     try:
+        locale = _babel_locale(call)
         with localcontext() as context:
-            context.prec = _decimal_precision(value, _maximum_fraction_digits(call)) + 2
+            context.prec = _decimal_precision(
+                value, _fraction_precision(call, locale.percent_formats[None].frac_prec[1])
+            ) + 2
             rendered = format_percent(
                 value,
                 format=_decimal_pattern(call, suffix="%"),
-                locale=_babel_locale(call),
+                locale=locale,
                 decimal_quantization=_maximum_fraction_digits(call) is not None,
             )
     except DecimalException as error:
@@ -124,6 +133,8 @@ def _format_currency(call: FunctionCall) -> str:
             "bad-operand",
             "Currency function requires a currency operand or currency option.",
         )
+    if len(currency) != 3 or not currency.isascii() or not currency.isalpha():
+        raise MF2Error("bad-option", "Currency option must contain three ASCII letters.")
     try:
         with localcontext() as context:
             context.prec = _decimal_precision(value, 2)
@@ -138,6 +149,9 @@ def _format_currency(call: FunctionCall) -> str:
 
 def _format_date(call: FunctionCall) -> str:
     value = _date_from(call.raw_value, call.value, call.inherited_source)
+    zone = _time_zone(call, value)
+    if isinstance(value, datetime) and value.utcoffset() is not None:
+        value = value.astimezone(zone)
     return format_date(
         value,
         format=_date_style(call),
@@ -183,17 +197,34 @@ def _format_relative_time(call: FunctionCall) -> str:
             "Babel relative time formatting does not support numeric=auto natural relative terms.",
         )
     try:
-        return format_timedelta(
-            _timedelta(value, unit),
-            granularity=unit,
-            add_direction=True,
-            format=style,
-            locale=_babel_locale(call),
-        )
+        locale = _babel_locale(call)
+        # Babel's duration formatter promotes units and rounds their magnitude.
+        # MF2 relativeTime keeps the requested unit and the numeric operand.
+        # These are the same CLDR date fields used by Babel's format_timedelta.
+        fields = locale._data["date_fields"]
+        tense = "future" if value >= 0 else "past"
+        # CLDR's short/narrow entries may omit a tense or plural category.
+        # A nonempty style dictionary is not necessarily complete.
+        patterns = fields.get(f"{unit}-{style}", {}).get(tense, {})
+        base_patterns = fields[unit][tense]
+        magnitude = value.copy_abs()
+        category = locale.plural_form(magnitude)
+        pattern = (patterns.get(category) or patterns.get("other")
+                   or base_patterns.get(category) or base_patterns["other"])
+        with localcontext() as context:
+            context.prec = _decimal_precision(magnitude, locale.decimal_formats[None].frac_prec[1])
+            rendered = format_decimal(magnitude, locale=locale, decimal_quantization=False)
+        return pattern.replace("{0}", rendered)
     except (DecimalException, OverflowError, ValueError) as error:
         raise MF2Error(
             "bad-operand", "Relative time function requires a bounded numeric operand."
         ) from error
+
+
+def _fraction_precision(call: FunctionCall, locale_maximum: int) -> int:
+    # Minimum-only options also introduce required places into Babel's pattern.
+    return max(_minimum_fraction_digits(call) or 0,
+               _maximum_fraction_digits(call) or 0, locale_maximum)
 
 
 def _decimal_pattern(call: FunctionCall, suffix: str = "") -> str | None:
@@ -250,7 +281,7 @@ def _date_from(
     source: FunctionSource | None,
 ) -> date:
     if isinstance(raw_value, datetime):
-        return raw_value.date()
+        return raw_value
     if isinstance(raw_value, date):
         return raw_value
     try:
@@ -258,7 +289,7 @@ def _date_from(
     except ValueError as error:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
-            return parsed_datetime.date()
+            return parsed_datetime
         inherited = _inherited_source_value(source, {"date", "datetime"})
         if inherited is not None:
             inherited_date = _parse_date_or_datetime_date(inherited)
@@ -323,7 +354,7 @@ def _parse_date_or_datetime_date(value: str) -> date | None:
         return date.fromisoformat(value)
     except ValueError:
         parsed_datetime = _parse_datetime_or_none(value)
-        return parsed_datetime.date() if parsed_datetime is not None else None
+        return parsed_datetime
 
 
 def _parse_time_or_datetime(value: str) -> time | datetime | None:
@@ -456,7 +487,7 @@ def _option_one_of(
     return value
 
 
-def _time_zone(call: FunctionCall, temporal_value: time | datetime) -> Any:
+def _time_zone(call: FunctionCall, temporal_value: date | time) -> Any:
     option = call.option_value("timeZone", "UTC") or "UTC"
     if option == "input":
         input_timezone = getattr(temporal_value, "tzinfo", None)
@@ -473,19 +504,6 @@ def _time_zone(call: FunctionCall, temporal_value: time | datetime) -> Any:
             "bad-option",
             "timeZone option must be a valid time zone identifier.",
         ) from error
-
-
-def _timedelta(value: Decimal, unit: str) -> timedelta:
-    amount = float(value)
-    return {
-        "second": timedelta(seconds=amount),
-        "minute": timedelta(minutes=amount),
-        "hour": timedelta(hours=amount),
-        "day": timedelta(days=amount),
-        "week": timedelta(weeks=amount),
-        "month": timedelta(days=amount * 30),
-        "year": timedelta(days=amount * 365),
-    }[unit]
 
 
 def _apply_sign_display(rendered: str, value: Decimal, call: FunctionCall) -> str:

@@ -29,6 +29,7 @@ const CHECKS = [
     ['tests/pattern-selection.json', 'runtime'],
 ];
 
+if (!defined('MF2_OFFICIAL_BRIDGE')) {
 $root = $argv[1] ?? realpath(__DIR__ . '/../../third_party/message-format-wg/test');
 $baselinePath = $argv[2] ?? realpath(__DIR__ . '/../../conformance/unicode-official-baseline.json');
 
@@ -60,6 +61,8 @@ if (count($summary['skipExamples']) > 0) {
 echo 'PHP Unicode official tests passed=' . $summary['passed'] . ' skipped=' . $summary['skipped'] . ' not_wired=' . $summary['notWired'] . ' total=' . ($summary['passed'] + $summary['skipped'] + $summary['notWired']) . "\n";
 
 check_baseline($summary, $baselinePath);
+
+}
 
 function run_file(string $root, string $path, string $mode, array &$summary): void
 {

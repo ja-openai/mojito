@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use std::sync::OnceLock;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::cldr::{
     select_cardinal_plural_category, select_ordinal_plural_category, NumberOperands,
@@ -37,6 +37,7 @@ pub enum FormattedPart {
     Expression {
         value: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(alias = "direction")]
         dir: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         attributes: Option<BTreeMap<String, AttributeValue>>,
@@ -349,6 +350,23 @@ enum BidiDirection {
     Rtl,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct ResolvedBidi {
+    direction: Option<BidiDirection>,
+    explicit_direction: bool,
+    force_isolation: bool,
+}
+
+impl ResolvedBidi {
+    fn public_direction(self) -> Option<String> {
+        if self.explicit_direction {
+            self.direction.map(|direction| direction.name().to_string())
+        } else {
+            None
+        }
+    }
+}
+
 impl BidiDirection {
     fn marker(self) -> char {
         match self {
@@ -374,6 +392,7 @@ pub type FunctionSelector = for<'a> fn(FunctionMatch<'a>) -> Result<Option<i32>,
 pub struct FunctionRegistry {
     formatters: BTreeMap<String, FunctionFormatter>,
     selectors: BTreeMap<String, FunctionSelector>,
+    production_numeric_formatters: BTreeSet<String>,
 }
 
 impl FunctionRegistry {
@@ -385,6 +404,9 @@ impl FunctionRegistry {
         let mut registry = Self::empty_registry();
         portable_functions::register(&mut registry);
         registry
+            .production_numeric_formatters
+            .extend(["number", "integer", "percent"].map(str::to_string));
+        registry
     }
 
     #[cfg(feature = "icu4x")]
@@ -392,17 +414,23 @@ impl FunctionRegistry {
         let mut registry = Self::portable();
         icu4x_functions::register(&mut registry);
         registry
+            .production_numeric_formatters
+            .extend(["number", "integer"].map(str::to_string));
+        registry
     }
 
     fn empty_registry() -> Self {
         Self {
             formatters: BTreeMap::new(),
             selectors: BTreeMap::new(),
+            production_numeric_formatters: BTreeSet::new(),
         }
     }
 
     pub fn with_function(mut self, name: impl Into<String>, formatter: FunctionFormatter) -> Self {
-        self.formatters.insert(name.into(), formatter);
+        let name = name.into();
+        self.production_numeric_formatters.remove(&name);
+        self.formatters.insert(name, formatter);
         self
     }
 
@@ -412,7 +440,9 @@ impl FunctionRegistry {
     }
 
     pub fn register_formatter(&mut self, name: impl Into<String>, formatter: FunctionFormatter) {
-        self.formatters.insert(name.into(), formatter);
+        let name = name.into();
+        self.production_numeric_formatters.remove(&name);
+        self.formatters.insert(name, formatter);
     }
 
     pub fn register_selector(&mut self, name: impl Into<String>, selector: FunctionSelector) {
@@ -531,6 +561,9 @@ impl<'a> FunctionCall<'a> {
     }
 
     pub fn option_value(&self, name: &str) -> Result<Option<String>, Diagnostic> {
+        if name == "u:dir" {
+            return Ok(None);
+        }
         option_value(self.function, self.values, name)
     }
 
@@ -561,6 +594,9 @@ impl<'a> FunctionMatch<'a> {
     }
 
     pub fn option_value(&self, name: &str) -> Result<Option<String>, Diagnostic> {
+        if name == "u:dir" {
+            return Ok(None);
+        }
         option_value(self.function, self.values, name)
     }
 
@@ -579,6 +615,9 @@ impl<'a> FunctionSourceRef<'a> {
     }
 
     pub fn option_value(&self, name: &str) -> Result<Option<String>, Diagnostic> {
+        if name == "u:dir" {
+            return Ok(None);
+        }
         option_value(&self.source.function, self.values, name)
     }
 
@@ -615,45 +654,14 @@ fn option_value(
     }
 }
 
-fn function_option_literal<'a>(function: &'a FunctionRef, name: &str) -> Option<&'a str> {
-    let Some(ExpressionArg::Literal { value }) = function
-        .options
-        .as_ref()
-        .and_then(|options| options.get(name))
-    else {
-        return None;
-    };
-    Some(value)
-}
-
-fn bidi_direction_for_function(
-    function: &FunctionRef,
-    source: Option<&ResolvedFunctionSource>,
-) -> Result<Option<BidiDirection>, Diagnostic> {
-    if let Some(value) = function_option_literal(function, "u:dir") {
-        return parse_bidi_direction(value).map(Some);
-    }
-    bidi_direction_from_source(source)
-}
-
-fn bidi_direction_from_source(
-    source: Option<&ResolvedFunctionSource>,
-) -> Result<Option<BidiDirection>, Diagnostic> {
-    let Some(source) = source else {
-        return Ok(None);
-    };
-    if let Some(value) = function_option_literal(&source.function, "u:dir") {
-        return parse_bidi_direction(value).map(Some);
-    }
-    bidi_direction_from_source(source.inherited.as_deref())
-}
-
 fn parse_bidi_direction(value: &str) -> Result<BidiDirection, Diagnostic> {
     match value {
         "auto" => Ok(BidiDirection::Auto),
         "ltr" => Ok(BidiDirection::Ltr),
         "rtl" => Ok(BidiDirection::Rtl),
-        _ => Err(bad_option("u:dir option must be auto, ltr, or rtl.")),
+        _ => Err(bad_option(
+            "u:dir option must be auto, ltr, rtl, or inherit.",
+        )),
     }
 }
 
@@ -701,9 +709,9 @@ fn format_result_with_options(
     arguments: &Arguments,
     options: &FormatOptions<'_>,
 ) -> Result<FormatResult, Diagnostic> {
-    let result = format_to_parts_with_options(model, arguments, options)?;
+    let (result, isolation) = format_parts_with_metadata(model, arguments, options)?;
     Ok(FormatResult {
-        value: parts_to_string(&result.parts, options.bidi_isolation),
+        value: parts_to_string(&result.parts, options.bidi_isolation, &isolation),
         errors: result.errors,
     })
 }
@@ -713,6 +721,16 @@ fn format_to_parts_with_options(
     arguments: &Arguments,
     options: &FormatOptions<'_>,
 ) -> Result<PartsResult, Diagnostic> {
+    format_parts_with_metadata(model, arguments, options).map(|(parts, _)| parts)
+}
+
+fn format_parts_with_metadata(
+    model: &MessageModel,
+    arguments: &Arguments,
+    options: &FormatOptions<'_>,
+) -> Result<(PartsResult, Vec<bool>), Diagnostic> {
+    let normalized_model = model.normalized_variable_names();
+    let model = normalized_model.as_ref();
     validate_model(model)?;
     let mut context = FormatContext::new(arguments, options.locale, options.functions)
         .with_fallback()
@@ -726,10 +744,13 @@ fn format_to_parts_with_options(
             ..
         } => context.format_select_to_parts(selectors, variants)?,
     };
-    Ok(PartsResult {
-        parts,
-        errors: context.errors,
-    })
+    Ok((
+        PartsResult {
+            parts,
+            errors: context.errors,
+        },
+        context.expression_isolation,
+    ))
 }
 
 fn validate_model(model: &MessageModel) -> Result<(), Diagnostic> {
@@ -753,6 +774,8 @@ fn validate_model(model: &MessageModel) -> Result<(), Diagnostic> {
 fn validate_declarations(declarations: &[Declaration]) -> Result<(), Diagnostic> {
     let mut names = BTreeSet::new();
     for declaration in declarations {
+        let (Declaration::Input { value, .. } | Declaration::Local { value, .. }) = declaration;
+        validate_expression(value)?;
         let name = match declaration {
             Declaration::Input { name, value } => {
                 validate_input_declaration(name, value)?;
@@ -834,9 +857,43 @@ fn validate_pattern(pattern: &[PatternPart]) -> Result<(), Diagnostic> {
                     "Pattern text parts must be non-empty.",
                 ));
             }
-            PatternPart::Markup(markup) => validate_markup(markup)?,
+            PatternPart::Markup(markup) => {
+                validate_attributes(markup.attributes.as_ref())?;
+                validate_markup(markup)?;
+            }
+            PatternPart::Expression(expression) => validate_expression(expression)?,
             _ => {}
         }
+    }
+    Ok(())
+}
+
+fn validate_expression(expression: &Expression) -> Result<(), Diagnostic> {
+    if expression.arg.is_none() && expression.function.is_none() {
+        return Err(model_error(
+            "invalid-model",
+            "An expression requires an argument or function.",
+        ));
+    }
+    validate_attributes(expression.attributes.as_ref())
+}
+
+fn validate_attributes(
+    attributes: Option<&BTreeMap<String, AttributeValue>>,
+) -> Result<(), Diagnostic> {
+    if attributes.is_some_and(|attributes| {
+        attributes.values().any(|value| {
+            !matches!(
+                value,
+                AttributeValue::Present(true)
+                    | AttributeValue::Literal(ExpressionArg::Literal { .. })
+            )
+        })
+    }) {
+        return Err(model_error(
+            "invalid-model",
+            "Attributes must be literal strings or true.",
+        ));
     }
     Ok(())
 }
@@ -882,22 +939,17 @@ fn selector_annotations(declarations: &[Declaration]) -> BTreeMap<String, Select
         }
     }
 
-    let mut changed = true;
-    while changed {
-        changed = false;
-        for declaration in declarations {
-            let (name, value) = declaration_name_value(declaration);
-            if annotations.contains_key(name) {
-                continue;
+    // Local forward references are rejected before this pass. Seed all input
+    // annotations first, then aliases propagate once in declaration order.
+    for declaration in declarations {
+        let (name, value) = declaration_name_value(declaration);
+        if annotations.contains_key(name) {
+            continue;
+        }
+        if let Some(ExpressionArg::Variable { name: source }) = &value.arg {
+            if let Some(annotation) = annotations.get(source).cloned() {
+                annotations.insert(name.to_string(), annotation);
             }
-            let Some(ExpressionArg::Variable { name: source }) = &value.arg else {
-                continue;
-            };
-            let Some(annotation) = annotations.get(source).cloned() else {
-                continue;
-            };
-            annotations.insert(name.to_string(), annotation);
-            changed = true;
         }
     }
 
@@ -915,6 +967,8 @@ struct FormatContext<'a> {
     selector_annotations: BTreeMap<String, SelectorAnnotation>,
     failed_values: BTreeSet<String>,
     errors: Vec<Diagnostic>,
+    expression_isolation: Vec<bool>,
+    locale_is_ltr: bool,
     locale: String,
     functions: &'a FunctionRegistry,
     fallback: bool,
@@ -928,11 +982,18 @@ impl<'a> FormatContext<'a> {
             values: arguments
                 .values
                 .iter()
-                .map(|(name, value)| (name.clone(), ResolvedValue::from_argument(value.clone())))
+                .map(|(name, value)| {
+                    (
+                        name.nfc().collect(),
+                        ResolvedValue::from_argument(value.clone()),
+                    )
+                })
                 .collect(),
             selector_annotations: BTreeMap::new(),
             failed_values: BTreeSet::new(),
             errors: Vec::new(),
+            expression_isolation: Vec::new(),
+            locale_is_ltr: crate::locale_key::locale_is_ltr(locale) == Some(true),
             locale: locale.to_string(),
             functions,
             fallback: false,
@@ -1003,6 +1064,7 @@ impl<'a> FormatContext<'a> {
         };
         let value = input.rendered();
         self.record_function_resolution_errors(function, input.source.as_ref())?;
+        let bidi = self.resolve_bidi(function, input.source.as_ref());
         match self.functions.format(
             &value,
             &input.value,
@@ -1018,6 +1080,7 @@ impl<'a> FormatContext<'a> {
                         input.source_value(&value),
                         function.clone(),
                         input.source,
+                        bidi,
                     ));
                 }
                 Ok(())
@@ -1047,10 +1110,15 @@ impl<'a> FormatContext<'a> {
                         if !failed_value {
                             self.errors.push(unresolved_variable(&selector.name));
                         }
-                        if annotation.as_ref().is_some_and(|annotation| {
-                            self.functions.has_selector(&annotation.function)
-                        }) {
-                            if !failed_value {
+                        if annotation
+                            .as_ref()
+                            .is_some_and(|annotation| !annotation.is_string())
+                        {
+                            if !failed_value
+                                && annotation.as_ref().is_some_and(|annotation| {
+                                    self.functions.has_formatter(&annotation.function)
+                                })
+                            {
                                 self.errors
                                     .push(bad_operand("Selector operand is not available."));
                             }
@@ -1061,6 +1129,7 @@ impl<'a> FormatContext<'a> {
                             .as_ref()
                             .is_some_and(|annotation| annotation.is_string());
                         return Ok(SelectorValue {
+                            failed: std::cell::Cell::new(true),
                             normalized_rendered: string_select.then(|| normalize_string_key("")),
                             rendered: String::new(),
                             raw_value: ArgumentValue::String(String::new()),
@@ -1079,11 +1148,21 @@ impl<'a> FormatContext<'a> {
                 let exact_match = annotation
                     .as_ref()
                     .is_none_or(|annotation| annotation.exact_match());
-                let selection_key = self.selection_key_for_selector(annotation.as_ref(), value);
+                let selection_key_result =
+                    self.selection_key_for_selector(annotation.as_ref(), value);
                 let raw_value = value.value.clone();
                 let source = value.source.clone();
+                let selection_key = match selection_key_result {
+                    Ok(key) => key,
+                    Err(error) if self.fallback => {
+                        self.errors.push(error);
+                        None
+                    }
+                    Err(error) => return Err(error),
+                };
                 self.record_selector_resolution_errors(annotation.as_ref())?;
                 Ok(SelectorValue {
+                    failed: std::cell::Cell::new(false),
                     normalized_rendered: string_select.then(|| normalize_string_key(&rendered)),
                     rendered,
                     raw_value,
@@ -1183,6 +1262,9 @@ impl<'a> FormatContext<'a> {
                 let Some(function) = selector.function.as_ref() else {
                     return Ok(None);
                 };
+                if selector.failed.get() {
+                    return Ok(None);
+                }
                 match self.functions.select(
                     &selector.rendered,
                     &selector.raw_value,
@@ -1194,8 +1276,15 @@ impl<'a> FormatContext<'a> {
                 ) {
                     Ok(rank) => Ok(rank),
                     Err(error) if self.fallback => {
+                        if error.code != "bad-variant-key" {
+                            selector.failed.set(true);
+                        }
+                        let needs_selector_error =
+                            error.code != "bad-selector" && error.code != "bad-variant-key";
                         self.errors.push(fallback_error(error));
-                        self.errors.push(bad_selector("Selector failed to match."));
+                        if needs_selector_error {
+                            self.errors.push(bad_selector("Selector failed to match."));
+                        }
                         Ok(None)
                     }
                     Err(error) => Err(error),
@@ -1225,9 +1314,14 @@ impl<'a> FormatContext<'a> {
                         output.push(FormattedPart::Fallback { source, value });
                         continue;
                     }
+                    self.expression_isolation.push(
+                        !(self.locale_is_ltr
+                            && rendered.bidi.direction == Some(BidiDirection::Ltr)
+                            && !rendered.bidi.force_isolation),
+                    );
                     output.push(FormattedPart::Expression {
                         value: rendered.value,
-                        dir: rendered.bidi_direction.map(|dir| dir.name().to_string()),
+                        dir: rendered.bidi.public_direction(),
                         attributes: expression.attributes.clone(),
                     });
                 }
@@ -1255,9 +1349,16 @@ impl<'a> FormatContext<'a> {
                     if !self.failed_values.contains(name) {
                         self.errors.push(error.clone());
                     }
-                    if expression.function.is_some() {
-                        self.errors
-                            .push(bad_operand("Function operand is not available."));
+                    if let Some(function) = expression.function.as_ref() {
+                        if !self.functions.has_formatter(function) {
+                            self.errors.push(model_error(
+                                "unknown-function",
+                                format!("Function :{} is not known.", function.name),
+                            ));
+                        } else if function.name != "string" {
+                            self.errors
+                                .push(bad_operand("Function operand is not available."));
+                        }
                     }
                     let source = fallback_source(expression);
                     let recovered =
@@ -1278,23 +1379,33 @@ impl<'a> FormatContext<'a> {
                 value,
                 had_error: true,
                 source: None,
-                bidi_direction: None,
+                bidi: ResolvedBidi::default(),
                 fallback_source: Some(fallback_source(expression)),
             });
         }
 
         let Some(function) = expression.function.as_ref() else {
-            let bidi_direction = bidi_direction_from_source(source.as_ref())?;
+            if source.is_none() && matches!(raw_value, ArgumentValue::Number(_)) {
+                return self.format_expression_output(
+                    &expression
+                        .clone()
+                        .with_function(FunctionRef::new("number", BTreeMap::new())),
+                );
+            }
+            let bidi = source
+                .as_ref()
+                .map(|source| source.bidi)
+                .unwrap_or_default();
             return Ok(ExpressionOutput {
                 value,
                 had_error,
                 source,
-                bidi_direction,
+                bidi,
                 fallback_source: None,
             });
         };
         self.record_function_resolution_errors(function, source.as_ref())?;
-        let bidi_direction = bidi_direction_for_function(function, source.as_ref())?;
+        let bidi = self.resolve_bidi(function, source.as_ref());
 
         let source_value = source
             .as_ref()
@@ -1315,8 +1426,9 @@ impl<'a> FormatContext<'a> {
                     source_value,
                     function.clone(),
                     source,
+                    bidi,
                 )),
-                bidi_direction,
+                bidi,
                 fallback_source: None,
             }),
             Err(error) if self.fallback => {
@@ -1327,7 +1439,7 @@ impl<'a> FormatContext<'a> {
                     value: self.recover_format_error(expression, &source, &recoverable),
                     had_error: true,
                     source: None,
-                    bidi_direction: None,
+                    bidi: ResolvedBidi::default(),
                     fallback_source: Some(source),
                 })
             }
@@ -1382,6 +1494,63 @@ impl<'a> FormatContext<'a> {
                 error,
             },
         )
+    }
+
+    fn resolve_bidi(
+        &mut self,
+        function: &FunctionRef,
+        source: Option<&ResolvedFunctionSource>,
+    ) -> ResolvedBidi {
+        let mut bidi = source.map(|source| source.bidi).unwrap_or_default();
+        // A new annotation defaults to inherit; a plain variable keeps its resolved value.
+        bidi.force_isolation = false;
+        if bidi.direction.is_none()
+            && self.locale_is_ltr
+            && self
+                .functions
+                .production_numeric_formatters
+                .contains(&function.name)
+        {
+            bidi.direction = Some(BidiDirection::Ltr);
+        }
+        let Some(option) = function
+            .options
+            .as_ref()
+            .and_then(|options| options.get("u:dir"))
+        else {
+            return bidi;
+        };
+        let value = match option {
+            ExpressionArg::Literal { value } => Some(value.clone()),
+            ExpressionArg::Variable { name } => match self.values.get(name) {
+                Some(ResolvedValue {
+                    value: ArgumentValue::String(value),
+                    ..
+                }) => Some(value.clone()),
+                Some(_) => None,
+                None => {
+                    self.errors.push(unresolved_variable(name));
+                    None
+                }
+            },
+        };
+        if value.as_deref() == Some("inherit") {
+            return bidi;
+        }
+        if let Some(direction) = value
+            .as_deref()
+            .and_then(|value| parse_bidi_direction(value).ok())
+        {
+            return ResolvedBidi {
+                direction: Some(direction),
+                explicit_direction: true,
+                force_isolation: true,
+            };
+        }
+        self.errors.push(bad_option(
+            "u:dir option must be auto, ltr, rtl, or inherit.",
+        ));
+        bidi
     }
 
     fn record_function_resolution_errors(
@@ -1450,8 +1619,10 @@ impl<'a> FormatContext<'a> {
         &self,
         annotation: Option<&SelectorAnnotation>,
         value: &ResolvedValue,
-    ) -> Option<String> {
-        let annotation = annotation?;
+    ) -> Result<Option<String>, Diagnostic> {
+        let Some(annotation) = annotation else {
+            return Ok(None);
+        };
         let semantic_source_value = value.source.as_ref().and_then(|source| {
             portable_functions::numeric_source_operand(Some(FunctionSourceRef {
                 source,
@@ -1463,13 +1634,35 @@ impl<'a> FormatContext<'a> {
             self.numeric_option_for_selector(&annotation.function, value, "minimumFractionDigits");
         let maximum =
             self.numeric_option_for_selector(&annotation.function, value, "maximumFractionDigits");
-        annotation.selection_key(
+        if !annotation.is_numeric() || annotation.number_select == NumberSelect::Exact {
+            return Ok(None);
+        }
+        let key = annotation.selection_key(
             &self.locale,
             value,
             semantic_source_value.as_deref(),
             minimum.as_deref(),
             maximum.as_deref(),
-        )
+        );
+        if key.is_none() {
+            // Invalid options are diagnosed by the selector. Only add a range error
+            // when the resolved numeric operand is otherwise valid.
+            if let Some(operand) = annotation.operand_for_selection(
+                value,
+                semantic_source_value.as_deref(),
+                minimum.as_deref(),
+                maximum.as_deref(),
+            ) {
+                let number = operand.parse::<f64>().ok();
+                if number.is_none_or(|number| {
+                    !number.is_finite() || number.abs() > 9_007_199_254_740_991.0
+                }) || NumberOperands::from_str(&operand).is_none()
+                {
+                    return Err(bad_selector("CLDR selection requires an absolute value at most 9007199254740991 and fraction operands that fit signed 64-bit integers."));
+                }
+            }
+        }
+        Ok(key)
     }
 
     fn numeric_option_for_selector(
@@ -1534,7 +1727,11 @@ impl ResolvedValue {
 struct ResolvedFunctionSource {
     value: String,
     function: FunctionRef,
-    inherited: Option<Box<ResolvedFunctionSource>>,
+    inherited: Option<Arc<ResolvedFunctionSource>>,
+    cacheable_numeric_source: bool,
+    numeric_operand: Arc<OnceLock<Result<String, ()>>>,
+    numeric_options: Arc<Mutex<BTreeMap<String, Option<String>>>>,
+    bidi: ResolvedBidi,
 }
 
 impl ResolvedFunctionSource {
@@ -1542,11 +1739,36 @@ impl ResolvedFunctionSource {
         value: String,
         function: FunctionRef,
         inherited: Option<ResolvedFunctionSource>,
+        bidi: ResolvedBidi,
     ) -> Self {
+        let cacheable_numeric_source = function.options.as_ref().is_none_or(|options| {
+            options
+                .values()
+                .all(|value| matches!(value, ExpressionArg::Literal { .. }))
+        }) && inherited
+            .as_ref()
+            .is_none_or(|source| source.cacheable_numeric_source);
         Self {
             value,
             function,
-            inherited: inherited.map(Box::new),
+            inherited: inherited.map(Arc::new),
+            cacheable_numeric_source,
+            numeric_operand: Arc::new(OnceLock::new()),
+            numeric_options: Arc::new(Mutex::new(BTreeMap::new())),
+            bidi,
+        }
+    }
+}
+
+impl Drop for ResolvedFunctionSource {
+    fn drop(&mut self) {
+        // Release uniquely owned chain tails without consuming one stack frame per node.
+        let mut inherited = self.inherited.take();
+        while let Some(source) = inherited {
+            match Arc::try_unwrap(source) {
+                Ok(mut source) => inherited = source.inherited.take(),
+                Err(_) => break,
+            }
         }
     }
 }
@@ -1556,12 +1778,13 @@ struct ExpressionOutput {
     value: String,
     had_error: bool,
     source: Option<ResolvedFunctionSource>,
-    bidi_direction: Option<BidiDirection>,
+    bidi: ResolvedBidi,
     fallback_source: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 struct SelectorValue {
+    failed: std::cell::Cell<bool>,
     rendered: String,
     raw_value: ArgumentValue,
     normalized_rendered: Option<String>,
@@ -1605,12 +1828,17 @@ impl SelectorAnnotation {
         if !self.is_numeric() {
             return None;
         }
-        let operands = NumberOperands::from_str(&self.operand_for_selection(
+        let operand = self.operand_for_selection(
             value,
             semantic_source_value,
             minimum_fraction_digits,
             maximum_fraction_digits,
-        )?)?;
+        )?;
+        let number = operand.parse::<f64>().ok()?;
+        if !number.is_finite() || number.abs() > 9_007_199_254_740_991.0 {
+            return None;
+        }
+        let operands = NumberOperands::from_str(&operand)?;
         match self.number_select {
             NumberSelect::Plural => {
                 Some(select_cardinal_plural_category(locale, operands).to_string())
@@ -1635,7 +1863,6 @@ impl SelectorAnnotation {
     ) -> Option<String> {
         let rendered = value.rendered();
         let source_value = semantic_source_value.unwrap_or(&rendered);
-        let parsed = parse_decimal_number(source_value).ok()?;
         let minimum = minimum_fraction_digits
             .unwrap_or("0")
             .parse::<usize>()
@@ -1644,7 +1871,12 @@ impl SelectorAnnotation {
             .map(str::parse::<usize>)
             .transpose()
             .ok()?;
-        portable_functions::numeric_selection_operand(parsed, &self.function.name, minimum, maximum)
+        portable_functions::numeric_selection_operand(
+            source_value,
+            &self.function.name,
+            minimum,
+            maximum,
+        )
     }
 }
 
@@ -1789,7 +2021,7 @@ fn model_error(code: impl Into<String>, message: impl Into<String>) -> Diagnosti
 fn fallback_source(expression: &Expression) -> String {
     match (&expression.arg, &expression.function) {
         (Some(arg), _) => expression_arg_source(arg),
-        (None, Some(function)) => function_source(function),
+        (None, Some(function)) => format!(":{}", function.name),
         (None, None) => String::new(),
     }
 }
@@ -1868,8 +2100,13 @@ fn markup_to_part(markup: &Markup) -> FormattedPart {
     }
 }
 
-fn parts_to_string(parts: &[FormattedPart], bidi_isolation: BidiIsolation) -> String {
+fn parts_to_string(
+    parts: &[FormattedPart],
+    bidi_isolation: BidiIsolation,
+    expression_isolation: &[bool],
+) -> String {
     let mut output = String::new();
+    let mut expression_index = 0;
     for part in parts {
         match part {
             FormattedPart::Text { value } => output.push_str(value),
@@ -1884,9 +2121,14 @@ fn parts_to_string(parts: &[FormattedPart], bidi_isolation: BidiIsolation) -> St
                 push_expression(
                     &mut output,
                     value,
-                    bidi_isolation,
+                    if expression_isolation[expression_index] {
+                        bidi_isolation
+                    } else {
+                        BidiIsolation::None
+                    },
                     dir.as_deref().and_then(bidi_direction_from_name),
                 );
+                expression_index += 1;
             }
             FormattedPart::Markup { .. } => {}
         }

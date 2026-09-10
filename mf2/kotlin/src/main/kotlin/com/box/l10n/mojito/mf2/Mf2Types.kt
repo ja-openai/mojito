@@ -85,8 +85,18 @@ data class Mf2FunctionSource(
     val inherited: Mf2FunctionSource?,
     private val optionResolver: ((String, String?) -> String?)? = null,
 ) {
+    internal fun bindCache() { (optionResolver as? Mf2SourceCache)?.owner = this }
+    internal val cache: Mf2SourceCache? get() = (optionResolver as? Mf2SourceCache)?.takeIf { it.owner === this }
     fun optionValue(name: String, fallback: String? = null): String? =
         optionResolver?.invoke(name, fallback) ?: functionOptionLiteral(function, name, fallback)
+}
+
+/** Truncates a finite numeric operand within the supported signed-64-bit range. */
+fun truncateInteger(value: Double): Long {
+    if (!value.isFinite() || value < -9223372036854775808.0 || value >= 9223372036854775808.0) {
+        throw Mf2Error.badOperand("Integer operand is outside the supported signed-64-bit range.")
+    }
+    return value.toLong()
 }
 
 fun numericSourceOperand(source: Mf2FunctionSource?): String? {
@@ -100,16 +110,31 @@ internal fun inheritedNumericOptionValue(
     optionName: String,
     fallback: String?,
 ): String? {
-    if (source == null || blocksInheritedOption(targetFunction, optionName)) return fallback
-    val sourceFunction = stringValue(source.function["name"])
-    if (
-        !canInheritOptionsFrom(targetFunction, sourceFunction) ||
-        blocksInheritedOption(sourceFunction, optionName)
-    ) return fallback
-    if (asMap(source.function["options"]).containsKey(optionName)) {
-        return source.optionValue(optionName, fallback)
+    var current = source
+    var target = targetFunction
+    var result: String? = null
+    val visited = mutableListOf<Pair<Mf2SourceCache, String>>()
+    while (current != null && !blocksInheritedOption(target, optionName)) {
+        val cache = current.cache
+        val key = "$target:$optionName"
+        if (cache?.cacheable == true) {
+            if (cache.inheritedOptions.containsKey(key)) {
+                result = cache.inheritedOptions[key]
+                break
+            }
+            visited += cache to key
+        }
+        val sourceFunction = stringValue(current.function["name"])
+        if (!canInheritOptionsFrom(target, sourceFunction) || blocksInheritedOption(sourceFunction, optionName)) break
+        if (asMap(current.function["options"]).containsKey(optionName)) {
+            result = current.optionValue(optionName, null)
+            break
+        }
+        target = sourceFunction
+        current = current.inherited
     }
-    return inheritedNumericOptionValue(sourceFunction, source.inherited, optionName, fallback)
+    for ((cache, key) in visited) cache.remember(key, result)
+    return result ?: fallback
 }
 
 fun resolvedCurrencyCode(call: Mf2FunctionCall): String? {
@@ -123,16 +148,32 @@ fun resolvedCurrencyCode(call: Mf2FunctionCall): String? {
 }
 
 private fun numericSourceOperandChain(source: Mf2FunctionSource?): String? {
-    if (source == null) return null
-    val operand = numericSourceOperandChain(source.inherited) ?: source.value
-    val functionName = stringValue(source.function["name"])
-    if (functionName !in decimalSourceFunctions) return operand
-    val parsed = Mf2PortableFunctions.parseDecimalNumber(operand) ?: return null
-    if (functionName == "integer") return parsed.toLong().toString()
-    if (functionName == "offset") {
-        val add = source.optionValue("add", null)
-        val subtract = source.optionValue("subtract", null)
-        return adjustedOffsetOperand(operand, add, subtract)
+    val chain = ArrayDeque<Mf2FunctionSource>()
+    var current = source
+    var operand: String? = null
+    while (current != null) {
+        val cache = current.cache
+        if (cache?.cacheable == true && cache.operandResolved) {
+            operand = cache.operand
+            break
+        }
+        chain.addFirst(current)
+        current = current.inherited
+    }
+    for (item in chain) {
+        val value = operand ?: item.value
+        operand = value
+        val functionName = stringValue(item.function["name"])
+        if (functionName in decimalSourceFunctions) {
+            val parsed = Mf2PortableFunctions.parseDecimalNumber(value)
+            operand = when {
+                parsed == null -> null
+                functionName == "integer" -> truncateInteger(parsed).toString()
+                functionName == "offset" -> adjustedOffsetOperand(value, item.optionValue("add", null), item.optionValue("subtract", null))
+                else -> value
+            }
+        }
+        item.cache?.takeIf { it.cacheable }?.let { it.operand = operand; it.operandResolved = true }
     }
     return operand
 }
@@ -142,10 +183,18 @@ internal fun adjustedOffsetOperand(operand: String, add: String?, subtract: Stri
         return null
     }
     val delta = parseSemanticInteger(add ?: subtract) ?: return null
-    val value = BigDecimal(operand)
+    if (operand.length > 8192) return null
+    val value = try { BigDecimal(operand) } catch (error: NumberFormatException) { return null }
+    if (!boundedDecimal(value)) return null
     val adjustment = BigDecimal.valueOf(delta)
     val result = if (add == null) value.subtract(adjustment) else value.add(adjustment)
-    return result.stripTrailingZeros().toPlainString()
+    return if (boundedDecimal(result)) result.stripTrailingZeros().toPlainString() else null
+}
+
+private fun boundedDecimal(value: BigDecimal): Boolean {
+    val precision = value.precision().toLong()
+    val scale = value.scale().toLong()
+    return precision <= 4096 && maxOf(precision - scale, 1) + maxOf(scale, 0) <= 4096
 }
 
 private val decimalSourceFunctions = setOf("number", "integer", "percent", "offset", "currency")
@@ -172,9 +221,13 @@ private fun blocksInheritedOption(functionName: String, optionName: String): Boo
     }
 
 private fun inheritedCurrencyCode(source: Mf2FunctionSource?): String? {
-    if (source == null || source.function["name"] != "currency") return null
-    source.optionValue("currency", null)?.let { return it }
-    return inheritedCurrencyCode(source.inherited)
+    if (source?.cache?.cacheable == true) return inheritedNumericOptionValue("currency", source, "currency", null)
+    var current = source
+    while (current != null && current.function["name"] == "currency") {
+        current.optionValue("currency", null)?.let { return it }
+        current = current.inherited
+    }
+    return null
 }
 
 private fun parseSemanticInteger(value: String?): Long? =
@@ -183,23 +236,25 @@ private fun parseSemanticInteger(value: String?): Long? =
 class Mf2FunctionCall(
     val value: String,
     val rawValue: Any?,
-    val function: Map<String, Any?>,
+    function: Map<String, Any?>,
     val locale: String,
     private val optionResolver: (String, String?) -> String?,
     val inheritedSource: Mf2FunctionSource?,
 ) {
+    val function: Map<String, Any?> = immutableFunction(function)
     fun optionValue(name: String, fallback: String? = null): String? = optionResolver.invoke(name, fallback)
 }
 
 class Mf2FunctionMatch(
     val value: String,
     val rawValue: Any?,
-    val function: Map<String, Any?>,
+    function: Map<String, Any?>,
     val key: String,
     val locale: String,
     private val optionResolver: (String, String?) -> String?,
     val inheritedSource: Mf2FunctionSource?,
 ) {
+    val function: Map<String, Any?> = immutableFunction(function)
     fun optionValue(name: String, fallback: String? = null): String? = optionResolver.invoke(name, fallback)
 }
 

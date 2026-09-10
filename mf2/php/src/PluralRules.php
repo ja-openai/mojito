@@ -17,7 +17,7 @@ final class NumberOperands
 
     public function __construct(mixed $value)
     {
-        if (is_int($value)) {
+        if (is_int($value) && $value !== PHP_INT_MIN) {
             $this->n = abs($value);
             $this->i = abs($value);
             $this->v = 0;
@@ -28,16 +28,21 @@ final class NumberOperands
         }
         $raw = trim(value_to_string($value));
         if (preg_match('/^[+-]?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/', $raw) !== 1) {
-            throw new \RangeException("Unsupported plural operand value: {$raw}");
+            throw \Mojito\MessageFormat2\MF2Error::badSelector('Numeric plural operand is outside the supported range.');
         }
         $n = abs((float) $raw);
-        if (!is_finite($n)) {
-            throw new \RangeException("Unsupported plural operand value: {$raw}");
+        if (!is_finite($n) || $n >= (float) PHP_INT_MAX) {
+            throw \Mojito\MessageFormat2\MF2Error::badSelector('Numeric plural operand is outside the supported range.');
         }
         $normalized = strtolower(preg_replace('/^[+-]+/', '', $raw) ?? $raw);
         $base = explode('e', $normalized, 2)[0];
         $fraction = str_contains($base, '.') ? explode('.', $base, 2)[1] : '';
         $trimmed = rtrim($fraction, '0');
+        $digits = ltrim($fraction, '0');
+        $maximum = (string) PHP_INT_MAX;
+        if (strlen($digits) > strlen($maximum) || (strlen($digits) === strlen($maximum) && strcmp($digits, $maximum) > 0)) {
+            throw \Mojito\MessageFormat2\MF2Error::badSelector('Numeric plural operand is outside the supported range.');
+        }
         $this->n = $n;
         $this->i = (int) floor($n);
         $this->v = strlen($fraction);

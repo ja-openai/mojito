@@ -98,8 +98,8 @@ package source. Regenerate them from the shared CLDR generator with
 to fail when vendored generated sources are stale. The project has no runtime
 dependencies; Maven plugins are build-time only.
 
-The runtime is parser-free: production callers can pass compiled message models
-or catalog resources without shipping a source parser. Fixture JSON parsing and
+Formatting a compiled message model or catalog resource does not invoke the source parser.
+The published JAR includes both the parser and formatter; it is not a separate parser-free artifact. Fixture JSON parsing and
 object-map model decoding live under `src/test/java` to keep the production jar
 focused on the runtime API.
 
@@ -118,3 +118,34 @@ sh run.sh jdk-check
 sh run.sh datetime-demo
 sh run.sh bench ../conformance/fixtures/source-to-model 100000 10000
 ```
+
+## Runtime bounds and model ownership
+
+Portable numeric fraction options accept integers from 0 through 1000. A minimum
+larger than an explicit maximum returns `bad-option`. Offset decimal expansion is
+limited to 4096 digits and out-of-range operands return `bad-operand`. Plural
+category selection rejects operands outside the supported integer/fraction range;
+exact-key selection does not require a CLDR category.
+
+Compiled models are checked for required semantic fields, discriminator types,
+and literal-or-present attributes before formatting. Unknown extension fields are
+ignored by formatting. Returned parts do not share mutable semantic attributes or
+options with the input model. Markup options retain model references for callers
+that resolve them in their rendering layer.
+
+The package includes `LICENSE`, `NOTICE`, and `UNICODE-LICENSE.txt`; JVM JARs place
+these notices in `META-INF`.
+
+Long declaration histories use iterative source traversal and a per-format cache for literal-only
+numeric/option histories (at most 64 inherited option entries per source). Variable-dependent
+histories retain their resolver behavior and are not cached; no process-wide cache retains catalogs.
+`u:dir` accepts `ltr`, `rtl`, `auto`, and `inherit`, including resolved string variables. Invalid
+values report `bad-option` and preserve the formatted value. The option is hidden from formatter
+callback option resolution; a plain alias retains its operand's isolation, while reannotation uses
+the default `inherit` unless explicitly overridden.
+
+The portable, JDK and ICU4J `:integer` formatters truncate a finite binary numeric operand only
+within `-2^63 <= value < 2^63`. Outside that converted numeric range they report `bad-operand`
+instead of clamping; integer selectors report `bad-selector`. This is the current JVM integer
+conversion contract, not arbitrary-precision integer formatting. Other numeric formatting and
+plain argument conversion do not narrow integral values to signed 64-bit integers.

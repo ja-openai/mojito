@@ -323,9 +323,16 @@ impl<'a> Parser<'a> {
                 continue;
             }
             let key = self.take_while(|ch| !is_syntax_whitespace(ch) && ch != '{');
-            if !key.is_empty() {
-                keys.push(VariantKey::Literal { value: key });
+            if key.is_empty() {
+                self.push_diagnostic(
+                    "invalid-variant-key",
+                    "Expected a variant key before the pattern.",
+                    self.index,
+                    self.index + 1,
+                );
+                return None;
             }
+            keys.push(VariantKey::Literal { value: key });
         }
         Some(keys)
     }
@@ -344,6 +351,7 @@ impl<'a> Parser<'a> {
         let content_start = self.index;
         let mut scan = self.index;
         let mut placeholder_depth = 0usize;
+        let mut in_quote = false;
         while scan < self.source.len() {
             if placeholder_depth == 0 && self.source[scan..].starts_with("}}") {
                 let content = &self.source[content_start..scan];
@@ -365,9 +373,11 @@ impl<'a> Parser<'a> {
                 }
                 continue;
             }
-            if ch == '{' {
+            if placeholder_depth > 0 && ch == '|' {
+                in_quote = !in_quote;
+            } else if !in_quote && ch == '{' {
                 placeholder_depth += 1;
-            } else if ch == '}' && placeholder_depth > 0 {
+            } else if !in_quote && ch == '}' && placeholder_depth > 0 {
                 placeholder_depth -= 1;
             }
             scan += ch.len_utf8();
@@ -423,7 +433,7 @@ impl<'a> Parser<'a> {
         let start = self.index;
         self.advance_char();
         match self.peek_char() {
-            Some('{') | Some('}') | Some('\\') => {
+            Some('{') | Some('}') | Some('|') | Some('\\') => {
                 text.push(self.advance_char().expect("peeked char exists"));
             }
             Some(_) => {
@@ -486,11 +496,6 @@ impl<'a> Parser<'a> {
                     }
                     continue;
                 }
-                if ch == '}' {
-                    let content_end = self.index;
-                    self.advance_char();
-                    return Some(&self.source[content_start..content_end]);
-                }
                 if ch == '|' {
                     in_quote = false;
                 }
@@ -510,8 +515,12 @@ impl<'a> Parser<'a> {
             self.advance_char();
         }
         self.push_diagnostic(
-            "unclosed-placeholder",
-            "Placeholder is missing a closing brace.",
+            if in_quote {
+                "unclosed-quoted-literal"
+            } else {
+                "unclosed-placeholder"
+            },
+            "Placeholder or quoted literal is missing its closing delimiter.",
             start,
             self.source.len(),
         );

@@ -1,6 +1,14 @@
 #!/usr/bin/env sh
 set -eu
 
+CHECK_INDEX=1
+if [ "$#" -eq 1 ] && [ "$1" = "--worktree" ]; then
+  CHECK_INDEX=0
+elif [ "$#" -ne 0 ]; then
+  echo "Usage: $0 [--worktree]" >&2
+  exit 2
+fi
+
 ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
 REPO_ROOT="$(CDPATH= cd -- "$ROOT/.." && pwd)"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/mojito-mf2-cldr-check.XXXXXX")"
@@ -22,15 +30,15 @@ sh "$ROOT/cldr/update_generated.sh" --destination-root "$EXPECTED_ROOT"
 ) | LC_ALL=C sort -u >"$EXPECTED_PATHS"
 
 {
-  if [ -d "$REPO_ROOT/mf2/cldr/generated/all" ]; then
+  if [ -d "$REPO_ROOT/mf2/cldr/generated" ]; then
     (
       cd "$REPO_ROOT"
-      find mf2/cldr/generated/all ! -type d -print
+      find mf2/cldr/generated/all mf2/cldr/generated/bidi ! -type d -print
     )
   fi
   while IFS= read -r path; do
     case "$path" in
-      mf2/cldr/generated/all/*) ;;
+      mf2/cldr/generated/all/*|mf2/cldr/generated/bidi/*) ;;
       *)
         if [ -e "$REPO_ROOT/$path" ] || [ -L "$REPO_ROOT/$path" ]; then
           printf '%s\n' "$path"
@@ -41,10 +49,10 @@ sh "$ROOT/cldr/update_generated.sh" --destination-root "$EXPECTED_ROOT"
 } | LC_ALL=C sort -u >"$WORKTREE_PATHS"
 
 {
-  git -C "$REPO_ROOT" ls-files -- mf2/cldr/generated/all
+  git -C "$REPO_ROOT" ls-files -- mf2/cldr/generated/all mf2/cldr/generated/bidi
   while IFS= read -r path; do
     case "$path" in
-      mf2/cldr/generated/all/*) ;;
+      mf2/cldr/generated/all/*|mf2/cldr/generated/bidi/*) ;;
       *) git -C "$REPO_ROOT" ls-files -- "$path" ;;
     esac
   done <"$EXPECTED_PATHS"
@@ -78,8 +86,10 @@ report_extra_paths() {
 
 report_missing_paths "$EXPECTED_PATHS" "$WORKTREE_PATHS" "working tree"
 report_extra_paths "$EXPECTED_PATHS" "$WORKTREE_PATHS" "working tree"
-report_missing_paths "$EXPECTED_PATHS" "$INDEX_PATHS" "Git index"
-report_extra_paths "$EXPECTED_PATHS" "$INDEX_PATHS" "Git index"
+if [ "$CHECK_INDEX" -eq 1 ]; then
+  report_missing_paths "$EXPECTED_PATHS" "$INDEX_PATHS" "Git index"
+  report_extra_paths "$EXPECTED_PATHS" "$INDEX_PATHS" "Git index"
+fi
 
 while IFS= read -r repo_path; do
   expected_file="$EXPECTED_ROOT/${repo_path#mf2/}"
@@ -95,6 +105,9 @@ while IFS= read -r repo_path; do
     STATUS=1
   fi
 
+  if [ "$CHECK_INDEX" -eq 0 ]; then
+    continue
+  fi
   index_entry="$(git -C "$REPO_ROOT" ls-files --stage -- "$repo_path")"
   if [ -n "$index_entry" ]; then
     index_mode="${index_entry%% *}"
@@ -122,4 +135,8 @@ if [ "$STATUS" -ne 0 ]; then
   exit 1
 fi
 
-echo "Generated CLDR plural sources are current and tracked."
+if [ "$CHECK_INDEX" -eq 1 ]; then
+  echo "Generated CLDR sources are current and tracked."
+else
+  echo "Generated CLDR sources are current in the working tree (Git index not checked)."
+fi

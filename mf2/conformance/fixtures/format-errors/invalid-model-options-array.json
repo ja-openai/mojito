@@ -1,0 +1,25 @@
+{
+  "name": "invalid-model-options-array",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "function": {
+          "type": "function",
+          "name": "string",
+          "options": [
+            {
+              "type": "literal",
+              "value": "x"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "expectedError": {
+    "code": "invalid-model"
+  }
+}

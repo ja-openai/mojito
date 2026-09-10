@@ -1,9 +1,18 @@
 package com.box.l10n.mojito.mf2;
 
 import java.math.BigDecimal;
+import java.util.ArrayDeque;
 
 public final class Mf2FunctionSupport {
     private Mf2FunctionSupport() {}
+
+    /** Truncates a finite binary numeric operand within the supported signed-64-bit range. */
+    public static long truncateInteger(double value) throws Mf2Exception {
+        if (!Double.isFinite(value) || value < -0x1.0p63 || value >= 0x1.0p63) {
+            throw Mf2Exception.badOperand("Integer operand is outside the supported signed-64-bit range.");
+        }
+        return (long) value;
+    }
 
     static double parseCallDecimal(Mf2FunctionRegistry.FunctionCall call, String message)
             throws Mf2Exception {
@@ -39,19 +48,30 @@ public final class Mf2FunctionSupport {
             String optionName,
             String fallback)
             throws Mf2Exception {
-        if (source == null || blocksInheritedOption(targetFunction, optionName)) {
-            return fallback;
+        String result = null;
+        var visited = new java.util.ArrayList<java.util.Map.Entry<Mf2SourceCache, String>>();
+        while (source != null && !blocksInheritedOption(targetFunction, optionName)) {
+            Mf2SourceCache cache = Mf2SourceCache.of(source);
+            String key = targetFunction + ":" + optionName;
+            if (cache != null && cache.cacheable) {
+                if (cache.inheritedOptions.containsKey(key)) {
+                    result = cache.inheritedOptions.get(key);
+                    break;
+                }
+                visited.add(java.util.Map.entry(cache, key));
+            }
+            String sourceFunction = source.function().name();
+            if (!canInheritOptionsFrom(targetFunction, sourceFunction)
+                    || blocksInheritedOption(sourceFunction, optionName)) break;
+            if (source.function().options().containsKey(optionName)) {
+                result = source.optionValue(optionName, null);
+                break;
+            }
+            targetFunction = sourceFunction;
+            source = source.inheritedSource();
         }
-        String sourceFunction = source.function().name();
-        if (!canInheritOptionsFrom(targetFunction, sourceFunction)
-                || blocksInheritedOption(sourceFunction, optionName)) {
-            return fallback;
-        }
-        if (source.function().options().containsKey(optionName)) {
-            return source.optionValue(optionName, fallback);
-        }
-        return inheritedNumericOptionValue(
-                sourceFunction, source.inheritedSource(), optionName, fallback);
+        for (var item : visited) item.getKey().remember(item.getValue(), result);
+        return result == null ? fallback : result;
     }
 
     public static String resolvedCurrencyCode(Mf2FunctionRegistry.FunctionCall call)
@@ -71,28 +91,31 @@ public final class Mf2FunctionSupport {
 
     private static String numericSourceOperandChain(
             Mf2FunctionRegistry.FunctionSourceRef source) throws Mf2Exception {
-        if (source == null) {
-            return null;
+        ArrayDeque<Mf2FunctionRegistry.FunctionSourceRef> chain = new ArrayDeque<>();
+        String operand = null;
+        for (var current = source; current != null; current = current.inheritedSource()) {
+            Mf2SourceCache cache = Mf2SourceCache.of(current);
+            if (cache != null && cache.cacheable && cache.operandResolved) {
+                operand = cache.operand;
+                break;
+            }
+            chain.push(current);
         }
-        String operand = numericSourceOperandChain(source.inheritedSource());
-        if (operand == null) {
-            operand = source.value();
-        }
-        String functionName = source.function().name();
-        if (!isDecimalSourceFunction(source.function())) {
-            return operand;
-        }
-        Double parsed = parseDecimalNumber(operand);
-        if (parsed == null) {
-            return null;
-        }
-        if (functionName.equals("integer")) {
-            return Long.toString((long) parsed.doubleValue());
-        }
-        if (functionName.equals("offset")) {
-            String add = source.optionValue("add", null);
-            String subtract = source.optionValue("subtract", null);
-            return adjustedOffsetOperand(operand, add, subtract);
+        while (!chain.isEmpty()) {
+            var current = chain.pop();
+            if (operand == null) operand = current.value();
+            if (isDecimalSourceFunction(current.function())) {
+                Double parsed = parseDecimalNumber(operand);
+                if (parsed == null) operand = null;
+                else if (current.function().name().equals("integer")) operand = Long.toString(truncateInteger(parsed));
+                else if (current.function().name().equals("offset")) operand = adjustedOffsetOperand(operand,
+                        current.optionValue("add", null), current.optionValue("subtract", null));
+            }
+            Mf2SourceCache cache = Mf2SourceCache.of(current);
+            if (cache != null && cache.cacheable) {
+                cache.operand = operand;
+                cache.operandResolved = true;
+            }
         }
         return operand;
     }
@@ -106,12 +129,26 @@ public final class Mf2FunctionSupport {
         if (delta == null) {
             return null;
         }
-        BigDecimal value = new BigDecimal(operand);
+        // Bound expansion before arithmetic; a small exponent must not allocate an enormous scale.
+        BigDecimal value;
+        try {
+            if (operand.length() > 8192) return null;
+            value = new BigDecimal(operand);
+        } catch (NumberFormatException error) {
+            return null;
+        }
+        if (!boundedDecimal(value)) return null;
         BigDecimal adjustment = BigDecimal.valueOf(delta);
         BigDecimal result = add == null
                 ? value.subtract(adjustment)
                 : value.add(adjustment);
-        return result.stripTrailingZeros().toPlainString();
+        return boundedDecimal(result) ? result.stripTrailingZeros().toPlainString() : null;
+    }
+
+    private static boolean boundedDecimal(BigDecimal value) {
+        long precision = value.precision();
+        long scale = value.scale();
+        return precision <= 4096 && Math.max(precision - scale, 1) + Math.max(scale, 0) <= 4096;
     }
 
     static Double parseDecimalNumber(String value) {
@@ -132,11 +169,15 @@ public final class Mf2FunctionSupport {
 
     static int parseNonNegativeOption(String value, String message)
             throws Mf2Exception {
-        if (value.isEmpty() || !value.chars().allMatch(Character::isDigit)) {
+        if (value.isEmpty() || !value.chars().allMatch(ch -> ch >= '0' && ch <= '9')) {
             throw badOption(message);
         }
         try {
-            return Integer.parseInt(value);
+            int parsed = Integer.parseInt(value);
+            if (parsed > 1000) {
+                throw badOption(message);
+            }
+            return parsed;
         } catch (NumberFormatException error) {
             throw badOption(message);
         }
@@ -240,14 +281,14 @@ public final class Mf2FunctionSupport {
 
     private static String inheritedCurrencyCode(
             Mf2FunctionRegistry.FunctionSourceRef source) throws Mf2Exception {
-        if (source == null || !source.function().name().equals("currency")) {
-            return null;
+        Mf2SourceCache cache = Mf2SourceCache.of(source);
+        if (cache != null && cache.cacheable) return inheritedNumericOptionValue("currency", source, "currency", null);
+        while (source != null && source.function().name().equals("currency")) {
+            String currency = source.optionValue("currency", null);
+            if (currency != null) return currency;
+            source = source.inheritedSource();
         }
-        String currency = source.optionValue("currency", null);
-        if (currency != null) {
-            return currency;
-        }
-        return inheritedCurrencyCode(source.inheritedSource());
+        return null;
     }
 
     private static Long parseInteger(String value) {

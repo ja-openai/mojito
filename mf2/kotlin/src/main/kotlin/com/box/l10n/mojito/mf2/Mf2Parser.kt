@@ -198,9 +198,11 @@ private class Parser(
                 continue
             }
             val key = takeWhile { !isSyntaxWhitespace(it) && it != code("{") }
-            if (key.isNotEmpty()) {
-                keys += linkedMapOf("type" to "literal", "value" to key)
+            if (key.isEmpty()) {
+                pushDiagnostic("invalid-variant-key", "Expected a variant key or quoted pattern.", index, index + 1)
+                return null
             }
+            keys += linkedMapOf("type" to "literal", "value" to key)
         }
         return keys
     }
@@ -272,7 +274,7 @@ private class Parser(
             return ""
         }
         val cp = peekCodePoint()
-        return if (cp == code("{") || cp == code("}") || cp == code("\\")) advanceCodePoint() else "\\"
+        return if (cp == code("{") || cp == code("}") || cp == code("|") || cp == code("\\")) advanceCodePoint() else "\\"
     }
 
     private fun parseBracedPatternPart(): Map<String, Any?>? {
@@ -301,6 +303,7 @@ private class Parser(
         advanceCodePoint()
         val contentStart = index
         var inQuote = false
+        var quotedClosingBrace = -1
         while (!isDone()) {
             val cp = peekCodePoint()
             if (inQuote) {
@@ -309,11 +312,7 @@ private class Parser(
                     if (!isDone()) advanceCodePoint()
                     continue
                 }
-                if (cp == code("}")) {
-                    val content = source.substring(contentStart, index)
-                    advanceCodePoint()
-                    return content
-                }
+                if (cp == code("}") && quotedClosingBrace < 0) quotedClosingBrace = index
                 if (cp == code("|")) inQuote = false
                 advanceCodePoint()
                 continue
@@ -329,6 +328,10 @@ private class Parser(
                 return content
             }
             advanceCodePoint()
+        }
+        if (quotedClosingBrace >= 0) {
+            index = quotedClosingBrace + 1
+            return source.substring(contentStart, quotedClosingBrace)
         }
         pushDiagnostic("unclosed-placeholder", "Placeholder is missing a closing brace.", start, source.length)
         return null
@@ -372,7 +375,7 @@ private class Parser(
         }
         if (rest.isEmpty()) return expression
         val tail = parseTail(rest, start, end) ?: return null
-        return expressionModel(asMap(expression["arg"]), tail.function, tail.attributes)
+        return expressionModel(expression["arg"] as? Map<String, Any?>, tail.function, tail.attributes)
     }
 
     private fun restAfterOperand(rest: String, start: Int, end: Int): String? {

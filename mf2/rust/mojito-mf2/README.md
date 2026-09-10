@@ -159,3 +159,48 @@ cargo run -- unicode-tests
 cargo run -- compile ../../conformance/fixtures/source-to-model/variable-basic.json
 cargo run -- format-first-case ../../conformance/fixtures/source-to-model/match-string.json
 ```
+
+### Exact numbers and model interchange
+
+The portable number, integer, percent, and offset functions retain decimal
+coefficients as text, with at most 4096 expanded digits and 1000 requested
+fraction digits. A minimum greater than the maximum is `bad-option`. Maximum
+fraction digits use half-even rounding; integer formatting truncates toward zero
+without saturating to a machine integer. JSON numeric lexemes are preserved by
+Serde's `arbitrary_precision` feature. ICU4X formatting uses the same operand and
+fraction-digit bounds.
+
+Generated CLDR plural selection accepts absolute values at most 9007199254740991
+and fractional operands that fit signed 64-bit integers. Unsupported plural
+operands report `bad-selector`; portable formatting and `select=exact` preserve
+larger exact numbers.
+
+Expressions, functions, variable references, and markup have public constructors.
+Serde round-trips preserve the supported semantic model; unknown extension
+properties are ignored and are not re-emitted. Formatting validates imported and
+directly constructed models before calling functions. Variable bindings compare
+canonically equivalent Unicode names. Expression parts continue to serialize
+`dir` and also accept `direction` when deserializing.
+
+The `official-bridge` CLI reads JSON-lines requests for the shared upstream
+assertion runner. `registry=portable` selects the production portable registry;
+`registry=platform` requires the `icu4x` feature and selects production ICU4X.
+Only the upstream `test:*` namespace uses test helpers.
+
+Default bidirectional isolation uses pinned CLDR locale direction and private
+production-formatter metadata. Numeric output in a known left-to-right locale
+needs no extra isolation unless its resolved value requires it. Plain variable
+aliases preserve isolation; a new function annotation defaults to `inherit` and
+retains direction without forcing isolation. Replacing a
+numeric formatter removes that guarantee; custom formatters and unknown locale
+directions keep isolation. Public parts JSON remains unchanged.
+
+`u:dir` accepts literal or variable `auto`, `ltr`, `rtl`, and `inherit` values.
+Invalid values report `bad-option` and leave the formatted value intact. Function
+handlers do not receive `u:dir` through resolved option access; the source model
+remains available for inspection.
+
+Long declaration chains share source history, release it iteratively, and
+propagate selector annotations in declaration order. Numeric history and inherited
+options are memoized only within a format call, for histories with literal options.
+Histories with variable options remain uncached.

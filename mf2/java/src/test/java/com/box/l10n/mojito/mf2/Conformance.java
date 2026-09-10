@@ -14,6 +14,7 @@ public final class Conformance {
     }
 
     static int run(String[] args) throws Exception {
+        RuntimeRegressionTests.run();
         Path fixtureDir = args.length > 0
                 ? Path.of(args[0])
                 : Path.of("../conformance/fixtures/source-to-model");
@@ -192,9 +193,9 @@ public final class Conformance {
         int checkedCases = 0;
         for (Path fixturePath : jsonFiles(fixtureDir)) {
             Map<String, Object> fixture = object(JsonParser.parse(fixturePath));
-            Mf2Message message = Mf2ModelDecoder.fromJson(fixture.get("model"));
             String expectedCode = string(object(fixture.get("expectedError")).get("code"));
             try {
+                Mf2Message message = Mf2ModelDecoder.fromJson(fixture.get("model"));
                 Mf2FormatResult actual = message.format(
                         objectOrEmpty(fixture.get("arguments")),
                         Mf2FormatOptions.builder()
@@ -205,6 +206,8 @@ public final class Conformance {
                             "%s: expected error %s, got %s",
                             fixturePath.getFileName(), expectedCode, actual.errors()));
                 }
+            } catch (IllegalArgumentException error) {
+                if (!expectedCode.equals("invalid-model")) throw error;
             } catch (Mf2Exception error) {
                 if (!error.code().equals(expectedCode)) {
                     throw new ConformanceFailure(String.format(

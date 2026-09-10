@@ -279,8 +279,15 @@ class _Parser:
                 keys.append({"type": "literal", "value": split.value})
                 continue
             key = self.take_while(lambda ch: not is_syntax_whitespace(ch) and ch != "{")
-            if key:
-                keys.append({"type": "literal", "value": key})
+            if not key:
+                self.push_diagnostic(
+                    "invalid-variant-key",
+                    "Expected a variant key or a quoted pattern.",
+                    self.index,
+                    self.index + 1,
+                )
+                return None
+            keys.append({"type": "literal", "value": key})
         return keys
 
     def parse_quoted_pattern(self) -> list[Any] | None:
@@ -366,7 +373,7 @@ class _Parser:
             )
             return ""
         ch = self.peek()
-        if ch in {"{", "}", "\\"}:
+        if ch in {"{", "}", "\\", "|"}:
             self.index += 1
             return ch
         return "\\"

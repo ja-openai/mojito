@@ -554,9 +554,8 @@
             "num": 3.1415927
           },
           "expected": "The number in scientific notation is 3.1415927E0. As a percentage, it's 314%.\nFormatted with at least four integer digits and four fractional digits, it's\n0,003.1416. Formatted with at most six significant digits, it's 3.14159.",
-          "knownGap": "unsupported-number-options",
-          "output": "The number in scientific notation is 3.142. As a percentage, it's 3.142.\nFormatted with at least four integer digits and four fractional digits, it's\n3.1416. Formatted with at most six significant digits, it's 3.142.",
-          "knownMismatch": true,
+          "output": "The number in scientific notation is 3.1415927E0. As a percentage, it's 314%.\nFormatted with at least four integer digits and four fractional digits, it's\n0,003.1416. Formatted with at most six significant digits, it's 3.14159.",
+          "knownMismatch": false,
           "portableErrors": []
         },
         {
@@ -565,9 +564,8 @@
             "num": 3.1415927
           },
           "expected": "En notation scientifique : 3,1415927E0. En pourcentage : 314 %.\nAvec au moins quatre chiffres entiers et quatre décimales : 0 003,1416.\nAvec au plus six chiffres significatifs : 3,14159.",
-          "knownGap": "unsupported-number-options",
-          "output": "En notation scientifique : 3,142. En pourcentage : 3,142.\nAvec au moins quatre chiffres entiers et quatre décimales : 3,1416.\nAvec au plus six chiffres significatifs : 3,142.",
-          "knownMismatch": true,
+          "output": "En notation scientifique : 3,1415927E0. En pourcentage : 314 %.\nAvec au moins quatre chiffres entiers et quatre décimales : 0 003,1416.\nAvec au plus six chiffres significatifs : 3,14159.",
+          "knownMismatch": false,
           "portableErrors": []
         }
       ]
@@ -796,7 +794,8 @@
           "output": "Hello, Mario!",
           "knownMismatch": false,
           "portableErrors": [
-            "unknown-function"
+            "unknown-function",
+            "bad-selector"
           ]
         },
         {
@@ -813,7 +812,8 @@
           "output": "Please welcome Marii!",
           "knownMismatch": false,
           "portableErrors": [
-            "unknown-function"
+            "unknown-function",
+            "bad-selector"
           ]
         },
         {
@@ -828,7 +828,8 @@
           "output": "Hello!",
           "knownMismatch": false,
           "portableErrors": [
-            "unknown-function"
+            "unknown-function",
+            "bad-selector"
           ]
         },
         {
@@ -845,7 +846,8 @@
           "output": "Bonjour, Camille !",
           "knownMismatch": false,
           "portableErrors": [
-            "unknown-function"
+            "unknown-function",
+            "bad-selector"
           ]
         },
         {
@@ -862,7 +864,8 @@
           "output": "Accueillez Camille !",
           "knownMismatch": false,
           "portableErrors": [
-            "unknown-function"
+            "unknown-function",
+            "bad-selector"
           ]
         },
         {
@@ -877,7 +880,8 @@
           "output": "Bonjour !",
           "knownMismatch": false,
           "portableErrors": [
-            "unknown-function"
+            "unknown-function",
+            "bad-selector"
           ]
         }
       ]
@@ -2870,5 +2874,5 @@
     }
   ],
   "totalCases": 163,
-  "knownMismatches": 2
+  "knownMismatches": 0
 }

@@ -13,6 +13,8 @@ use Mojito\MessageFormat2\IntlFunctions;
 
 require_once __DIR__ . '/../src/bootstrap.php';
 
+require_once __DIR__ . '/runtime_regressions.php';
+runtime_regressions();
 assert_public_api_boundary();
 
 $formatCases = 0;

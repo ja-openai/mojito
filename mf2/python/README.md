@@ -177,3 +177,16 @@ sh run.sh babel-demo
 sh run.sh bench
 sh run.sh bench-parse
 ```
+
+## Runtime ownership and limits
+
+Function callbacks receive detached read-only annotation/source snapshots.
+Read their options through `option_value`; change the caller's catalog between
+format calls to change behavior. Memoized numeric histories belong to one call;
+variable-dependent histories retain dynamic resolver behavior. The public parts
+schema retains expression strings and original model metadata. It does not
+promise the upstream resolved numeric-subparts/markup-options API.
+
+See `../spec/runtime-limits.md` for numeric bounds, direction handling, source
+ownership and the remaining application-level budgets. Run
+`sh ../packaging/check_runtime.sh python` for native/shared/official/adapter gates.

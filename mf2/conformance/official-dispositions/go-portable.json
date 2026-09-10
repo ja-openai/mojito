@@ -1,0 +1,435 @@
+{
+  "functions/currency.json#1/errors": {
+    "testSha256": "8532b9c28cf82683bad8af2b0c34bfb554037364e47e41a0190f20efee2cbae7",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#2/errors": {
+    "testSha256": "876cf54dd5b10b3bc6e3c7786fdeb5e91a48696dcda4520d82e1ce2931e070bf",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#3/errors": {
+    "testSha256": "a66f129e652afc5885c612a7643b5c337c7a1b333c8f878ed5997fe73a3206ae",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#4/errors": {
+    "testSha256": "a6f1dcdce558f02d0f51c6f81e6213f348a2720d5093d077eba0a925f233906d",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#5/errors": {
+    "testSha256": "13c3c78705a69e49d5f56a90f89cc8c27042f9b5f574c2838c6e3dd502b92224",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#6/errors": {
+    "testSha256": "b783965ac8bb37938b26c0811be91af7c7a000baac7ea06cf7f66ba334ce4cc7",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#7/errors": {
+    "testSha256": "dbd77079690da71089552016f631cf9dec4b15a3bb64fce9d122c7e65e3db0cf",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#8/errors": {
+    "testSha256": "2bd5e588c42c32e21cb7256db2396e5b9dc073bd89c64c1ae191cd0fc4c5689e",
+    "actual": [
+      "unknown-function",
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#9/errors": {
+    "testSha256": "fa280fbc5821faa201aa5d5c0e84c4f2b6929ad7ebafdc455ab4a0fb5fa75040",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#10/errors": {
+    "testSha256": "996028e117d6de8fd0c55766137fba2e1b6a7c8209322a4ce0c55b9786334e9b",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#11/errors": {
+    "testSha256": "34f68165bad95d30e1e13e8301b7165d733e95c549a2ffc6d8afddf49bfdcbc5",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/currency.json#12/errors": {
+    "testSha256": "e2f904c4f40cada72161dd5d367abbe2d95575e2cc6c8459aed3da26f42d4442",
+    "actual": [
+      "bad-selector",
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/date.json#1/errors": {
+    "testSha256": "a561041b0ba0230463993e57fc0b26c8ccb5bbbf134be5434b82293c60947408",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/date.json#2/errors": {
+    "testSha256": "c230cde9f887aa2c5a9b4ecd9a71f838b5a03e1edfe3f08d8e12767a49adda7c",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/date.json#3/errors": {
+    "testSha256": "ba38130ca49cdb17348cc6d3430c19cc9c09352ac4db1ee14c22c52e5e1650da",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/date.json#4/errors": {
+    "testSha256": "e3b09c6f71e4954c74e0057b9f0505573628b674759432ea807fb40064db3168",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/date.json#5/errors": {
+    "testSha256": "0e24229deb67e4b970f609c16ec2cdb6487afc9c0ef956d7fba38c287faa5887",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/date.json#6/errors": {
+    "testSha256": "5b249d3656bee16f7eb825f694a66b071a32e1fa313dda7539f1c9074ec31254",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/date.json#7/errors": {
+    "testSha256": "ec8c69e3579f25866387b16da299f63c595c573559eac7f05fc15f056c9d25ad",
+    "actual": [
+      "unknown-function",
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/datetime.json#1/errors": {
+    "testSha256": "a1483858ff95878a6c8f96a3e4eb952cef34baa068d26fc7494f9d6e803e8050",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/datetime.json#2/errors": {
+    "testSha256": "92c55fbdbb2720bf0ad6107c120adfa3c1cab2ca146d906a07c4364bbd0e2479",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/datetime.json#3/errors": {
+    "testSha256": "1d5e4b34380f23181acf677693362b4d407c7f8a27786846b59815c79ae9d89d",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/datetime.json#4/errors": {
+    "testSha256": "197ff7dbaa996e306eab73cff25ea3a351b4950bfbfd1687ddf0f847b7fa7cb8",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/datetime.json#5/errors": {
+    "testSha256": "23c0780c945ad9fb7f9d7b93f00f89245c69638f295e9e6a1d6d3a7a97490369",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/datetime.json#6/errors": {
+    "testSha256": "b18f31081ffe75a5aa2165173001230349c5dab578c0bca60a5dec70cecf6f86",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/datetime.json#7/errors": {
+    "testSha256": "129af3a8f585803d8e06344fe17e8513ef8262727dbd9653be8f9d262d57f145",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/number.json#41/parts": {
+    "testSha256": "c07f3f992ad1c47d47d92418f3097fa6e238e81649add8e9fec5fcee1f527278",
+    "actual": [
+      {
+        "type": "string",
+        "value": "42"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "functions/time.json#1/errors": {
+    "testSha256": "213aa4fa269619bc8c54dd9c1c087ca01735f1a9a9e36b78a78e9242ece20e00",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/time.json#2/errors": {
+    "testSha256": "189c616dc0754dfb03268e51ce70c84bd65558a7578c92016f3a75b3fc76d6cb",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/time.json#3/errors": {
+    "testSha256": "7a322607616fdca7ced753ae8c71b15ab54a84689a639a9a5db73770f8164ede",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/time.json#4/errors": {
+    "testSha256": "3b29452b66cdce253cc2b076596437b606eee17e63fe0e60f7900b737692d39b",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/time.json#5/errors": {
+    "testSha256": "e2e59443a52cbd189e5c7bfb405140ecc79f358b50408f5c30c0f35c33b14b8c",
+    "actual": [
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "functions/time.json#6/errors": {
+    "testSha256": "1c2057639f487d5c25e22b39344a1c94ca2b53a0763923b6200319dab8c56168",
+    "actual": [
+      "unknown-function",
+      "unknown-function"
+    ],
+    "reason": "The portable production registry does not implement this platform function. The platform registry is checked separately; no test-only standard-function substitute is installed."
+  },
+  "syntax.json#50/parts": {
+    "testSha256": "5062f5da58f2c8ff27debd1c785d6357f05965b5dfda99d8254bbd25029811b6",
+    "actual": [
+      {
+        "kind": "open",
+        "name": "tag",
+        "options": {
+          "foo": {
+            "type": "literal",
+            "value": "bar"
+          }
+        },
+        "type": "markup"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "syntax.json#56/parts": {
+    "testSha256": "b90e16b7cf4c59acba62a1bf27e49e7877fe31a3164893b313fac3697876fdd4",
+    "actual": [
+      {
+        "kind": "close",
+        "name": "tag",
+        "options": {
+          "foo": {
+            "type": "literal",
+            "value": "bar"
+          }
+        },
+        "type": "markup"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "syntax.json#91/output": {
+    "testSha256": "9e2b46c1a7d2db24d47cddc6cadbafca26e357c71490a3071e59373bb1adbd95",
+    "actual": "1.3 et 4.2",
+    "reason": "The portable registry deliberately uses unlocalized numeric display. The same unannotated native-number case must pass with the production platform registry."
+  },
+  "syntax.json#104/parts": {
+    "testSha256": "74f01393951dbdd0cc4c76b0f601c4916fd04b906aa1bccbb70bb6f083db3dd1",
+    "actual": [
+      {
+        "kind": "standalone",
+        "name": "tag",
+        "options": {
+          "foo": {
+            "type": "literal",
+            "value": "bar"
+          }
+        },
+        "type": "markup"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "syntax.json#105/parts": {
+    "testSha256": "1d0cb4a04cd182f7b8be09dd571db592ee2e7937c3e6840f0a7ab478a2609128",
+    "actual": [
+      {
+        "kind": "open",
+        "name": "tag",
+        "options": {
+          "a:foo": {
+            "type": "literal",
+            "value": "foo"
+          },
+          "b:bar": {
+            "name": "bar",
+            "type": "variable"
+          }
+        },
+        "type": "markup"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#1/parts": {
+    "testSha256": "4873c1f542fb627bd620f015cdd7d38b4bc0a2099926edf327b73faf23227013",
+    "actual": [
+      {
+        "kind": "open",
+        "name": "tag",
+        "options": {
+          "u:id": {
+            "type": "literal",
+            "value": "x"
+          }
+        },
+        "type": "markup"
+      },
+      {
+        "type": "text",
+        "value": "content"
+      },
+      {
+        "kind": "close",
+        "name": "ns:tag",
+        "options": {
+          "u:id": {
+            "type": "literal",
+            "value": "x"
+          }
+        },
+        "type": "markup"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#2/parts": {
+    "testSha256": "f006c860bff746e8c65df2c02629f9b27fd4c7b051acb3ab8657fbfa4740a4ae",
+    "actual": [
+      {
+        "kind": "open",
+        "name": "tag",
+        "options": {
+          "u:dir": {
+            "type": "literal",
+            "value": "rtl"
+          }
+        },
+        "type": "markup"
+      },
+      {
+        "type": "text",
+        "value": "content"
+      },
+      {
+        "kind": "close",
+        "name": "ns:tag",
+        "type": "markup"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#3/parts": {
+    "testSha256": "928812cee52805dbb90527aaf64300c657b5d9864f20842d1ba6cacc3a556f14",
+    "actual": [
+      {
+        "type": "text",
+        "value": "hello "
+      },
+      {
+        "type": "string",
+        "value": "world",
+        "dir": "ltr"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#4/parts": {
+    "testSha256": "b12963e42a463ca580d3e6cece37481c7294f47d96aa9ce42450413fd513e0c6",
+    "actual": [
+      {
+        "type": "text",
+        "value": "hello "
+      },
+      {
+        "type": "string",
+        "value": "world",
+        "dir": "rtl"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#5/parts": {
+    "testSha256": "668137ded223f5acb0670029400d65b15e2e05af8dcc586a79d5cc3f2df1ddb6",
+    "actual": [
+      {
+        "type": "text",
+        "value": "hello "
+      },
+      {
+        "type": "string",
+        "value": "world",
+        "dir": "auto"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  },
+  "u-options.json#6/parts": {
+    "testSha256": "d276585fea1f88993722dad22b75a5dbef5876ef14453919cde7349c82d0961e",
+    "actual": [
+      {
+        "type": "text",
+        "value": "hello "
+      },
+      {
+        "type": "string",
+        "value": "world",
+        "dir": "ltr"
+      }
+    ],
+    "reason": "The public Mojito parts API preserves expression strings and model metadata. It does not expose the upstream resolved numeric subparts, resolved markup options, u:id, locale or standalone bidi-isolation parts. This assertion is evaluated and records the exact API difference; it is not a pass."
+  }
+}

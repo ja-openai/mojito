@@ -4,7 +4,11 @@ final class ConformanceFunctionRegistry {
     private ConformanceFunctionRegistry() {}
 
     static Mf2FunctionRegistry registry() {
-        return FixtureFormatterStubs.registry()
+        return withTestFunctions(FixtureFormatterStubs.registry());
+    }
+
+    static Mf2FunctionRegistry withTestFunctions(Mf2FunctionRegistry base) {
+        return base
                 .withFunction("test:function", ConformanceFunctionRegistry::testFunction)
                 .withFunction("test:select", ConformanceFunctionRegistry::testSelectResolver)
                 .withFunction("test:format", ConformanceFunctionRegistry::testFormatResolver)

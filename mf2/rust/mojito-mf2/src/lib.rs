@@ -4,6 +4,8 @@ mod cldr;
 mod cldr_plural_rules;
 mod diagnostic;
 mod formatter;
+#[rustfmt::skip]
+mod locale_direction_data;
 mod locale_key;
 mod model;
 mod parser;

@@ -4,11 +4,22 @@ This subproject owns generated locale data used by MF2 runtimes. It starts with
 plural rules because plural data is small enough to ship selectively and is
 updated independently from parser/runtime code.
 
-Regenerate the vendored plural rule implementations for every runtime package:
+Regenerate the vendored plural rules and locale-direction tables for every runtime package:
 
 ```sh
 sh update_generated.sh
 ```
+
+Normal regeneration reads the immutable CLDR JSON revision in `pinned-ref.txt`.
+Update that pin deliberately with the generated output. Direction metadata records
+SHA-256 hashes of `scriptMetadata.json` and `likelySubtags.json`; explicit scripts
+win over region/language defaults, and unknown locale direction remains unknown.
+This metadata controls numeric isolation without guessing from rendered text.
+
+`sh check_generated.sh` regenerates into a temporary directory and checks both
+working-tree and Git-index paths and bytes. While editing, use
+`sh check_generated.sh --worktree` to check the working tree without requiring
+unfinished changes to be staged. CI uses the strict default.
 
 Generate a custom locale subset for an embedded or product-specific build:
 
@@ -26,7 +37,7 @@ The checked-in runtime data is:
   is the default runtime data used by Rust, Swift, Python, Java, Kotlin,
   JavaScript, Go, and PHP.
 
-Current size smoke results from CLDR `main` on 2026-05-19:
+Historical size smoke results from CLDR `main` on 2026-05-19 (not the current pinned build):
 
 - all CLDR plural locales: JSON ~125 KB, Python ~116 KB, Rust ~62 KB, Swift
   ~81 KB, Java ~71 KB, Kotlin ~64 KB, JavaScript ~53 KB, PHP ~69 KB

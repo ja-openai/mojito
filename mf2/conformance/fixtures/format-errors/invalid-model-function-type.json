@@ -1,0 +1,19 @@
+{
+  "name": "invalid-model-function-type",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "function": {
+          "type": "literal",
+          "name": "string"
+        }
+      }
+    ]
+  },
+  "expectedError": {
+    "code": "invalid-model"
+  }
+}

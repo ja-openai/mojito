@@ -1,0 +1,10 @@
+Mojito MessageFormat 2
+Copyright Mojito contributors.
+
+This distribution includes code generated from the Unicode Common Locale Data
+Repository (CLDR), copyright Unicode, Inc. and others. The generated data is
+licensed under Unicode-3.0; see UNICODE-LICENSE.txt for the full permission notice.
+Source: https://github.com/unicode-org/cldr
+License text: https://github.com/unicode-org/cldr/blob/release-48/LICENSE
+Generated data provenance is recorded in the distributed generated CLDR module.
+This notice does not claim the generated data is pinned to that license-source tag.

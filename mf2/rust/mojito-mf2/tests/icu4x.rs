@@ -252,3 +252,25 @@ fn format_with_default_registry(source: &str, arguments: Arguments) -> mojito_mf
     let model = parsed.model.expect("model");
     mojito_mf2::format_message(&model, arguments).expect("format")
 }
+
+#[test]
+fn temporal_reannotation_traverses_long_string_history_without_recursion() {
+    let mut source = String::from(".local $v = {$value :date dateStyle=long timeZone=UTC}\n");
+    let mut previous = String::from("v");
+    for index in 0..7000 {
+        let name = format!("v{index}");
+        source.push_str(&format!(".local ${name} = {{${previous} :string}}\n"));
+        previous = name;
+    }
+    source.push_str(&format!(
+        "{{{{{{${previous} :date dateStyle=long timeZone=UTC}}}}}}"
+    ));
+    let result = format_result_with(
+        &source,
+        "en",
+        Arguments::new().with("value", "2026-05-21"),
+        &FunctionRegistry::icu4x(),
+    );
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+    assert!(result.value.contains("2026"));
+}

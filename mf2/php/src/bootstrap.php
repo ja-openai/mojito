@@ -10,3 +10,6 @@ require_once __DIR__ . '/Formatter.php';
 require_once __DIR__ . '/IntlFunctions.php';
 require_once __DIR__ . '/PluralRules.php';
 require_once __DIR__ . '/CldrPluralRules.php';
+
+require_once __DIR__ . '/LocaleDirectionData.php';
+require_once __DIR__ . '/LocaleDirection.php';

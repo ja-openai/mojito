@@ -67,3 +67,34 @@ php examples/demo.php
 php examples/intl_demo.php
 php bench.php
 ```
+
+## Runtime bounds and model ownership
+
+Portable numeric fraction options accept integers from 0 through 1000. A minimum
+larger than an explicit maximum returns `bad-option`. Offset decimal expansion is
+limited to 4096 digits and out-of-range operands return `bad-operand`. Plural
+category selection rejects operands outside the supported integer/fraction range;
+exact-key selection does not require a CLDR category.
+
+Compiled models are checked for required semantic fields, discriminator types,
+and literal-or-present attributes before formatting. Unknown extension fields are
+ignored by formatting. Returned parts do not share mutable semantic attributes or
+options with the input model. Markup options retain model references for callers
+that resolve them in their rendering layer.
+
+The package includes `LICENSE`, `NOTICE`, and `UNICODE-LICENSE.txt`; JVM JARs place
+these notices in `META-INF`.
+
+`u:dir` accepts `ltr`, `rtl`, `auto`, and `inherit`, including resolved string variables. Invalid
+values report `bad-option` and preserve the formatted value. The option is hidden from formatter
+callback option resolution. A plain alias retains isolation; reannotation defaults to `inherit`.
+Built-in portable and Intl registries memoize literal-only numeric histories within each format call,
+including exact decimal offsets and at most 64 inherited option lookups per source. Variable-option
+histories and customized registries remain uncached, preserving callback and copied-source behavior.
+Numeric LTR direction survives reannotation without adding inferred direction to public parts.
+
+Portable `:integer` truncates bounded decimal text directly, including magnitudes above the native
+signed integer range. Exact matching keeps that value; plural categories outside the supported
+operand range return `bad-selector` and choose fallback. Native floats retain their shortest
+round-trippable decimal value. Offset options must fit a native signed integer, and subtracting
+its minimum value is rejected with `bad-option` because the positive delta is not representable.

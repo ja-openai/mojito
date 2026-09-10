@@ -1,0 +1,19 @@
+{
+  "name": "invalid-model-literal-number",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": {
+          "type": "literal",
+          "value": 42
+        }
+      }
+    ]
+  },
+  "expectedError": {
+    "code": "invalid-model"
+  }
+}

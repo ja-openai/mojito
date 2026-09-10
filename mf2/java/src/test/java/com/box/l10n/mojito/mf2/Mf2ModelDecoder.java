@@ -59,6 +59,7 @@ final class Mf2ModelDecoder {
 
     private static Mf2Message.Expression parseExpression(Object value) {
         Map<String, Object> map = object(value, "expression");
+        if (!"expression".equals(map.get("type"))) throw new IllegalArgumentException("Invalid expression type.");
         Object rawArg = map.get("arg");
         Object rawFunction = map.get("function");
         return new Mf2Message.Expression(
@@ -78,6 +79,7 @@ final class Mf2ModelDecoder {
 
     private static Mf2Message.FunctionRef parseFunction(Object value) {
         Map<String, Object> map = object(value, "function");
+        if (!"function".equals(map.get("type"))) throw new IllegalArgumentException("Invalid function type.");
         return new Mf2Message.FunctionRef(
                 string(map.get("name"), "function.name"),
                 parseOptions(map.get("options")));

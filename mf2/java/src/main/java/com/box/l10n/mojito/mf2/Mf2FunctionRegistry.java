@@ -2,12 +2,20 @@ package com.box.l10n.mojito.mf2;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 public final class Mf2FunctionRegistry {
     private final Map<String, Formatter> formatters;
     private final Map<String, Selector> selectors;
+    private final Set<String> numericFormatters;
 
     Mf2FunctionRegistry(Map<String, Formatter> formatters, Map<String, Selector> selectors) {
+        this(formatters, selectors, Set.of());
+    }
+
+    Mf2FunctionRegistry(Map<String, Formatter> formatters, Map<String, Selector> selectors, Set<String> numericFormatters) {
+        this.numericFormatters = Set.copyOf(numericFormatters);
         this.formatters = Map.copyOf(formatters);
         this.selectors = Map.copyOf(selectors);
     }
@@ -23,13 +31,32 @@ public final class Mf2FunctionRegistry {
     public Mf2FunctionRegistry withFunction(String name, Formatter formatter) {
         Map<String, Formatter> next = new HashMap<>(formatters);
         next.put(name, formatter);
-        return new Mf2FunctionRegistry(next, selectors);
+        Set<String> numeric = new HashSet<>(numericFormatters);
+        numeric.remove(name);
+        return new Mf2FunctionRegistry(next, selectors, numeric);
     }
 
     public Mf2FunctionRegistry withSelector(String name, Selector selector) {
         Map<String, Selector> next = new HashMap<>(selectors);
         next.put(name, selector);
-        return new Mf2FunctionRegistry(formatters, next);
+        return new Mf2FunctionRegistry(formatters, next, numericFormatters);
+    }
+
+    /**
+     * Registers a numeric formatter whose output follows the locale's text direction.
+     * This permits omission of default isolation in known left-to-right locales only;
+     * explicit u:dir options still apply. Ordinary withFunction overrides clear this guarantee.
+     */
+    public Mf2FunctionRegistry withNumericFunction(String name, Formatter formatter) {
+        Map<String, Formatter> next = new HashMap<>(formatters);
+        next.put(name, formatter);
+        Set<String> numeric = new HashSet<>(numericFormatters);
+        numeric.add(name);
+        return new Mf2FunctionRegistry(next, selectors, numeric);
+    }
+
+    boolean isNumericFormatter(Mf2Message.FunctionRef function) {
+        return function != null && numericFormatters.contains(function.name());
     }
 
     boolean hasSelector(Mf2Message.FunctionRef function) {

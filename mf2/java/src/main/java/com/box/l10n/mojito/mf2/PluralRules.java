@@ -12,6 +12,8 @@ final class PluralRules {
             return null;
         }
 
+        Double magnitude = Mf2FunctionSupport.parseDecimalNumber(Mf2Formatter.valueToString(value));
+        if (magnitude == null || Math.abs(magnitude) >= 0x1p63) return null;
         CldrPluralRules.NumberOperands operands =
                 CldrPluralRules.NumberOperands.fromString(Mf2Formatter.valueToString(value));
         if (operands == null) {

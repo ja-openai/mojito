@@ -227,6 +227,7 @@ def _numeric_match_operand(
             "maximumFractionDigits option must be a non-negative integer.",
         )
     )
+    _validate_fraction_range(minimum_digits, maximum_digits)
     return _numeric_selection_operand(
         value,
         function_name,
@@ -329,18 +330,22 @@ def _parse_source_decimal(source: object | None) -> Decimal | None:
 
 
 def _numeric_source_operand(source: object | None) -> Decimal | None:
-    chain = list(_iter_source_chain(source))
+    chain = []
     operand: Decimal | None = None
+    for current in _iter_source_chain(source):
+        memo = getattr(current, "_memo", None)
+        if memo is not None and "numeric_operand" in memo:
+            operand = memo["numeric_operand"]
+            break
+        chain.append(current)
     for current in reversed(chain):
         if operand is None:
             operand = _parse_decimal_or_none(getattr(current, "value"))
         function = getattr(current, "function")
-        if not _is_decimal_source_function(function) or operand is None:
-            continue
-        function_name = function.get("name")
-        if function_name == "integer":
+        function_name = function.get("name") if _is_decimal_source_function(function) and operand is not None else None
+        if function_name == "integer" and operand is not None:
             operand = operand.to_integral_value(rounding=ROUND_DOWN)
-        elif function_name == "offset":
+        elif function_name == "offset" and operand is not None:
             add = _source_option_value(current, "add")
             subtract = _source_option_value(current, "subtract")
             if (add is None) == (subtract is None):
@@ -353,6 +358,9 @@ def _numeric_source_operand(source: object | None) -> Decimal | None:
             operand = _apply_integer_offset(
                 operand, delta if add is not None else -delta
             )
+        memo = getattr(current, "_memo", None)
+        if memo is not None:
+            memo["numeric_operand"] = operand
     return operand
 
 
@@ -449,10 +457,17 @@ def _maximum_fraction_digits(call: "FunctionCall") -> int | None:
     value = _numeric_option_value(call, "maximumFractionDigits")
     if value is None:
         return None
-    return _parse_non_negative_integer_option(
+    maximum = _parse_non_negative_integer_option(
         value,
         "maximumFractionDigits option must be a non-negative integer.",
     )
+    _validate_fraction_range(_minimum_fraction_digits(call), maximum)
+    return maximum
+
+
+def _validate_fraction_range(minimum: int, maximum: int | None) -> None:
+    if maximum is not None and minimum > maximum:
+        raise MF2Error("bad-option", "minimumFractionDigits must not exceed maximumFractionDigits.")
 
 
 def _parse_non_negative_integer_option(value: str, message: str) -> int:
@@ -526,17 +541,29 @@ def _source_numeric_option_value(
 ) -> str | None:
     if source is None or _numeric_option_is_discarded(target_function, name):
         return fallback
+    visited = []
+    value = None
+    key = "numeric_option:" + name
     for current in _iter_source_chain(source):
+        memo = getattr(current, "_memo", None)
+        if memo is not None and key in memo:
+            value = memo[key]
+            break
+        visited.append(current)
         function = getattr(current, "function")
         source_function = str(function.get("name", ""))
         if not _is_numeric_function(function) or _numeric_option_is_discarded(
             source_function, name
         ):
-            return fallback
+            break
         value = _source_option_value(current, name)
         if value is not None:
-            return value
-    return fallback
+            break
+    for current in visited:
+        memo = getattr(current, "_memo", None)
+        if memo is not None:
+            memo[key] = value
+    return fallback if value is None else value
 
 
 def _numeric_option_is_discarded(function_name: str, option_name: str) -> bool:

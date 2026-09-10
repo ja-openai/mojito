@@ -85,3 +85,39 @@ experiments:
 ```sh
 MAVEN_REPO_LOCAL=/private/tmp/mojito-mf2-m2 sh run.sh conformance
 ```
+
+## Runtime bounds and model ownership
+
+Portable numeric fraction options accept integers from 0 through 1000. A minimum
+larger than an explicit maximum returns `bad-option`. Offset decimal expansion is
+limited to 4096 digits and out-of-range operands return `bad-operand`. Plural
+category selection rejects operands outside the supported integer/fraction range;
+exact-key selection does not require a CLDR category.
+
+Compiled models are checked for required semantic fields, discriminator types,
+and literal-or-present attributes before formatting. Unknown extension fields are
+ignored by formatting. Returned parts do not share mutable semantic attributes or
+options with the input model. Markup options retain model references for callers
+that resolve them in their rendering layer.
+
+The package includes `LICENSE`, `NOTICE`, and `UNICODE-LICENSE.txt`; JVM JARs place
+these notices in `META-INF`.
+
+Long declaration histories use iterative source traversal and a per-format cache for literal-only
+numeric/option histories (at most 64 inherited option entries per source). Variable-dependent
+histories retain their resolver behavior and are not cached; no process-wide cache retains catalogs.
+`u:dir` accepts `ltr`, `rtl`, `auto`, and `inherit`, including resolved string variables. Invalid
+values report `bad-option` and preserve the formatted value. The option is hidden from formatter
+callback option resolution; a plain alias retains its operand's isolation, while reannotation uses
+the default `inherit` unless explicitly overridden.
+
+Function callbacks receive detached, read-only semantic annotation maps, including the annotations
+in inherited sources. Mutating them through a `MutableMap` cast throws `UnsupportedOperationException`.
+This preserves catalog ownership and cached literal options. Unknown extension payloads and
+caller-supplied raw argument objects are outside this semantic copy.
+
+The portable, JDK and ICU4J `:integer` formatters truncate a finite binary numeric operand only
+within `-2^63 <= value < 2^63`. Outside that converted numeric range they report `bad-operand`
+instead of clamping; integer selectors report `bad-selector`. This is the current JVM integer
+conversion contract, not arbitrary-precision integer formatting. Other numeric formatting and
+plain argument conversion do not narrow integral values to signed 64-bit integers.

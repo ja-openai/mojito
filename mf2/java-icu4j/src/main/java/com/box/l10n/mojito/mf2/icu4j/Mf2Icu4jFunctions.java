@@ -32,10 +32,10 @@ public final class Mf2Icu4jFunctions {
 
     public static Mf2FunctionRegistry registry() {
         return Mf2FunctionRegistry.portable()
-                .withFunction("number", Mf2Icu4jFunctions::formatNumber)
-                .withFunction("percent", Mf2Icu4jFunctions::formatPercent)
-                .withFunction("integer", Mf2Icu4jFunctions::formatInteger)
-                .withFunction("currency", Mf2Icu4jFunctions::formatCurrency)
+                .withNumericFunction("number", Mf2Icu4jFunctions::formatNumber)
+                .withNumericFunction("percent", Mf2Icu4jFunctions::formatPercent)
+                .withNumericFunction("integer", Mf2Icu4jFunctions::formatInteger)
+                .withNumericFunction("currency", Mf2Icu4jFunctions::formatCurrency)
                 .withFunction("date", Mf2Icu4jFunctions::formatDate)
                 .withFunction("time", Mf2Icu4jFunctions::formatTime)
                 .withFunction("datetime", Mf2Icu4jFunctions::formatDateTime)
@@ -64,7 +64,7 @@ public final class Mf2Icu4jFunctions {
             throws Mf2Exception {
         double value = numericValue(call, "Integer function requires a numeric operand.");
         NumberFormat format = NumberFormat.getIntegerInstance(locale(call));
-        return applySignDisplay(format.format((long) value), value, call);
+        return applySignDisplay(format.format(Mf2FunctionSupport.truncateInteger(value)), value, call);
     }
 
     private static String formatCurrency(Mf2FunctionRegistry.FunctionCall call)
@@ -318,7 +318,12 @@ public final class Mf2Icu4jFunctions {
 
     private static OptionalInt minimumFractionDigits(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        return nonNegativeOption(call, "minimumFractionDigits");
+        OptionalInt minimum = nonNegativeOption(call, "minimumFractionDigits");
+        OptionalInt maximum = maximumFractionDigits(call);
+        if (minimum.isPresent() && maximum.isPresent() && minimum.getAsInt() > maximum.getAsInt()) {
+            throw badOption("minimumFractionDigits must not exceed maximumFractionDigits.");
+        }
+        return minimum;
     }
 
     private static OptionalInt maximumFractionDigits(Mf2FunctionRegistry.FunctionCall call)
@@ -350,7 +355,7 @@ public final class Mf2Icu4jFunctions {
     private static int parseNonNegativeInteger(String value, String message) throws Mf2Exception {
         try {
             int parsed = Integer.parseInt(value);
-            if (parsed >= 0) {
+            if (parsed >= 0 && parsed <= 1000 && value.chars().allMatch(ch -> ch >= '0' && ch <= '9')) {
                 return parsed;
             }
         } catch (NumberFormatException error) {

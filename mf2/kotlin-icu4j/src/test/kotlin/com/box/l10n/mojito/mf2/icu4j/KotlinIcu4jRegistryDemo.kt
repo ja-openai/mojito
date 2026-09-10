@@ -40,6 +40,10 @@ object KotlinIcu4jRegistryDemo {
     @JvmStatic
     fun main(args: Array<String>) {
         val quiet = args.firstOrNull() == "--quiet"
+        for (operand in listOf(1e19, -1e19, 9223372036854775808.0, Math.nextDown(-9223372036854775808.0))) {
+            val result = Mf2Formatter.formatMessage(parse("{${'$'}x :integer}"), mapOf("x" to operand), functions = Mf2Icu4jFunctions.registry())
+            check(result.errors.any { it.code == "bad-operand" }) { "integer range: $operand" }
+        }
         val message = parse(source)
         val arguments = mapOf(
             "amount" to AMOUNT,

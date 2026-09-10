@@ -5,7 +5,7 @@ Performance work has two different jobs:
 - benchmark hot formatter loops after warmup
 - profile CPU and memory to explain bottlenecks before optimizing
 
-Use `compare.sh` for comparable hot-loop throughput:
+Use `compare.sh` for hot-loop throughput across the configured runtime registries:
 
 ```sh
 sh perf/compare.sh conformance/fixtures/source-to-model 100000 10000
@@ -43,11 +43,24 @@ On macOS this uses `/usr/bin/time -l`, which reports `maximum resident set size`
 for each process. That number includes runtime/process overhead, so it should be
 reported separately from in-process hot-loop throughput.
 
-The ICU4J classpath, ICU4C++ binary, and Java benchmark classpath are prepared
-before `/usr/bin/time` runs, so Maven startup, dependency resolution, and C++
-compile time are not counted in the RSS measurements.
+Rust, Swift, Go, Java, Kotlin and reference executables/classpaths are built
+before `/usr/bin/time`. JavaScript runs directly with Node. Runtime startup,
+fixture loading, correctness preflight and warmup still contribute to process
+RSS and wall time; the separately reported hot loop excludes them. Cumulative
+allocation bytes and retained heap are different metrics.
 
-## Current Local Smoke Results
+`profile.sh` emits a manifest with sorted fixture names/content SHA-256, case
+counts, registry scope and iteration/warmup settings. Go honors that fixture path
+and warmup; setup and correctness checks run with its timer stopped. JavaScript
+parser timing records success, diagnostics and UTF-8 source bytes without
+serializing every model. Format checksums count UTF-8 output bytes in every
+runtime, and correctness preflight checks the expected output with each case's
+locale and bidi options before warmup or timing. These
+changes invalidate comparisons against earlier driver-inclusive RSS numbers.
+The platform registries and reference engines do different formatting work;
+compare only matching cases, registry semantics and options.
+
+## Historical Local Smoke Results
 
 Run on 2026-05-19 with 1,000,000 timed iterations and 100,000 warmup
 iterations:
@@ -67,8 +80,8 @@ RSS smoke run with 10,000 timed iterations and 2,000 warmup iterations:
 - ICU4J process: about 266 MB max RSS
 - ICU4C++ process: about 6.1 MB max RSS
 
-These are development-machine smoke numbers, not release benchmarks. They are
-useful for trend detection and obvious bottlenecks only.
+These are development-machine smoke numbers, not release benchmarks. They predate the current corpus and measurement fixes and must not be used as a
+current performance or cross-runtime regression baseline.
 
 `compare_parse.sh` now includes Rust, Swift, Python, JavaScript, Java, and Kotlin for
 both valid and invalid source fixtures; `profile.sh rss-parse` adds RSS smoke

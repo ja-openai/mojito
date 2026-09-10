@@ -1,0 +1,15 @@
+{
+  "name": "invalid-model-empty-expression",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression"
+      }
+    ]
+  },
+  "expectedError": {
+    "code": "invalid-model"
+  }
+}

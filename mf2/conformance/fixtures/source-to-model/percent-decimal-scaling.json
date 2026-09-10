@@ -1,0 +1,47 @@
+{
+  "name": "percent-decimal-scaling",
+  "source": "{$n :percent}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": {
+          "type": "variable",
+          "name": "n"
+        },
+        "function": {
+          "type": "function",
+          "name": "percent"
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "arguments": {
+        "n": 0.29
+      },
+      "expected": "29%"
+    },
+    {
+      "arguments": {
+        "n": 0.07
+      },
+      "expected": "7%"
+    },
+    {
+      "arguments": {
+        "n": -0.29
+      },
+      "expected": "-29%"
+    },
+    {
+      "arguments": {
+        "n": 0.00029
+      },
+      "expected": "0.029%"
+    }
+  ]
+}

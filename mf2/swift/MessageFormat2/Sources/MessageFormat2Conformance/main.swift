@@ -3,6 +3,7 @@ import MessageFormat2
 
 do {
     let arguments = Array(CommandLine.arguments.dropFirst())
+    if arguments.first == "official-bridge" { try runOfficialBridge(); Foundation.exit(0) }
     if arguments.first == "--bench" {
         try runBenchmark(arguments: Array(arguments.dropFirst()))
         Foundation.exit(0)
@@ -12,6 +13,8 @@ do {
         Foundation.exit(0)
     }
 
+    try runRuntimeRegressionChecks()
+    try runBenchmarkRegressionChecks()
     let fixtureDirectory = try resolveFixtureDirectory(arguments: arguments)
     var checkedSourceCases = 0
     var checkedCases = 0
@@ -32,6 +35,11 @@ do {
                 expected: "\(fixture.expectedModel)",
                 actual: "\(String(describing: parsed.model)); diagnostics=\(parsed.diagnostics)"
             )
+        }
+        let roundTripped = try JSONDecoder().decode(MF2Message.self, from: JSONEncoder().encode(fixture.expectedModel))
+        if roundTripped != fixture.expectedModel {
+            throw ConformanceError.parseMismatch(fixture: fixtureURL.lastPathComponent,
+                expected: "\(fixture.expectedModel)", actual: "\(roundTripped)")
         }
         checkedSourceCases += 1
 
@@ -160,8 +168,8 @@ private func resolveFixtureDirectory(arguments: [String]) throws -> URL {
 
 private func runBenchmark(arguments: [String]) throws {
     let fixtureDirectory = try resolveFixtureDirectory(arguments: arguments)
-    let iterations = Int(arguments.dropFirst().first ?? "100000") ?? 100000
-    let warmupIterations = Int(arguments.dropFirst(2).first ?? "10000") ?? 10000
+    let iterations = try benchmarkCount(arguments.dropFirst().first ?? "100000", label: "iteration", minimum: 1)
+    let warmupIterations = try benchmarkCount(arguments.dropFirst(2).first ?? "10000", label: "warmup", minimum: 0)
     let cases = try fixtureURLs(in: fixtureDirectory).flatMap { fixtureURL in
         let fixture = try JSONDecoder().decode(
             SourceToModelFixture.self,
@@ -171,7 +179,9 @@ private func runBenchmark(arguments: [String]) throws {
             BenchCase(
                 model: fixture.expectedModel,
                 locale: formatCase.locale,
-                arguments: formatCase.arguments
+                arguments: formatCase.arguments,
+                bidiIsolation: formatCase.bidiIsolation ?? .none,
+                expected: formatCase.expected
             )
         }
     }
@@ -180,25 +190,24 @@ private func runBenchmark(arguments: [String]) throws {
         throw ConformanceError.noFormatCases
     }
 
+    // Check the whole corpus before warmup/timing, including cases not reached
+    // by a short measured run.
+    for benchCase in cases {
+        let output = try benchCase.format()
+        if output != benchCase.expected {
+            throw ConformanceError.formatMismatch(fixture: "benchmark preflight", expected: benchCase.expected, actual: output)
+        }
+    }
+
     for index in 0..<warmupIterations {
-        let benchCase = cases[index % cases.count]
-        let result = try benchCase.model.format(
-            arguments: benchCase.arguments,
-            locale: benchCase.locale
-        )
-        if result.hasErrors { throw ConformanceError.expectedNoFormatErrors(fixture: "bench", actual: result.errors.map(\.code)) }
+        _ = try cases[index % cases.count].format()
     }
 
     let started = Date()
     var bytes = 0
     for index in 0..<iterations {
-        let benchCase = cases[index % cases.count]
-        let output = try benchCase.model.format(
-            arguments: benchCase.arguments,
-            locale: benchCase.locale
-        )
-        if output.hasErrors { throw ConformanceError.expectedNoFormatErrors(fixture: "bench", actual: output.errors.map(\.code)) }
-        bytes += output.value.utf8.count
+        let output = try cases[index % cases.count].format()
+        bytes += output.utf8.count
     }
     let seconds = Date().timeIntervalSince(started)
     let opsPerSecond = Double(iterations) / seconds
@@ -209,19 +218,31 @@ private func runBenchmark(arguments: [String]) throws {
 
 private func runParseBenchmark(arguments: [String]) throws {
     let fixtureDirectory = try resolveFixtureDirectory(arguments: arguments)
-    let iterations = Int(arguments.dropFirst().first ?? "100000") ?? 100000
-    let warmupIterations = Int(arguments.dropFirst(2).first ?? "10000") ?? 10000
-    let sources = try fixtureURLs(in: fixtureDirectory).compactMap { fixtureURL in
-        let fixture = try JSONDecoder().decode(
+    let iterations = try benchmarkCount(arguments.dropFirst().first ?? "100000", label: "iteration", minimum: 1)
+    let warmupIterations = try benchmarkCount(arguments.dropFirst(2).first ?? "10000", label: "warmup", minimum: 0)
+    let fixtures = try fixtureURLs(in: fixtureDirectory).map { fixtureURL in
+        try JSONDecoder().decode(
             SourceOnlyFixture.self,
             from: Data(contentsOf: fixtureURL)
         )
-        return fixture.source
     }
 
-    guard !sources.isEmpty else {
+    guard !fixtures.isEmpty else {
         throw ConformanceError.noSourceCases
     }
+
+    for fixture in fixtures {
+        let result = parseToModel(fixture.source)
+        let actual = result.diagnostics.map(\.code)
+        let expected = (fixture.expectedDiagnostics ?? []).map(\.code)
+        guard actual == expected, (result.model != nil) == expected.isEmpty else {
+            throw ConformanceError.sourceDiagnosticsMismatch(
+                fixture: "parser benchmark preflight",
+                expected: "\(expected), model=\(expected.isEmpty)",
+                actual: "\(actual), model=\(result.model != nil)")
+        }
+    }
+    let sources = fixtures.map(\.source)
 
     for index in 0..<warmupIterations {
         _ = parseToModel(sources[index % sources.count])
@@ -245,6 +266,13 @@ private func runParseBenchmark(arguments: [String]) throws {
     print(
         "swift parse iterations=\(iterations) warmup=\(warmupIterations) cases=\(sources.count) seconds=\(String(format: "%.6f", seconds)) ops_per_second=\(String(format: "%.0f", opsPerSecond)) parsed=\(parsedCount) diagnostics=\(diagnosticCount) bytes=\(bytes)"
     )
+}
+
+private func benchmarkCount(_ value: String, label: String, minimum: Int) throws -> Int {
+    guard let count = Int(value), count >= minimum else {
+        throw ConformanceError.invalidBenchmarkCount(label: label, value: value)
+    }
+    return count
 }
 
 private func runPublicApiEdgeChecks() throws {
@@ -389,35 +417,35 @@ private func runPublicApiEdgeChecks() throws {
             []
         ),
         (
-            "out-of-range integral number",
-            "{9223372036854775807 :number}",
+                "exact integral number",
+                "{9223372036854775807 :number}",
             [:],
-            "{|9223372036854775807|}",
-            ["bad-operand"]
-        ),
+                "9223372036854775807",
+                []
+            ),
         (
-            "out-of-range offset number reannotation",
-            ".local $offset = {-1 :offset subtract=-9223372036854775808} "
+                "exact offset number reannotation",
+                ".local $offset = {-1 :offset subtract=-9223372036854775808} "
                 + "{{Value {$offset :number}}}",
             [:],
-            "Value {$offset}",
-            ["bad-operand"]
-        ),
+                "Value 9223372036854775807",
+                []
+            ),
         (
-            "out-of-range integral integer",
-            "{9223372036854775807 :integer}",
+                "exact integral integer",
+                "{9223372036854775807 :integer}",
             [:],
-            "{|9223372036854775807|}",
-            ["bad-operand"]
-        ),
+                "9223372036854775807",
+                []
+            ),
         (
-            "out-of-range offset integer reannotation",
-            ".local $offset = {-1 :offset subtract=-9223372036854775808} "
+                "exact offset integer reannotation",
+                ".local $offset = {-1 :offset subtract=-9223372036854775808} "
                 + "{{Value {$offset :integer}}}",
             [:],
-            "Value {$offset}",
-            ["bad-operand"]
-        ),
+                "Value 9223372036854775807",
+                []
+            ),
         (
             "excessive maximum fraction digits",
             "Value {1 :number maximumFractionDigits=65536}",
@@ -433,19 +461,19 @@ private func runPublicApiEdgeChecks() throws {
             ["bad-option"]
         ),
         (
-            "percent multiplication overflow",
-            "{1E308 :percent}",
+                "large exact percent",
+                "{1E308 :percent}",
             [:],
-            "{|1E308|}",
-            ["bad-operand"]
-        ),
+                "1" + String(repeating: "0", count: 310) + "%",
+                []
+            ),
         (
-            "offset arithmetic range failure",
-            "{1E127 :offset add=9223372036854775807}",
+                "large exact offset",
+                "{1E127 :offset add=9223372036854775807}",
             [:],
-            "{|1E127|}",
-            ["bad-operand"]
-        ),
+                "1" + String(repeating: "0", count: 108) + "9223372036854775807",
+                []
+            ),
         (
             "variable numeric select",
             "variable select {1 :number select=$bad}",
@@ -474,7 +502,7 @@ private func runPublicApiEdgeChecks() throws {
         call.value
     }
     let integerSelector = try parsePublicApiModel(
-        ".input {$value :integer}\n.match $value\n"
+        ".input {$value :integer select=exact}\n.match $value\n"
             + "9223372036854775807 {{exact}}\n* {{fallback}}"
     )
     let integerSelectorResult = try formatMessage(
@@ -483,14 +511,14 @@ private func runPublicApiEdgeChecks() throws {
         functions: permissiveInteger
     )
     try expectValue(
-        "public-api out-of-range integer selector",
+        "public-api exact large integer selector",
         integerSelectorResult.value,
-        "fallback"
+        "exact"
     )
     try expectCodes(
-        "public-api out-of-range integer selector errors",
+        "public-api exact large integer selector errors",
         integerSelectorResult.errors,
-        ["bad-selector"]
+        []
     )
 
     let permissiveNumber = MF2FunctionRegistry.portable.withFunction("number") { call in
@@ -591,10 +619,19 @@ private func runFormatErrorFixtures(fixtureRoot: URL) throws -> Int {
 
     var checkedCases = 0
     for fixtureURL in try fixtureURLs(in: fixtureDirectory) {
-        let fixture = try JSONDecoder().decode(
-            FormatErrorFixture.self,
-            from: Data(contentsOf: fixtureURL)
-        )
+        let data = try Data(contentsOf: fixtureURL)
+        let fixture: FormatErrorFixture
+        do {
+            fixture = try JSONDecoder().decode(FormatErrorFixture.self, from: data)
+        } catch is DecodingError {
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            guard (json?["expectedError"] as? [String: Any])?["code"] as? String == "invalid-model" else {
+                throw ConformanceError.expectedFormatError(
+                    fixture: fixtureURL.lastPathComponent, actual: "model decode error")
+            }
+            checkedCases += 1
+            continue
+        }
 
         do {
             let actual = try fixture.model.format(
@@ -751,7 +788,8 @@ private struct SourceToModelFixture: Decodable {
 }
 
 private struct SourceOnlyFixture: Decodable {
-    let source: String?
+    let source: String
+    let expectedDiagnostics: [ExpectedError]?
 }
 
 private struct InvalidSourceFixture: Decodable {
@@ -764,12 +802,27 @@ private struct FormatCase: Decodable {
     let bidiIsolation: MF2BidiIsolation?
     let arguments: [String: MF2Value]
     let expected: String
+    private enum CodingKeys: String, CodingKey { case locale, bidiIsolation, arguments, expected }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        locale = try c.decodeIfPresent(String.self, forKey: .locale) ?? "en"
+        bidiIsolation = try c.decodeIfPresent(MF2BidiIsolation.self, forKey: .bidiIsolation)
+        arguments = try c.decodeIfPresent([String: MF2Value].self, forKey: .arguments) ?? [:]
+        expected = try c.decode(String.self, forKey: .expected)
+    }
 }
 
 private struct PartsCase: Decodable {
     let locale: String
     let arguments: [String: MF2Value]
     let expected: [MF2FormattedPart]
+    private enum CodingKeys: String, CodingKey { case locale, arguments, expected }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        locale = try c.decodeIfPresent(String.self, forKey: .locale) ?? "en"
+        arguments = try c.decodeIfPresent([String: MF2Value].self, forKey: .arguments) ?? [:]
+        expected = try c.decode([MF2FormattedPart].self, forKey: .expected)
+    }
 }
 
 private struct FallbackCase: Decodable {
@@ -778,6 +831,15 @@ private struct FallbackCase: Decodable {
     let arguments: [String: MF2Value]
     let expected: String
     let expectedErrors: [ExpectedError]
+    private enum CodingKeys: String, CodingKey { case locale, bidiIsolation, arguments, expected, expectedErrors }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        locale = try c.decodeIfPresent(String.self, forKey: .locale) ?? "en"
+        bidiIsolation = try c.decodeIfPresent(MF2BidiIsolation.self, forKey: .bidiIsolation)
+        arguments = try c.decodeIfPresent([String: MF2Value].self, forKey: .arguments) ?? [:]
+        expected = try c.decode(String.self, forKey: .expected)
+        expectedErrors = try c.decode([ExpectedError].self, forKey: .expectedErrors)
+    }
 }
 
 private struct FallbackPartsCase: Decodable {
@@ -785,6 +847,14 @@ private struct FallbackPartsCase: Decodable {
     let arguments: [String: MF2Value]
     let expected: [MF2FormattedPart]
     let expectedErrors: [ExpectedError]
+    private enum CodingKeys: String, CodingKey { case locale, arguments, expected, expectedErrors }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        locale = try c.decodeIfPresent(String.self, forKey: .locale) ?? "en"
+        arguments = try c.decodeIfPresent([String: MF2Value].self, forKey: .arguments) ?? [:]
+        expected = try c.decode([MF2FormattedPart].self, forKey: .expected)
+        expectedErrors = try c.decode([ExpectedError].self, forKey: .expectedErrors)
+    }
 }
 
 private struct FormatErrorFixture: Decodable {
@@ -792,6 +862,14 @@ private struct FormatErrorFixture: Decodable {
     let locale: String
     let arguments: [String: MF2Value]
     let expectedError: ExpectedError
+    private enum CodingKeys: String, CodingKey { case model, locale, arguments, expectedError }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        model = try c.decode(MF2Message.self, forKey: .model)
+        locale = try c.decodeIfPresent(String.self, forKey: .locale) ?? "en"
+        arguments = try c.decodeIfPresent([String: MF2Value].self, forKey: .arguments) ?? [:]
+        expectedError = try c.decode(ExpectedError.self, forKey: .expectedError)
+    }
 }
 
 private struct ExpectedError: Decodable {
@@ -817,6 +895,16 @@ private struct BenchCase {
     let model: MF2Message
     let locale: String
     let arguments: [String: MF2Value]
+    let bidiIsolation: MF2BidiIsolation
+    let expected: String
+
+    func format() throws -> String {
+        let output = try model.format(arguments: arguments, locale: locale, bidiIsolation: bidiIsolation)
+        if output.hasErrors {
+            throw ConformanceError.expectedNoFormatErrors(fixture: "bench", actual: output.errors.map(\.code))
+        }
+        return output.value
+    }
 }
 
 private func canonicalLocaleKey(_ locale: String) -> String {
@@ -861,6 +949,7 @@ private func canonicalSubtag(index: Int, part: String) -> String {
 }
 
 private enum ConformanceError: Error, CustomStringConvertible {
+    case invalidBenchmarkCount(label: String, value: String)
     case noFormatCases
     case noSourceCases
     case parseMismatch(fixture: String, expected: String, actual: String)
@@ -875,6 +964,8 @@ private enum ConformanceError: Error, CustomStringConvertible {
 
     var description: String {
         switch self {
+        case let .invalidBenchmarkCount(label, value):
+            "Invalid \(label) count: '\(value)'"
         case .noFormatCases:
             "No format cases found."
         case .noSourceCases:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from ._portable_functions import portable_formatters, portable_selectors
@@ -19,6 +19,10 @@ class FunctionSource:
     function: MF2FunctionAnnotation
     inherited_source: "FunctionSource | None"
     _option_resolver: OptionResolver
+    # Only runtime-owned, per-format sources opt in. Externally constructed
+    # sources retain their uncached resolver behavior.
+    _memo: dict[str, Any] | None = field(default=None, repr=False, compare=False)
+    _direction_info: tuple[str | None, str | None, bool] | None = field(default=None, repr=False, compare=False)
 
     def option_value(self, name: str, default: str | None = None) -> str | None:
         return self._option_resolver(name, default)
@@ -59,6 +63,7 @@ class FunctionRegistry:
     ) -> None:
         self._formatters = dict(formatters or {})
         self._selectors = dict(selectors or {})
+        self._production_numeric_formatters: frozenset[str] = frozenset()
 
     @classmethod
     def defaults(cls) -> "FunctionRegistry":
@@ -66,17 +71,23 @@ class FunctionRegistry:
 
     @classmethod
     def portable(cls) -> "FunctionRegistry":
-        return cls(portable_formatters(), portable_selectors())
+        registry = cls(portable_formatters(), portable_selectors())
+        registry._production_numeric_formatters = frozenset({"number", "integer", "percent"})
+        return registry
 
     def with_function(self, name: str, formatter: Formatter) -> "FunctionRegistry":
         formatters = dict(self._formatters)
         formatters[name] = formatter
-        return FunctionRegistry(formatters, self._selectors)
+        registry = FunctionRegistry(formatters, self._selectors)
+        registry._production_numeric_formatters = self._production_numeric_formatters - {name}
+        return registry
 
     def with_selector(self, name: str, selector: Selector) -> "FunctionRegistry":
         selectors = dict(self._selectors)
         selectors[name] = selector
-        return FunctionRegistry(self._formatters, selectors)
+        registry = FunctionRegistry(self._formatters, selectors)
+        registry._production_numeric_formatters = self._production_numeric_formatters
+        return registry
 
     def has_formatter(self, function: MF2FunctionAnnotation) -> bool:
         return function.get("name", "") in self._formatters

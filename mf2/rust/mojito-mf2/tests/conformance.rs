@@ -34,6 +34,7 @@ struct FormatErrorFixture {
     model: MessageModel,
     #[serde(default = "default_locale")]
     locale: String,
+    #[serde(default)]
     arguments: BTreeMap<String, serde_json::Value>,
     expected_error: ExpectedDiagnostic,
 }
@@ -50,6 +51,7 @@ struct FormatCase {
     locale: String,
     #[serde(default)]
     bidi_isolation: Option<String>,
+    #[serde(default)]
     arguments: BTreeMap<String, serde_json::Value>,
     expected: String,
 }
@@ -59,6 +61,7 @@ struct FormatCase {
 struct PartsCase {
     #[serde(default = "default_locale")]
     locale: String,
+    #[serde(default)]
     arguments: BTreeMap<String, serde_json::Value>,
     expected: Vec<FormattedPart>,
 }
@@ -498,7 +501,19 @@ fn source_to_model_fixtures_pass() {
 fn format_error_fixtures_return_expected_diagnostics() {
     let fixture_dir = conformance_dir().join("format-errors");
     for fixture_path in fixture_paths(&fixture_dir) {
-        let fixture: FormatErrorFixture = read_fixture(&fixture_path);
+        let json: serde_json::Value = read_fixture(&fixture_path);
+        let fixture: FormatErrorFixture = match serde_json::from_value(json.clone()) {
+            Ok(fixture) => fixture,
+            Err(error) => {
+                assert_eq!(
+                    json["expectedError"]["code"],
+                    "invalid-model",
+                    "unexpected model decode error for {}: {error}",
+                    fixture_path.display()
+                );
+                continue;
+            }
+        };
         let actual = format_with_options(
             &fixture.model,
             &arguments_from_json(&fixture.arguments),

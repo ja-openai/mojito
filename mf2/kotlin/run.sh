@@ -35,6 +35,9 @@ fi
 command="${1:-conformance}"
 tool_classpath="$(classpath)"
 case "$command" in
+  official-bridge)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.KotlinOfficialBridge
+    ;;
   conformance)
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.KotlinConformance "${2:-../conformance/fixtures/source-to-model}"
     ;;

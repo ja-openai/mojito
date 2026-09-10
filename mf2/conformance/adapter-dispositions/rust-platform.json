@@ -1,0 +1,15 @@
+{
+  "resolved-values/adapters/currency-through-number-override.json#explicit-currency-replacement": {
+    "testSha256": "ace9e785aea3141781c140bf2eff1512a0c57deb257971ad2f4642da719cece4",
+    "actual": {
+      "value": "Value {$plain}",
+      "errors": [
+        "unknown-function",
+        "bad-operand",
+        "unknown-function"
+      ],
+      "diagnostics": []
+    },
+    "reason": "The Rust ICU4X registry has no currency function. The production registry is exercised and its exact unsupported-function result is recorded; this is not a pass."
+  }
+}

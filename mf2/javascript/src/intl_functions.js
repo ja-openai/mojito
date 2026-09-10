@@ -4,10 +4,12 @@ import {
   numericSourceOperand,
   parseDecimalNumber,
   sourceOptionValue,
+  sourceMemo,
 } from "./function_support.js";
 import { registerNumericSelectors } from "./numeric_selectors.js";
 import { parseNonNegativeOption } from "./unlocalized_numeric_functions.js";
 import { formatOffset } from "./offset_function.js";
+import { markNumericFunctions, markNumericSelectionGuard } from "./numeric_registry_metadata.js";
 
 export function createIntlFunctionRegistry(FunctionRegistry) {
   const formatters = new Map();
@@ -23,7 +25,8 @@ export function createIntlFunctionRegistry(FunctionRegistry) {
   formatters.set("relativeTime", formatIntlRelativeTime);
   formatters.set("offset", formatOffset);
   registerNumericSelectors(selectors);
-  return new FunctionRegistry(formatters, selectors);
+  const registry = markNumericFunctions(new FunctionRegistry(formatters, selectors), ["number", "integer", "percent", "currency"]);
+  return markNumericSelectionGuard(registry, ["number", "integer", "percent", "offset"], validateIntlNumericSelection);
 }
 
 function formatIntlNumber(call) {
@@ -99,6 +102,8 @@ function formatIntlRelativeTime(call) {
 function numberFormatter(locale, call, baseOptions) {
   const options = {
     ...baseOptions,
+    style: numericStyle(call, baseOptions.style ?? "decimal"),
+    notation: optionOneOf(call, "notation", ["standard", "scientific", "engineering", "compact"], undefined, numericOptionValue),
     signDisplay: optionOneOf(
       call,
       "signDisplay",
@@ -111,10 +116,40 @@ function numberFormatter(locale, call, baseOptions) {
   const maximumFractionDigits = nonNegativeIntegerOption(call, "maximumFractionDigits", numericOptionValue);
   if (minimumFractionDigits != null) options.minimumFractionDigits = minimumFractionDigits;
   if (maximumFractionDigits != null) options.maximumFractionDigits = maximumFractionDigits;
+  for (const optionName of ["minimumIntegerDigits", "minimumSignificantDigits", "maximumSignificantDigits"]) {
+    const value = nonNegativeIntegerOption(call, optionName, numericOptionValue);
+    if (value == null) continue;
+    if (value < 1 || value > 21) throw MF2Error.badOption(`${optionName} option must be between 1 and 21.`);
+    options[optionName] = value;
+  }
   try {
     return new Intl.NumberFormat(locale, options);
   } catch (error) {
     throw MF2Error.badOption(error.message);
+  }
+}
+
+function numericStyle(call, fixedStyle) {
+  if (call.function.name === "number") {
+    return optionOneOf(call, "style", ["decimal", "percent"], "decimal", numericOptionValue);
+  }
+  const style = call.optionValue("style", null);
+  if (style != null && style !== fixedStyle) {
+    throw MF2Error.badOption(`:${call.function.name} has fixed ${fixedStyle} formatting; style cannot override it.`);
+  }
+  return fixedStyle;
+}
+
+function validateIntlNumericSelection(call) {
+  const notation = numericOptionValue(call, "notation", "standard");
+  const significantDigits = ["minimumSignificantDigits", "maximumSignificantDigits"]
+    .some(name => numericOptionValue(call, name, null) != null);
+  const percentStyle = call.function.name === "number"
+    && numericOptionValue(call, "style", "decimal") === "percent";
+  if (notation !== "standard" || significantDigits || percentStyle) {
+    throw MF2Error.badOption(
+      "Intl notation, significant digits, and legacy number style=percent are supported for formatting only; this selector requires the standard numeric options.",
+    );
   }
 }
 
@@ -179,6 +214,18 @@ const FLOATING_DATE_TIME_LITERAL = /^(?!0000)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9
 
 function parseDateValue(value) {
   const text = String(value);
+  // Date normalizes impossible ISO dates, including February 31. Validate the
+  // calendar fields before either the floating or offset-bearing conversion.
+  const calendar = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/.exec(text);
+  if (calendar) {
+    const [, yearText, monthText, dayText] = calendar;
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const day = Number(dayText);
+    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (year === 0 || month < 1 || month > 12 || day < 1 || day > days[month - 1]) return null;
+  }
   const floating = FLOATING_DATE_TIME_LITERAL.test(text);
   if (!floating) return { value: new Date(text), floating: false };
   const instantText = text.includes("T") ? `${text}Z` : `${text}T00:00:00Z`;
@@ -336,19 +383,24 @@ function sourceOptionFrom(source, optionName, sourceFunctions) {
 }
 
 function inheritedNumericOptionValue(source, optionName, fallback, targetFunction) {
+  if (numericOptionIsDiscarded(targetFunction, optionName)) return fallback;
   let current = source;
-  let target = targetFunction;
+  const visited = [];
+  const cacheKey = `intl_numeric_option:${optionName}`;
+  let resolved = MISSING_OPTION;
   while (current != null) {
-    if (numericOptionIsDiscarded(target, optionName)) return fallback;
+    const memo = sourceMemo(current);
+    if (memo?.has(cacheKey)) { resolved = memo.get(cacheKey); break; }
+    visited.push(current);
     const sourceFunction = current.function?.name;
     if (!isNumericFunctionName(sourceFunction)
-        || numericOptionIsDiscarded(sourceFunction, optionName)) return fallback;
+        || numericOptionIsDiscarded(sourceFunction, optionName)) break;
     const value = sourceOptionValue(current, optionName, MISSING_OPTION);
-    if (value !== MISSING_OPTION) return value;
-    target = sourceFunction;
+    if (value !== MISSING_OPTION) { resolved = value; break; }
     current = current.inherited;
   }
-  return fallback;
+  for (const item of visited) sourceMemo(item)?.set(cacheKey, resolved);
+  return resolved === MISSING_OPTION ? fallback : resolved;
 }
 
 function currencyOptionFrom(source) {
@@ -366,6 +418,9 @@ function isNumericFunctionName(functionName) {
 }
 
 function numericOptionIsDiscarded(functionName, optionName) {
+  // The website legacy style option belongs only to :number. Native MF2
+  // :percent, :integer, and :offset carry their own semantic numeric types.
+  if (optionName === "style" && functionName !== "number") return true;
   if (functionName === "integer") {
     return ["minimumFractionDigits", "maximumFractionDigits", "minimumSignificantDigits"].includes(optionName);
   }

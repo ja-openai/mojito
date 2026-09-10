@@ -1,0 +1,131 @@
+name: Standalone MF2 runtimes and packages
+
+on:
+  push:
+    paths:
+      - 'mf2/**'
+      - '.github/workflows/mf2.yml'
+      - 'LICENSE'
+  pull_request:
+    paths:
+      - 'mf2/**'
+      - '.github/workflows/mf2.yml'
+      - 'LICENSE'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mf2-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runtimes:
+    name: ${{ matrix.runtime }} / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runtime: python, os: ubuntu-24.04 }
+          - { runtime: javascript, os: ubuntu-24.04 }
+          - { runtime: java, os: ubuntu-24.04 }
+          - { runtime: kotlin, os: ubuntu-24.04 }
+          - { runtime: go, os: ubuntu-24.04 }
+          - { runtime: rust, os: ubuntu-24.04 }
+          - { runtime: php, os: ubuntu-24.04 }
+          - { runtime: swift, os: macos-15 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    env:
+      MF2_CI_REPORT_DIR: ${{ runner.temp }}/mf2-reports
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Set up Node
+        if: matrix.runtime == 'javascript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Set up JVM
+        if: matrix.runtime == 'java' || matrix.runtime == 'kotlin'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Set up Go
+        if: matrix.runtime == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: mf2/go/go.mod
+          cache-dependency-path: mf2/go/go.sum
+      - name: Set up Rust
+        if: matrix.runtime == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+      - name: Set up PHP and Composer
+        if: matrix.runtime == 'php'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl
+          tools: composer:v2
+          coverage: none
+      - name: Install Python package/check tools
+        if: matrix.runtime == 'python'
+        run: python3 -m pip install 'setuptools>=77' build wheel Babel mypy
+      - name: Install JavaScript check tools
+        if: matrix.runtime == 'javascript'
+        run: npm --prefix mf2/javascript install --ignore-scripts --no-package-lock --no-audit --no-fund
+      - name: Verify Swift toolchain
+        if: matrix.runtime == 'swift'
+        run: swift --version
+      - name: Native tests, shared fixtures, direct official corpus and platform registry
+        run: sh mf2/packaging/check_runtime.sh '${{ matrix.runtime }}'
+      - name: Build artifact, check notices, install clean consumer
+        run: python3 mf2/packaging/smoke.py --runtime '${{ matrix.runtime }}' --output '${{ runner.temp }}/mf2-packages'
+      - name: Upload gate and package evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mf2-${{ matrix.runtime }}-evidence
+          path: |
+            ${{ runner.temp }}/mf2-reports
+            ${{ runner.temp }}/mf2-packages/${{ matrix.runtime }}/report.json
+            ${{ runner.temp }}/mf2-packages/${{ matrix.runtime }}/*.log
+            ${{ runner.temp }}/mf2-packages/${{ matrix.runtime }}/artifacts
+          if-no-files-found: warn
+
+  shared-data:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: mf2/go/go.mod
+          cache-dependency-path: mf2/go/go.sum
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl
+          coverage: none
+      - name: Set up Rust formatter for generated data
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check generated CLDR, source fixture integrity, and empty-suite rejection
+        run: sh mf2/packaging/check_runtime.sh shared

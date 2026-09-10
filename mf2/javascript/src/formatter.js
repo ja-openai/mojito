@@ -1,20 +1,23 @@
 import { MF2Error } from "./errors.js";
+import { localeIsLtr } from "./locale_direction.js";
+import { checkNumericSelection, copyNumericFunctions, hasNumericDirection } from "./numeric_registry_metadata.js";
 import { selectCardinal, selectOrdinal } from "./cldr_plural_rules.js";
 import { createPortableFunctionRegistry } from "./portable_functions.js";
 import { numericSelectionOperand } from "./unlocalized_numeric_functions.js";
 import {
   functionOptionLiteral,
   inheritedExactNumericSource,
+  memoizeFunctionSource,
   isNumericFunction,
   numericSelectUsesVariable,
   parseDecimalNumber,
 } from "./function_support.js";
 
 export function formatMessage(model, arguments_ = {}, options = {}) {
-  const result = formatMessageToParts(model, arguments_, options);
+  const { result, isolation } = formatPartsWithMetadata(model, arguments_, options);
   const errors = result.errors;
   return {
-    value: partsToString(result.parts, options.bidiIsolation ?? "none"),
+    value: renderParts(result.parts, options.bidiIsolation ?? "none", isolation),
     errors,
     ok: errors.length === 0,
     hasErrors: errors.length > 0,
@@ -22,18 +25,22 @@ export function formatMessage(model, arguments_ = {}, options = {}) {
 }
 
 export function formatMessageToParts(model, arguments_ = {}, options = {}) {
-  validateModel(model);
+  return formatPartsWithMetadata(model, arguments_, options).result;
+}
+
+function formatPartsWithMetadata(model, arguments_, options) {
+  model = validateModel(model);
   const context = new FormatContext(arguments_, options.locale ?? "en", options.functions ?? FunctionRegistry.defaults(), true, options);
   context.applyDeclarations(model.declarations ?? []);
   const parts = model.type === "message"
     ? context.formatPatternToParts(model.pattern ?? [])
     : context.formatSelectToParts(model.selectors ?? [], model.variants ?? []);
-  return {
+  return { result: {
     parts,
     errors: context.errors,
     ok: context.errors.length === 0,
     hasErrors: context.errors.length > 0,
-  };
+  }, isolation: context.expressionIsolation };
 }
 
 export class FunctionRegistry {
@@ -53,13 +60,13 @@ export class FunctionRegistry {
   withFunction(name, formatter) {
     const formatters = new Map(this.formatters);
     formatters.set(name, formatter);
-    return new FunctionRegistry(formatters, this.selectors);
+    return copyNumericFunctions(this, new FunctionRegistry(formatters, this.selectors), name);
   }
 
   withSelector(name, selector) {
     const selectors = new Map(this.selectors);
     selectors.set(name, selector);
-    return new FunctionRegistry(this.formatters, selectors);
+    return copyNumericFunctions(this, new FunctionRegistry(this.formatters, selectors), undefined, name);
   }
 
   hasFormatter(functionRef) {
@@ -81,12 +88,17 @@ export class FunctionRegistry {
   }
 }
 
+const sourceDirections = new WeakMap();
+const sourceDirection = source => sourceDirections.get(source) ?? { direction: null, resolvedDirection: null, forceIsolation: false };
+
 class FormatContext {
   constructor(arguments_, locale, functions, fallback = false, options = {}) {
-    this.arguments = new Map(Object.entries(arguments_ ?? {}));
+    this.arguments = new Map(Object.entries(arguments_ ?? {}).map(([name, value]) => [name.normalize("NFC"), value]));
     this.locals = new Map();
     this.failedLocals = new Set();
     this.errors = [];
+    this.expressionIsolation = [];
+    this.knownLtrLocale = localeIsLtr(locale) === true;
     this.locale = locale == null || String(locale).trim() === "" ? "en" : String(locale);
     this.functions = functions;
     this.fallback = fallback;
@@ -168,8 +180,8 @@ class FormatContext {
     if (!this.hasValue(selector.name)) {
       if (!this.fallback) throw MF2Error.missingArgument(selector.name);
       if (!this.failedLocals.has(selector.name)) this.errors.push(unresolvedVariable(selector.name));
-      if (annotation != null && this.functions.hasSelector(annotation.function)) {
-        if (!this.failedLocals.has(selector.name)) this.errors.push(MF2Error.badOperand("Selector operand is not available."));
+      if (annotation != null && !annotation.isString) {
+        if (!this.failedLocals.has(selector.name) && this.functions.hasSelector(annotation.function)) this.errors.push(MF2Error.badOperand("Selector operand is not available."));
         this.errors.push(new MF2Error("bad-selector", "Selector operand is not available."));
       }
       return {
@@ -187,6 +199,16 @@ class FormatContext {
     this.recordSelectorResolutionErrors(annotation);
     let resolvedSelectionKey = null;
     try {
+      if (annotation?.isNumeric) {
+        checkNumericSelection(this.functions, {
+          value: rendered,
+          rawValue: value.rawValue,
+          function: annotation.function,
+          locale: this.locale,
+          optionValue: (name, fallback) => this.optionValue(annotation.function, name, fallback),
+          inheritedSource: value.source,
+        });
+      }
       resolvedSelectionKey = selectionKey(this.locale, annotation, value);
     } catch (error) {
       this.recoverSelectorError(error);
@@ -223,8 +245,9 @@ class FormatContext {
           if (output.value !== fallbackValue(source)) fallbackPart.value = output.value;
           parts.push(fallbackPart);
         } else {
+          this.expressionIsolation.push(output.forceIsolation || !(output.resolvedDirection === "ltr" && this.knownLtrLocale));
           const expressionPart = { type: "expression", value: output.value };
-          if (part.attributes && Object.keys(part.attributes).length > 0) expressionPart.attributes = part.attributes;
+          if (part.attributes && Object.keys(part.attributes).length > 0) expressionPart.attributes = structuredClone(part.attributes);
           if (output.direction) expressionPart.direction = output.direction;
           parts.push(expressionPart);
         }
@@ -235,8 +258,8 @@ class FormatContext {
           this.errors.push(error);
         }
         const markup = { type: "markup", kind: part.kind, name: part.name };
-        if (part.options && Object.keys(part.options).length > 0) markup.options = part.options;
-        if (part.attributes && Object.keys(part.attributes).length > 0) markup.attributes = part.attributes;
+        if (part.options && Object.keys(part.options).length > 0) markup.options = structuredClone(part.options);
+        if (part.attributes && Object.keys(part.attributes).length > 0) markup.attributes = structuredClone(part.attributes);
         parts.push(markup);
       } else {
         throw new MF2Error("unsupported-pattern-part", `Unsupported pattern part: ${part.type}`);
@@ -260,7 +283,9 @@ class FormatContext {
         if (!this.fallback) throw MF2Error.missingArgument(expression.arg.name);
         const error = unresolvedVariable(expression.arg.name);
         if (!this.failedLocals.has(expression.arg.name)) this.errors.push(error);
-        if (expression.function != null) this.errors.push(MF2Error.badOperand("Function operand is not available."));
+        if (expression.function != null) this.errors.push(this.functions.hasFormatter(expression.function)
+          ? MF2Error.badOperand("Function operand is not available.")
+          : new MF2Error("unknown-function", "Function is not defined by this registry."));
         const source = fallbackSource(expression);
         return {
           value: this.recoverMissingArgument(expression, expression.arg.name, source, error),
@@ -277,11 +302,13 @@ class FormatContext {
     } else {
       throw new MF2Error("unsupported-expression-arg", `Unsupported expression arg: ${expression.arg.type}`);
     }
-    const functionRef = expression.function;
-    if (functionRef == null) return { value, hadError: false, source, direction: bidiDirectionFromSource(source) };
+    const functionRef = expression.function ?? (source == null && ["number", "bigint"].includes(typeof rawValue)
+      ? Object.freeze({ type: "function", name: "number" })
+      : null);
+    if (functionRef == null) return { value, hadError: false, source, ...sourceDirection(source) };
     this.recordFunctionResolutionErrors(functionRef, source);
     try {
-      const direction = bidiDirectionForFunction(functionRef, source);
+      const directionInfo = this.resolveDirection(functionRef, source);
       const formatted = this.functions.format({
         value,
         rawValue,
@@ -294,8 +321,8 @@ class FormatContext {
       return {
         value: formatted,
         hadError: false,
-        source: this.functionSource(sourceValue, functionRef, source),
-        direction,
+        source: this.functionSource(sourceValue, functionRef, source, directionInfo),
+        ...directionInfo,
       };
     } catch (error) {
       if (!this.fallback) throw error;
@@ -339,6 +366,7 @@ class FormatContext {
   }
 
   optionValue(functionRef, optionName, fallback) {
+    if (optionName === "u:dir") return fallback;
     const option = functionRef.options?.[optionName];
     if (option == null) return fallback;
     if (option.type === "literal") return option.value ?? "";
@@ -373,13 +401,44 @@ class FormatContext {
     this.errors.push(error);
   }
 
-  functionSource(value, functionRef, inherited) {
-    return {
+  resolveDirection(functionRef, source) {
+    let { direction, resolvedDirection } = sourceDirection(source);
+    let forceIsolation = false;
+    const option = functionRef.options?.["u:dir"];
+    if (option != null) {
+      try {
+        let value;
+        if (option.type === "literal") value = option.value;
+        else {
+          if (!this.hasValue(option.name)) throw unresolvedVariable(option.name);
+          value = this.value(option.name).rawValue;
+        }
+        if (!["ltr", "rtl", "auto", "inherit"].includes(value)) throw MF2Error.badOption("u:dir option must be auto, ltr, rtl, or inherit.");
+        if (value !== "inherit") {
+          direction = value;
+          resolvedDirection = value === "auto" ? null : value;
+          forceIsolation = true;
+        }
+      } catch (error) {
+        if (!this.fallback) throw error;
+        const recovered = fallbackError(error);
+        if (recovered.code !== "bad-option") this.errors.push(recovered);
+        this.errors.push(MF2Error.badOption("Invalid u:dir option was ignored."));
+      }
+    }
+    if (direction == null && resolvedDirection == null && this.knownLtrLocale && hasNumericDirection(this.functions, functionRef.name)) resolvedDirection = "ltr";
+    return { direction, resolvedDirection, forceIsolation };
+  }
+
+  functionSource(value, functionRef, inherited, directionInfo = this.resolveDirection(functionRef, inherited)) {
+    const source = memoizeFunctionSource({
       value,
       function: functionRef,
       inherited,
       optionValue: (name, fallback) => this.optionValue(functionRef, name, fallback),
-    };
+    });
+    sourceDirections.set(source, directionInfo);
+    return source;
   }
 
   validateVariant(variant, selectorValues, signatures) {
@@ -434,11 +493,117 @@ class FormatContext {
 }
 
 function validateModel(model) {
+  validateModelShape(model);
+  model = normalizeModelBindings(model);
   validateDeclarations(model.declarations ?? []);
   if (model.type === "message") validatePattern(model.pattern ?? []);
   else if (model.type === "select") {
     validateSelectorAnnotations(model.declarations ?? [], model.selectors ?? []);
     for (const variant of model.variants ?? []) validatePattern(variant.value ?? []);
+  }
+  return model;
+}
+
+function normalizeModelBindings(model) {
+  const arg = (value) => value.type === "variable" ? { ...value, name: value.name.normalize("NFC") } : value;
+  const part = (value) => {
+    if (typeof value === "string") return value;
+    const result = { ...value };
+    if (result.type === "expression" && result.arg) result.arg = arg(result.arg);
+    if (result.type === "expression" && result.function) result.function = part(result.function);
+    if (["function", "markup"].includes(result.type) && result.options) result.options = Object.fromEntries(Object.entries(result.options).map(([name, value]) => [name, arg(value)]));
+    if (result.type === "function") {
+      const snapshot = structuredClone(result);
+      if (snapshot.options) {
+        for (const option of Object.values(snapshot.options)) Object.freeze(option);
+        Object.freeze(snapshot.options);
+      }
+      return Object.freeze(snapshot);
+    }
+    return result;
+  };
+  const normalized = { ...model, declarations: model.declarations.map((item) => ({ ...item, name: item.name.normalize("NFC"), value: part(item.value) })) };
+  if (model.type === "message") normalized.pattern = model.pattern.map(part);
+  else {
+    normalized.selectors = model.selectors.map(arg);
+    normalized.variants = model.variants.map((item) => ({ ...item, value: item.value.map(part) }));
+  }
+  return normalized;
+}
+
+function requireModel(condition) {
+  if (!condition) throw new MF2Error("invalid-model", "Message model does not match the MF2 data model schema.");
+}
+
+function isRecord(value) {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validateArgShape(arg, allowed = ["literal", "variable"]) {
+  requireModel(isRecord(arg));
+  requireModel(allowed.includes(arg.type));
+  requireModel(typeof arg[arg.type === "literal" ? "value" : "name"] === "string");
+}
+
+function validateMetadataShape(node, fields = ["options", "attributes"]) {
+  for (const field of fields) {
+    if (!Object.hasOwn(node, field)) continue;
+    requireModel(isRecord(node[field]));
+    for (const value of Object.values(node[field])) {
+      if (field === "attributes" && value === true) continue;
+      validateArgShape(value, field === "attributes" ? ["literal"] : ["literal", "variable"]);
+    }
+  }
+}
+
+function validateExpressionShape(expression) {
+  requireModel(isRecord(expression));
+  requireModel(expression.type === "expression");
+  requireModel(Object.hasOwn(expression, "arg") || Object.hasOwn(expression, "function"));
+  if (Object.hasOwn(expression, "arg")) validateArgShape(expression.arg);
+  if (Object.hasOwn(expression, "function")) {
+    const func = expression.function;
+    requireModel(isRecord(func));
+    requireModel(func.type === "function" && typeof func.name === "string");
+    validateMetadataShape(func, ["options"]);
+  }
+  validateMetadataShape(expression, ["attributes"]);
+}
+
+function validatePatternShape(pattern) {
+  requireModel(Array.isArray(pattern));
+  for (const part of pattern) {
+    if (typeof part === "string") continue;
+    requireModel(isRecord(part));
+    if (part.type === "markup") {
+      requireModel(typeof part.name === "string");
+      validateMarkup(part);
+      validateMetadataShape(part);
+    } else validateExpressionShape(part);
+  }
+}
+
+function validateModelShape(model) {
+  // Only standardized fields are traversed. Unknown extension metadata is allowed.
+  requireModel(isRecord(model));
+  requireModel(["message", "select"].includes(model.type));
+  requireModel(Array.isArray(model.declarations));
+  for (const declaration of model.declarations) {
+    requireModel(isRecord(declaration));
+    requireModel(["input", "local"].includes(declaration.type) && typeof declaration.name === "string");
+    validateExpressionShape(declaration.value);
+  }
+  if (model.type === "message") return validatePatternShape(model.pattern);
+  requireModel(Array.isArray(model.selectors) && Array.isArray(model.variants));
+  for (const selector of model.selectors) validateArgShape(selector, ["variable"]);
+  for (const variant of model.variants) {
+    requireModel(isRecord(variant) && Array.isArray(variant.keys));
+    for (const key of variant.keys) {
+      requireModel(isRecord(key));
+      if (key.type === "*") requireModel(!Object.hasOwn(key, "value") || typeof key.value === "string");
+      else validateArgShape(key, ["literal"]);
+    }
+    validatePatternShape(variant.value);
   }
 }
 
@@ -627,7 +792,7 @@ function safeErrorMessage(error) {
 
 function fallbackSource(expression) {
   if (expression.arg) return expressionArgSource(expression.arg);
-  if (expression.function) return functionSource(expression.function);
+  if (expression.function) return `:${expression.function.name ?? ""}`;
   return "";
 }
 
@@ -666,11 +831,19 @@ function quoteLiteralSource(value) {
 }
 
 export function partsToString(parts, bidiIsolation = "none") {
+  return renderParts(parts, bidiIsolation);
+}
+
+function renderParts(parts, bidiIsolation, isolation) {
   let output = "";
+  let expressionIndex = 0;
   for (const part of parts) {
     if (part.type === "text") output += part.value ?? "";
     else if (part.type === "fallback") output += part.value ?? `{${part.source ?? ""}}`;
-    else if (part.type === "expression") output += isolateExpression(part.value ?? "", bidiIsolation, part.direction);
+    else if (part.type === "expression") {
+      output += isolateExpression(part.value ?? "", isolation?.[expressionIndex] === false ? "none" : bidiIsolation, part.direction);
+      expressionIndex += 1;
+    }
   }
   return output;
 }
@@ -684,27 +857,6 @@ function bidiMarker(direction) {
   if (direction === "ltr") return "\u2066";
   if (direction === "rtl") return "\u2067";
   return "\u2068";
-}
-
-function bidiDirectionForFunction(functionRef, source) {
-  const value = functionOptionLiteral(functionRef, "u:dir", null);
-  if (value != null) return parseBidiDirection(value);
-  return bidiDirectionFromSource(source);
-}
-
-function bidiDirectionFromSource(source) {
-  let current = source;
-  while (current != null) {
-    const value = functionOptionLiteral(current.function, "u:dir", null);
-    if (value != null) return parseBidiDirection(value);
-    current = current.inherited;
-  }
-  return null;
-}
-
-function parseBidiDirection(value) {
-  if (["auto", "ltr", "rtl"].includes(value)) return value;
-  throw new MF2Error("bad-option", "u:dir option must be auto, ltr, or rtl.");
 }
 
 export function valueToString(value) {

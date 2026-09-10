@@ -68,7 +68,7 @@ final class Mf2JdkFunctions {
         double value = Mf2FunctionSupport.parseCallDecimal(call, "Integer function requires a numeric operand.");
         NumberFormat format = NumberFormat.getIntegerInstance(locale(call.locale()));
         format.setGroupingUsed(false);
-        return applySignDisplay(format.format((long) value), value, call);
+        return applySignDisplay(format.format(Mf2FunctionSupport.truncateInteger(value)), value, call);
     }
 
     private static String formatCurrency(Mf2FunctionRegistry.FunctionCall call)
@@ -109,9 +109,15 @@ final class Mf2JdkFunctions {
         LocalTime time = timeFrom(call.rawValue(), call.value(), zone)
                 .or(() -> parseSourceLocalTime(call.inheritedSource(), zone))
                 .orElseThrow(() -> Mf2Exception.badOperand("Datetime and time functions require a datetime operand."));
-        return DateTimeFormatter.ofLocalizedTime(timeStyle(timeStyleOption(call)))
-                .withLocale(locale(call.locale()))
-                .format(time);
+        FormatStyle style = timeStyle(timeStyleOption(call));
+        var formatter = DateTimeFormatter.ofLocalizedTime(style).withLocale(locale(call.locale()));
+        if (style == FormatStyle.LONG || style == FormatStyle.FULL) {
+            ZonedDateTime zoned = zonedDateTimeFrom(call.rawValue(), call.value(), zone)
+                    .or(() -> parseSourceZonedDateTime(call.inheritedSource(), zone))
+                    .orElse(time.atDate(LocalDate.of(1970, 1, 1)).atZone(zone));
+            return formatter.format(zoned);
+        }
+        return formatter.format(time);
     }
 
     private static String formatDateTime(Mf2FunctionRegistry.FunctionCall call)
@@ -148,7 +154,10 @@ final class Mf2JdkFunctions {
         if (value == null) {
             return null;
         }
-        return Mf2FunctionSupport.parseNonNegativeOption(value, "minimumFractionDigits option must be a non-negative integer.");
+        int minimum = Mf2FunctionSupport.parseNonNegativeOption(value, "minimumFractionDigits option must be a non-negative integer.");
+        Integer maximum = maximumFractionDigits(call);
+        if (maximum != null && minimum > maximum) throw Mf2FunctionSupport.badOption("minimumFractionDigits must not exceed maximumFractionDigits.");
+        return minimum;
     }
 
     private static Integer maximumFractionDigits(Mf2FunctionRegistry.FunctionCall call)
@@ -223,7 +232,10 @@ final class Mf2JdkFunctions {
 
     private static FormatStyle timeStyle(String value) throws Mf2Exception {
         return switch (value) {
-            case "full", "long", "medium", "short", "second" -> FormatStyle.MEDIUM;
+            case "full" -> FormatStyle.FULL;
+            case "long" -> FormatStyle.LONG;
+            case "short" -> FormatStyle.SHORT;
+            case "medium", "second" -> FormatStyle.MEDIUM;
             default -> throw Mf2FunctionSupport.badOption("Time style option must be full, long, medium, short, or second.");
         };
     }
@@ -303,29 +315,32 @@ final class Mf2JdkFunctions {
 
     private static Optional<LocalDate> parseSourceLocalDate(
             Mf2FunctionRegistry.FunctionSourceRef source, ZoneId zone) {
-        if (source == null) {
-            return Optional.empty();
+        while (source != null) {
+            Optional<LocalDate> value = dateFrom(source.value(), source.value(), zone);
+            if (value.isPresent()) return value;
+            source = source.inheritedSource();
         }
-        Optional<LocalDate> date = dateFrom(source.value(), source.value(), zone);
-        return date.isPresent() ? date : parseSourceLocalDate(source.inheritedSource(), zone);
+        return Optional.empty();
     }
 
     private static Optional<LocalTime> parseSourceLocalTime(
             Mf2FunctionRegistry.FunctionSourceRef source, ZoneId zone) {
-        if (source == null) {
-            return Optional.empty();
+        while (source != null) {
+            Optional<LocalTime> value = timeFrom(source.value(), source.value(), zone);
+            if (value.isPresent()) return value;
+            source = source.inheritedSource();
         }
-        Optional<LocalTime> time = timeFrom(source.value(), source.value(), zone);
-        return time.isPresent() ? time : parseSourceLocalTime(source.inheritedSource(), zone);
+        return Optional.empty();
     }
 
     private static Optional<ZonedDateTime> parseSourceZonedDateTime(
             Mf2FunctionRegistry.FunctionSourceRef source, ZoneId zone) {
-        if (source == null) {
-            return Optional.empty();
+        while (source != null) {
+            Optional<ZonedDateTime> value = zonedDateTimeFrom(source.value(), source.value(), zone);
+            if (value.isPresent()) return value;
+            source = source.inheritedSource();
         }
-        Optional<ZonedDateTime> dateTime = zonedDateTimeFrom(source.value(), source.value(), zone);
-        return dateTime.isPresent() ? dateTime : parseSourceZonedDateTime(source.inheritedSource(), zone);
+        return Optional.empty();
     }
 
     private static Optional<LocalDate> parseLocalDate(String value) {

@@ -84,13 +84,22 @@ parser and formatter. Every English and French party, social, and event-matrix
 branch has a case. `validation-results.json` records actual output, reference
 expectations, warning counts, and portable-registry errors.
 
-The September 2 run exposes these limits, rather than hiding them:
+The September 9 validation asserts every recorded output and retains these boundaries:
 
-- **Two known output mismatches:** the official number example ignores scientific
-  notation, legacy `style=percent`, integer padding, and significant-digit options
-  in the current Intl adapter. Native `Intl.NumberFormat` reference outputs are
-  recorded alongside Mojito's outputs. Zero runtime errors alone does not mean
-  these options worked.
+- **Number formatting:** scientific/engineering/compact notation, the website's
+  legacy `:number style=percent`, integer padding, and significant digits now
+  match native Intl expectations. Both four-local example outputs are required
+  assertions. Notation other than `standard`, significant-digit options, and
+  legacy percent style are currently supported for formatting only: using an
+  affected numeric value as a selector returns `bad-option`/`bad-selector` and
+  chooses the fallback. Use standard notation and fraction-digit options for
+  selection; use the standard `:percent` function for percent selection.
+- **Digit limits:** integer and significant digits support 1–21; fraction digits
+  support 0–100. Invalid sizes/combinations return `bad-option`. `:percent`,
+  `:currency`, and `:integer` keep their fixed styles. Numeric locals inherit
+  options, with direct overrides and MF2 numeric-type discard rules.
+  These rules follow [Intl digit options](https://tc39.es/ecma402/#sec-setnumberformatdigitoptions)
+  and [MF2 option inheritance and selection](https://unicode.org/reports/tr35/tr35-messageFormat.html#number-selection).
 - **Preview registry:** the editor's portable registry lacks date/time/currency
   formatting. The dataset's date and event cases are validated with the explicit
   Intl registry, which supports these functions.

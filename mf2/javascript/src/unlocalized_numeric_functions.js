@@ -6,6 +6,7 @@ import {
   numericSourceOperand,
   parseDecimalNumber,
   sourceOptionValue,
+  sourceMemo,
 } from "./function_support.js";
 
 export function registerUnlocalizedNumericFormatters(formatters) {
@@ -23,7 +24,7 @@ export function formatUnlocalizedNumber(call) {
 
 export function formatUnlocalizedPercent(call) {
   const value = parseCallDecimal(call, "Percent function requires a numeric operand.");
-  let formatted = formatUnlocalizedDecimalWithMaximumFractionDigits(value * 100, maximumFractionDigits(call));
+  let formatted = formatUnlocalizedDecimalWithMaximumFractionDigits(scalePercent(value), maximumFractionDigits(call));
   if (signDisplayAlways(call) && value >= 0) formatted = `+${formatted}`;
   return `${appendMinimumFractionDigits(formatted, minimumFractionDigits(call))}%`;
 }
@@ -62,8 +63,9 @@ export function numericSelectionOperand(resolvedValue, functionRef) {
   const maximum = optionValue("maximumFractionDigits", null);
   const minimumDigits = minimum == null ? 0 : parseNonNegativeOption(minimum, "minimumFractionDigits option must be a non-negative integer.");
   const maximumDigits = maximum == null ? null : parseNonNegativeOption(maximum, "maximumFractionDigits option must be a non-negative integer.");
+  validateFractionRange(minimumDigits, maximumDigits);
 
-  if (functionRef.name === "percent") value *= 100;
+  if (functionRef.name === "percent") value = scalePercent(value);
   if (["number", "percent"].includes(functionRef.name)) {
     return appendMinimumFractionDigits(
       formatUnlocalizedDecimalWithMaximumFractionDigits(value, maximumDigits),
@@ -118,7 +120,22 @@ function minimumFractionDigits(call) {
 
 function maximumFractionDigits(call) {
   const value = numericCallOptionValue(call, "maximumFractionDigits", null);
-  return value == null ? null : parseNonNegativeOption(value, "maximumFractionDigits option must be a non-negative integer.");
+  const maximum = value == null ? null : parseNonNegativeOption(value, "maximumFractionDigits option must be a non-negative integer.");
+  validateFractionRange(minimumFractionDigits(call), maximum);
+  return maximum;
+}
+
+function validateFractionRange(minimum, maximum) {
+  if (maximum != null && minimum > maximum) throw MF2Error.badOption("minimumFractionDigits must not exceed maximumFractionDigits.");
+}
+
+function scalePercent(value) {
+  // Shift the decimal exponent before converting back to a host number. Binary
+  // multiplication introduces visible artifacts even for ordinary 0.29 inputs.
+  const [coefficient, exponent = "0"] = String(value).split("e");
+  const scaled = Number(`${coefficient}e${Number(exponent) + 2}`);
+  if (!Number.isFinite(scaled)) throw MF2Error.badOperand("Percent function requires a bounded numeric operand.");
+  return scaled;
 }
 
 export function parseNonNegativeOption(value, message) {
@@ -148,19 +165,27 @@ function numericCallOptionValue(call, name, fallback) {
 }
 
 function sourceOptionFrom(source, name, fallback, targetFunction) {
+  if (numericOptionIsDiscarded(targetFunction, name)) return fallback;
   let current = source;
   let target = targetFunction;
+  const visited = [];
+  const cacheKey = `numeric_option:${name}`;
+  let resolved = MISSING_OPTION;
   while (current != null) {
-    if (numericOptionIsDiscarded(target, name)) return fallback;
+    if (numericOptionIsDiscarded(target, name)) break;
+    const memo = sourceMemo(current);
+    if (memo?.has(cacheKey)) { resolved = memo.get(cacheKey); break; }
+    visited.push(current);
     const sourceFunction = current.function?.name;
     if (!numericSourceFunctions(target).includes(sourceFunction)
-        || numericOptionIsDiscarded(sourceFunction, name)) return fallback;
+        || numericOptionIsDiscarded(sourceFunction, name)) break;
     const value = sourceOptionValue(current, name, MISSING_OPTION);
-    if (value !== MISSING_OPTION) return value;
+    if (value !== MISSING_OPTION) { resolved = value; break; }
     target = sourceFunction;
     current = current.inherited;
   }
-  return fallback;
+  for (const item of visited) sourceMemo(item)?.set(cacheKey, resolved);
+  return resolved === MISSING_OPTION ? fallback : resolved;
 }
 
 function numericSourceFunctions(functionName) {

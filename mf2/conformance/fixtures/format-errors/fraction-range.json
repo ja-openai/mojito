@@ -1,0 +1,33 @@
+{
+  "name": "fraction-range",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": {
+          "type": "literal",
+          "value": "1"
+        },
+        "function": {
+          "type": "function",
+          "name": "number",
+          "options": {
+            "maximumFractionDigits": {
+              "type": "literal",
+              "value": "2"
+            },
+            "minimumFractionDigits": {
+              "type": "literal",
+              "value": "3"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "expectedError": {
+    "code": "bad-option"
+  }
+}

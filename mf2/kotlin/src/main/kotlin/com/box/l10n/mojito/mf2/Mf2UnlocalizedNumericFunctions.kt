@@ -32,7 +32,7 @@ internal object Mf2UnlocalizedNumericFunctions {
     private fun formatInteger(call: Mf2FunctionCall): String {
         val value = Mf2PortableFunctions.parseCallDecimal(call, "Integer function requires a numeric operand.")
         return Mf2PortableFunctions.formatIntegerNumber(
-            truncate(value).toLong(),
+            truncateInteger(value),
             signDisplayAlways(call),
         )
     }
@@ -44,9 +44,14 @@ internal object Mf2UnlocalizedNumericFunctions {
         maximumFractionDigits: Int?,
     ): String =
         when (functionName) {
-            "integer" -> truncate(value).toLong().toString()
+            "integer" -> {
+                if (value < -9223372036854775808.0 || value >= 9223372036854775808.0) {
+                    throw Mf2Error.badSelector("Integer selector is outside the supported signed-64-bit range.")
+                }
+                truncateInteger(value).toString()
+            }
             "percent" -> appendMinimumFractionDigits(
-                formatDecimalWithMaximumFractionDigits(value * 100.0, maximumFractionDigits),
+                formatDecimalWithMaximumFractionDigits(scaledPercent(value), maximumFractionDigits),
                 minimumFractionDigits,
             )
             "number" -> appendMinimumFractionDigits(
@@ -57,11 +62,14 @@ internal object Mf2UnlocalizedNumericFunctions {
         }
 
     private fun formatDecimalNumber(value: Double, signAlways: Boolean, minimumFractionDigits: Int): String {
-        var formatted = value.toString()
-        if (formatted.endsWith(".0")) formatted = formatted.dropLast(2)
+        var formatted = BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()
         if (signAlways && value >= 0.0) formatted = "+$formatted"
         return appendMinimumFractionDigits(formatted, minimumFractionDigits)
     }
+
+    private fun scaledPercent(value: Double): Double =
+        BigDecimal.valueOf(value).movePointRight(2).toDouble().takeIf { it.isFinite() }
+            ?: throw Mf2Error.badOperand("Scaled percent operand is outside the supported range.")
 
     private fun formatPercentNumber(
         value: Double,
@@ -69,7 +77,7 @@ internal object Mf2UnlocalizedNumericFunctions {
         minimumFractionDigits: Int,
         maximumFractionDigits: Int?,
     ): String {
-        var formatted = formatDecimalWithMaximumFractionDigits(value * 100.0, maximumFractionDigits)
+        var formatted = formatDecimalWithMaximumFractionDigits(scaledPercent(value), maximumFractionDigits)
         if (signAlways && value >= 0.0) formatted = "+$formatted"
         return appendMinimumFractionDigits(formatted, minimumFractionDigits) + "%"
     }
@@ -95,10 +103,13 @@ internal object Mf2UnlocalizedNumericFunctions {
         return output.toString()
     }
 
-    private fun minimumFractionDigits(call: Mf2FunctionCall): Int =
-        call.optionValue("minimumFractionDigits", null)
-            ?.let { Mf2PortableFunctions.parseNonNegativeOption(it, "minimumFractionDigits option must be a non-negative integer.") }
-            ?: 0
+    private fun minimumFractionDigits(call: Mf2FunctionCall): Int {
+        val minimum = call.optionValue("minimumFractionDigits", null)
+            ?.let { Mf2PortableFunctions.parseNonNegativeOption(it, "minimumFractionDigits option must be a non-negative integer.") } ?: 0
+        val maximum = maximumFractionDigits(call)
+        if (maximum != null && minimum > maximum) throw Mf2Error.badOption("minimumFractionDigits must not exceed maximumFractionDigits.")
+        return minimum
+    }
 
     private fun maximumFractionDigits(call: Mf2FunctionCall): Int? =
         call.optionValue("maximumFractionDigits", null)

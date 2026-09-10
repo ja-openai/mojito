@@ -7,7 +7,7 @@ internal object Mf2FunctionRegistries {
         Mf2PortableFunctions.registerFormatters(formatters)
         Mf2PortableFunctions.registerSelectors(selectors)
         Mf2UnlocalizedNumericFunctions.registerFormatters(formatters)
-        return Mf2FunctionRegistry(formatters, selectors)
+        return Mf2FunctionRegistry(formatters, selectors, setOf("number", "integer", "percent"))
     }
 
     fun jdk(): Mf2FunctionRegistry {
@@ -16,6 +16,6 @@ internal object Mf2FunctionRegistries {
         Mf2PortableFunctions.registerFormatters(formatters)
         Mf2PortableFunctions.registerSelectors(selectors)
         Mf2JdkFunctions.registerFormatters(formatters)
-        return Mf2FunctionRegistry(formatters, selectors)
+        return Mf2FunctionRegistry(formatters, selectors, setOf("number", "integer", "percent", "currency"))
     }
 }
