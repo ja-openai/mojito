@@ -1,6 +1,5 @@
 package com.box.l10n.mojito.service.oaireview;
 
-import com.box.l10n.mojito.quartz.QuartzPollableJob;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatRequest;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatResponse;
@@ -10,8 +9,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 /** Runs interactive review without keeping the browser's request open during provider work. */
 @Component
-public class AiReviewChatJob
-    extends QuartzPollableJob<AiReviewChatRequest, AiReviewChatJob.Result> {
+@org.quartz.DisallowConcurrentExecution
+public class AiReviewChatJob extends AiReviewAsyncJob<AiReviewChatRequest> {
 
   @Autowired AiReviewChatWS aiReviewChatWS;
 

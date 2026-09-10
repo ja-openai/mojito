@@ -38,6 +38,8 @@ public interface PollableTaskRepository extends JpaRepository<PollableTask, Long
       """
 	      select pt from #{#entityName} pt
 	      where pt.finishedDate is null
+	      and pt.name not in ('com.box.l10n.mojito.service.oaireview.AiReviewChatJob',
+	                          'com.box.l10n.mojito.service.oaireview.AiReviewConfiguredChatJob')
 	      and (cast(unix_timestamp(pt.createdDate) as long) + pt.timeout) < cast(unix_timestamp(:now) as long)
 	      """)
   List<PollableTask> findZombiePollableTasks(@Param("now") ZonedDateTime now, Pageable pageable);

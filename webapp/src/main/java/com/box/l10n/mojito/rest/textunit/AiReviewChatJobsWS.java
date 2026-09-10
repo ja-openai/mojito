@@ -2,20 +2,20 @@ package com.box.l10n.mojito.rest.textunit;
 
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
-import com.box.l10n.mojito.quartz.QuartzJobInfo;
-import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatRequest;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatResponse;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJob;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
-import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfiguredChatJob;
+import com.box.l10n.mojito.service.oaireview.AiReviewDispatchService;
+import com.box.l10n.mojito.service.oaireview.AiReviewExecutionProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import java.time.ZonedDateTime;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,28 +28,28 @@ import org.springframework.web.server.ResponseStatusException;
 public class AiReviewChatJobsWS {
 
   private final AiReviewChatWS aiReviewChatWS;
-  private final AiReviewConfigurationProperties configuration;
-  private final QuartzPollableTaskScheduler scheduler;
   private final PollableTaskService pollableTaskService;
   private final PollableTaskBlobStorage blobStorage;
   private final AiReviewChatJobAccess jobAccess;
   private final ObjectMapper objectMapper;
+  private final AiReviewDispatchService dispatch;
+  private final AiReviewExecutionProperties execution;
 
   public AiReviewChatJobsWS(
       AiReviewChatWS aiReviewChatWS,
-      AiReviewConfigurationProperties configuration,
-      QuartzPollableTaskScheduler scheduler,
       PollableTaskService pollableTaskService,
       PollableTaskBlobStorage blobStorage,
       AiReviewChatJobAccess jobAccess,
-      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper) {
+      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
+      AiReviewDispatchService dispatch,
+      AiReviewExecutionProperties execution) {
     this.aiReviewChatWS = aiReviewChatWS;
-    this.configuration = configuration;
-    this.scheduler = scheduler;
     this.pollableTaskService = pollableTaskService;
     this.blobStorage = blobStorage;
     this.jobAccess = jobAccess;
     this.objectMapper = objectMapper;
+    this.dispatch = dispatch;
+    this.execution = execution;
   }
 
   @PostMapping("/api/ai/review/jobs")
@@ -59,14 +59,26 @@ public class AiReviewChatJobsWS {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "messages must not be empty");
     }
     Prepared prepared = aiReviewChatWS.prepare(request);
-    QuartzJobInfo<Prepared, AiReviewChatJob.Result> job =
-        QuartzJobInfo.newBuilder(AiReviewConfiguredChatJob.class)
-            .withInput(prepared)
-            .withInlineInput(true)
-            .withScheduler(configuration.getSchedulerName())
-            .withRequestRecovery(true)
-            .build();
-    return new StartResponse(scheduler.scheduleJob(job).getPollableTask().getId());
+    PollableTask task =
+        pollableTaskService.createPollableTask(
+            null,
+            AiReviewConfiguredChatJob.class.getCanonicalName(),
+            null,
+            0,
+            execution.getTimeoutSeconds());
+    dispatch.start(task.getId(), prepared);
+    return new StartResponse(task.getId());
+  }
+
+  @DeleteMapping("/api/ai/review/jobs/{taskId}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void cancel(@PathVariable long taskId) {
+    PollableTask task = pollableTaskService.getPollableTask(taskId);
+    if (!AiReviewChatJobAccess.isReviewChatJob(task)) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "AI review task not found.");
+    }
+    jobAccess.assertCanRead(task);
+    dispatch.cancel(taskId);
   }
 
   @GetMapping("/api/ai/review/jobs/{taskId}")

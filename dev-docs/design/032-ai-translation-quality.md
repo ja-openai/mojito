@@ -166,9 +166,10 @@ AI Translate request timeouts keep their existing semantics. These are engineeri
 promises about model latency. The client extracts only message text, safely skipping reasoning
 items that have no message content.
 
-Interactive review uses durable job submission and short status polls, preserving the configured
-reasoning and full request context while allowing it to outlast a gateway request deadline. See
-`010-ai-observability.md` for transport, retention, and cancellation behavior.
+Interactive review starts a bounded asynchronous provider request and returns a pollable task ID.
+Completion saves output before marking the task finished. New reviews do not use Quartz or wait
+in a durable queue; a server restart can fail a request for the reviewer to retry. See
+`010-ai-observability.md` for admission limits, deadlines, retention, and cancellation behavior.
 
 The API has no `reasoning.effort=ultra`. Application Ultra mode adds automatic subagents to maximum
 reasoning. With candidate validation enabled, generation can make one bounded structural repair

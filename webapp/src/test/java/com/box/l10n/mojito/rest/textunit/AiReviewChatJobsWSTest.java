@@ -4,32 +4,31 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
-import com.box.l10n.mojito.quartz.QuartzJobInfo;
-import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatMessage;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatRequest;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatResponse;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJob;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
-import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfiguredChatJob;
+import com.box.l10n.mojito.service.oaireview.AiReviewDispatchService;
+import com.box.l10n.mojito.service.oaireview.AiReviewExecutionProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared;
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Settings;
-import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import java.time.ZonedDateTime;
@@ -39,6 +38,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.HttpStatus;
@@ -50,33 +50,31 @@ import org.springframework.web.server.ResponseStatusException;
 public class AiReviewChatJobsWSTest {
 
   @Mock AiReviewChatWS review;
-  @Mock QuartzPollableTaskScheduler scheduler;
   @Mock PollableTaskService tasks;
   @Mock PollableTaskBlobStorage storage;
   @Mock AiReviewChatJobAccess access;
+  @Mock AiReviewDispatchService dispatch;
 
   private final ObjectMapper mapper = ObjectMapper.withNoFailOnUnknownProperties();
+  private final AiReviewExecutionProperties execution = new AiReviewExecutionProperties();
   private AiReviewChatJobsWS ws;
 
   @Before
   public void setUp() {
-    AiReviewConfigurationProperties configuration = new AiReviewConfigurationProperties();
-    configuration.setSchedulerName("review-queue");
-    ws = new AiReviewChatJobsWS(review, configuration, scheduler, tasks, storage, access, mapper);
+    ws = new AiReviewChatJobsWS(review, tasks, storage, access, mapper, dispatch, execution);
   }
 
   @Test
-  @SuppressWarnings("unchecked")
-  public void startReturns202AndQueuesTheAuthenticatedRequesterAndFrozenSettings()
+  public void startReturns202AndDirectlyDispatchesTheAuthenticatedRequesterAndFrozenSettings()
       throws Exception {
     AiReviewChatRequest request = request();
     Prepared prepared =
         new Prepared(
             request, 17L, new Settings("ultra", "selected-model", "max", "low", "priority"));
     when(review.prepare(request)).thenReturn(prepared);
-    PollableFuture<AiReviewChatJob.Result> future = mock(PollableFuture.class);
-    when(future.getPollableTask()).thenReturn(task());
-    when(scheduler.scheduleJob(any(QuartzJobInfo.class))).thenReturn(future);
+    when(tasks.createPollableTask(
+            null, AiReviewConfiguredChatJob.class.getCanonicalName(), null, 0, 180L))
+        .thenReturn(task());
 
     MockMvcBuilders.standaloneSetup(ws)
         .build()
@@ -87,25 +85,24 @@ public class AiReviewChatJobsWSTest {
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.taskId").value(91));
 
-    ArgumentCaptor<QuartzJobInfo> scheduled = ArgumentCaptor.forClass(QuartzJobInfo.class);
-    verify(scheduler).scheduleJob(scheduled.capture());
-    assertSame(prepared, scheduled.getValue().getInput());
+    ArgumentCaptor<Prepared> dispatched = ArgumentCaptor.forClass(Prepared.class);
+    verify(dispatch).start(eq(91L), dispatched.capture());
+    assertSame(prepared, dispatched.getValue());
     assertEquals(
         prepared,
         mapper.readValueUnchecked(
-            mapper.writeValueAsStringUnchecked(scheduled.getValue().getInput()), Prepared.class));
-    assertEquals(AiReviewConfiguredChatJob.class, scheduled.getValue().getClazz());
-    assertEquals("review-queue", scheduled.getValue().getScheduler());
-    assertTrue(scheduled.getValue().isInlineInput());
-    assertTrue(scheduled.getValue().getRequestRecovery());
+            mapper.writeValueAsStringUnchecked(dispatched.getValue()), Prepared.class));
+    verify(tasks)
+        .createPollableTask(
+            null, AiReviewConfiguredChatJob.class.getCanonicalName(), null, 0, 180L);
     verify(review).prepare(request);
     verify(review, never()).chat(any());
     verify(review, never()).chatPrepared(any(), any());
-    verify(future, never()).get();
+    verifyNoInteractions(storage, access);
   }
 
   @Test
-  public void invalidRequestNeverSchedulesWork() {
+  public void invalidRequestNeverCreatesOrDispatchesWork() {
     for (AiReviewChatRequest request :
         List.of(
             new AiReviewChatRequest("source", null, "fr", null, null, null),
@@ -115,23 +112,79 @@ public class AiReviewChatJobsWSTest {
           assertThrows(ResponseStatusException.class, () -> ws.start(request)).getStatusCode());
     }
     assertThrows(ResponseStatusException.class, () -> ws.start(null));
-    verifyNoInteractions(review, scheduler);
+    verifyNoInteractions(review, tasks, dispatch);
   }
 
   @Test
-  public void missingProviderIsDetectedBeforeScheduling() {
+  public void missingProviderIsDetectedBeforeCreatingTheTask() {
     doThrow(new IllegalStateException("provider missing")).when(review).prepare(request());
     assertThrows(IllegalStateException.class, () -> ws.start(request()));
-    verifyNoInteractions(scheduler);
+    verifyNoInteractions(tasks, dispatch);
   }
 
   @Test
-  public void rejectedPreparationNeverSchedulesWork() {
+  public void rejectedPreparationNeverCreatesOrDispatchesWork() {
     ResponseStatusException invalid =
         new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown AI review version.");
     when(review.prepare(request())).thenThrow(invalid);
     assertSame(invalid, assertThrows(ResponseStatusException.class, () -> ws.start(request())));
-    verifyNoInteractions(scheduler);
+    verifyNoInteractions(tasks, dispatch);
+  }
+
+  @Test
+  public void taskUsesTheConfiguredOverallDeadline() {
+    execution.setTimeoutSeconds(75);
+    Prepared prepared =
+        new Prepared(
+            request(), 17L, new Settings("ultra", "selected-model", "max", "low", "priority"));
+    when(review.prepare(request())).thenReturn(prepared);
+    when(tasks.createPollableTask(
+            null, AiReviewConfiguredChatJob.class.getCanonicalName(), null, 0, 75L))
+        .thenReturn(task());
+
+    assertEquals(91L, ws.start(request()).taskId());
+    verify(dispatch).start(91L, prepared);
+  }
+
+  @Test
+  public void cancelChecksOwnershipAndReturnsNoContent() throws Exception {
+    PollableTask task = task();
+    when(tasks.getPollableTask(91L)).thenReturn(task);
+
+    MockMvcBuilders.standaloneSetup(ws)
+        .build()
+        .perform(delete("/api/ai/review/jobs/91"))
+        .andExpect(status().isNoContent());
+
+    InOrder ownershipFirst = inOrder(access, dispatch);
+    ownershipFirst.verify(access).assertCanRead(task);
+    ownershipFirst.verify(dispatch).cancel(91L);
+    verifyNoInteractions(storage, review);
+  }
+
+  @Test
+  public void anotherUserCannotCancelTheTask() {
+    PollableTask task = task();
+    when(tasks.getPollableTask(91L)).thenReturn(task);
+    ResponseStatusException denied = new ResponseStatusException(HttpStatus.NOT_FOUND);
+    doThrow(denied).when(access).assertCanRead(task);
+
+    assertSame(denied, assertThrows(ResponseStatusException.class, () -> ws.cancel(91L)));
+    verifyNoInteractions(dispatch, storage, review);
+  }
+
+  @Test
+  public void missingAndOtherTaskTypesCannotBeCanceledAsReview() {
+    assertEquals(
+        HttpStatus.NOT_FOUND,
+        assertThrows(ResponseStatusException.class, () -> ws.cancel(404L)).getStatusCode());
+    PollableTask otherTask = task();
+    otherTask.setName("another job");
+    when(tasks.getPollableTask(91L)).thenReturn(otherTask);
+    assertEquals(
+        HttpStatus.NOT_FOUND,
+        assertThrows(ResponseStatusException.class, () -> ws.cancel(91L)).getStatusCode());
+    verifyNoInteractions(dispatch, storage, access, review);
   }
 
   @Test
@@ -168,7 +221,7 @@ public class AiReviewChatJobsWSTest {
     assertEquals("completed", response.status());
     assertEquals(reviewResponse, response.response());
     assertNull(response.error());
-    verifyNoInteractions(review, scheduler);
+    verifyNoInteractions(review);
   }
 
   @Test

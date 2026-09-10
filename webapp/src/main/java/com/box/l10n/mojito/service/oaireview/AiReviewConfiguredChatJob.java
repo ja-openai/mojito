@@ -1,6 +1,5 @@
 package com.box.l10n.mojito.service.oaireview;
 
-import com.box.l10n.mojito.quartz.QuartzPollableJob;
 import com.box.l10n.mojito.rest.textunit.AiReviewChatWS;
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +8,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 /** Uses settings and the authenticated requester captured by the submission endpoint. */
 @Component
-public class AiReviewConfiguredChatJob extends QuartzPollableJob<Prepared, AiReviewChatJob.Result> {
+@org.quartz.DisallowConcurrentExecution
+public class AiReviewConfiguredChatJob extends AiReviewAsyncJob<Prepared> {
   @Autowired AiReviewChatWS aiReviewChatWS;
 
   @Override
