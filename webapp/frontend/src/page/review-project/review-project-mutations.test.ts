@@ -19,6 +19,12 @@ import {
   useReviewProjectMutations,
 } from './review-project-mutations';
 
+const saveAgentReviewOutcomeMock = vi.hoisted(() => vi.fn());
+vi.mock('../../api/agent-reviews', () => ({
+  AGENT_REVIEW_FEEDBACK_QUERY_KEY: 'agent-review-feedback',
+  saveAgentReviewOutcome: saveAgentReviewOutcomeMock,
+}));
+
 const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
 const setReviewProjectTextUnitDecisionStateMock = vi.hoisted(() => vi.fn());
 const updateReviewProjectStatusMock = vi.hoisted(() => vi.fn());
@@ -103,6 +109,7 @@ const project: ApiReviewProjectDetail = {
 };
 
 beforeEach(() => {
+  saveAgentReviewOutcomeMock.mockReset();
   saveReviewProjectTextUnitDecisionMock.mockReset();
   setReviewProjectTextUnitDecisionStateMock.mockReset();
   updateReviewProjectStatusMock.mockReset();
@@ -1274,5 +1281,116 @@ describe('Review Project save operation outcomes', () => {
     expect(queryClient.getQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id])).toEqual(
       project,
     );
+  });
+});
+
+describe('Agent feedback acknowledgements', () => {
+  const agentReview = {
+    proposalId: 91,
+    proposalRevision: 1,
+    proposalVersion: 2,
+    requestId: 'feedback-key',
+    action: 'DEFER' as const,
+  };
+  const context = {
+    proposalId: 91,
+    proposalRevision: 1,
+    proposalVersion: 3,
+    findingId: 'finding-91',
+    runId: 9,
+    reviewType: 'TRANSLATION_QUALITY',
+    reviewedSource: 'Pay now',
+    reviewedTarget: 'Pay now',
+    proposedTarget: 'Payer',
+    rationale: 'Untranslated',
+    category: 'OBVIOUS_ERROR',
+    verificationStatus: 'READY',
+    disposition: 'ROUTED',
+    stale: false,
+  };
+  it('requires the exact feedback request acknowledgement before reporting success', async () => {
+    saveAgentReviewOutcomeMock.mockResolvedValue({
+      ...textUnit,
+      reviewStateRevision: 'new-row',
+      agentReview: { ...context, lastFeedbackRequestId: 'another-request' },
+    });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], project);
+    const { result } = renderMutationsHook(queryClient);
+    act(() => {
+      result.current.onRequestDecisionState({
+        textUnitId: textUnit.id,
+        decisionState: 'PENDING',
+        expectedCurrentTmTextUnitVariantId: null,
+        expectedReviewStateRevision: 'draft-row-revision',
+        agentReview,
+      });
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('failed'));
+    expect(result.current.errorMessage).toContain('did not confirm');
+    expect(queryClient.getQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id])).toEqual(
+      project,
+    );
+    expect(setReviewProjectTextUnitDecisionStateMock).not.toHaveBeenCalled();
+  });
+  it('acknowledges non-TM outcomes through the guarded mutation and keeps translation state', async () => {
+    const updated = {
+      ...textUnit,
+      reviewStateRevision: 'new-row',
+      agentReview: { ...context, lastFeedbackRequestId: agentReview.requestId },
+    };
+    saveAgentReviewOutcomeMock.mockResolvedValue(updated);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], project);
+    const { result } = renderMutationsHook(queryClient);
+    act(() => {
+      result.current.onRequestDecisionState({
+        textUnitId: textUnit.id,
+        decisionState: 'PENDING',
+        expectedCurrentTmTextUnitVariantId: null,
+        expectedReviewStateRevision: 'draft-row-revision',
+        agentReview,
+      });
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('succeeded'));
+    expect(saveReviewProjectTextUnitDecisionMock).not.toHaveBeenCalled();
+    expect(setReviewProjectTextUnitDecisionStateMock).not.toHaveBeenCalled();
+    const request = saveAgentReviewOutcomeMock.mock.calls[0][0] as {
+      agentReview: { requestId: string };
+    };
+    expect(request).not.toHaveProperty('target');
+    expect(request.agentReview.requestId).toBe('feedback-key');
+  });
+  it('cannot use legacy conflict recovery to rebase or bypass an agent proposal', async () => {
+    saveAgentReviewOutcomeMock.mockRejectedValue(
+      Object.assign(new Error('Conflict'), {
+        status: 409,
+        data: { ...textUnit, reviewStateRevision: 'new-row', agentReview: context },
+      }),
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const { result } = renderMutationsHook(queryClient);
+    act(() => {
+      result.current.onRequestDecisionState({
+        textUnitId: textUnit.id,
+        decisionState: 'PENDING',
+        expectedCurrentTmTextUnitVariantId: null,
+        expectedReviewStateRevision: 'draft-row-revision',
+        agentReview,
+      });
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('conflict'));
+    act(() => {
+      result.current.onOverwriteConflict();
+      result.current.onUseConflictCurrent();
+    });
+    expect(saveAgentReviewOutcomeMock).toHaveBeenCalledTimes(1);
+    expect(setReviewProjectTextUnitDecisionStateMock).not.toHaveBeenCalled();
   });
 });

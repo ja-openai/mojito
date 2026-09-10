@@ -44,5 +44,5 @@ review or accept and decide them through the existing Review Project save path.
 ## Follow-Ups
 
 - Decide whether local undo/redo checkpoints need durable backend storage.
-- Decide whether staged suggestions should also become the persistence layer for future AI Review
-  proposal workflows.
+- The proposed [agent review workflow](036-agent-translation-review.md) keeps staged suggestions as
+  editable working copies and adds durable proposal storage for agent output, evidence, and outcomes.

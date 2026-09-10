@@ -8,6 +8,7 @@ import type React from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
+import type { AgentReviewDecision } from '../../api/agent-reviews';
 import {
   type AiReviewMessage,
   type AiReviewSuggestion,
@@ -139,8 +140,11 @@ import {
   buildTextUnitDetailUrl,
 } from '../../utils/textUnitDetailUrl';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
+import { AgentReviewFeedbackForm, AgentReviewPanel } from './AgentReviewPanel';
+import { AgentReviewTable } from './AgentReviewTable';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
 import { getDefaultReviewProjectShortcutHelpPreference } from './review-project-preferences';
+import { useAgentReviewFeedback } from './useAgentReviewFeedback';
 import {
   type ReviewProjectDecisionSnapshot as DecisionSnapshot,
   type ReviewProjectDraftStatus as StatusChoice,
@@ -821,7 +825,13 @@ function buildSnapshot(textUnit: ApiReviewProjectTextUnit): DecisionSnapshot {
     messageFormat: textUnit.tmTextUnit?.messageFormat,
     expectedCurrentVariantId: current?.id ?? null,
     reviewStateRevision: textUnit.reviewStateRevision ?? null,
-    target: suggestion?.target ?? baseVariant?.content ?? '',
+    target:
+      suggestion?.target ??
+      (textUnit.agentReview && ['OPEN', 'ROUTED'].includes(textUnit.agentReview.disposition)
+        ? textUnit.agentReview.proposedTarget
+        : null) ??
+      baseVariant?.content ??
+      '',
     comment: baseVariant?.comment ?? null,
     decisionNotes: textUnit.reviewProjectTextUnitDecision?.notes ?? null,
     statusChoice,
@@ -882,8 +892,9 @@ export function ReviewProjectPageView({
     () => project?.reviewProjectTextUnits ?? [],
     [project?.reviewProjectTextUnits],
   );
+  const isAgentProject = textUnits.some((row) => row.agentReview != null);
   const canStartFindReplace =
-    project?.status === 'OPEN' && !isProjectTerminology && textUnits.length > 0;
+    project?.status === 'OPEN' && !isProjectTerminology && !isAgentProject && textUnits.length > 0;
   const findReplaceHref = useMemo(() => {
     const path = `/review-projects/${projectId}/find-replace`;
     if (!reviewProjectsSessionKey) {
@@ -896,8 +907,8 @@ export function ReviewProjectPageView({
 
   const layoutRef = useRef<HTMLDivElement>(null);
   const detailPaneRef = useRef<HTMLDivElement>(null);
-  const [listWidthPct, setListWidthPct] = useState(20);
-  const [lastListWidthPct, setLastListWidthPct] = useState(20);
+  const [listWidthPct, setListWidthPct] = useState(isAgentProject ? 55 : 20);
+  const [lastListWidthPct, setLastListWidthPct] = useState(isAgentProject ? 55 : 20);
   const [isListCollapsed, setIsListCollapsed] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -959,6 +970,9 @@ export function ReviewProjectPageView({
       }
       if (!term) return true;
       const haystacks = [
+        tu.agentReview?.rationale,
+        tu.agentReview?.proposedTarget,
+        tu.agentReview?.reviewedTarget,
         tu.tmTextUnit?.name,
         tu.tmTextUnit?.content,
         tu.tmTextUnit?.comment,
@@ -1441,7 +1455,7 @@ export function ReviewProjectPageView({
     : 'Accept and go to next text unit. If unchanged, mark decided and go to next.';
 
   return (
-    <div className="review-project-page">
+    <div className={`review-project-page${isAgentProject ? ' review-project-page--agent' : ''}`}>
       <ReviewProjectHeader
         projectId={projectId}
         project={project}
@@ -1552,38 +1566,53 @@ export function ReviewProjectPageView({
               </Link>
             ) : null}
           </div>
-          <VirtualList
-            scrollRef={scrollRef}
-            items={items}
-            totalSize={totalSize}
-            renderRow={(virtualItem: VirtualItem) => {
-              const textUnit = filtered[virtualItem.index] as ApiReviewProjectTextUnit | undefined;
-              if (!textUnit) {
-                return null;
-              }
-              const isDecided = getDecisionState(textUnit) === 'DECIDED';
-              return {
-                key: virtualItem.key,
-                props: {
-                  ref: measureElement,
-                  onClick: () => attemptSelectTextUnit(textUnit.id, virtualItem.index),
-                  className:
-                    textUnit.id === selectedTextUnitId
-                      ? `review-project-row is-selected${
-                          isDecided ? ' review-project-row--decided' : ''
-                        }`
-                      : `review-project-row${isDecided ? ' review-project-row--decided' : ''}`,
-                },
-                content: (
-                  <TextUnitRow
-                    textUnit={textUnit}
-                    isSelected={textUnit.id === selectedTextUnitId}
-                    isDecided={isDecided}
-                  />
-                ),
-              };
-            }}
-          />
+          {isAgentProject ? (
+            <AgentReviewTable
+              rows={filtered}
+              selectedId={selectedTextUnitId}
+              localeTag={localeTag}
+              scrollRef={scrollRef}
+              items={items}
+              totalSize={totalSize}
+              measureElement={measureElement}
+              onSelect={attemptSelectTextUnit}
+            />
+          ) : (
+            <VirtualList
+              scrollRef={scrollRef}
+              items={items}
+              totalSize={totalSize}
+              renderRow={(virtualItem: VirtualItem) => {
+                const textUnit = filtered[virtualItem.index] as
+                  | ApiReviewProjectTextUnit
+                  | undefined;
+                if (!textUnit) {
+                  return null;
+                }
+                const isDecided = getDecisionState(textUnit) === 'DECIDED';
+                return {
+                  key: virtualItem.key,
+                  props: {
+                    ref: measureElement,
+                    onClick: () => attemptSelectTextUnit(textUnit.id, virtualItem.index),
+                    className:
+                      textUnit.id === selectedTextUnitId
+                        ? `review-project-row is-selected${
+                            isDecided ? ' review-project-row--decided' : ''
+                          }`
+                        : `review-project-row${isDecided ? ' review-project-row--decided' : ''}`,
+                  },
+                  content: (
+                    <TextUnitRow
+                      textUnit={textUnit}
+                      isSelected={textUnit.id === selectedTextUnitId}
+                      isDecided={isDecided}
+                    />
+                  ),
+                };
+              }}
+            />
+          )}
         </section>
         <div
           className={`review-project-page__resize-handle${
@@ -1902,7 +1931,7 @@ function DetailPane({
       setActiveContextTab((current) => (current === 'search' ? 'glossary' : current));
     }
   }, [canSearchTranslations]);
-  const [isAiCollapsed, setIsAiCollapsed] = useState(false);
+  const [isAiCollapsed, setIsAiCollapsed] = useState(textUnit.agentReview != null);
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
   const [aiInput, setAiInput] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
@@ -1923,6 +1952,27 @@ function DetailPane({
       ? String(textUnit.tmTextUnit.asset.assetPath)
       : null;
   const textUnitName = textUnit.tmTextUnit?.name ?? `Text unit ${textUnit.id}`;
+  const agentReview = textUnit.agentReview;
+  const [reconsiderVersion, setReconsiderVersion] = useState<number | null>(null);
+  const reconsidering =
+    agentReview?.canReconsider === true && reconsiderVersion === agentReview.proposalVersion;
+  const agentReviewCompleted =
+    agentReview != null &&
+    ['RESOLVED', 'FOLLOW_UP', 'SUPERSEDED'].includes(agentReview.disposition) &&
+    !reconsidering;
+  const agentFeedback = useAgentReviewFeedback(
+    user.username,
+    projectId,
+    textUnit.id,
+    agentReview,
+    mutations.actionState,
+  );
+  const {
+    read: readAgentFeedback,
+    isDirty: isAgentFeedbackDirty,
+    startOperation: startAgentFeedbackOperation,
+    reset: resetAgentFeedback,
+  } = agentFeedback;
   const snapshot = useMemo(() => buildSnapshot(textUnit), [textUnit]);
   const draft = useReviewProjectDraft(user.username, projectId, textUnit.id, snapshot);
   const sourceChanged = draft.sourceChanged;
@@ -2082,7 +2132,7 @@ function DetailPane({
         action.operationId,
         buildSnapshot(action.textUnit),
         action.resolution === 'use-current',
-        action.action.kind === 'decision-state',
+        action.action.kind === 'decision-state' && !action.action.request.agentReview,
       );
     }
   }, [cancelOperation, finishOperation, mutations.actionState, textUnit.id]);
@@ -2324,6 +2374,7 @@ function DetailPane({
     resetFeedbackDraft();
     resetResolutionDraft();
     resetMetadataDraft();
+    resetAgentFeedback();
     mutations.onDiscardAction(textUnit.id);
   }, [
     mutations,
@@ -2331,6 +2382,7 @@ function DetailPane({
     resetFeedbackDraft,
     resetResolutionDraft,
     resetMetadataDraft,
+    resetAgentFeedback,
     textUnit.id,
   ]);
 
@@ -2553,7 +2605,7 @@ function DetailPane({
   ]);
 
   useEffect(() => {
-    if (!aiPreferencesReady || aiAutomaticDisabled) {
+    if (!aiPreferencesReady || aiAutomaticDisabled || agentReview != null) {
       return;
     }
     const requestAttempt = (aiRequestAttemptRef.current += 1);
@@ -2670,6 +2722,7 @@ function DetailPane({
     aiPreset,
     aiPreferencesReady,
     aiAutomaticDisabled,
+    agentReview,
     glossaryMatchesQuery.data,
     glossaryMatchesQuery.isLoading,
     isTerminologyProject,
@@ -2699,7 +2752,7 @@ function DetailPane({
     draftDecisionNotesNormalized !== draftBase.decisionNotes;
   const isDirty = isTerminologyProject
     ? isTerminologyDirty || isTerminologyResolutionDirty || metadataDraft.dirty
-    : isTranslationReviewDirty;
+    : isTranslationReviewDirty || agentFeedback.dirty;
   const isRejected = draftStatusApi.includedInLocalizedFile === false;
   const canReset = !isTerminologyProject && isDirty && !isSavingGlobal;
   const isAcceptedAndDecided =
@@ -2709,6 +2762,10 @@ function DetailPane({
     ? !isSavingGlobal && draftTerminologyRecommendation != null && isTerminologyNotesDirty
     : !isSavingGlobal &&
       !sourceChanged &&
+      !agentReview?.stale &&
+      !agentReviewCompleted &&
+      (!agentReview || agentReview.proposedTarget !== null || isTranslationDirty) &&
+      (!reconsidering || isTranslationDirty) &&
       !isComposing &&
       !mf2HasErrors &&
       (!isAcceptedAndDecided || isDirty);
@@ -2722,7 +2779,12 @@ function DetailPane({
   const isCommentDirty = draftCommentNormalized !== draftBase.comment;
   const isDecisionNotesDirty = draftDecisionNotesNormalized !== draftBase.decisionNotes;
   const isStatusDropdownDisabled =
-    isSavingGlobal || sourceChanged || isTranslationDirty || isCommentDirty || isDecisionNotesDirty;
+    agentReview != null ||
+    isSavingGlobal ||
+    sourceChanged ||
+    isTranslationDirty ||
+    isCommentDirty ||
+    isDecisionNotesDirty;
   const translationWarnings = useMemo(
     () => buildTranslationWarnings(source ?? '', draftTarget),
     [draftTarget, source],
@@ -2743,6 +2805,7 @@ function DetailPane({
       isDirty: () => {
         if (isTerminologyProject)
           return isFeedbackDirty() || isResolutionDirty() || isMetadataDirty();
+        if (isAgentFeedbackDirty()) return true;
         const current = readDraft();
         if (!current) return false;
         return (
@@ -2766,6 +2829,7 @@ function DetailPane({
     isResolutionDirty,
     isMetadataDirty,
     isTerminologyProject,
+    isAgentFeedbackDirty,
     navigationGuardRef,
     readDraft,
   ]);
@@ -2801,6 +2865,7 @@ function DetailPane({
       const currentDraft = readDraft();
       if (!currentDraft || compositionRef.current || mutations.isSaving) return;
       if (!sameReviewProjectSource(currentDraft.base, currentDraft.remote)) return;
+      if (agentReview && (agentReview.stale || agentReviewCompleted)) return;
       const nextTarget = targetOverride ?? currentDraft.values.target;
       const nextStatusChoice = statusChoiceOverride ?? currentDraft.values.statusChoice;
       if (sourceIsMf2 && mf2HasErrors && nextStatusChoice === 'ACCEPTED') {
@@ -2826,6 +2891,20 @@ function DetailPane({
         status: nextStatusApi.status,
         includedInLocalizedFile: nextStatusApi.includedInLocalizedFile,
         decisionState: 'DECIDED',
+        ...(agentReview
+          ? {
+              agentReview: {
+                proposalId: agentReview.proposalId,
+                proposalRevision: agentReview.proposalRevision,
+                proposalVersion: agentReview.proposalVersion,
+                requestId: crypto.randomUUID(),
+                action: 'ACCEPT' as const,
+                originalAssessment: readAgentFeedback()?.values.originalAssessment || undefined,
+                suggestionAssessment: readAgentFeedback()?.values.suggestionAssessment || undefined,
+                explanation: readAgentFeedback()?.values.explanation || undefined,
+              },
+            }
+          : {}),
         expectedCurrentTmTextUnitVariantId: currentDraft.base.expectedCurrentVariantId,
         expectedReviewStateRevision: currentDraft.base.reviewStateRevision,
         decisionNotes:
@@ -2833,12 +2912,19 @@ function DetailPane({
             ? decisionNotesOverride
             : normalizeOptional(currentDraft.values.decisionNotes),
       });
-      if (typeof operationId === 'number') startOperation(operationId);
+      if (typeof operationId === 'number') {
+        startOperation(operationId);
+        if (agentReview) startAgentFeedbackOperation(operationId);
+      }
       return operationId;
     },
     [
       readDraft,
       startOperation,
+      agentReview,
+      agentReviewCompleted,
+      readAgentFeedback,
+      startAgentFeedbackOperation,
       mf2HasErrors,
       mutations,
       projectId,
@@ -2851,6 +2937,7 @@ function DetailPane({
 
   const requestDecisionState = useCallback(
     (decisionState: DecisionStateChoice) => {
+      if (agentReview) return;
       const currentDraft = readDraft();
       if (!currentDraft || compositionRef.current || mutations.isSaving) return;
       if (!sameReviewProjectSource(currentDraft.base, currentDraft.remote)) return;
@@ -2863,7 +2950,55 @@ function DetailPane({
       if (typeof operationId === 'number') startOperation(operationId);
       return operationId;
     },
-    [mutations, readDraft, startOperation],
+    [agentReview, mutations, readDraft, startOperation],
+  );
+
+  const requestAgentOutcome = useCallback(
+    (action: Exclude<AgentReviewDecision['action'], 'ACCEPT'>) => {
+      const currentDraft = readDraft();
+      const currentFeedback = readAgentFeedback();
+      if (
+        !agentReview ||
+        agentReviewCompleted ||
+        !currentDraft ||
+        !currentFeedback ||
+        compositionRef.current ||
+        mutations.isSaving ||
+        isTranslationReviewDirty
+      )
+        return;
+      const operationId = mutations.onRequestDecisionState({
+        textUnitId: textUnit.id,
+        decisionState: action === 'DEFER' ? 'PENDING' : 'DECIDED',
+        expectedCurrentTmTextUnitVariantId: currentDraft.base.expectedCurrentVariantId,
+        expectedReviewStateRevision: currentDraft.base.reviewStateRevision,
+        agentReview: {
+          proposalId: agentReview.proposalId,
+          proposalRevision: agentReview.proposalRevision,
+          proposalVersion: agentReview.proposalVersion,
+          requestId: crypto.randomUUID(),
+          action,
+          originalAssessment: currentFeedback.values.originalAssessment || undefined,
+          suggestionAssessment: currentFeedback.values.suggestionAssessment || undefined,
+          explanation: currentFeedback.values.explanation || undefined,
+        },
+      });
+      if (typeof operationId === 'number') {
+        startOperation(operationId);
+        startAgentFeedbackOperation(operationId);
+      }
+    },
+    [
+      agentReview,
+      agentReviewCompleted,
+      isTranslationReviewDirty,
+      mutations,
+      readAgentFeedback,
+      readDraft,
+      startOperation,
+      startAgentFeedbackOperation,
+      textUnit.id,
+    ],
   );
 
   const requestSaveTerminologyFeedback = useCallback(
@@ -3408,6 +3543,7 @@ function DetailPane({
 
   useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
+      if (event.target instanceof Element && event.target.closest('.agent-review-feedback')) return;
       if (compositionRef.current || isComposingKeyEvent(event)) return;
       const lowerKey = event.key.toLowerCase();
       const isPlainKey = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
@@ -3668,7 +3804,7 @@ function DetailPane({
   }, []);
 
   return (
-    <div className="review-project-detail">
+    <div className={`review-project-detail${agentReview ? ' review-project-detail--agent' : ''}`}>
       <div className="review-project-detail__header">
         <div className="review-project-detail__title" />
       </div>
@@ -3866,24 +4002,31 @@ function DetailPane({
                 Current decision:{' '}
                 {conflictSnapshot?.decisionState === 'DECIDED' ? 'Decided' : 'Pending'}
               </div>
-              <div className="review-project-detail__conflict-actions">
-                <button
-                  type="button"
-                  className="review-project-detail__actions-button"
-                  onClick={handleUseCurrent}
-                  disabled={isSavingGlobal || sourceChanged}
-                >
-                  Use external
-                </button>
-                <button
-                  type="button"
-                  className="review-project-detail__actions-button review-project-detail__actions-button--primary"
-                  onClick={handleOverwrite}
-                  disabled={isSavingGlobal || sourceChanged}
-                >
-                  Use mine
-                </button>
-              </div>
+              {agentReview ? (
+                <p>
+                  Your draft has been kept. Reset to inspect the latest state; changed proposals
+                  need a new review before acceptance.
+                </p>
+              ) : (
+                <div className="review-project-detail__conflict-actions">
+                  <button
+                    type="button"
+                    className="review-project-detail__actions-button"
+                    onClick={handleUseCurrent}
+                    disabled={isSavingGlobal || sourceChanged}
+                  >
+                    Use external
+                  </button>
+                  <button
+                    type="button"
+                    className="review-project-detail__actions-button review-project-detail__actions-button--primary"
+                    onClick={handleOverwrite}
+                    disabled={isSavingGlobal || sourceChanged}
+                  >
+                    Use mine
+                  </button>
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -4161,9 +4304,43 @@ function DetailPane({
             </>
           ) : (
             <>
+              {agentReview ? (
+                <AgentReviewPanel
+                  key={agentReview.proposalId}
+                  projectId={projectId}
+                  proposal={agentReview}
+                  localeTag={localeTag}
+                  currentSource={textUnit.tmTextUnit?.content ?? null}
+                  currentTarget={textUnit.currentTmTextUnitVariant?.content ?? null}
+                  onReconsider={
+                    agentReview.canReconsider && !reconsidering
+                      ? () => setReconsiderVersion(agentReview.proposalVersion)
+                      : undefined
+                  }
+                />
+              ) : null}
               <div className="review-project-detail__field review-project-detail__field--translation">
                 <div className="review-project-detail__label-row">
-                  <div className="review-project-detail__label">Translation</div>
+                  <div className="review-project-detail__label">
+                    {agentReviewCompleted
+                      ? 'Current translation'
+                      : agentReview
+                        ? 'Your translation'
+                        : 'Translation'}
+                  </div>
+                  {agentReview &&
+                  !agentReviewCompleted &&
+                  agentReview.proposedTarget !== null &&
+                  agentReview.proposedTarget !== draftTarget ? (
+                    <button
+                      type="button"
+                      className="review-project-detail__actions-button"
+                      disabled={isSavingGlobal || isComposing || agentReview.stale}
+                      onClick={() => setDraftTarget(agentReview.proposedTarget!)}
+                    >
+                      Use agent proposal
+                    </button>
+                  ) : null}
                   {snapshot.suggestionSourceLabel ? (
                     <Pill className="review-project-detail__origin-pill">
                       {snapshot.suggestionSourceLabel}
@@ -4185,7 +4362,7 @@ function DetailPane({
                       onKeyDown={handleTranslationEditorKeyDown}
                       onSubmit={handleMf2Accept}
                       onTargetChange={setDraftTarget}
-                      readOnly={isSavingGlobal}
+                      readOnly={isSavingGlobal || agentReviewCompleted}
                       ref={setTranslationRef}
                       showActiveSourceComparison
                       showArgumentInputs={false}
@@ -4222,7 +4399,7 @@ function DetailPane({
                     }}
                     spellCheck={true}
                     lang={translationLang}
-                    disabled={isSavingGlobal}
+                    disabled={isSavingGlobal || agentReviewCompleted}
                     onKeyDown={handleTranslationEditorKeyDown}
                     marksMode={translationMarksMode}
                     protectedDiagnostics={draftTargetProtectedDiagnostics}
@@ -4233,32 +4410,34 @@ function DetailPane({
               </div>
 
               <div className="review-project-detail__editor-controls">
-                <div className="review-project-detail__decision-cluster">
-                  <div className="review-project-detail__decision-segmented" role="group">
-                    <button
-                      type="button"
-                      className={`review-project-detail__decision-option${
-                        snapshot.decisionState === 'PENDING' ? ' is-active' : ''
-                      }`}
-                      onClick={() => handleDecisionStateChange('PENDING')}
-                      disabled={isDirty || isSavingGlobal}
-                      aria-pressed={snapshot.decisionState === 'PENDING'}
-                    >
-                      Pending
-                    </button>
-                    <button
-                      type="button"
-                      className={`review-project-detail__decision-option${
-                        snapshot.decisionState === 'DECIDED' ? ' is-active' : ''
-                      }`}
-                      onClick={() => handleDecisionStateChange('DECIDED')}
-                      disabled={isDirty || isSavingGlobal || (mf2HasErrors && !isRejected)}
-                      aria-pressed={snapshot.decisionState === 'DECIDED'}
-                    >
-                      Decided
-                    </button>
+                {!agentReview ? (
+                  <div className="review-project-detail__decision-cluster">
+                    <div className="review-project-detail__decision-segmented" role="group">
+                      <button
+                        type="button"
+                        className={`review-project-detail__decision-option${
+                          snapshot.decisionState === 'PENDING' ? ' is-active' : ''
+                        }`}
+                        onClick={() => handleDecisionStateChange('PENDING')}
+                        disabled={isDirty || isSavingGlobal}
+                        aria-pressed={snapshot.decisionState === 'PENDING'}
+                      >
+                        Pending
+                      </button>
+                      <button
+                        type="button"
+                        className={`review-project-detail__decision-option${
+                          snapshot.decisionState === 'DECIDED' ? ' is-active' : ''
+                        }`}
+                        onClick={() => handleDecisionStateChange('DECIDED')}
+                        disabled={isDirty || isSavingGlobal || (mf2HasErrors && !isRejected)}
+                        aria-pressed={snapshot.decisionState === 'DECIDED'}
+                      >
+                        Decided
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : null}
                 <div
                   className={`review-project-detail__saving-indicator${
                     showSavingIndicator ? ' is-active' : ''
@@ -4285,10 +4464,34 @@ function DetailPane({
                     onClick={handleAccept}
                     disabled={!canAccept}
                   >
-                    Accept
+                    {agentReviewCompleted
+                      ? 'Reviewed'
+                      : agentReview
+                        ? draftTarget === agentReview.proposedTarget
+                          ? 'Accept proposal'
+                          : 'Accept your edit'
+                        : 'Accept'}
                   </button>
                 </div>
               </div>
+
+              {agentReview && !agentReviewCompleted ? (
+                <AgentReviewFeedbackForm
+                  values={agentFeedback.values}
+                  onChange={(values) => agentFeedback.updateValues(() => values)}
+                  onOutcome={requestAgentOutcome}
+                  onResetTranslation={() => {
+                    if (!isSavingGlobal && !compositionRef.current) {
+                      resetDraft();
+                      mutations.onDiscardAction(textUnit.id);
+                    }
+                  }}
+                  disabled={isSavingGlobal || isComposing}
+                  hasUnsavedTranslation={isTranslationReviewDirty}
+                  pending={isSaving}
+                  completed={agentReviewCompleted}
+                />
+              ) : null}
 
               {translationWarnings.length > 0 ? (
                 <button
@@ -4358,6 +4561,7 @@ function DetailPane({
                 <AutoTextarea
                   className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
                   ref={commentRef}
+                  disabled={agentReview != null && (isSavingGlobal || agentReviewCompleted)}
                   value={draftComment}
                   onChange={(event) => setDraftComment(event.target.value)}
                   placeholder="Explain why you chose this translation (if not obvious)."
@@ -4372,9 +4576,14 @@ function DetailPane({
                 <AutoTextarea
                   className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
                   ref={decisionNotesRef}
+                  disabled={agentReview != null && (isSavingGlobal || agentReviewCompleted)}
                   value={draftDecisionNotes}
                   onChange={(event) => setDraftDecisionNotes(event.target.value)}
-                  placeholder="Explain why the baseline translation was bad (to improve AI translation)."
+                  placeholder={
+                    agentReview
+                      ? 'Record any additional review context.'
+                      : 'Explain why the baseline translation was bad (to improve AI translation).'
+                  }
                   onKeyDown={handleEditorKeyDown}
                   rows={1}
                   style={{ resize: 'none' }}

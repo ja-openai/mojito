@@ -10,6 +10,50 @@ import jakarta.persistence.Table;
 @Table(name = "translation_incident")
 public class TranslationIncident extends AuditableEntity {
 
+  @Column(name = "review_type", length = 64)
+  private String reviewType;
+
+  @Column(name = "review_run_id")
+  private Long reviewRunId;
+
+  @Column(name = "review_finding_id", length = 36)
+  private String reviewFindingId;
+
+  @Column(name = "resolution_review_project_id")
+  private Long resolutionReviewProjectId;
+
+  public String getReviewType() {
+    return reviewType;
+  }
+
+  public void setReviewType(String reviewType) {
+    this.reviewType = reviewType;
+  }
+
+  public Long getReviewRunId() {
+    return reviewRunId;
+  }
+
+  public void setReviewRunId(Long reviewRunId) {
+    this.reviewRunId = reviewRunId;
+  }
+
+  public String getReviewFindingId() {
+    return reviewFindingId;
+  }
+
+  public void setReviewFindingId(String reviewFindingId) {
+    this.reviewFindingId = reviewFindingId;
+  }
+
+  public Long getResolutionReviewProjectId() {
+    return resolutionReviewProjectId;
+  }
+
+  public void setResolutionReviewProjectId(Long resolutionReviewProjectId) {
+    this.resolutionReviewProjectId = resolutionReviewProjectId;
+  }
+
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false, length = 32)
   private TranslationIncidentStatus status;

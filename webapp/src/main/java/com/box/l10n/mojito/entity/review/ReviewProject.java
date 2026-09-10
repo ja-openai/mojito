@@ -30,6 +30,17 @@ public class ReviewProject extends AuditableEntity {
   @Column(name = "type", nullable = false)
   private ReviewProjectType type = ReviewProjectType.NORMAL;
 
+  @Column(name = "agent_review_run_id")
+  private Long agentReviewRunId;
+
+  public Long getAgentReviewRunId() {
+    return agentReviewRunId;
+  }
+
+  public void setAgentReviewRunId(Long agentReviewRunId) {
+    this.agentReviewRunId = agentReviewRunId;
+  }
+
   @Enumerated(EnumType.STRING)
   @Column(name = "terminology_phase")
   private ReviewProjectTerminologyPhase terminologyPhase;

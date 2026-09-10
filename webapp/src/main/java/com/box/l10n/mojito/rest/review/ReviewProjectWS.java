@@ -405,7 +405,8 @@ public class ReviewProjectWS {
               request.getExpectedCurrentTmTextUnitVariantId(),
               Boolean.TRUE.equals(request.getOverrideChangedCurrent()),
               request.getDecisionNotes(),
-              request.getExpectedReviewStateRevision());
+              request.getExpectedReviewStateRevision(),
+              request.getAgentReview());
       return ResponseEntity.ok(toTextUnitResponse(detail));
     } catch (ReviewProjectCurrentVariantConflictException conflict) {
       GetProjectDetailView.ReviewProjectTextUnit currentTextUnit = conflict.getCurrentTextUnit();
@@ -732,7 +733,8 @@ public class ReviewProjectWS {
         TerminologyTerm terminologyTerm,
         List<TerminologyTermEvidence> glossaryTermEvidence,
         List<ReviewProjectTextUnitFeedback> terminologyFeedbacks,
-        String reviewStateRevision) {}
+        String reviewStateRevision,
+        com.box.l10n.mojito.service.agentreview.AgentReviewProposalView agentReview) {}
 
     public record TerminologyTerm(
         Long glossaryId,
@@ -1151,7 +1153,8 @@ public class ReviewProjectWS {
         toTerminologyTermResponse(view.terminologyTerm()),
         glossaryTermEvidence.stream().map(this::toTerminologyTermEvidenceResponse).toList(),
         terminologyFeedbacks.stream().map(this::toTerminologyFeedbackResponse).toList(),
-        view.reviewStateRevision());
+        view.reviewStateRevision(),
+        view.agentReview());
   }
 
   private GetReviewProjectResponse.ReviewProjectTextUnitSuggestion toSuggestionResponse(

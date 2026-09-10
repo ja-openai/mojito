@@ -4,6 +4,7 @@ import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
+import com.box.l10n.mojito.service.agentreview.AgentReviewProposalView;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -54,7 +55,8 @@ public record GetProjectDetailView(
       TerminologyTerm terminologyTerm,
       List<TerminologyTermEvidence> glossaryTermEvidence,
       List<ReviewProjectTextUnitFeedback> terminologyFeedbacks,
-      String reviewStateRevision) {}
+      String reviewStateRevision,
+      AgentReviewProposalView agentReview) {}
 
   public record TerminologyTerm(
       Long glossaryId,

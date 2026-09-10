@@ -137,6 +137,14 @@ export function ReviewProjectFindReplacePage() {
     );
   }
   if (!project) return <PageState tone="error">Project not found.</PageState>;
+  if (project.reviewProjectTextUnits?.some((row) => row.agentReview)) {
+    return (
+      <PageState>
+        Review agent proposals individually to keep each decision and its feedback together.
+        <Link to={`/review-projects/${projectId}`}>Open proposal review</Link>
+      </PageState>
+    );
+  }
   return (
     <FindReplaceSession
       key={`${user.username}:${projectId}`}
@@ -1164,7 +1172,7 @@ function HighlightedText({
   );
 }
 
-function PageState({ children, tone }: { children: string; tone?: 'error' }) {
+function PageState({ children, tone }: { children: React.ReactNode; tone?: 'error' }) {
   return (
     <div className={`review-find-replace-page__state${tone === 'error' ? ' is-error' : ''}`}>
       {children}

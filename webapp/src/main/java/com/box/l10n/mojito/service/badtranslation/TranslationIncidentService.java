@@ -72,7 +72,11 @@ public class TranslationIncidentService {
       ZonedDateTime rejectedAt,
       ZonedDateTime closedAt,
       String closedByUsername,
-      String incidentLink) {}
+      String incidentLink,
+      String reviewType,
+      Long reviewRunId,
+      String reviewFindingId,
+      Long resolutionReviewProjectId) {}
 
   public record LookupCandidateSnapshot(
       String repositoryName,
@@ -153,7 +157,11 @@ public class TranslationIncidentService {
       String closedByUsername,
       ZonedDateTime createdDate,
       ZonedDateTime lastModifiedDate,
-      ZonedDateTime rejectedAt) {}
+      ZonedDateTime rejectedAt,
+      String reviewType,
+      Long reviewRunId,
+      String reviewFindingId,
+      Long resolutionReviewProjectId) {}
 
   private static final TypeReference<List<LookupCandidateSnapshot>> LOOKUP_CANDIDATE_LIST_TYPE =
       new TypeReference<>() {};
@@ -208,12 +216,26 @@ public class TranslationIncidentService {
       LocalDate createdBefore,
       int page,
       int size) {
+    return getIncidents(status, query, createdAfter, createdBefore, page, size, null, null);
+  }
+
+  @Transactional(readOnly = true)
+  public IncidentPage getIncidents(
+      TranslationIncidentStatus status,
+      String query,
+      LocalDate createdAfter,
+      LocalDate createdBefore,
+      int page,
+      int size,
+      String reviewType,
+      Long reviewRunId) {
     assertCurrentUserCanManageIncidents();
     int validatedPage = Math.max(0, page);
     int validatedSize = Math.max(1, Math.min(size, 200));
     Page<TranslationIncident> result =
         translationIncidentRepository.findAll(
-            buildIncidentSpecification(status, query, createdAfter, createdBefore),
+            buildIncidentSpecification(
+                status, query, createdAfter, createdBefore, reviewType, reviewRunId),
             PageRequest.of(
                 validatedPage, validatedSize, Sort.by(Sort.Direction.DESC, "createdDate")));
     return new IncidentPage(
@@ -541,7 +563,11 @@ public class TranslationIncidentService {
         incident.getRejectedAt(),
         incident.getClosedAt(),
         incident.getClosedByUsername(),
-        buildIncidentLink(incident.getId()));
+        buildIncidentLink(incident.getId()),
+        incident.getReviewType(),
+        incident.getReviewRunId(),
+        incident.getReviewFindingId(),
+        incident.getResolutionReviewProjectId());
   }
 
   private IncidentDetail toDetail(TranslationIncident incident) {
@@ -599,7 +625,11 @@ public class TranslationIncidentService {
         incident.getClosedByUsername(),
         incident.getCreatedDate(),
         incident.getLastModifiedDate(),
-        incident.getRejectedAt());
+        incident.getRejectedAt(),
+        incident.getReviewType(),
+        incident.getReviewRunId(),
+        incident.getReviewFindingId(),
+        incident.getResolutionReviewProjectId());
   }
 
   private BadTranslationSlackService.SlackContext buildStoredSlackContext(
@@ -768,11 +798,19 @@ public class TranslationIncidentService {
       TranslationIncidentStatus status,
       String query,
       LocalDate createdAfter,
-      LocalDate createdBefore) {
+      LocalDate createdBefore,
+      String reviewType,
+      Long reviewRunId) {
     return (root, criteriaQuery, criteriaBuilder) -> {
       List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
       if (status != null) {
         predicates.add(criteriaBuilder.equal(root.get("status"), status));
+      }
+      if (normalizeOptional(reviewType) != null) {
+        predicates.add(criteriaBuilder.equal(root.get("reviewType"), reviewType.trim()));
+      }
+      if (reviewRunId != null) {
+        predicates.add(criteriaBuilder.equal(root.get("reviewRunId"), reviewRunId));
       }
 
       String normalizedQuery = normalizeOptional(query);

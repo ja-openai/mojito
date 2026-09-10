@@ -7,6 +7,7 @@ import type * as ReactRouterDom from 'react-router-dom';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as AgentReviewsApi from '../../api/agent-reviews';
 import type { AiReviewRequest, AiReviewResponse } from '../../api/ai-review';
 import type * as GlossariesApi from '../../api/glossaries';
 import type * as ReviewProjectsApi from '../../api/review-projects';
@@ -29,6 +30,12 @@ import {
   useReviewProjectMutations,
 } from './review-project-mutations';
 import { ReviewProjectPageView } from './ReviewProjectPageView';
+
+const fetchAgentReviewFeedbackMock = vi.hoisted(() => vi.fn());
+vi.mock('../../api/agent-reviews', async (importActual) => ({
+  ...(await importActual<typeof AgentReviewsApi>()),
+  fetchAgentReviewFeedback: fetchAgentReviewFeedbackMock,
+}));
 
 const matchGlossaryTermsMock = vi.hoisted(() => vi.fn());
 const fetchPrecomputedAiReviewMock = vi.hoisted(() => vi.fn());
@@ -208,6 +215,8 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  fetchAgentReviewFeedbackMock.mockReset();
+  fetchAgentReviewFeedbackMock.mockResolvedValue([]);
   window.localStorage.clear();
   fetchUserPreferencesMock.mockReset();
   fetchUserPreferencesMock.mockResolvedValue(preferences);
@@ -2028,4 +2037,307 @@ one {{Você tem {$count} arquivo.}}
 
     expect(screen.queryByText('Stale manual answer.')).not.toBeInTheDocument();
   });
+});
+
+function buildAgentTextUnit(
+  overrides: Partial<NonNullable<ApiReviewProjectTextUnit['agentReview']>> = {},
+): ApiReviewProjectTextUnit {
+  return {
+    ...textUnit,
+    reviewStateRevision: 'agent-row-v1',
+    currentTmTextUnitVariant: textUnit.baselineTmTextUnitVariant,
+    agentReview: {
+      proposalId: 901,
+      proposalRevision: 1,
+      proposalVersion: 2,
+      findingId: 'finding-checkout',
+      runId: 51,
+      reviewType: 'TRANSLATION_QUALITY',
+      reviewedSource: 'Pay {price} now',
+      reviewedTarget: 'Pay {price} now',
+      proposedTarget: 'Pague {price} agora',
+      rationale: 'The target is still in English.',
+      category: 'OBVIOUS_ERROR',
+      verificationStatus: 'READY',
+      verificationNotes: 'Confirmed this is a payment action.',
+      disposition: 'ROUTED',
+      stale: false,
+      evidence: [
+        { label: 'Checkout screenshot', url: 'https://example.com/screenshot' },
+        { label: 'Unsafe link stays text', url: 'javascript:alert(1)' },
+      ],
+      ...overrides,
+    },
+  };
+}
+
+function renderAgentReview(
+  overrides: Partial<NonNullable<ApiReviewProjectTextUnit['agentReview']>> = {},
+  mutations = buildMutations(),
+) {
+  return renderReviewProjectPageView({
+    project: { ...project, reviewProjectTextUnits: [buildAgentTextUnit(overrides)] },
+    mutations,
+  });
+}
+
+describe('Agent proposal review in Review Projects', () => {
+  it('shows the immutable diff table and sends acceptance with the exact proposal and reviewed row', async () => {
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    renderAgentReview({}, buildMutations({ onRequestSaveDecision }));
+    expect(screen.getByRole('table', { name: 'Agent review findings' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Find and replace' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Decided$/ })).not.toBeInTheDocument();
+    const editor = screen.getByRole('textbox', { name: 'Translation' });
+    expect(editor).toHaveTextContent('Pague price agora');
+    fireEvent.click(screen.getByRole('button', { name: 'Accept proposal' }));
+    expect(onRequestSaveDecision.mock.calls[0][0]).toMatchObject({
+      target: 'Pague {price} agora',
+      status: 'APPROVED',
+      includedInLocalizedFile: true,
+      expectedCurrentTmTextUnitVariantId: 30,
+      expectedReviewStateRevision: 'agent-row-v1',
+      agentReview: {
+        proposalId: 901,
+        proposalRevision: 1,
+        proposalVersion: 2,
+        action: 'ACCEPT',
+      },
+    });
+    expect(onRequestSaveDecision.mock.calls[0][0].agentReview?.requestId).toEqual(
+      expect.any(String),
+    );
+    await waitFor(() => expect(requestAiReviewMock).not.toHaveBeenCalled());
+  });
+
+  it('blocks stale acceptance and shortcuts while preserving evidence and allowing a new proposal request', () => {
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
+    renderAgentReview(
+      { stale: true, reviewedTarget: 'Earlier translation' },
+      buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
+    );
+    expect(screen.getByRole('button', { name: 'Accept proposal' })).toBeDisabled();
+    expect(screen.getByText('Latest current translation')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'a' });
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true, shiftKey: true });
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    expect(onRequestDecisionState).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Ask for another proposal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save feedback' }));
+    expect(onRequestDecisionState.mock.calls[0][0]).toMatchObject({
+      decisionState: 'DECIDED',
+      expectedCurrentTmTextUnitVariantId: 30,
+      agentReview: { action: 'REQUEST_REVISION', proposalId: 901 },
+    });
+    expect(onRequestDecisionState.mock.calls[0][0]).not.toHaveProperty('target');
+  });
+
+  it('records separate original and suggestion judgments without saving the translation', () => {
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
+    renderAgentReview({}, buildMutations({ onRequestSaveDecision, onRequestDecisionState }));
+    fireEvent.click(screen.getByRole('button', { name: /^Keep current$/ }));
+    fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'GOOD' } });
+    fireEvent.change(screen.getByLabelText('Agent suggestion'), {
+      target: { value: 'UNNECESSARY' },
+    });
+    fireEvent.change(screen.getByLabelText('Explanation'), {
+      target: { value: 'This phrase matches our approved glossary.' },
+    });
+    fireEvent.keyDown(screen.getByLabelText('Explanation'), { key: 'Enter', ctrlKey: true });
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save feedback' }));
+    expect(onRequestDecisionState.mock.calls[0][0]).toMatchObject({
+      agentReview: {
+        action: 'KEEP_CURRENT',
+        originalAssessment: 'GOOD',
+        suggestionAssessment: 'UNNECESSARY',
+        explanation: 'This phrase matches our approved glossary.',
+      },
+    });
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+  });
+
+  it('does not turn an issue without a replacement into an implicit acceptance of the current text', () => {
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    renderAgentReview({ proposedTarget: null }, buildMutations({ onRequestSaveDecision }));
+    expect(screen.getAllByText('No replacement proposed').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Accept your edit' })).toBeDisabled();
+    fireEvent.keyDown(window, { key: 'a' });
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+  });
+
+  it('keeps the original/proposed diff unchanged when the human edits and resets only translation work', () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    renderAgentReview();
+    const finding = screen.getByRole('region', { name: 'Agent finding' });
+    const originalDiff = finding.querySelector('.agent-review-diff')?.textContent;
+    const editor = screen.getByRole('textbox', { name: 'Translation' });
+    fireEvent.change(editor, { target: { value: 'Pague {price} imediatamente' } });
+    expect(finding.querySelector('.agent-review-diff')?.textContent).toBe(originalDiff);
+    fireEvent.click(screen.getByRole('button', { name: /^Defer$/ }));
+    fireEvent.change(screen.getByLabelText('Explanation'), {
+      target: { value: 'Need product context.' },
+    });
+    expect(screen.getByRole('button', { name: 'Save feedback' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Reset translation edits' }));
+    expect(screen.getByLabelText('Explanation')).toHaveValue('Need product context.');
+    expect(screen.getByRole('button', { name: 'Save feedback' })).toBeEnabled();
+  });
+
+  it('does not allow evidence to create executable links or silently overwrite a conflict', () => {
+    const current = buildAgentTextUnit({ stale: true });
+    renderAgentReview(
+      {
+        evidence: [
+          { label: 'Checkout screenshot', url: 'https://example.com/screenshot' },
+          {
+            label: 'Saved artifact',
+            url: `/api/agent-reviews/projects/7/proposals/11/artifacts/${'a'.repeat(64)}`,
+          },
+          { label: 'Unsafe link stays text', url: 'javascript:alert(1)' },
+          { label: 'Unrelated API stays text', url: '/api/users/me' },
+        ],
+      },
+      buildMutations({ activeTextUnitId: current.id, conflictTextUnit: current }),
+    );
+    expect(screen.queryByRole('button', { name: 'Use mine' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Use external' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Evidence and verification'));
+    expect(screen.getByRole('link', { name: 'Checkout screenshot' })).toHaveAttribute(
+      'href',
+      'https://example.com/screenshot',
+    );
+    expect(screen.queryByRole('link', { name: 'Unsafe link stays text' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Saved artifact' })).toHaveAttribute(
+      'href',
+      `/api/agent-reviews/projects/7/proposals/11/artifacts/${'a'.repeat(64)}`,
+    );
+    expect(
+      screen.queryByRole('link', { name: 'Unrelated API stays text' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+it('adopts unchanged current text after keep-current feedback without leaving a phantom proposal draft', () => {
+  visibleTextEditorEnabledMock.mockReturnValue(false);
+  const initialRow = buildAgentTextUnit();
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>(
+    () => 40,
+  );
+  const initialProps: ReviewProjectPageViewProps = {
+    projectId: 7,
+    project: { ...project, reviewProjectTextUnits: [initialRow] },
+    mutations: buildMutations({ onRequestDecisionState }),
+    selectedTextUnitQueryId: null,
+    onSelectedTextUnitIdChange: noop,
+    openRequestDetailsQuery: false,
+    requestDetailsSource: null,
+    onRequestDetailsQueryHandled: noop,
+    onRequestDetailsFlowFinished: noop,
+  };
+  const view = render(renderReviewProjectPageViewNode(initialProps, queryClient));
+  fireEvent.click(screen.getByRole('button', { name: /^Keep current$/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save feedback' }));
+  const request = onRequestDecisionState.mock.calls[0][0];
+  const savedRow: ApiReviewProjectTextUnit = {
+    ...initialRow,
+    reviewStateRevision: 'agent-row-v2',
+    reviewProjectTextUnitDecision: {
+      decisionState: 'DECIDED',
+      decisionTmTextUnitVariant: initialRow.currentTmTextUnitVariant,
+    },
+    agentReview: {
+      ...initialRow.agentReview!,
+      proposalVersion: 3,
+      disposition: 'RESOLVED',
+      lastFeedbackRequestId: request.agentReview!.requestId,
+    },
+  };
+  const action = { kind: 'decision-state' as const, request };
+  view.rerender(
+    renderReviewProjectPageViewNode(
+      {
+        ...initialProps,
+        project: { ...project, reviewProjectTextUnits: [savedRow] },
+        mutations: buildMutations({
+          actionState: {
+            phase: 'succeeded',
+            operationId: 40,
+            attemptId: 40,
+            action,
+            originalAction: action,
+            textUnit: savedRow,
+            resolution: 'saved',
+          },
+        }),
+      },
+      queryClient,
+    ),
+  );
+  expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pay {price} now');
+  expect(screen.getByRole('button', { name: 'Reset' })).toBeDisabled();
+  expect(screen.queryByRole('dialog', { name: 'Discard changes?' })).not.toBeInTheDocument();
+});
+
+it('requires an agent response and explicit reconsideration before another human decision', async () => {
+  fetchAgentReviewFeedbackMock.mockResolvedValue([
+    {
+      id: 1,
+      proposalId: 901,
+      proposalRevision: 1,
+      actorType: 'AGENT',
+      actorIdentity: 'Verifier',
+      createdDate: '2026-09-10T05:00:00Z',
+      action: 'CHALLENGE',
+      explanation: 'This glossary entry only applies to the noun form.',
+      evidenceJson: JSON.stringify([
+        { label: 'Glossary usage', url: 'https://example.com/glossary' },
+        { label: 'Unsafe response link', url: 'javascript:alert(1)' },
+      ]),
+    },
+  ]);
+  const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+  const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
+  renderAgentReview(
+    { disposition: 'FOLLOW_UP', canReconsider: true },
+    buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
+  );
+  expect(screen.getByRole('button', { name: 'Reviewed' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: /^Keep current$/ })).not.toBeInTheDocument();
+  expect(
+    await screen.findByText('This glossary entry only applies to the noun form.'),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Ready for reconsideration')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Response evidence'));
+  expect(screen.getByRole('link', { name: 'Glossary usage' })).toHaveAttribute(
+    'href',
+    'https://example.com/glossary',
+  );
+  expect(screen.queryByRole('link', { name: 'Unsafe response link' })).not.toBeInTheDocument();
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Reconsider finding' })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Reconsider finding' }));
+  expect(onRequestSaveDecision).not.toHaveBeenCalled();
+  expect(onRequestDecisionState).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Accept your edit' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Use agent proposal' }));
+  expect(screen.getByRole('button', { name: 'Accept proposal' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Accept proposal' }));
+  expect(onRequestSaveDecision.mock.calls[0][0]).toMatchObject({
+    agentReview: {
+      proposalId: 901,
+      proposalVersion: 2,
+      action: 'ACCEPT',
+    },
+  });
+});
+
+it('keeps follow-up rows read-only until the agent has answered the human round', () => {
+  renderAgentReview({ disposition: 'FOLLOW_UP', canReconsider: false });
+  expect(screen.queryByRole('button', { name: 'Reconsider finding' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reviewed' })).toBeDisabled();
 });

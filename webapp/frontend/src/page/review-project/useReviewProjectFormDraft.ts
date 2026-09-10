@@ -23,7 +23,7 @@ export function useReviewProjectFormDraft<T extends object>(
   username: string,
   projectId: number,
   textUnitId: number,
-  form: 'feedback' | 'resolution' | 'metadata',
+  form: 'feedback' | 'resolution' | 'metadata' | `agent-feedback:${string}`,
   snapshot: T,
 ) {
   const queryClient = useQueryClient();

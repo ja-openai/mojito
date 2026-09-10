@@ -99,6 +99,10 @@ function formatTranslationResolution(value: string) {
       return 'Ready to reject';
     case 'PENDING_REVIEW':
       return 'Needs review';
+    case 'REVIEW_APPLIED':
+      return 'Correction accepted';
+    case 'REVIEW_DISMISSED':
+      return 'Current translation kept';
     case 'REJECT_FAILED':
       return 'Reject failed';
     default:
@@ -142,6 +146,11 @@ function IncidentQueueRow({
       <div className="translation-incidents-page__queue-cell translation-incidents-page__queue-cell--string">
         <div>{incident.stringId}</div>
         <div className="settings-hint">{incident.repositoryName ?? 'Unknown repo'}</div>
+        {incident.reviewType ? (
+          <div className="settings-hint">
+            {formatLabel(incident.reviewType)} · Run #{incident.reviewRunId}
+          </div>
+        ) : null}
       </div>
       <div className="translation-incidents-page__queue-cell">
         {incident.resolvedLocale ?? incident.observedLocale}
@@ -171,6 +180,30 @@ export function AdminTranslationIncidentsPage() {
   const queryClient = useQueryClient();
   const { data: repositories } = useRepositories();
   const [searchParams, setSearchParams] = useSearchParams();
+  const reviewTypeFilter = searchParams.get('reviewType') ?? '';
+  const reviewRunFilter = searchParams.get('reviewRunId') ?? '';
+  const [debouncedReviewType, setDebouncedReviewType] = useState(reviewTypeFilter.trim());
+  const [debouncedReviewRun, setDebouncedReviewRun] = useState(reviewRunFilter);
+  const reviewRunId =
+    /^\d+$/.test(debouncedReviewRun) &&
+    Number(debouncedReviewRun) > 0 &&
+    Number.isSafeInteger(Number(debouncedReviewRun))
+      ? Number(debouncedReviewRun)
+      : null;
+  const invalidReviewRun = debouncedReviewRun !== '' && reviewRunId === null;
+  const updateReviewFilter = (key: string, value: string) => {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('incidentId');
+        if (value) next.set(key, value);
+        else next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
+    setNotice(null);
+  };
   const [statusFilter, setStatusFilter] = useState<ApiTranslationIncidentStatus | null>('OPEN');
   const [incidentSearch, setIncidentSearch] = useState('');
   const [debouncedIncidentSearch, setDebouncedIncidentSearch] = useState('');
@@ -193,9 +226,11 @@ export function AdminTranslationIncidentsPage() {
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedIncidentSearch(incidentSearch.trim());
+      setDebouncedReviewType(reviewTypeFilter.trim());
+      setDebouncedReviewRun(reviewRunFilter);
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [incidentSearch]);
+  }, [incidentSearch, reviewTypeFilter, reviewRunFilter]);
 
   useEffect(() => {
     setSelectedIncidentId(requestedIncidentId);
@@ -220,14 +255,19 @@ export function AdminTranslationIncidentsPage() {
   const incidentsQuery = useQuery({
     queryKey: [
       'translation-incidents',
+      debouncedReviewType,
+      reviewRunId,
       statusFilter,
       debouncedIncidentSearch,
       createdAfter,
       createdBefore,
       limit,
     ],
+    enabled: !invalidReviewRun,
     queryFn: () =>
       fetchTranslationIncidents({
+        reviewType: debouncedReviewType || null,
+        reviewRunId,
         status: statusFilter,
         query: debouncedIncidentSearch || null,
         createdAfter: createdAfter || null,
@@ -237,7 +277,10 @@ export function AdminTranslationIncidentsPage() {
       }),
   });
 
-  const incidents = useMemo(() => incidentsQuery.data?.items ?? [], [incidentsQuery.data]);
+  const incidents = useMemo(
+    () => (invalidReviewRun ? [] : (incidentsQuery.data?.items ?? [])),
+    [incidentsQuery.data, invalidReviewRun],
+  );
   const rowsParentRef = useRef<HTMLDivElement>(null);
   const estimateRowHeight = useCallback(
     () =>
@@ -511,7 +554,9 @@ export function AdminTranslationIncidentsPage() {
       ? `${formatDateTime(detail.closedAt)} · ${detail.closedByUsername ?? '—'}`
       : 'Not closed'
     : null;
-  const totalMatchingIncidents = incidentsQuery.data?.totalElements ?? incidents.length;
+  const totalMatchingIncidents = invalidReviewRun
+    ? 0
+    : (incidentsQuery.data?.totalElements ?? incidents.length);
   const countLabel = `Showing ${incidents.length} of ${totalMatchingIncidents} incident${
     totalMatchingIncidents === 1 ? '' : 's'
   }`;
@@ -609,6 +654,37 @@ export function AdminTranslationIncidentsPage() {
             buttonAriaLabel="Filter translation incidents by status"
           />
           <label className="translation-incidents-page__date-filter">
+            <span>Review type</span>
+            <input
+              type="text"
+              value={reviewTypeFilter}
+              aria-label="Filter incidents by review type"
+              placeholder="All types"
+              list="incident-review-types"
+              maxLength={100}
+              onChange={(event) => updateReviewFilter('reviewType', event.target.value)}
+            />
+            <datalist id="incident-review-types">
+              <option value="TRANSLATION_QUALITY">Translation quality</option>
+            </datalist>
+          </label>
+          <label className="translation-incidents-page__date-filter">
+            <span>Run</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={reviewRunFilter}
+              aria-label="Filter incidents by review run"
+              aria-invalid={invalidReviewRun}
+              aria-describedby={invalidReviewRun ? 'incident-review-run-error' : undefined}
+              placeholder="All runs"
+              onChange={(event) => {
+                if (/^\d*$/.test(event.target.value))
+                  updateReviewFilter('reviewRunId', event.target.value);
+              }}
+            />
+          </label>
+          <label className="translation-incidents-page__date-filter">
             <span>After</span>
             <input
               type="date"
@@ -663,7 +739,15 @@ export function AdminTranslationIncidentsPage() {
             isListCollapsed ? ' translation-incidents-page__list-pane--collapsed' : ''
           }`}
         >
-          {incidentsQuery.isLoading ? (
+          {invalidReviewRun ? (
+            <p
+              id="incident-review-run-error"
+              role="alert"
+              className="translation-incidents-page__pane-placeholder settings-hint is-error"
+            >
+              Enter a valid positive review run number.
+            </p>
+          ) : incidentsQuery.isLoading ? (
             <p className="translation-incidents-page__pane-placeholder settings-page__hint">
               Loading incidents…
             </p>
@@ -804,7 +888,23 @@ export function AdminTranslationIncidentsPage() {
                   </dl>
                 </section>
 
+                {detail.reviewType ? (
+                  <div className="settings-hint">
+                    {formatLabel(detail.reviewType)} · Run #{detail.reviewRunId}
+                    {detail.resolutionReviewProjectId == null
+                      ? ' · Awaiting review-project routing'
+                      : ''}
+                  </div>
+                ) : null}
                 <div className="translation-incidents-page__actions">
+                  {detail.resolutionReviewProjectId != null ? (
+                    <Link
+                      className="settings-button settings-button--primary"
+                      to={`/review-projects/${detail.resolutionReviewProjectId}${detail.selectedTmTextUnitId != null ? `?tu=${detail.selectedTmTextUnitId}` : ''}`}
+                    >
+                      Review agent finding
+                    </Link>
+                  ) : null}
                   {detail.selectedTmTextUnitId != null ? (
                     <Link
                       to={{
@@ -867,7 +967,9 @@ export function AdminTranslationIncidentsPage() {
                 <section className="translation-incidents-page__detail-section translation-incidents-page__detail-section--context">
                   <dl className="translation-incidents-page__detail-list">
                     <div className="translation-incidents-page__detail-item">
-                      <dt>Review project</dt>
+                      <dt>
+                        {detail.reviewType ? 'Original review attribution' : 'Review project'}
+                      </dt>
                       <dd>
                         {detail.reviewProjectLink ? (
                           <a

@@ -193,7 +193,9 @@ public class ReviewProjectServiceTest {
                 teamSlackNotificationService,
                 quartzPollableTaskScheduler,
                 reviewFeatureRepository,
-                meterRegistry));
+                meterRegistry,
+                Mockito.mock(
+                    com.box.l10n.mojito.service.agentreview.AgentReviewDecisionService.class)));
     ReflectionTestUtils.setField(reviewProjectService, "entityManager", entityManager);
     doReturn(null).when(reviewProjectService).getProjectDetail(anyLong());
 

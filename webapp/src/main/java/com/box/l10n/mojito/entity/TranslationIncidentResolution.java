@@ -4,5 +4,7 @@ public enum TranslationIncidentResolution {
   READY_TO_REJECT,
   PENDING_REVIEW,
   REJECTED,
-  REJECT_FAILED
+  REJECT_FAILED,
+  REVIEW_APPLIED,
+  REVIEW_DISMISSED
 }

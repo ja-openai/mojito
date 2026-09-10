@@ -23,6 +23,9 @@ import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
+import com.box.l10n.mojito.service.agentreview.AgentReviewDecisionRequest;
+import com.box.l10n.mojito.service.agentreview.AgentReviewDecisionService;
+import com.box.l10n.mojito.service.agentreview.AgentReviewProposalView;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.glossary.GlossaryTermEvidenceRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermIndexCurationService;
@@ -121,6 +124,7 @@ public class ReviewProjectService {
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
   private final ReviewFeatureRepository reviewFeatureRepository;
   private final MeterRegistry meterRegistry;
+  private final AgentReviewDecisionService agentReviewDecisionService;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -159,7 +163,8 @@ public class ReviewProjectService {
       TeamSlackNotificationService teamSlackNotificationService,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
       ReviewFeatureRepository reviewFeatureRepository,
-      MeterRegistry meterRegistry) {
+      MeterRegistry meterRegistry,
+      AgentReviewDecisionService agentReviewDecisionService) {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
@@ -195,6 +200,7 @@ public class ReviewProjectService {
     this.quartzPollableTaskScheduler = quartzPollableTaskScheduler;
     this.reviewFeatureRepository = reviewFeatureRepository;
     this.meterRegistry = meterRegistry;
+    this.agentReviewDecisionService = agentReviewDecisionService;
   }
 
   public PollableFuture<CreateReviewProjectRequestResult> createReviewProjectRequestAsync(
@@ -799,6 +805,78 @@ public class ReviewProjectService {
 
   private record LocaleCandidates(Locale locale, List<TextUnitDTO> candidates) {}
 
+  public record AgentReviewCandidate(Long tmTextUnitId, Long baselineVariantId, String source) {}
+
+  /**
+   * Creates review rows from reviewed snapshots, without selecting or changing current TM values.
+   */
+  @Transactional
+  public List<Long> createAgentReviewProjects(
+      Long runId,
+      Long localeId,
+      String name,
+      Long teamId,
+      ZonedDateTime dueDate,
+      int maxWordCount,
+      boolean assignTranslator,
+      List<AgentReviewCandidate> snapshots) {
+    if (!userService.isCurrentUserAdminOrPm()) {
+      throw new AccessDeniedException("Agent review routing requires a PM or administrator");
+    }
+    if (runId == null
+        || localeId == null
+        || teamId == null
+        || dueDate == null
+        || snapshots == null
+        || snapshots.isEmpty()
+        || maxWordCount < 1) {
+      throw new IllegalArgumentException(
+          "Run, locale, team, due date and bounded review snapshots are required");
+    }
+    Long userId = teamService.getCurrentUserIdOrThrow();
+    teamService.assertUserCanAccessTeam(teamId, userId);
+    userService.checkUserCanEditLocale(localeId);
+    Locale locale = entityManager.find(Locale.class, localeId);
+    if (locale == null) throw new IllegalArgumentException("Unknown review locale");
+    List<TextUnitDTO> candidates = new ArrayList<>();
+    Set<Long> seen = new HashSet<>();
+    for (AgentReviewCandidate snapshot : snapshots) {
+      if (snapshot.tmTextUnitId() == null
+          || snapshot.source() == null
+          || !seen.add(snapshot.tmTextUnitId())) {
+        throw new IllegalArgumentException("Review snapshots require distinct, identified strings");
+      }
+      TMTextUnit unit =
+          tmTextUnitRepository
+              .findById(snapshot.tmTextUnitId())
+              .orElseThrow(() -> new IllegalArgumentException("Reviewed string no longer exists"));
+      TextUnitDTO candidate = toSourceTerminologyReviewCandidate(unit);
+      candidate.setSource(snapshot.source());
+      candidate.setTmTextUnitVariantId(snapshot.baselineVariantId());
+      candidates.add(candidate);
+    }
+    List<LocaleCandidates> chunks =
+        splitCandidatesByMaxWordCount(candidates, maxWordCount).stream()
+            .map(chunk -> new LocaleCandidates(locale, chunk))
+            .toList();
+    PersistedReviewProjectRequest result =
+        persistPreparedReviewProjectRequest(
+            name,
+            "Agent findings with staged proposals. Review the diff and evidence before accepting.",
+            null,
+            ReviewProjectType.NORMAL,
+            dueDate,
+            teamId,
+            userId,
+            assignTranslator,
+            null,
+            chunks);
+    for (ReviewProject project : reviewProjectRepository.findAllById(result.projectIds())) {
+      project.setAgentReviewRunId(runId);
+    }
+    return result.projectIds();
+  }
+
   private static class CandidateReviewTextUnitDTO extends TextUnitDTO {
     private final Long termIndexCandidateId;
     private final Long targetGlossaryId;
@@ -1124,7 +1202,8 @@ public class ReviewProjectService {
       TMTextUnitCurrentVariant currentVariant,
       TMTextUnitVariant currentTmTextUnitVariant,
       Optional<ReviewProjectTextUnitDecision> existingDecision,
-      boolean wasDecided) {}
+      boolean wasDecided,
+      AgentReviewDecisionService.Prepared agentReview) {}
 
   private List<ReviewProjectStatus> getRequestModeStatuses(List<ReviewProjectStatus> statuses) {
     if (statuses == null || statuses.isEmpty()) {
@@ -1631,7 +1710,7 @@ public class ReviewProjectService {
         canTranslateAllLocales);
   }
 
-  private void assertCurrentUserCanReadProject(ReviewProject reviewProject) {
+  public void assertCurrentUserCanReadProject(ReviewProject reviewProject) {
     if (reviewProject == null) {
       throw new IllegalArgumentException("reviewProject must not be null");
     }
@@ -1754,6 +1833,10 @@ public class ReviewProjectService {
             getGlossaryTermEvidenceByReviewProjectTextUnitId(textUnitDetails);
     Map<Long, ReviewProjectTextUnitSuggestion> suggestionsByReviewProjectTextUnitId =
         getSuggestionsByReviewProjectTextUnitId(projectId);
+    Map<Long, AgentReviewProposalView> agentProposals =
+        reviewProject.getAgentReviewRunId() == null
+            ? Map.of()
+            : agentReviewDecisionService.views(reviewProject, textUnitDetails);
 
     List<GetProjectDetailView.ReviewProjectTextUnit> reviewProjectTextUnits =
         textUnitDetails.stream()
@@ -1768,7 +1851,8 @@ public class ReviewProjectService {
                         glossaryTermEvidenceByReviewProjectTextUnitId.getOrDefault(
                             detail.reviewProjectTextUnitId(), List.of()),
                         suggestionsByReviewProjectTextUnitId.get(detail.reviewProjectTextUnitId()),
-                        project.localeId()))
+                        project.localeId(),
+                        agentProposals.get(detail.reviewProjectTextUnitId())))
             .toList();
 
     List<String> screenshotImageIds =
@@ -2314,6 +2398,33 @@ public class ReviewProjectService {
       boolean overrideChangedCurrent,
       String decisionNotes,
       String expectedReviewStateRevision) {
+    return saveDecision(
+        reviewProjectTextUnitId,
+        target,
+        comment,
+        status,
+        includedInLocalizedFile,
+        decisionState,
+        expectedCurrentTmTextUnitVariantId,
+        overrideChangedCurrent,
+        decisionNotes,
+        expectedReviewStateRevision,
+        null);
+  }
+
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public GetProjectDetailView.ReviewProjectTextUnit saveDecision(
+      Long reviewProjectTextUnitId,
+      String target,
+      String comment,
+      String status,
+      Boolean includedInLocalizedFile,
+      DecisionState decisionState,
+      Long expectedCurrentTmTextUnitVariantId,
+      boolean overrideChangedCurrent,
+      String decisionNotes,
+      String expectedReviewStateRevision,
+      AgentReviewDecisionRequest agentReview) {
 
     Stopwatch totalStopwatch = Stopwatch.createStarted();
     String totalResult = "success";
@@ -2371,9 +2482,27 @@ public class ReviewProjectService {
                 Long currentVariantId =
                     currentTmTextUnitVariant != null ? currentTmTextUnitVariant.getId() : null;
 
+                AgentReviewDecisionService.Prepared proposalDecision =
+                    project.getAgentReviewRunId() == null && agentReview == null
+                        ? null
+                        : agentReviewDecisionService.prepare(
+                            textUnit,
+                            currentTmTextUnitVariant,
+                            agentReview,
+                            target,
+                            comment,
+                            status,
+                            includedInLocalizedFile,
+                            decisionState,
+                            expectedCurrentTmTextUnitVariantId,
+                            expectedReviewStateRevision,
+                            decisionNotes);
+                boolean replay = proposalDecision != null && proposalDecision.replay();
+
                 // An override chooses the draft, but must still match the version shown to the
                 // user.
-                if (requireCurrentVariantMatch
+                if (!replay
+                    && requireCurrentVariantMatch
                     && !Objects.equals(expectedCurrentTmTextUnitVariantId, currentVariantId)) {
                   throw new ReviewProjectCurrentVariantConflictException(
                       expectedCurrentTmTextUnitVariantId,
@@ -2381,8 +2510,9 @@ public class ReviewProjectService {
                       fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project));
                 }
 
-                assertReviewStateRevision(
-                    reviewProjectTextUnitId, project, expectedReviewStateRevision);
+                if (!replay)
+                  assertReviewStateRevision(
+                      reviewProjectTextUnitId, project, expectedReviewStateRevision);
 
                 Optional<ReviewProjectTextUnitDecision> existingDecision =
                     reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(
@@ -2401,7 +2531,8 @@ public class ReviewProjectService {
                     currentVariant,
                     currentTmTextUnitVariant,
                     existingDecision,
-                    wasDecided);
+                    wasDecided,
+                    proposalDecision);
               });
 
       ReviewProjectTextUnit textUnit = initialRead.textUnit();
@@ -2414,7 +2545,11 @@ public class ReviewProjectService {
       TMTextUnitVariant currentTmTextUnitVariant = initialRead.currentTmTextUnitVariant();
       Optional<ReviewProjectTextUnitDecision> existingDecision = initialRead.existingDecision();
       boolean wasDecided = initialRead.wasDecided();
-      if (!hasTarget
+      if (initialRead.agentReview() != null && initialRead.agentReview().replay()) {
+        return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
+      }
+      if (initialRead.agentReview() == null
+          && !hasTarget
           && !hasDecisionNotes
           && decisionState == DecisionState.PENDING
           && existingDecision.isEmpty()) {
@@ -2438,7 +2573,7 @@ public class ReviewProjectService {
 
       if (hasTarget) {
         String normalizedTarget = NormalizationUtils.normalize(target);
-        if (isTranslator) {
+        if (isTranslator && initialRead.agentReview() == null) {
           Stopwatch integrityCheckStopwatch = Stopwatch.createStarted();
           try {
             tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrityForLocale(
@@ -2515,6 +2650,14 @@ public class ReviewProjectService {
                   .ifPresent(reviewProjectTextUnitSuggestionRepository::delete);
             }
           });
+
+      // Record lineage while the current variant and proposal are still managed. The following
+      // atomic counter update flushes and clears the persistence context.
+      if (initialRead.agentReview() != null) {
+        agentReviewDecisionService.record(
+            initialRead.agentReview(),
+            hasTarget ? decision.getDecisionVariant() : currentTmTextUnitVariant);
+      }
 
       runSaveDecisionPhase(
           "decidedCountUpdate",
@@ -3605,7 +3748,12 @@ public class ReviewProjectService {
         getGlossaryTermEvidenceByReviewProjectTextUnitId(List.of(detail))
             .getOrDefault(detail.reviewProjectTextUnitId(), List.of()),
         suggestion,
-        reviewProject.getLocale().getId());
+        reviewProject.getLocale().getId(),
+        reviewProject.getAgentReviewRunId() == null
+            ? null
+            : agentReviewDecisionService
+                .views(reviewProject, List.of(detail))
+                .get(reviewProjectTextUnitId));
   }
 
   private GetProjectDetailView.ReviewProjectTextUnit toReviewProjectTextUnit(
@@ -3614,7 +3762,8 @@ public class ReviewProjectService {
       GetProjectDetailView.TerminologyTerm terminologyTerm,
       List<GetProjectDetailView.TerminologyTermEvidence> glossaryTermEvidence,
       ReviewProjectTextUnitSuggestion suggestion,
-      Long localeId) {
+      Long localeId,
+      AgentReviewProposalView agentReview) {
     GetProjectDetailView.Asset.Repository repository =
         new GetProjectDetailView.Asset.Repository(detail.repositoryId(), detail.repositoryName());
     GetProjectDetailView.Asset assetView =
@@ -3686,7 +3835,8 @@ public class ReviewProjectService {
         terminologyTerm,
         glossaryTermEvidence == null ? List.of() : glossaryTermEvidence,
         feedbacks.stream().map(this::toReviewProjectTextUnitFeedback).toList(),
-        reviewStateRevision(detail, suggestion, localeId));
+        reviewStateRevision(detail, suggestion, localeId),
+        agentReview);
   }
 
   private GetProjectDetailView.ReviewProjectTextUnitSuggestion toReviewProjectTextUnitSuggestion(

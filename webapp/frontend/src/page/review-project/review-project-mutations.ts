@@ -1,6 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  AGENT_REVIEW_FEEDBACK_QUERY_KEY,
+  type AgentReviewDecision,
+  saveAgentReviewOutcome,
+} from '../../api/agent-reviews';
 import type {
   ApiReviewProjectDetail,
   ApiReviewProjectStatus,
@@ -38,6 +43,7 @@ import {
 
 export type SaveDecisionRequest = {
   textUnitId: number;
+  agentReview?: AgentReviewDecision;
   tmTextUnitId: number | null;
   reportUrl?: string | null;
   reviewProjectTextUnitUrl?: string | null;
@@ -54,6 +60,7 @@ export type SaveDecisionRequest = {
 
 export type DecisionStateRequest = {
   textUnitId: number;
+  agentReview?: AgentReviewDecision;
   decisionState: 'PENDING' | 'DECIDED';
   expectedCurrentTmTextUnitVariantId?: number | null;
   expectedReviewStateRevision?: string | null;
@@ -231,6 +238,7 @@ function hasMatchingSavedDecision(
   const decision = textUnit.reviewProjectTextUnitDecision;
 
   return (
+    confirmsAgentReviewFeedback(action, textUnit) &&
     textUnit.id === action.request.textUnitId &&
     (action.request.tmTextUnitId == null ||
       textUnit.tmTextUnit?.id === action.request.tmTextUnitId) &&
@@ -246,7 +254,18 @@ function hasMatchingSavedDecision(
   );
 }
 
+function confirmsAgentReviewFeedback(action: PendingAction, textUnit: ApiReviewProjectTextUnit) {
+  if (!('agentReview' in action.request) || !action.request.agentReview) return true;
+  const expected = action.request.agentReview;
+  return (
+    textUnit.agentReview?.proposalId === expected.proposalId &&
+    textUnit.agentReview.proposalRevision === expected.proposalRevision &&
+    textUnit.agentReview.lastFeedbackRequestId === expected.requestId
+  );
+}
+
 function confirmsRequestedChanges(action: PendingAction, textUnit: ApiReviewProjectTextUnit) {
+  if (!confirmsAgentReviewFeedback(action, textUnit)) return false;
   if (action.kind === 'save-decision') return hasMatchingSavedDecision(action, textUnit);
   if (action.kind !== 'decision-state') return true;
   const decision = textUnit.reviewProjectTextUnitDecision;
@@ -375,6 +394,7 @@ export function useReviewProjectMutations(
           expectedReviewStateRevision: action.request.expectedReviewStateRevision,
           overrideChangedCurrent: action.request.overrideChangedCurrent,
           decisionNotes: action.request.decisionNotes,
+          agentReview: action.request.agentReview,
         });
       }
       if (action.kind === 'terminology-feedback') {
@@ -385,6 +405,15 @@ export function useReviewProjectMutations(
       }
       if (action.kind === 'terminology-metadata') {
         return updateReviewProjectTextUnitTerminologyMetadata(action.request);
+      }
+      if (action.request.agentReview) {
+        return saveAgentReviewOutcome({
+          textUnitId: action.request.textUnitId,
+          decisionState: action.request.decisionState,
+          expectedCurrentTmTextUnitVariantId: action.request.expectedCurrentTmTextUnitVariantId,
+          expectedReviewStateRevision: action.request.expectedReviewStateRevision,
+          agentReview: action.request.agentReview,
+        });
       }
       return setReviewProjectTextUnitDecisionState({
         textUnitId: action.request.textUnitId,
@@ -551,6 +580,9 @@ export function useReviewProjectMutations(
       void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
       void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
       void queryClient.invalidateQueries({ queryKey: ['review-project-text-unit-history'] });
+      void queryClient.invalidateQueries({
+        queryKey: [AGENT_REVIEW_FEEDBACK_QUERY_KEY, projectId],
+      });
       if (shouldInvalidateGlossaryQueriesForAction(attempt.action)) {
         void queryClient.invalidateQueries({ queryKey: ['review-project-glossary-term'] });
         void queryClient.invalidateQueries({ queryKey: ['glossary-terms'] });
@@ -925,6 +957,7 @@ export function useReviewProjectMutations(
     }
     const current = actionState.textUnit;
     const originalAction = actionState.originalAction;
+    if ('agentReview' in originalAction.request && originalAction.request.agentReview) return;
     const requestedDecisionState =
       originalAction.kind === 'decision-state' || originalAction.kind === 'save-decision'
         ? originalAction.request.decisionState
@@ -970,6 +1003,7 @@ export function useReviewProjectMutations(
     }
     // A failed Use external attempt must not replace the original local draft intent.
     const action = actionState.originalAction;
+    if ('agentReview' in action.request && action.request.agentReview) return;
     if (
       action.kind === 'save-decision' &&
       action.request.tmTextUnitId != null &&

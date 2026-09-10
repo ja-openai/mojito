@@ -1,5 +1,6 @@
 import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
 import { isTransientHttpError, poll } from '../utils/poller';
+import type { AgentReviewDecision, ApiAgentReviewContext } from './agent-reviews';
 import type { ApiGlossaryTermEvidence } from './glossaries';
 
 // Keep in sync with com.box.l10n.mojito.entity.review.ReviewProjectStatus
@@ -108,6 +109,7 @@ export type ApiReviewProjectAssignedScope = (typeof REVIEW_PROJECT_ASSIGNED_SCOP
 
 export type ApiReviewProjectTextUnit = {
   id: number;
+  agentReview?: ApiAgentReviewContext | null;
   reviewStateRevision?: string | null;
   tmTextUnit: {
     id: number;
@@ -972,8 +974,10 @@ export const saveReviewProjectTextUnitDecision = async ({
   expectedReviewStateRevision,
   overrideChangedCurrent = false,
   decisionNotes,
+  agentReview,
 }: {
   textUnitId: number;
+  agentReview?: AgentReviewDecision;
   target: string;
   comment: string | null;
   status: string;
@@ -999,6 +1003,7 @@ export const saveReviewProjectTextUnitDecision = async ({
       expectedReviewStateRevision,
       overrideChangedCurrent,
       decisionNotes,
+      agentReview,
     }),
   });
 

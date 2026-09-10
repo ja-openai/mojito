@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.rest.review;
 
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
+import com.box.l10n.mojito.service.agentreview.AgentReviewDecisionRequest;
 
 public class ReviewProjectTextUnitDecisionRequest {
 
@@ -13,6 +14,15 @@ public class ReviewProjectTextUnitDecisionRequest {
   private String decisionNotes;
   private DecisionState decisionState;
   private String expectedReviewStateRevision;
+  private AgentReviewDecisionRequest agentReview;
+
+  public AgentReviewDecisionRequest getAgentReview() {
+    return agentReview;
+  }
+
+  public void setAgentReview(AgentReviewDecisionRequest agentReview) {
+    this.agentReview = agentReview;
+  }
 
   public String getExpectedReviewStateRevision() {
     return expectedReviewStateRevision;

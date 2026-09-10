@@ -4,10 +4,16 @@ export type ApiTranslationIncidentResolution =
   | 'READY_TO_REJECT'
   | 'PENDING_REVIEW'
   | 'REJECTED'
-  | 'REJECT_FAILED';
+  | 'REJECT_FAILED'
+  | 'REVIEW_APPLIED'
+  | 'REVIEW_DISMISSED';
 
 export type ApiTranslationIncidentSummary = {
   id: number;
+  reviewType?: string | null;
+  reviewRunId?: number | null;
+  reviewFindingId?: string | null;
+  resolutionReviewProjectId?: number | null;
   status: ApiTranslationIncidentStatus;
   resolution: ApiTranslationIncidentResolution;
   repositoryName: string | null;
@@ -59,6 +65,10 @@ export type ApiTranslationIncidentReviewProjectCandidate = {
 
 export type ApiTranslationIncidentDetail = {
   id: number;
+  reviewType?: string | null;
+  reviewRunId?: number | null;
+  reviewFindingId?: string | null;
+  resolutionReviewProjectId?: number | null;
   status: ApiTranslationIncidentStatus;
   resolution: ApiTranslationIncidentResolution;
   repositoryName: string | null;
@@ -128,6 +138,8 @@ const jsonHeaders = {
 };
 
 export async function fetchTranslationIncidents(options?: {
+  reviewType?: string | null;
+  reviewRunId?: number | null;
   status?: ApiTranslationIncidentStatus | null;
   query?: string | null;
   createdAfter?: string | null;
@@ -136,6 +148,8 @@ export async function fetchTranslationIncidents(options?: {
   size?: number;
 }): Promise<ApiTranslationIncidentPage> {
   const params = new URLSearchParams();
+  if (options?.reviewType) params.set('reviewType', options.reviewType);
+  if (options?.reviewRunId != null) params.set('reviewRunId', String(options.reviewRunId));
   if (options?.status) {
     params.set('status', options.status);
   }

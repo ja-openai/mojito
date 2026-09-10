@@ -44,9 +44,11 @@ public class TranslationIncidentWS {
           @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
           LocalDate createdBefore,
       @RequestParam(name = "page", required = false, defaultValue = "0") int page,
-      @RequestParam(name = "size", required = false, defaultValue = "25") int size) {
+      @RequestParam(name = "size", required = false, defaultValue = "25") int size,
+      @RequestParam(required = false) String reviewType,
+      @RequestParam(required = false) Long reviewRunId) {
     return translationIncidentService.getIncidents(
-        status, query, createdAfter, createdBefore, page, size);
+        status, query, createdAfter, createdBefore, page, size, reviewType, reviewRunId);
   }
 
   @GetMapping("/{incidentId}")

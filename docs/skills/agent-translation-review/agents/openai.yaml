@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent translation review"
+  short_description: "Review Mojito translations and stage findings for humans"
+  default_prompt: "Use $agent-translation-review to review the requested Mojito locales and feature groups, resume shared progress when available, and stage verified findings for human review."
