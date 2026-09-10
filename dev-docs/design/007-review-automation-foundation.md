@@ -70,26 +70,33 @@ Backend Notes
 
 Slack Notifications
 
-- Manual and automated review requests use one shared format. Team settings still select the Slack client/channel; automation setup does not need a format selector.
-- The channel message contains only the bold request title (with the emergency marker when applicable) and the request link. Link and media previews are disabled on this message to keep it compact.
-- A reply contains the existing request details: project type, due date, description excerpt or automation source, locales, assigned PMs, and assigned translators with locale coverage. User mappings still produce Slack mentions in this reply.
-- Request-wide and individual assignment updates reply to the saved request thread. If the Slack client/channel changes or there is no saved thread, Mojito creates a compact parent before posting the update.
-- The parent timestamp is saved before posting the reply. A failed reply leaves the parent available for later notifications; an unsuccessful parent post or missing timestamp stops delivery of the reply. Delivery remains best-effort, without an automatic retry queue.
+- Team Slack settings select the client and channel. All manual and automated requests use the same compact notification format; there is no format selector on teams or automations.
+- The channel message contains a linked request title and deadline, with an emergency marker when applicable. When projects have different deadlines, the parent labels the earliest one. Link and media previews are disabled on the parent.
+- Thread details include the request ID, review word counts, type, due dates, description (up to 3,000 characters) or automation source, screenshot/attachment links, the full locale list, and mapped PM/translator mentions. Review word counts sum project workloads within each locale, including split projects and terminology phases; differing locale totals are shown as a range, followed by the total across locales. They are not a distinct request source-word count.
+- Screenshot links are read from the persisted request attachments, including files saved during creation or a team-change update. At most five links appear, followed by a link to the request for the rest. They retain Mojito sign-in requirements; inline Slack image previews would require separate file-upload integration.
+- Existing request-wide and individual assignment updates use the saved thread when its client/channel matches. A missing or mismatched thread causes Mojito to create a compact request parent before posting the update. Existing parent messages are not rewritten.
+- Mojito does not discover or adopt handoff threads created by other Slack workflows. Channel changes do not migrate old Slack messages.
+- The parent timestamp is saved before posting the details reply. A failed reply leaves the parent available for later notifications; an unsuccessful parent post or missing timestamp stops delivery of the reply. Delivery remains best-effort, without an automatic retry queue.
+- Notification formatting requires no database migration.
+
+The September 9 follow-up asks for title and deadline on one line, with word count in the thread. See the [format discussion](https://openai-corpws.slack.com/archives/C09UYSY3SAD/p1788974752128659) and [reassignment discussion](https://openai-corpws.slack.com/archives/C09UYSY3SAD/p1788995358009309).
 
 Example channel message:
 
 ```text
-*Checkout review*
-View request in Mojito: <https://mojito.example/review-projects?requestId=44|request #44>
+*<https://mojito.example/review-projects?requestId=44|Checkout review>* — Due: 2026-09-10 17:00 PDT
 ```
 
 Example reply:
 
 ```text
 *Review request details*
+Request: <https://mojito.example/review-projects?requestId=44|request #44>
+Review words: 1,044 per locale · 2,088 total
 Type: Normal
 Due: 2026-09-10 17:00 PDT
-Description: Check wording in the checkout flow.
+Description: Check wording in the checkout flow. Keep CTA language consistent across locales.
+Screenshots / attachments: <https://mojito.example/api/images/checkout.png|checkout.png>
 Locales (2): de-DE, fr-FR
 Assigned PMs: <@U_PM>
 Assigned Translators: <@U_TRANSLATOR_DE> (de-DE), <@U_TRANSLATOR_FR> (fr-FR)

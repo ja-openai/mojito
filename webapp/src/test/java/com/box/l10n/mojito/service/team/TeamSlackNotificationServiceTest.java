@@ -17,6 +17,7 @@ import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequestSlackThread;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.service.review.ReviewProjectRepository;
 import com.box.l10n.mojito.service.review.ReviewProjectRequestSlackThreadRepository;
 import com.box.l10n.mojito.slack.SlackClient;
 import com.box.l10n.mojito.slack.SlackClientException;
@@ -40,6 +41,10 @@ public class TeamSlackNotificationServiceTest {
   private final SlackClients slackClients = Mockito.mock(SlackClients.class);
   private final ReviewProjectRequestSlackThreadRepository requestSlackThreadRepository =
       Mockito.mock(ReviewProjectRequestSlackThreadRepository.class);
+  private final ReviewProjectRepository projectRepository =
+      Mockito.mock(ReviewProjectRepository.class);
+  private final ReviewProjectSlackAttachmentService attachmentService =
+      Mockito.mock(ReviewProjectSlackAttachmentService.class);
   private final SlackClient slackClient = Mockito.mock(SlackClient.class);
   private final ServerConfig serverConfig = new ServerConfig();
 
@@ -48,11 +53,14 @@ public class TeamSlackNotificationServiceTest {
   @Before
   public void setUp() {
     serverConfig.setUrl("http://localhost:8080/");
+    when(attachmentService.buildAttachmentSummary(any())).thenReturn("");
     teamSlackNotificationService =
         new TeamSlackNotificationService(
             teamService,
             slackClients,
             requestSlackThreadRepository,
+            projectRepository,
+            attachmentService,
             serverConfig,
             "America/Los_Angeles");
   }
@@ -77,9 +85,7 @@ public class TeamSlackNotificationServiceTest {
     assertThat(messages.get(0).getChannel()).isEqualTo("channel-1");
     assertThat(messages.get(0).getThreadTs()).isNull();
     assertThat(messages.get(0).getText())
-        .isEqualTo(
-            "*Payments launch*\n"
-                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=44|request #44>");
+        .isEqualTo("*<http://localhost:8080/review-projects?requestId=44|Payments launch>*");
     assertThat(messages.get(0).getUnfurlLinks()).isFalse();
     assertThat(messages.get(0).getUnfurlMedia()).isFalse();
     assertThat(messages.get(1).getChannel()).isEqualTo("channel-1");
@@ -142,22 +148,23 @@ public class TeamSlackNotificationServiceTest {
     List<Message> messages = sentMessages(2);
     assertThat(messages.get(0).getText())
         .isEqualTo(
-            "*Checkout review*\n"
-                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=49|request #49>");
+            "*<http://localhost:8080/review-projects?requestId=49|Checkout review>* — Due: 2026-09-10 10:00 PDT");
     assertThat(messages.get(1).getThreadTs()).isEqualTo("171.010");
     assertThat(messages.get(1).getText())
         .isEqualTo(
             "*Review request details*\n"
+                + "Request: <http://localhost:8080/review-projects?requestId=49|request #49>\n"
+                + "Review words: 0 per locale · 0 total\n"
                 + "Type: Normal\n"
                 + "Due: 2026-09-10 10:00 PDT\n"
-                + "Description: Check wording in the checkout flow.\n"
+                + "Description: Check wording in the checkout flow. Keep CTA language consistent across locales.\n"
                 + "Locales (2): ca, fr-FR\n"
                 + "Assigned PMs: <@U_PM>\n"
                 + "Assigned Translators: <@U_TRANSLATOR> (fr-FR), translator_es2 (ca)");
   }
 
   @Test
-  public void createRequestNotificationShowsAutomationSourceAndTruncatedLocales() throws Exception {
+  public void createRequestNotificationShowsAutomationSourceAndAllLocales() throws Exception {
     ReviewProjectRequest request =
         reviewProjectRequest(
             50L, "Nightly web review", "Created by review automation Web nightly sweep (cron)");
@@ -184,13 +191,11 @@ public class TeamSlackNotificationServiceTest {
 
     List<Message> messages = sentMessages(2);
     assertThat(messages.get(0).getText())
-        .isEqualTo(
-            "*Nightly web review*\n"
-                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=50|request #50>");
+        .isEqualTo("*<http://localhost:8080/review-projects?requestId=50|Nightly web review>*");
     assertThat(messages.get(1).getThreadTs()).isEqualTo("171.011");
     assertThat(messages.get(1).getText())
         .contains("Source: Automation — Web nightly sweep (cron)")
-        .contains("Locales (7): am, bn, bs, ca, cs, da, +1 more")
+        .contains("Locales (7): am, bn, bs, ca, cs, da, de")
         .doesNotContain("Description:");
   }
 
@@ -244,9 +249,7 @@ public class TeamSlackNotificationServiceTest {
     assertThat(messages.get(0).getChannel()).isEqualTo("channel-2");
     assertThat(messages.get(0).getThreadTs()).isNull();
     assertThat(messages.get(0).getText())
-        .isEqualTo(
-            "*Mobile QA*\n"
-                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=46|request #46>");
+        .isEqualTo("*<http://localhost:8080/review-projects?requestId=46|Mobile QA>*");
     assertThat(messages.get(1).getChannel()).isEqualTo("channel-2");
     assertThat(messages.get(1).getThreadTs()).isEqualTo("171.005");
     assertThat(messages.get(1).getText()).contains("Mojito review project reassigned: #93");
@@ -332,9 +335,7 @@ public class TeamSlackNotificationServiceTest {
     List<Message> messages = sentMessages(2);
     assertThat(messages.get(0).getThreadTs()).isNull();
     assertThat(messages.get(0).getText())
-        .isEqualTo(
-            "*Desktop review*\n"
-                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=51|request #51>");
+        .isEqualTo("*<http://localhost:8080/review-projects?requestId=51|Desktop review>*");
     assertThat(messages.get(1).getThreadTs()).isEqualTo("171.013");
     assertThat(messages.get(1).getText()).startsWith("*Review request details*\n");
     verify(requestSlackThreadRepository).save(previousThread);
@@ -358,8 +359,7 @@ public class TeamSlackNotificationServiceTest {
     assertThat(messages.get(0).getThreadTs()).isNull();
     assertThat(messages.get(0).getText())
         .isEqualTo(
-            "*\uD83D\uDEA8 Urgent checkout fix*\n"
-                + "View request in Mojito: <http://localhost:8080/review-projects?requestId=52|request #52>");
+            "\uD83D\uDEA8 *<http://localhost:8080/review-projects?requestId=52|Urgent checkout fix>*");
     assertThat(messages.get(1).getThreadTs()).isEqualTo("171.014");
     assertThat(messages.get(1).getText())
         .startsWith("[EMERGENCY] Mojito review project assigned: #210")
@@ -379,7 +379,8 @@ public class TeamSlackNotificationServiceTest {
 
     Message root = sentMessages(1).get(0);
     assertThat(root.getThreadTs()).isNull();
-    assertThat(root.getText()).startsWith("*Search review*\n");
+    assertThat(root.getText())
+        .startsWith("*<http://localhost:8080/review-projects?requestId=53|Search review>*");
     verify(requestSlackThreadRepository, never()).save(any(ReviewProjectRequestSlackThread.class));
   }
 
@@ -467,7 +468,8 @@ public class TeamSlackNotificationServiceTest {
 
     Message root = sentMessages(1).get(0);
     assertThat(root.getThreadTs()).isNull();
-    assertThat(root.getText()).startsWith("*Profile review*\n");
+    assertThat(root.getText())
+        .startsWith("*<http://localhost:8080/review-projects?requestId=54|Profile review>*");
     verify(requestSlackThreadRepository, never()).save(any(ReviewProjectRequestSlackThread.class));
   }
 
@@ -487,6 +489,58 @@ public class TeamSlackNotificationServiceTest {
         .contains("Note: Direct assignment")
         .contains("View project: <http://localhost:8080/review-projects/214|review project #214>");
     verifyNoInteractions(requestSlackThreadRepository);
+  }
+
+  @Test
+  public void requestDetailsSumSplitWorkPerLocaleAndKeepAttachmentsInThread() throws Exception {
+    ReviewProjectRequest request = reviewProjectRequest(61L, "Catalog & checkout\nreview");
+    ReviewProject frA = reviewProject(221L, request, team(7L), "fr-FR");
+    ReviewProject frB = reviewProject(222L, request, team(7L), "fr-FR");
+    ReviewProject de = reviewProject(223L, request, team(7L), "de-DE");
+    frA.setWordCount(700);
+    frB.setWordCount(500);
+    de.setWordCount(900);
+    frA.setDueDate(ZonedDateTime.parse("2026-09-12T17:00:00Z"));
+    de.setDueDate(ZonedDateTime.parse("2026-09-10T17:00:00Z"));
+    configureTeamSlack();
+    when(attachmentService.buildAttachmentSummary(61L))
+        .thenReturn(
+            "\nScreenshots / attachments: <http://localhost:8080/api/images/context.png|context.png>");
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.021"));
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        request, List.of(frA, frB, de));
+
+    List<Message> messages = sentMessages(2);
+    assertThat(messages.get(0).getText())
+        .isEqualTo(
+            "*<http://localhost:8080/review-projects?requestId=61|Catalog &amp; checkout review>* — Earliest due: 2026-09-10 10:00 PDT");
+    assertThat(messages.get(0).getText()).doesNotContain("attachments", "Review words");
+    assertThat(messages.get(1).getThreadTs()).isEqualTo("171.021");
+    assertThat(messages.get(1).getText())
+        .contains(
+            "Review words: 900–1,200 per locale · 2,100 total",
+            "Screenshots / attachments:",
+            "Locales (2): de-DE, fr-FR");
+  }
+
+  @Test
+  public void changedDestinationUsesAllRequestDeadlinesForAssignmentParent() throws Exception {
+    ReviewProjectRequest request = reviewProjectRequest(62L, "Regional review");
+    ReviewProject fr = reviewProject(224L, request, team(7L), "fr-FR");
+    ReviewProject de = reviewProject(225L, request, team(7L), "de-DE");
+    fr.setDueDate(ZonedDateTime.parse("2026-09-12T17:00:00Z"));
+    de.setDueDate(ZonedDateTime.parse("2026-09-10T17:00:00Z"));
+    configureTeamSlack();
+    when(projectRepository.findByRequestIdWithAssignment(62L)).thenReturn(List.of(fr, de));
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.022"));
+
+    teamSlackNotificationService.sendReviewProjectAssignmentNotification(
+        fr, ReviewProjectAssignmentEventType.REASSIGNED, null);
+
+    List<Message> messages = sentMessages(2);
+    assertThat(messages.get(0).getText()).contains("Earliest due: 2026-09-10 10:00 PDT");
+    assertThat(messages.get(1).getThreadTs()).isEqualTo("171.022");
   }
 
   private void configureTeamSlack() {
