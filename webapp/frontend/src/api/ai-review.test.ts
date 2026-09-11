@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchPrecomputedAiReview, requestAiReview } from './ai-review';
+import { type AiReviewRequest, fetchPrecomputedAiReview, requestAiReview } from './ai-review';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -17,6 +17,129 @@ describe('requestAiReview', () => {
       status,
       headers: { 'Content-Type': 'application/json' },
     });
+
+  it.each(['review_project', 'text_unit_detail'] as const)(
+    'waits briefly before submitting an automatic review from %s',
+    async (surface) => {
+      vi.useFakeTimers();
+      const controller = new AbortController();
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(json({ taskId: 42 }, 202))
+        .mockResolvedValueOnce(json({ status: 'completed', response: review }));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const request = requestAiReview(
+        {
+          requestType: 'automatic',
+          surface,
+          messages: [{ role: 'user', content: 'Review.' }],
+        },
+        { signal: controller.signal },
+      );
+      await vi.advanceTimersByTimeAsync(299);
+      expect(fetchMock).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(request).resolves.toEqual(review);
+      controller.abort();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it('cancels an automatic review during the delay without creating a server task', async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = requestAiReview(
+      { requestType: 'automatic', messages: [{ role: 'user', content: 'Review.' }] },
+      { signal: controller.signal },
+    ).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(299);
+    controller.abort();
+    await expect(result).resolves.toMatchObject({ name: 'AbortError' });
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('only submits the current string when navigation aborts earlier automatic reviews', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(json({ taskId: 42 }, 202))
+      .mockResolvedValueOnce(json({ status: 'completed', response: review }));
+    vi.stubGlobal('fetch', fetchMock);
+    const requests: Promise<unknown>[] = [];
+    let controller: AbortController | undefined;
+
+    for (const tmTextUnitId of [31, 32, 33]) {
+      controller?.abort();
+      controller = new AbortController();
+      requests.push(
+        requestAiReview(
+          {
+            tmTextUnitId,
+            requestType: 'automatic',
+            messages: [{ role: 'user', content: 'Review.' }],
+          },
+          { signal: controller.signal },
+        ).catch((error: unknown) => error),
+      );
+      await vi.advanceTimersByTimeAsync(100);
+    }
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(200);
+    await expect(Promise.all(requests)).resolves.toEqual([
+      expect.objectContaining({ name: 'AbortError' }),
+      expect.objectContaining({ name: 'AbortError' }),
+      review,
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toMatchObject({
+      tmTextUnitId: 33,
+    });
+  });
+
+  it('does not submit when navigation aborts as the automatic delay ends', async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = requestAiReview(
+      { requestType: 'automatic', messages: [{ role: 'user', content: 'Review.' }] },
+      { signal: controller.signal },
+    ).catch((error: unknown) => error);
+    vi.advanceTimersByTime(300);
+    controller.abort();
+    await expect(result).resolves.toMatchObject({ name: 'AbortError' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each<AiReviewRequest['requestType']>(['manual', 'follow_up', 'retry', undefined])(
+    'submits %s requests immediately',
+    async (requestType) => {
+      vi.useFakeTimers();
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(json({ taskId: 42 }, 202))
+        .mockResolvedValueOnce(json({ status: 'completed', response: review }));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const request = requestAiReview({
+        requestType,
+        messages: [{ role: 'user', content: 'Review.' }],
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+      await expect(request).resolves.toEqual(review);
+    },
+  );
 
   it('preserves review context and uses the abort signal for polling', async () => {
     const abortController = new AbortController();
@@ -149,7 +272,8 @@ describe('requestAiReview', () => {
     );
   });
 
-  it('cancels a task when navigation happens before its submission response arrives', async () => {
+  it('cancels an automatic task when navigation happens after submission but before its response', async () => {
+    vi.useFakeTimers();
     const controller = new AbortController();
     let submitted!: (response: Response) => void;
     const fetchMock = vi
@@ -163,9 +287,11 @@ describe('requestAiReview', () => {
       .mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
     const result = requestAiReview(
-      { messages: [{ role: 'user', content: 'Review.' }] },
+      { requestType: 'automatic', messages: [{ role: 'user', content: 'Review.' }] },
       { signal: controller.signal },
     ).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     controller.abort();
     submitted(json({ taskId: 73 }, 202));
     await expect(result).resolves.toMatchObject({ name: 'AbortError' });
@@ -174,6 +300,7 @@ describe('requestAiReview', () => {
       '/api/ai/review/jobs/73',
       expect.objectContaining({ method: 'DELETE' }),
     );
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('does not submit an already aborted request', async () => {

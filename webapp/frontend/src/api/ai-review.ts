@@ -74,6 +74,8 @@ type AiReviewJob =
   | { status: 'completed'; response: AiReviewResponse }
   | { status: 'failed'; error: { status: number; message: string } };
 
+const AUTOMATIC_REVIEW_DELAY_MS = 300;
+
 export async function requestAiReview(
   payload: AiReviewRequest,
   options: { signal?: AbortSignal } = {},
@@ -83,6 +85,11 @@ export async function requestAiReview(
   }
 
   options.signal?.throwIfAborted();
+  if (payload.requestType === 'automatic') {
+    // Navigation aborts this delay before a task is created for a string the reviewer skips.
+    await waitBeforeAutomaticReview(options.signal);
+    options.signal?.throwIfAborted();
+  }
   // Read the short submission response even if navigation occurs, so we can cancel its task ID.
   const { taskId } = await postJson<{ taskId: number }>('/api/ai/review/jobs', payload);
   let cancellationSent = false;
@@ -128,6 +135,26 @@ export async function requestAiReview(
   } finally {
     options.signal?.removeEventListener('abort', cancel);
   }
+}
+
+function waitBeforeAutomaticReview(signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const cancel = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', cancel);
+      const reason: unknown = signal?.reason;
+      reject(
+        reason instanceof Error
+          ? reason
+          : new DOMException('The request was aborted.', 'AbortError'),
+      );
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', cancel);
+      resolve();
+    }, AUTOMATIC_REVIEW_DELAY_MS);
+    signal?.addEventListener('abort', cancel, { once: true });
+  });
 }
 
 export async function fetchPrecomputedAiReview(
