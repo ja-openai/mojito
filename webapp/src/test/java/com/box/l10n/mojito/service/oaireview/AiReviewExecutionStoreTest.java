@@ -32,6 +32,7 @@ import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
 import com.box.l10n.mojito.service.oaireview.AiReviewCapacityStore.Admission;
 import com.box.l10n.mojito.service.oaireview.AiReviewExecutionStore.Claim;
 import com.box.l10n.mojito.service.oaireview.AiReviewExecutionStore.Disposition;
+import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Settings;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskRepository;
 import com.box.l10n.mojito.service.security.user.UserRepository;
@@ -708,6 +709,130 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     clock.advance(Duration.ofSeconds(12));
     assertFalse(store.isActive(taskId, claim.token()));
     assertEquals(Disposition.FINISH, store.tryClaim(taskId, "worker").disposition());
+  }
+
+  @Test
+  public void presetDeadlinesArePersistedInTheTaskClaimAndCapacityReservation() {
+    Map<String, Long> budgets =
+        Map.of(
+            "fastest",
+            15L,
+            "fast",
+            20L,
+            "balanced",
+            30L,
+            "thorough",
+            60L,
+            "deep",
+            90L,
+            "ultra",
+            180L);
+    for (var budget : budgets.entrySet()) {
+      String effort =
+          switch (budget.getKey()) {
+            case "thorough" -> "medium";
+            case "deep" -> "high";
+            case "ultra" -> "max";
+            default -> "low";
+          };
+      long taskId = task(0, 3600);
+      Instant expectedDeadline = clock.instant().plusSeconds(budget.getValue());
+
+      Claim claim =
+          store.tryClaim(
+              taskId,
+              "preset-process",
+              new Settings(budget.getKey(), "test-model", effort, "low", "priority"));
+
+      assertEquals(budget.getKey(), Disposition.START, claim.disposition());
+      assertEquals(budget.getValue(), tasks.findById(taskId).orElseThrow().getTimeout());
+      assertEquals(expectedDeadline, claim.deadline());
+      assertEquals(expectedDeadline, capacity().reservations().get(claim.token()).deadline());
+      assertTrue(store.releaseCapacity(claim.token()));
+    }
+  }
+
+  @Test
+  public void taskAgeAndAdmissionDelayBothConsumeThePresetBudget() {
+    long taskId = task(3, 3600);
+    Instant expectedDeadline = clock.instant().plusSeconds(12);
+    AiReviewCapacityStore delayedCapacity =
+        capacityWithAdmissionHook(token -> clock.advance(Duration.ofSeconds(5)));
+
+    Claim claim =
+        worker(outputs, delayedCapacity)
+            .tryClaim(
+                taskId,
+                "delayed-process",
+                new Settings("fastest", "test-model", "low", "low", "priority"));
+
+    assertEquals(Disposition.START, claim.disposition());
+    assertEquals(Long.valueOf(15), tasks.findById(taskId).orElseThrow().getTimeout());
+    assertEquals(expectedDeadline, claim.deadline());
+    assertEquals(expectedDeadline, capacity().reservations().get(claim.token()).deadline());
+    assertEquals(7, Duration.between(clock.instant(), claim.deadline()).getSeconds());
+  }
+
+  @Test
+  public void aPresetDeadlineReachedBeforeOrDuringAdmissionPreventsProviderWork() {
+    Settings fastest = new Settings("fastest", "test-model", "low", "low", "priority");
+    long alreadyExpiredTask = task(15, 3600);
+
+    Claim expired = store.tryClaim(alreadyExpiredTask, "late-process", fastest);
+
+    assertEquals(Disposition.FINISH, expired.disposition());
+    assertNull(expired.token());
+    assertEquals(Long.valueOf(15), tasks.findById(alreadyExpiredTask).orElseThrow().getTimeout());
+    assertEquals(504, store.getStagedResult(alreadyExpiredTask).orElseThrow().error().status());
+    assertEquals(0, reservations());
+
+    long expiringTask = task(10, 3600);
+    AiReviewCapacityStore delayedCapacity =
+        capacityWithAdmissionHook(token -> clock.advance(Duration.ofSeconds(5)));
+    Claim expiredDuringAdmission =
+        worker(outputs, delayedCapacity).tryClaim(expiringTask, "delayed-process", fastest);
+
+    assertEquals(Disposition.FINISH, expiredDuringAdmission.disposition());
+    assertNull(expiredDuringAdmission.token());
+    assertEquals(504, store.getStagedResult(expiringTask).orElseThrow().error().status());
+    assertEquals(0, reservations());
+    verifyNoInteractions(outputs);
+  }
+
+  @Test
+  public void presetSelectionCannotExtendAShorterTaskTimeout() {
+    long taskId = task(0, 12);
+
+    Claim claim =
+        store.tryClaim(
+            taskId,
+            "short-task-process",
+            new Settings("ultra", "test-model", "max", "low", "priority"));
+
+    assertEquals(Disposition.START, claim.disposition());
+    assertEquals(Long.valueOf(12), tasks.findById(taskId).orElseThrow().getTimeout());
+    assertEquals(clock.instant().plusSeconds(12), claim.deadline());
+    assertEquals(claim.deadline(), capacity().reservations().get(claim.token()).deadline());
+  }
+
+  @Test
+  public void anExistingAttemptKeepsItsPresetDeadlineAfterConfigurationChanges() {
+    long taskId = task(0, 3600);
+    Settings balanced = new Settings("balanced", "test-model", "low", "low", "priority");
+    Claim original = store.tryClaim(taskId, "original-process", balanced);
+    assertEquals(clock.instant().plusSeconds(30), original.deadline());
+    configuration.setPresetTimeoutSeconds(Map.of("balanced", 5L));
+    clock.advance(Duration.ofSeconds(6));
+
+    Claim duplicate = worker(outputs).tryClaim(taskId, "replacement-process", balanced);
+
+    assertEquals(Disposition.WAIT, duplicate.disposition());
+    assertEquals(original.token(), duplicate.token());
+    assertEquals(original.deadline(), duplicate.deadline());
+    assertEquals(Long.valueOf(30), tasks.findById(taskId).orElseThrow().getTimeout());
+    assertEquals(1, reservations());
+    assertEquals(original.deadline(), capacity().reservations().get(original.token()).deadline());
+    assertTrue(store.isActive(taskId, original.token()));
   }
 
   @Test

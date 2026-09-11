@@ -75,7 +75,8 @@ public class AiReviewDispatchService {
 
   /** Returns after starting HTTP, not its response. Full capacity produces a prompt busy result. */
   public boolean start(long taskId, Prepared prepared) {
-    Claim claim = store.tryClaim(taskId, ownerId);
+    prepared = interactive.enforceExecutionPolicy(prepared);
+    Claim claim = store.tryClaim(taskId, ownerId, prepared.settings());
     switch (claim.disposition()) {
       case DONE -> {
         return false;
@@ -124,7 +125,6 @@ public class AiReviewDispatchService {
 
   private void launch(long taskId, Claim claim, Prepared prepared) {
     try {
-      prepared = interactive.enforceExecutionPolicy(prepared);
       AiReviewChatWS.ReviewCall call =
           chat.chatPreparedCall(
               prepared, taskId, claim.deadline(), () -> store.isActive(taskId, claim.token()));

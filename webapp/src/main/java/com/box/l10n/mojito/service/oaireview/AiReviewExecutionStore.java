@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.oaireview;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.oaireview.AiReviewCapacityStore.Admission;
+import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Settings;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -92,11 +93,28 @@ public class AiReviewExecutionStore {
   private record Eligibility(Claim existing, Long userId, Instant deadline) {}
 
   public Claim tryClaim(long taskId, String owner) {
+    return tryClaim(taskId, owner, null);
+  }
+
+  public Claim tryClaim(long taskId, String owner, Settings settings) {
     Eligibility eligibility =
         claimTransaction(
             taskId,
             () -> {
               PollableTask task = lockTask(taskId);
+              if (settings != null
+                  && task != null
+                  && task.getFinishedDate() == null
+                  && state(task) == null) {
+                // Persist the effective speed budget for old queued inputs too. Never extend a
+                // task's existing timeout or give already claimed work a new deadline.
+                long selectedTimeout =
+                    configuration.resolveTimeoutSeconds(
+                        settings.profileId(), settings.reasoningEffort());
+                if (task.getTimeout() == null
+                    || task.getTimeout() <= 0
+                    || selectedTimeout < task.getTimeout()) task.setTimeout(selectedTimeout);
+              }
               Claim existing = existingClaim(task);
               if (existing != null) return new Eligibility(existing, null, null);
               State state = state(task);

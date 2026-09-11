@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -78,7 +79,7 @@ public class AiReviewDispatchServiceTest {
   public void setUpDispatch() {
     when(interactive.enforceExecutionPolicy(any())).thenAnswer(i -> i.getArgument(0));
     when(chat.prepare(any())).thenReturn(prepared());
-    when(store.tryClaim(anyLong(), anyString()))
+    when(store.tryClaim(anyLong(), anyString(), any(Settings.class)))
         .thenAnswer(
             i -> {
               ControlledTask task = taskFor(i.getArgument(0, Long.class));
@@ -303,7 +304,7 @@ public class AiReviewDispatchServiceTest {
     ControlledTask task = task(51);
     doReturn(new Claim(Disposition.WAIT, null, task.deadline))
         .when(store)
-        .tryClaim(eq(task.id), anyString());
+        .tryClaim(eq(task.id), anyString(), any(Settings.class));
 
     assertFalse(dispatcher.start(task.id, prepared()));
 
@@ -313,6 +314,25 @@ public class AiReviewDispatchServiceTest {
     dispatcher.cleanup();
     verify(store).rejectBusy(task.id);
     verify(chat, never()).chatPreparedCall(any(), anyLong(), any(), any());
+  }
+
+  @Test
+  public void executionPolicyIsAppliedBeforeClaimAndProviderCall() {
+    ControlledTask task = task(60);
+    Prepared effective = prepared();
+    Prepared original =
+        new Prepared(
+            effective.request(),
+            effective.userId(),
+            new Settings("ultra", "selected-model", "max", "low", "priority"));
+    doReturn(effective).when(interactive).enforceExecutionPolicy(original);
+
+    assertTrue(dispatcher.start(task.id, original));
+
+    var order = inOrder(interactive, store, chat);
+    order.verify(interactive).enforceExecutionPolicy(original);
+    order.verify(store).tryClaim(eq(task.id), anyString(), eq(effective.settings()));
+    order.verify(chat).chatPreparedCall(eq(effective), eq(task.id), eq(task.deadline), any());
   }
 
   @Test
@@ -357,7 +377,7 @@ public class AiReviewDispatchServiceTest {
     assertNotNull(task.task.getFinishedDate());
     assertEquals(504, controller.get(task.id).error().status());
     verify(chat, never()).chatPreparedCall(any(), anyLong(), any(), any());
-    verify(store, never()).tryClaim(anyLong(), anyString());
+    verify(store, never()).tryClaim(anyLong(), anyString(), any(Settings.class));
   }
 
   @Test

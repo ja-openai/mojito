@@ -1,5 +1,8 @@
 package com.box.l10n.mojito.service.oaireview;
 
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +13,7 @@ public class AiReviewExecutionProperties {
   private int maxInFlight = 400;
   private int maxInFlightPerUser = 3;
   private long timeoutSeconds = 180;
+  private Map<String, Long> presetTimeoutSeconds = defaultPresetTimeoutSeconds();
 
   public int getMaxInFlight() {
     return maxInFlight;
@@ -37,5 +41,58 @@ public class AiReviewExecutionProperties {
   public void setTimeoutSeconds(long value) {
     if (value < 1 || value > 900) throw new IllegalArgumentException("Invalid review deadline");
     timeoutSeconds = value;
+  }
+
+  public Map<String, Long> getPresetTimeoutSeconds() {
+    return Map.copyOf(presetTimeoutSeconds);
+  }
+
+  public void setPresetTimeoutSeconds(Map<String, Long> configured) {
+    if (configured == null) throw new IllegalArgumentException("Missing review preset deadlines");
+    Map<String, Long> merged = defaultPresetTimeoutSeconds();
+    configured.forEach(
+        (preset, seconds) -> {
+          if (!merged.containsKey(preset))
+            throw new IllegalArgumentException("Unknown review deadline preset: " + preset);
+          if (seconds == null || seconds < 1 || seconds > 900)
+            throw new IllegalArgumentException("Invalid review deadline for preset: " + preset);
+          merged.put(preset, seconds);
+        });
+    presetTimeoutSeconds = merged;
+  }
+
+  /** Resolve from effective settings, after automatic-review policy has selected its preset. */
+  public long resolveTimeoutSeconds(String presetId, String reasoningEffort) {
+    Long budget = presetTimeoutSeconds.get(normalize(presetId));
+    if (budget == null) {
+      // Older requests use version_a/version_b rather than today's speed presets. Their actual
+      // reasoning setting determines the fallback without coupling this policy to model names.
+      String fallback =
+          switch (normalize(reasoningEffort)) {
+            case "none" -> "fast";
+            case "low" -> "balanced";
+            case "medium" -> "thorough";
+            case "high" -> "deep";
+            case "xhigh", "max" -> "ultra";
+            default -> null;
+          };
+      budget = fallback == null ? timeoutSeconds : presetTimeoutSeconds.get(fallback);
+    }
+    return Math.min(timeoutSeconds, budget);
+  }
+
+  private static String normalize(String value) {
+    return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+  }
+
+  private static Map<String, Long> defaultPresetTimeoutSeconds() {
+    return new LinkedHashMap<>(
+        Map.of(
+            "fastest", 15L,
+            "fast", 20L,
+            "balanced", 30L,
+            "thorough", 60L,
+            "deep", 90L,
+            "ultra", 180L));
   }
 }
