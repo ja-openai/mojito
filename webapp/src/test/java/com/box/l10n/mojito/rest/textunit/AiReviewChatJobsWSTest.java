@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -29,6 +30,7 @@ import com.box.l10n.mojito.service.oaireview.AiReviewDispatchService;
 import com.box.l10n.mojito.service.oaireview.AiReviewExecutionProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared;
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Settings;
+import com.box.l10n.mojito.service.oaireview.AiReviewSubmissionRateObserver;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import java.time.ZonedDateTime;
@@ -54,6 +56,7 @@ public class AiReviewChatJobsWSTest {
   @Mock PollableTaskBlobStorage storage;
   @Mock AiReviewChatJobAccess access;
   @Mock AiReviewDispatchService dispatch;
+  @Mock AiReviewSubmissionRateObserver submissions;
 
   private final ObjectMapper mapper = ObjectMapper.withNoFailOnUnknownProperties();
   private final AiReviewExecutionProperties execution = new AiReviewExecutionProperties();
@@ -61,7 +64,9 @@ public class AiReviewChatJobsWSTest {
 
   @Before
   public void setUp() {
-    ws = new AiReviewChatJobsWS(review, tasks, storage, access, mapper, dispatch, execution);
+    ws =
+        new AiReviewChatJobsWS(
+            review, tasks, storage, access, mapper, dispatch, execution, submissions);
   }
 
   @Test
@@ -96,6 +101,7 @@ public class AiReviewChatJobsWSTest {
         .createPollableTask(
             null, AiReviewConfiguredChatJob.class.getCanonicalName(), null, 0, 180L);
     verify(review).prepare(request);
+    verify(submissions).observe(eq(17L), any(), anyLong());
     verify(review, never()).chat(any());
     verify(review, never()).chatPrepared(any(), any());
     verifyNoInteractions(storage, access);
@@ -112,7 +118,7 @@ public class AiReviewChatJobsWSTest {
           assertThrows(ResponseStatusException.class, () -> ws.start(request)).getStatusCode());
     }
     assertThrows(ResponseStatusException.class, () -> ws.start(null));
-    verifyNoInteractions(review, tasks, dispatch);
+    verifyNoInteractions(review, tasks, dispatch, submissions);
   }
 
   @Test

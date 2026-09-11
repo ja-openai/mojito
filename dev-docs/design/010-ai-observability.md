@@ -155,6 +155,52 @@ reach any API pod. The client polls the same task and cancels it with
 Cancellation is durable; local calls are cancelled immediately, and other instances detect it
 through periodic checks. Cancellation propagates to the underlying HTTP request.
 
+### Submission bursts and navigation
+
+Automatic reviews wait 300 ms in the shared frontend API before creating a task. Navigating away
+cancels that delay; manual review, follow-up chat and explicit retries submit immediately. Both
+Review Projects and Text Unit Details retain cancellation after submission, including when navigation
+happens before the task ID arrives. This adds 300 ms to automatic reviews that do run, in exchange
+for avoiding provider work on strings the reviewer only passes through.
+
+`l10n.ai-review.submission-rate` observes authenticated HTTP submissions with a per-user token bucket:
+`requests-per-second=3` refills the allowance and `burst=10` allows a short burst. `enabled=false`
+disables observation. This is deliberately observation-only: an empty bucket never rejects, delays,
+or queues the review. It counts valid submissions, including those later rejected by execution
+admission, once through the shared job endpoint. Provider retries, polling, cancellation, legacy
+Quartz drain jobs and invalid requests rejected during preparation do not consume tokens.
+
+The state is one small, non-expiring `MBlob` per observed user under
+`ai_review_submission_rate/v1/user/`, independent of the shared execution-capacity row. It uses the
+existing schema, scalar JDBC reads and conditional updates against the previous bytes. All pods
+share each user's balance and warning cooldown. There is no `SELECT FOR UPDATE`; a conditional
+write still takes a brief database row lock. Rows grow with the number of observed users, not requests.
+
+One dedicated background worker per pod processes at most 256 waiting observations. It never runs
+database work on a request/completion thread or waits for observer capacity. SQL statements have a
+one-second timeout and each transaction a one-second timeout; connection acquisition still follows
+the shared datasource's pool timeout. Observation therefore uses shared database resources, but a
+slow database cannot make the HTTP submission wait for these updates. Database, parsing, metrics
+and logging failures cannot reject a review. A full observer backlog drops telemetry, not reviews.
+
+Each event captures its submission timestamp before request preparation and retains it across retries.
+Observations delayed more than one
+second are skipped, as are timestamps older than a user's last processed event. This prevents
+observer backlog or reordered events from manufacturing bursts; contention, drops and cross-pod
+clock skew can instead undercount. The detector is approximate and assumes reasonably synchronized
+application clocks. CAS conflicts retry at most three times with fresh transactions and age checks;
+unknown commit outcomes are not retried. Tokens floor at zero, with no growing penalty debt.
+
+Search `AI review submission burst observed` for `userId`, `requestsPerSecond`, `burstAllowance`,
+`observationDelayMs` and `action=observe_only`. Only a successful committed update emits the warning,
+at most once per user every 30 seconds across pods. Missing observations produce a per-pod throttled
+`AI review submission observation incomplete` log. Overload counters and logs are reported by the
+observer when it resumes (or at shutdown), so even overload logging stays off the HTTP request path.
+`AiReviewSubmission.observation` uses bounded
+`outcome` labels: `within_allowance`, `excess`, `out_of_order`, `delayed`, `contended`, `overloaded`,
+`missing_user`, or `unavailable`. User IDs and source/translation/chat content are never metric labels;
+review text is not stored in these counters or logs. No new alert is configured.
+
 ### Interactive provider capacity and deadlines
 
 `l10n.ai-review.execution.max-in-flight` defaults to a **warning threshold of 800 across all
