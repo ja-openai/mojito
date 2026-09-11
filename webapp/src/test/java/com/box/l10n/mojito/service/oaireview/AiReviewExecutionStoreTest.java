@@ -117,21 +117,21 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   @Test
-  public void defaultsAllowFourHundredAcrossTheClusterAndThreePerUser() {
+  public void defaultsAllowEightHundredAcrossTheClusterAndSixPerUser() {
     AiReviewExecutionProperties defaults = new AiReviewExecutionProperties();
-    assertEquals(400, defaults.getMaxInFlight());
-    assertEquals(3, defaults.getMaxInFlightPerUser());
+    assertEquals(800, defaults.getMaxInFlight());
+    assertEquals(6, defaults.getMaxInFlightPerUser());
     assertThrows(IllegalArgumentException.class, () -> defaults.setMaxInFlightPerUser(0));
     assertThrows(IllegalArgumentException.class, () -> defaults.setMaxInFlightPerUser(1001));
   }
 
   @Test
-  public void threeRequestsForOneUserDoNotBlockAnotherUserAcrossProcesses() {
+  public void sixRequestsForOneUserDoNotBlockAnotherUserAcrossProcesses() {
     configuration.setMaxInFlight(400);
     long firstUser = user();
     long otherUser = user();
     AiReviewExecutionStore otherProcess = worker(outputs);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 6; i++) {
       long taskId = taskForUser(firstUser);
       Claim claim = (i % 2 == 0 ? store : otherProcess).tryClaim(taskId, "process-" + i);
       assertEquals(Disposition.START, claim.disposition());
@@ -144,7 +144,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     assertEquals(
         Disposition.START,
         worker(outputs).tryClaim(taskForUser(otherUser), "new-process").disposition());
-    assertEquals(4, reservations());
+    assertEquals(7, reservations());
   }
 
   @Test
@@ -219,7 +219,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   @Test
   public void ownerlessLegacyTasksShareOneConservativeUserBucket() {
     configuration.setMaxInFlight(400);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 6; i++) {
       assertEquals(
           Disposition.START,
           worker(outputs).tryClaim(taskForUser(null), "legacy-process-" + i).disposition());
@@ -227,11 +227,11 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
 
     assertEquals(
         Disposition.WAIT,
-        worker(outputs).tryClaim(taskForUser(null), "fourth-process").disposition());
+        worker(outputs).tryClaim(taskForUser(null), "seventh-process").disposition());
     assertEquals(
         Disposition.START,
         store.tryClaim(taskForUser(user()), "authenticated-process").disposition());
-    assertEquals(4, reservations());
+    assertEquals(7, reservations());
   }
 
   @Test

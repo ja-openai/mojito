@@ -157,8 +157,8 @@ through periodic checks. Cancellation propagates to the underlying HTTP request.
 
 ### Interactive provider capacity and deadlines
 
-`l10n.ai-review.execution.max-in-flight` defaults to **400 across all instances**, independent of
-Quartz threads or replica count. `max-in-flight-per-user` defaults to **3 per authenticated user**,
+`l10n.ai-review.execution.max-in-flight` defaults to **800 across all instances**, independent of
+Quartz threads or replica count. `max-in-flight-per-user` defaults to **6 per authenticated user**,
 including admins, shared across instances. These are approximate concurrent-request limits, not
 requests-per-minute limits or a separate HTTP connection pool. New interactive reviews do not wait
 in a Quartz backlog; HTTP server threads, database connections, and provider execution still have
@@ -178,7 +178,9 @@ both limits but concurrent updates defeat all reservation attempts, admission pr
 they do not justify this fallback. Counts can therefore understate active work, and either limit
 can temporarily be exceeded. A failed release can instead overstate active work until a later
 release succeeds or the reservation reaches its original deadline, based on the selected speed
-budget below. The limits remain at 3 and 400 while admission outcomes are measured.
+budget below. Start generously at 6 per user and 800 overall to accommodate normal navigation
+bursts and many concurrent reviewers. Tighten these initial limits only if observed provider
+pressure or application resource use justifies it.
 
 This approximation is intentional. The previous global `NOWAIT` row lock could turn overlapping
 requests from different users into busy responses even when both limits had room. An optional
