@@ -123,22 +123,22 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   @Test
-  public void defaultsWarnAtEightHundredAcrossTheClusterAndLimitSixPerUser() {
+  public void defaultsWarnAtEightHundredAcrossTheClusterAndLimitTwelvePerUser() {
     AiReviewExecutionProperties defaults = new AiReviewExecutionProperties();
     assertEquals(800, defaults.getMaxInFlight());
-    assertEquals(6, defaults.getMaxInFlightPerUser());
+    assertEquals(12, defaults.getMaxInFlightPerUser());
     assertThrows(IllegalArgumentException.class, () -> defaults.setMaxInFlightPerUser(0));
     assertThrows(IllegalArgumentException.class, () -> defaults.setMaxInFlightPerUser(1001));
   }
 
   @Test
-  public void sixRequestsForOneUserDoNotBlockAnotherUserAcrossProcesses() {
+  public void twelveRequestsForOneUserDoNotBlockAnotherUserAcrossProcesses() {
     configuration.setMaxInFlight(400);
-    configuration.setMaxInFlightPerUser(6);
+    configuration.setMaxInFlightPerUser(12);
     long firstUser = user();
     long otherUser = user();
     AiReviewExecutionStore otherProcess = worker(outputs);
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 12; i++) {
       long taskId = taskForUser(firstUser);
       Claim claim = (i % 2 == 0 ? store : otherProcess).tryClaim(taskId, "process-" + i);
       assertEquals(Disposition.START, claim.disposition());
@@ -151,7 +151,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     assertEquals(
         Disposition.START,
         worker(outputs).tryClaim(taskForUser(otherUser), "new-process").disposition());
-    assertEquals(7, reservations());
+    assertEquals(13, reservations());
   }
 
   @Test

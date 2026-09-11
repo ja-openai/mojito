@@ -159,7 +159,7 @@ through periodic checks. Cancellation propagates to the underlying HTTP request.
 
 `l10n.ai-review.execution.max-in-flight` defaults to a **warning threshold of 800 across all
 instances**, independent of Quartz threads or replica count. The existing property name is retained,
-but crossing it does not reject a review. `max-in-flight-per-user` defaults to **6 per authenticated
+but crossing it does not reject a review. `max-in-flight-per-user` defaults to **12 per authenticated
 user**, including admins, shared across instances. This is an approximate concurrent-request limit,
 not a requests-per-minute limit or a separate HTTP connection pool. New interactive reviews do not wait
 in a Quartz backlog; HTTP server threads, database connections, and provider execution still have
@@ -182,8 +182,11 @@ they do not justify this fallback. Counts can therefore understate active work, 
 limit can temporarily be exceeded. There is no global admission ceiling. A failed release can
 instead overstate active work until a later
 release succeeds or the reservation reaches its original deadline, based on the selected speed
-budget below. Start generously at 6 per user and observe global occupancy above 800 to accommodate
-normal navigation bursts and many concurrent reviewers. Revisit admission limits only if observed
+budget below. Start generously at 12 per user and observe global occupancy above 800 to accommodate
+normal navigation bursts and many concurrent reviewers. Slow calls retain slots: a reviewer starting
+one request every two seconds while calls take 20 seconds can have about ten requests in flight.
+The temporary allowance provides room for that overlap without extending the preset deadlines;
+larger bursts can still receive 429. Revisit admission limits only if observed
 provider pressure or application resource use justifies it.
 
 This approximation is intentional. The previous global `NOWAIT` row lock could turn overlapping
