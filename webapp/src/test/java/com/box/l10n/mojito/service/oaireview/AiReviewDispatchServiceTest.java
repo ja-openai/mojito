@@ -6,7 +6,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -101,13 +100,24 @@ public class AiReviewDispatchServiceTest {
             i -> {
               ControlledTask task = taskFor(i.getArgument(0, Long.class));
               assertEquals(task.token, i.getArgument(1));
-              task.transportSettled.set(i.getArgument(3));
               task.result.compareAndSet(null, i.getArgument(2));
               task.staged.countDown();
               return null;
             })
         .when(store)
-        .stageResult(anyLong(), anyString(), any(), anyBoolean());
+        .stageResult(anyLong(), anyString(), any());
+    when(store.releaseCapacity(anyString()))
+        .thenAnswer(
+            i -> {
+              ControlledTask task =
+                  tasks.values().stream()
+                      .filter(t -> t.token.equals(i.getArgument(0)))
+                      .findFirst()
+                      .orElseThrow();
+              assertTrue(task.httpSettled.isDone());
+              task.released.countDown();
+              return true;
+            });
     when(store.finishStaged(anyLong()))
         .thenAnswer(
             i -> {
@@ -224,7 +234,7 @@ public class AiReviewDispatchServiceTest {
       assertNull(task.task.getFinishedDate());
       assertEquals("pending", controller.get(task.id).status());
     }
-    verify(store, never()).stageResult(anyLong(), anyString(), any(), anyBoolean());
+    verify(store, never()).stageResult(anyLong(), anyString(), any());
     verify(store, never()).finishStaged(anyLong());
     verify(chat, times(requestCount)).chatPreparedCall(any(), anyLong(), any(), any());
 
@@ -236,7 +246,7 @@ public class AiReviewDispatchServiceTest {
       await(task.finished, "Provider result was not materialized");
       assertEquals("completed", controller.get(task.id).status());
       assertEquals(response(), controller.get(task.id).response());
-      assertEquals(Boolean.TRUE, task.transportSettled.get());
+      await(task.released, "Capacity was not released after HTTP settled");
     }
   }
 
@@ -260,7 +270,32 @@ public class AiReviewDispatchServiceTest {
     await(task.finished, "Cleanup did not materialize the already staged result");
     assertEquals("completed", controller.get(task.id).status());
     verify(chat, times(1)).chatPreparedCall(any(), eq(task.id), any(), any());
-    verify(store, times(1)).stageResult(eq(task.id), eq(task.token), any(), eq(true));
+    verify(store, times(1)).stageResult(eq(task.id), eq(task.token), any());
+  }
+
+  @Test
+  public void completedReviewIsAvailableWhileCapacityReleaseRetries() throws Exception {
+    ControlledTask task = task(42);
+    CountDownLatch released = new CountDownLatch(1);
+    AtomicBoolean firstRelease = new AtomicBoolean(true);
+    doAnswer(
+            invocation -> {
+              assertEquals("completed", controller.get(task.id).status());
+              if (firstRelease.getAndSet(false)) return false;
+              released.countDown();
+              return true;
+            })
+        .when(store)
+        .releaseCapacity(task.token);
+
+    assertTrue(dispatcher.start(task.id, prepared()));
+    task.provider.complete(response());
+    task.httpSettled.complete(null);
+
+    await(task.finished, "Capacity accounting blocked the completed response");
+    assertEquals("completed", controller.get(task.id).status());
+    await(released, "Deferred capacity release was not retried");
+    verify(chat, times(1)).chatPreparedCall(any(), eq(task.id), any(), any());
   }
 
   @Test
@@ -302,13 +337,13 @@ public class AiReviewDispatchServiceTest {
 
     await(task.finished, "Cancellation was not materialized");
     assertTrue(task.provider.isCancelled());
-    verify(store, never()).stageResult(eq(task.id), anyString(), any(), anyBoolean());
+    verify(store, never()).stageResult(eq(task.id), anyString(), any());
     task.httpSettled.complete(null);
     await(task.staged, "HTTP cancellation did not release capacity");
-    assertEquals(Boolean.TRUE, task.transportSettled.get());
+    await(task.released, "HTTP cancellation did not release capacity");
     assertEquals(409, controller.get(task.id).error().status());
     verify(store).cancel(task.id);
-    verify(store).stageResult(eq(task.id), eq(task.token), any(), eq(true));
+    verify(store).stageResult(eq(task.id), eq(task.token), any());
   }
 
   @Test
@@ -431,9 +466,9 @@ public class AiReviewDispatchServiceTest {
     final CompletableFuture<Void> httpSettled = new CompletableFuture<>();
     final AtomicBoolean claimed = new AtomicBoolean();
     final AtomicBoolean outputAvailable = new AtomicBoolean(true);
-    final AtomicReference<Boolean> transportSettled = new AtomicReference<>();
     final AtomicReference<AiReviewChatJob.Result> result = new AtomicReference<>();
     final CountDownLatch staged = new CountDownLatch(1);
+    final CountDownLatch released = new CountDownLatch(1);
     final CountDownLatch finishAttempt = new CountDownLatch(1);
     final CountDownLatch finished = new CountDownLatch(1);
 
