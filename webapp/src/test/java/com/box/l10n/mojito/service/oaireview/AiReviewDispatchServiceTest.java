@@ -187,7 +187,8 @@ public class AiReviewDispatchServiceTest {
             mock(AiReviewChatJobAccess.class),
             mapper,
             dispatcher,
-            new AiReviewExecutionProperties());
+            new AiReviewExecutionProperties(),
+            mock(AiReviewSubmissionRateObserver.class));
   }
 
   @After

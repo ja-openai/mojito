@@ -10,8 +10,10 @@ import com.box.l10n.mojito.service.oaireview.AiReviewConfiguredChatJob;
 import com.box.l10n.mojito.service.oaireview.AiReviewDispatchService;
 import com.box.l10n.mojito.service.oaireview.AiReviewExecutionProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared;
+import com.box.l10n.mojito.service.oaireview.AiReviewSubmissionRateObserver;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -34,6 +36,7 @@ public class AiReviewChatJobsWS {
   private final ObjectMapper objectMapper;
   private final AiReviewDispatchService dispatch;
   private final AiReviewExecutionProperties execution;
+  private final AiReviewSubmissionRateObserver submissions;
 
   public AiReviewChatJobsWS(
       AiReviewChatWS aiReviewChatWS,
@@ -42,7 +45,8 @@ public class AiReviewChatJobsWS {
       AiReviewChatJobAccess jobAccess,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
       AiReviewDispatchService dispatch,
-      AiReviewExecutionProperties execution) {
+      AiReviewExecutionProperties execution,
+      AiReviewSubmissionRateObserver submissions) {
     this.aiReviewChatWS = aiReviewChatWS;
     this.pollableTaskService = pollableTaskService;
     this.blobStorage = blobStorage;
@@ -50,15 +54,19 @@ public class AiReviewChatJobsWS {
     this.objectMapper = objectMapper;
     this.dispatch = dispatch;
     this.execution = execution;
+    this.submissions = submissions;
   }
 
   @PostMapping("/api/ai/review/jobs")
   @ResponseStatus(HttpStatus.ACCEPTED)
   public StartResponse start(@RequestBody AiReviewChatRequest request) {
+    Instant submittedAt = Instant.now();
+    long submittedAtNanos = System.nanoTime();
     if (request == null || request.messages() == null || request.messages().isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "messages must not be empty");
     }
     Prepared prepared = aiReviewChatWS.prepare(request);
+    submissions.observe(prepared.userId(), submittedAt, submittedAtNanos);
     PollableTask task =
         pollableTaskService.createPollableTask(
             null,
