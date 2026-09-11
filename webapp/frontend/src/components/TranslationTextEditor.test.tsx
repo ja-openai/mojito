@@ -163,13 +163,20 @@ function GuardedTranslationTextEditor({
 }
 
 describe('TranslationTextEditor', () => {
-  it.each([
-    { mode: 'assisted', assisted: true, rawMode: false },
-    { mode: 'unprotected', assisted: true, rawMode: true },
-    { mode: 'native', assisted: false, rawMode: false },
-  ])(
-    'inserts a special character at the caret in the $mode editor',
-    async ({ assisted, rawMode }) => {
+  it.each(
+    [
+      { mode: 'assisted', assisted: true, rawMode: false },
+      { mode: 'unprotected', assisted: true, rawMode: true },
+      { mode: 'native', assisted: false, rawMode: false },
+    ].flatMap((mode) =>
+      [
+        { label: 'No-break space', text: '\u00a0' },
+        { label: 'Word joiner', text: '\u2060' },
+      ].map((tool) => ({ ...mode, ...tool })),
+    ),
+  )(
+    'inserts $label at the caret in the $mode editor',
+    async ({ assisted, rawMode, label, text }) => {
       const user = userEvent.setup();
       const ref = createRef<VisibleTextEditorHandle>();
       const handleChange = vi.fn();
@@ -180,7 +187,7 @@ describe('TranslationTextEditor', () => {
           <ControlledTranslationTextEditor
             assisted={assisted}
             editorRef={ref}
-            initialValue="Bonjour monde"
+            initialValue="保存完了"
             onValueChange={handleChange}
           />,
         );
@@ -192,15 +199,15 @@ describe('TranslationTextEditor', () => {
             }),
           );
         }
-        act(() => ref.current?.setSelection({ start: 7, end: 7 }));
+        act(() => ref.current?.setSelection({ start: 2, end: 2 }));
 
         await user.click(screen.getByRole('button', { name: 'Characters' }));
-        await user.click(screen.getByRole('button', { name: /^No-break space/ }));
+        await user.click(screen.getByRole('button', { name: new RegExp(`^${label}`) }));
 
-        expect(handleChange).toHaveBeenLastCalledWith('Bonjour\u00a0 monde');
-        await waitFor(() => expect(ref.current?.getSelection()).toEqual({ start: 8, end: 8 }));
+        expect(handleChange).toHaveBeenLastCalledWith(`保存${text}完了`);
+        await waitFor(() => expect(ref.current?.getSelection()).toEqual({ start: 3, end: 3 }));
         expect(editor).toHaveFocus();
-        expect(screen.getByText('No-break space')).not.toBeVisible();
+        expect(screen.getByText(label)).not.toBeVisible();
       } finally {
         restoreDom();
       }
