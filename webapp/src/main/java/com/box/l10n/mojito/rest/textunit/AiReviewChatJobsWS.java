@@ -65,7 +65,8 @@ public class AiReviewChatJobsWS {
             AiReviewConfiguredChatJob.class.getCanonicalName(),
             null,
             0,
-            execution.getTimeoutSeconds());
+            execution.resolveTimeoutSeconds(
+                prepared.settings().profileId(), prepared.settings().reasoningEffort()));
     dispatch.start(task.getId(), prepared);
     return new StartResponse(task.getId());
   }

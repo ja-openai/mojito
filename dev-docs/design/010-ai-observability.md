@@ -177,8 +177,8 @@ both limits but concurrent updates defeat all reservation attempts, admission pr
 `best_effort` without adding a reservation. Failed reads or invalid stored state remain errors;
 they do not justify this fallback. Counts can therefore understate active work, and either limit
 can temporarily be exceeded. A failed release can instead overstate active work until a later
-release succeeds or the reservation reaches its original deadline, normally 180 seconds after task
-creation. The limits remain at 3 and 400 while admission outcomes are measured.
+release succeeds or the reservation reaches its original deadline, based on the selected speed
+budget below. The limits remain at 3 and 400 while admission outcomes are measured.
 
 This approximation is intentional. The previous global `NOWAIT` row lock could turn overlapping
 requests from different users into busy responses even when both limits had room. An optional
@@ -205,9 +205,34 @@ attempts, so summing every reason is not a request count. `AiReviewExecution.cap
 release attempts. These metrics distinguish actual observed limits from accounting contention
 before changing the configured limits.
 
-`l10n.ai-review.execution.timeout-seconds` defaults to **180 seconds overall**, measured from task
-creation. Each provider attempt uses the smaller of its adaptive timeout and the remaining overall
-budget, with at most three attempts. Expired, cancelled, or finished tasks cannot initiate a call
+Each review has a total speed-specific budget, persisted in the existing `PollableTask.timeout` and
+measured from task creation:
+
+| Preset | Overall budget |
+| --- | --- |
+| Fastest | 15 seconds |
+| Fast | 20 seconds |
+| Balanced | 30 seconds |
+| Thorough (admin) | 60 seconds |
+| Deep (admin) | 90 seconds |
+| Ultra (admin, manual) | 180 seconds |
+
+Configure individual budgets with `l10n.ai-review.execution.preset-timeout-seconds.<preset>`.
+Partial overrides retain the other defaults. `l10n.ai-review.execution.timeout-seconds` remains a
+global ceiling, defaulting to 180 seconds; it is no longer the budget for every interactive request.
+These are failure cutoffs, not latency promises. A fast review should not retain an abandoned
+reservation for three minutes. The initial budgets leave headroom above observed successful calls
+and should be tuned from actual timeout outcomes, especially for larger inputs.
+
+Use the effective preset after access checks and automatic Ultra fallback. Legacy model selections
+use their effective reasoning level: none uses Fast's budget, low Balanced's, medium Thorough's,
+high Deep's, and xhigh/max Ultra's. Old unclaimed Quartz inputs receive the same limits before
+claiming, without extending a shorter stored timeout. Already claimed tasks keep their recorded
+deadline across duplicate dispatch, configuration changes, and process restarts.
+
+Each provider attempt uses the smaller of its adaptive timeout and the remaining overall budget,
+with at most three attempts sharing that budget. Input size still influences the adaptive timeout
+but cannot extend the overall cutoff. Expired, cancelled, or finished tasks cannot initiate a call
 or retry. Cancellation attempts to release its reservation after the underlying HTTP future
 terminates or acknowledges cancellation. After process loss, the reservation expires at the
 original deadline. Client HTTP cancellation cannot establish whether the remote provider has

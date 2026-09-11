@@ -132,6 +132,30 @@ public class AiReviewChatJobsWSTest {
   }
 
   @Test
+  public void taskPersistsTheEffectiveSpeedBudgetBeforeDispatch() {
+    String[] presets = {"fastest", "fast", "balanced"};
+    long[] budgets = {15, 20, 30};
+    for (int i = 0; i < presets.length; i++) {
+      Prepared prepared =
+          new Prepared(
+              request(), 17L, new Settings(presets[i], "selected-model", "low", "low", "priority"));
+      when(review.prepare(request())).thenReturn(prepared);
+      when(tasks.createPollableTask(
+              null, AiReviewConfiguredChatJob.class.getCanonicalName(), null, 0, budgets[i]))
+          .thenReturn(task());
+
+      assertEquals(91L, ws.start(request()).taskId());
+
+      InOrder order = inOrder(tasks, dispatch);
+      order
+          .verify(tasks)
+          .createPollableTask(
+              null, AiReviewConfiguredChatJob.class.getCanonicalName(), null, 0, budgets[i]);
+      order.verify(dispatch).start(91L, prepared);
+    }
+  }
+
+  @Test
   public void taskUsesTheConfiguredOverallDeadline() {
     execution.setTimeoutSeconds(75);
     Prepared prepared =
