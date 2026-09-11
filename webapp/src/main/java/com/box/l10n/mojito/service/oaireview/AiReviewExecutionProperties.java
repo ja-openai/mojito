@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class AiReviewExecutionProperties {
   // Retain the existing configuration key; this is a warning threshold, not a global gate.
   private int maxInFlight = 800;
-  private int maxInFlightPerUser = 6;
+  private int maxInFlightPerUser = 12;
   private long timeoutSeconds = 180;
   private Map<String, Long> presetTimeoutSeconds = defaultPresetTimeoutSeconds();
 
