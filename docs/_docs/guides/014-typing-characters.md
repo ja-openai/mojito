@@ -16,6 +16,17 @@ Click in the translation and place the caret before using a system shortcut.
 These shortcuts operate your computer's tools directly; Mojito's menu provides
 instructions for opening them.
 
+## Insert a word joiner
+
+Place the caret between the characters you want to keep together, then choose
+**Characters > Word joiner**. This inserts **U+2060 WORD JOINER**, which prevents
+a line break at that position without adding a visible space. It is useful for
+CJK text where a non-breaking space would introduce an unwanted gap.
+
+With hidden characters visible, the editor shows a **WJ** marker so you can find
+the inserted character. The marker is only an editing aid; the translation stores
+the invisible word joiner.
+
 ## macOS
 
 ### Open the character picker

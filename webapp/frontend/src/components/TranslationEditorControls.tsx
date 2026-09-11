@@ -145,6 +145,12 @@ const TEXT_TOOL_GROUPS: Array<{ label: string; tools: SpecialTextTool[] }> = [
         title: 'Insert a narrow non-breaking space.',
       },
       {
+        code: 'WJ',
+        label: 'Word joiner',
+        text: '\u2060',
+        title: 'Prevent a line break without adding a space (U+2060).',
+      },
+      {
         code: '\u2019',
         label: 'Curly apostrophe',
         text: '\u2019',
