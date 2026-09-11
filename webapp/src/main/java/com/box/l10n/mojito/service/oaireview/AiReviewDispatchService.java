@@ -73,7 +73,7 @@ public class AiReviewDispatchService {
     completions.scheduleWithFixedDelay(this::checkCancellations, 2, 2, TimeUnit.SECONDS);
   }
 
-  /** Returns after starting HTTP, not its response. Full capacity produces a prompt busy result. */
+  /** Returns after starting HTTP. A full per-user allowance produces a prompt busy result. */
   public boolean start(long taskId, Prepared prepared) {
     prepared = interactive.enforceExecutionPolicy(prepared);
     Claim claim = store.tryClaim(taskId, ownerId, prepared.settings());

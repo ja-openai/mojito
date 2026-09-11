@@ -6,10 +6,11 @@ import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-/** Cluster-wide provider admission is deliberately independent of Quartz's thread pools. */
+/** Per-user admission and cluster-wide occupancy warnings are independent of Quartz's threads. */
 @Component
 @ConfigurationProperties("l10n.ai-review.execution")
 public class AiReviewExecutionProperties {
+  // Retain the existing configuration key; this is a warning threshold, not a global gate.
   private int maxInFlight = 800;
   private int maxInFlightPerUser = 6;
   private long timeoutSeconds = 180;

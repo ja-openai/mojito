@@ -300,7 +300,7 @@ public class AiReviewDispatchServiceTest {
   }
 
   @Test
-  public void fullCapacityProducesBusyResultWithoutQueuingProviderWork() throws Exception {
+  public void fullUserAllowanceProducesBusyResultWithoutQueuingProviderWork() throws Exception {
     ControlledTask task = task(51);
     doReturn(new Claim(Disposition.WAIT, null, task.deadline))
         .when(store)

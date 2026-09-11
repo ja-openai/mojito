@@ -20,6 +20,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.box.l10n.mojito.entity.MBlob;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.security.user.User;
@@ -62,6 +66,7 @@ import javax.sql.DataSource;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -102,6 +107,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     clock.set(Instant.parse("2026-09-10T22:00:00Z"));
     configuration = new AiReviewExecutionProperties();
     configuration.setMaxInFlight(1);
+    configuration.setMaxInFlightPerUser(1);
     configuration.setTimeoutSeconds(180);
     outputs = mock(PollableTaskBlobStorage.class);
     store = worker(outputs);
@@ -117,7 +123,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   @Test
-  public void defaultsAllowEightHundredAcrossTheClusterAndSixPerUser() {
+  public void defaultsWarnAtEightHundredAcrossTheClusterAndLimitSixPerUser() {
     AiReviewExecutionProperties defaults = new AiReviewExecutionProperties();
     assertEquals(800, defaults.getMaxInFlight());
     assertEquals(6, defaults.getMaxInFlightPerUser());
@@ -128,6 +134,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   @Test
   public void sixRequestsForOneUserDoNotBlockAnotherUserAcrossProcesses() {
     configuration.setMaxInFlight(400);
+    configuration.setMaxInFlightPerUser(6);
     long firstUser = user();
     long otherUser = user();
     AiReviewExecutionStore otherProcess = worker(outputs);
@@ -148,7 +155,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   @Test
-  public void allUsersStillShareTheGlobalLimit() {
+  public void distinctUsersCanStartBeyondTheGlobalWarningThreshold() {
     configuration.setMaxInFlight(2);
     assertEquals(
         Disposition.START, store.tryClaim(taskForUser(user()), "first-process").disposition());
@@ -156,10 +163,64 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
         Disposition.START,
         worker(outputs).tryClaim(taskForUser(user()), "second-process").disposition());
 
-    assertEquals(
-        Disposition.WAIT,
-        worker(outputs).tryClaim(taskForUser(user()), "third-process").disposition());
-    assertEquals(2, reservations());
+    Claim aboveThreshold = worker(outputs).tryClaim(taskForUser(user()), "third-process");
+
+    assertEquals(Disposition.START, aboveThreshold.disposition());
+    assertNotNull(aboveThreshold.token());
+    assertEquals(3, reservations());
+    assertTrue(capacity().reservations().containsKey(aboveThreshold.token()));
+  }
+
+  @Test
+  public void onlyActualPerUserRejectionsLogTheTaskUserAndConfiguredLimits() {
+    configuration.setMaxInFlight(800);
+    configuration.setMaxInFlightPerUser(6);
+    long reviewerId = user();
+    long firstTask = taskForUser(reviewerId);
+    long rejectedTask = taskForUser(reviewerId);
+    Logger logger = (Logger) LoggerFactory.getLogger(AiReviewExecutionStore.class);
+    Level previousLevel = logger.getLevel();
+    ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    logger.setLevel(Level.WARN);
+    try {
+      Claim first = store.tryClaim(firstTask, "first-process");
+      assertEquals(Disposition.START, first.disposition());
+      for (int i = 1; i < 6; i++) {
+        assertEquals(
+            Disposition.START,
+            worker(outputs).tryClaim(taskForUser(reviewerId), "other-process").disposition());
+      }
+      Claim duplicate = worker(outputs).tryClaim(firstTask, "duplicate-process");
+      assertEquals(Disposition.WAIT, duplicate.disposition());
+      assertEquals(first.token(), duplicate.token());
+      assertTrue(appender.list.isEmpty());
+
+      Claim rejected = worker(outputs).tryClaim(rejectedTask, "rejected-process");
+
+      assertEquals(Disposition.WAIT, rejected.disposition());
+      assertNull(rejected.token());
+      assertEquals(
+          Disposition.START,
+          worker(outputs).tryClaim(taskForUser(user()), "different-user-process").disposition());
+      assertEquals(first.token(), store.tryClaim(firstTask, "another-duplicate").token());
+      assertEquals(1, appender.list.size());
+      ILoggingEvent warning = appender.list.getFirst();
+      assertEquals(Level.WARN, warning.getLevel());
+      assertEquals(
+          "AI review admission rejected: reason=user_limit, taskId="
+              + rejectedTask
+              + ", userId="
+              + reviewerId
+              + ", userLimit=6, globalThreshold=800",
+          warning.getFormattedMessage());
+      assertNull(warning.getThrowableProxy());
+    } finally {
+      logger.detachAppender(appender);
+      logger.setLevel(previousLevel);
+      appender.stop();
+    }
   }
 
   @Test
@@ -219,6 +280,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   @Test
   public void ownerlessLegacyTasksShareOneConservativeUserBucket() {
     configuration.setMaxInFlight(400);
+    configuration.setMaxInFlightPerUser(6);
     for (int i = 0; i < 6; i++) {
       assertEquals(
           Disposition.START,
@@ -487,7 +549,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   @Test
-  public void independentWorkersCannotExceedSharedCapacity() throws Exception {
+  public void independentWorkersEnforceTheSharedPerUserCapacity() throws Exception {
     AiReviewExecutionStore secondWorker = worker(outputs);
     initializeWorkers(store, secondWorker);
     long firstTask = task(0, 3600);
@@ -891,6 +953,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     long stagedTask = task(0, 3600);
     store.tryClaim(activeTask, "worker");
     configuration.setMaxInFlight(2);
+    configuration.setMaxInFlightPerUser(2);
     Claim staged = store.tryClaim(stagedTask, "worker");
     AiReviewChatJob.Result saved = result("Completed before its deadline");
     store.stageResult(stagedTask, staged.token(), saved);
