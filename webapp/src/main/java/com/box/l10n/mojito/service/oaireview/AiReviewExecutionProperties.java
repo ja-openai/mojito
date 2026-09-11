@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties("l10n.ai-review.execution")
 public class AiReviewExecutionProperties {
-  private int maxInFlight = 400;
-  private int maxInFlightPerUser = 3;
+  private int maxInFlight = 800;
+  private int maxInFlightPerUser = 6;
   private long timeoutSeconds = 180;
   private Map<String, Long> presetTimeoutSeconds = defaultPresetTimeoutSeconds();
 
