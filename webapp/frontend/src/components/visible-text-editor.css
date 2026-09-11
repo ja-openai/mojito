@@ -69,6 +69,11 @@
     box-shadow var(--transition-fast);
 }
 
+.visible-text-editor--native {
+  /* AutoTextarea owns the height of the native editing surface. */
+  min-height: 0;
+}
+
 .visible-text-editor:focus-within {
   border-color: var(--color-focus-border);
   box-shadow: 0 0 0 0.15rem var(--color-focus-outline);
