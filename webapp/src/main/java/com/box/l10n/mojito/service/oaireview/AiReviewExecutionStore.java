@@ -1,20 +1,17 @@
 package com.box.l10n.mojito.service.oaireview;
 
-import com.box.l10n.mojito.entity.MBlob;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
-import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
+import com.box.l10n.mojito.service.oaireview.AiReviewCapacityStore.Admission;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.LockTimeoutException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PessimisticLockException;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,43 +20,46 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.CannotAcquireLockException;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Mandatory, transactional review lifecycle. Uses the existing task JSON and a non-expiring,
  * uniquely named database blob; this state must never be routed to external blob storage.
  *
- * <p>Locks are always capacity then task. Admission uses NOWAIT and never waits for a provider
- * permit. A reservation survives process loss until the original overall deadline. An ambiguous
- * attempt is never sent again automatically.
+ * <p>Capacity is approximate and updated optimistically in independent transactions. Task claims,
+ * cancellation and results remain fenced by a task-specific lock and a unique attempt token. An
+ * ambiguous attempt is never sent again automatically.
  */
 @Service
 public class AiReviewExecutionStore {
+  private static final Logger logger = LoggerFactory.getLogger(AiReviewExecutionStore.class);
   static final String CAPACITY_NAME = "ai_review_execution/v1/capacity";
   static final String SCHEMA = "ai-review-execution-v1";
   private static final Map<String, Object> NOWAIT = Map.of("jakarta.persistence.lock.timeout", 0);
   @PersistenceContext EntityManager entityManager;
-  private final MBlobRepository blobs;
+  private final AiReviewCapacityStore capacityStore;
   private final PollableTaskBlobStorage taskBlobs;
   private final ObjectMapper mapper;
   private final AiReviewExecutionProperties configuration;
   private final TransactionTemplate transaction;
-  private volatile boolean initialized;
   Clock clock = Clock.systemUTC();
 
   public AiReviewExecutionStore(
-      MBlobRepository blobs,
+      AiReviewCapacityStore capacityStore,
       PollableTaskBlobStorage taskBlobs,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper mapper,
       AiReviewExecutionProperties configuration,
       PlatformTransactionManager transactionManager) {
-    this.blobs = blobs;
+    this.capacityStore = capacityStore;
     this.taskBlobs = taskBlobs;
     this.mapper = mapper;
     this.configuration = configuration;
@@ -89,78 +89,83 @@ public class AiReviewExecutionStore {
 
   public record Capacity(Map<String, Reservation> reservations) {}
 
+  private record Eligibility(Claim existing, Long userId, Instant deadline) {}
+
   public Claim tryClaim(long taskId, String owner) {
+    Eligibility eligibility =
+        claimTransaction(
+            taskId,
+            () -> {
+              PollableTask task = lockTask(taskId);
+              Claim existing = existingClaim(task);
+              if (existing != null) return new Eligibility(existing, null, null);
+              State state = state(task);
+              return new Eligibility(
+                  null, ownerId(task), state == null ? deadline(task) : state.deadline());
+            });
+    if (eligibility.existing() != null) return eligibility.existing();
+
+    String token = UUID.randomUUID().toString();
+    // No task transaction or database connection is held while capacity updates retry.
+    Admission admission =
+        capacityStore.reserve(token, eligibility.userId(), eligibility.deadline(), clock.instant());
+    boolean started = false;
     try {
-      initializeCapacity();
-      return tx(
-          () -> {
-            MBlob row = lockCapacity();
-            Capacity capacity = capacity(row);
-            Instant now = clock.instant();
-            capacity
-                .reservations()
-                .values()
-                .removeIf(reservation -> !reservation.deadline().isAfter(now));
-            writeCapacity(row, capacity);
-            PollableTask task = lockTask(taskId);
-            if (task == null) return claim(Disposition.DONE, null);
-            State state = state(task);
-            if (task.getFinishedDate() != null) return claim(Disposition.DONE, state);
-            if (state != null && state.result() != null) return claim(Disposition.FINISH, state);
-            Instant deadline = state == null ? deadline(task) : state.deadline();
-            if (!deadline.isAfter(now) || task.getErrorMessage() != null) {
-              State expired =
-                  new State(
-                      SCHEMA,
-                      state == null ? null : state.token(),
-                      state == null ? null : state.owner(),
-                      state == null ? null : state.startedAt(),
-                      deadline,
-                      error(504, "AI review took too long. Please retry."));
-              writeState(task, expired);
-              return claim(Disposition.FINISH, expired);
-            }
-            if (state != null && state.token() != null) return claim(Disposition.WAIT, state);
-            Long userId = ownerId(task);
-            long userInFlight =
-                capacity.reservations().values().stream()
-                    .filter(reservation -> Objects.equals(userId, reservation.userId()))
-                    .count();
-            if (capacity.reservations().size() >= configuration.getMaxInFlight()
-                || userInFlight >= configuration.getMaxInFlightPerUser()) {
-              if (state == null)
-                writeState(task, new State(SCHEMA, null, null, null, deadline, null));
-              return new Claim(Disposition.WAIT, null, deadline);
-            }
-            String token = UUID.randomUUID().toString();
-            State started = new State(SCHEMA, token, owner, now, deadline, null);
-            capacity.reservations().put(token, new Reservation(userId, deadline));
-            writeCapacity(row, capacity);
-            writeState(task, started);
-            return claim(Disposition.START, started);
-          });
-    } catch (RuntimeException exception) {
-      if (isLockContention(exception)) return new Claim(Disposition.WAIT, null, null);
-      throw exception;
+      Claim claimed =
+          claimTransaction(
+              taskId,
+              () -> {
+                PollableTask task = lockTask(taskId);
+                // Cancellation, another claim or expiration can win during capacity accounting.
+                Claim existing = existingClaim(task);
+                if (existing != null) return existing;
+                State state = state(task);
+                Instant deadline = state == null ? deadline(task) : state.deadline();
+                if (admission == Admission.USER_LIMIT || admission == Admission.GLOBAL_LIMIT) {
+                  if (state == null)
+                    writeState(task, new State(SCHEMA, null, null, null, deadline, null));
+                  return new Claim(Disposition.WAIT, null, deadline);
+                }
+                State claimedState =
+                    new State(SCHEMA, token, owner, clock.instant(), deadline, null);
+                writeState(task, claimedState);
+                return claim(Disposition.START, claimedState);
+              });
+      started = claimed.disposition() == Disposition.START;
+      return claimed;
+    } finally {
+      // Duplicate or cancelled tasks release any provisional reservation independently.
+      if (!started && admission == Admission.RESERVED) releaseCapacity(token);
     }
   }
 
-  /** Called only when the local transport has completed. Fences both result and slot release. */
-  public void stageResult(long taskId, String token, AiReviewChatJob.Result result) {
-    stageResult(taskId, token, result, true);
+  private Claim existingClaim(PollableTask task) {
+    if (task == null) return claim(Disposition.DONE, null);
+    State state = state(task);
+    if (task.getFinishedDate() != null) return claim(Disposition.DONE, state);
+    if (state != null && state.result() != null) return claim(Disposition.FINISH, state);
+    Instant deadline = state == null ? deadline(task) : state.deadline();
+    if (!deadline.isAfter(clock.instant()) || task.getErrorMessage() != null) {
+      State expired =
+          new State(
+              SCHEMA,
+              state == null ? null : state.token(),
+              state == null ? null : state.owner(),
+              state == null ? null : state.startedAt(),
+              deadline,
+              error(504, "AI review took too long. Please retry."));
+      writeState(task, expired);
+      return claim(Disposition.FINISH, expired);
+    }
+    return state != null && state.token() != null ? claim(Disposition.WAIT, state) : null;
   }
 
-  public void stageResult(
-      long taskId, String token, AiReviewChatJob.Result result, boolean transportSettled) {
+  /** Persist the canonical result independently of approximate capacity accounting. */
+  public void stageResult(long taskId, String token, AiReviewChatJob.Result result) {
     Objects.requireNonNull(token);
     Objects.requireNonNull(result);
     tx(
         () -> {
-          MBlob row = lockCapacity();
-          Capacity capacity = capacity(row);
-          // Removing this opaque token cannot remove a different attempt's reservation.
-          if (transportSettled) capacity.reservations().remove(token);
-          writeCapacity(row, capacity);
           PollableTask task = lockTask(taskId);
           if (task == null || task.getFinishedDate() != null) return null;
           State state = state(task);
@@ -175,6 +180,17 @@ public class AiReviewExecutionStore {
                   SCHEMA, token, state.owner(), state.startedAt(), state.deadline(), accepted));
           return null;
         });
+  }
+
+  /** Release after transport settlement or abandoning an unstarted claim. */
+  public boolean releaseCapacity(String token) {
+    try {
+      return capacityStore.release(token, clock.instant());
+    } catch (RuntimeException exception) {
+      logger.warn(
+          "AI review capacity release deferred; reservation expires at its deadline", exception);
+      return false;
+    }
   }
 
   /**
@@ -331,66 +347,6 @@ public class AiReviewExecutionStore {
     return task;
   }
 
-  private MBlob lockCapacity() {
-    Long id =
-        blobs
-            .findIdByName(CAPACITY_NAME)
-            .orElseThrow(() -> new IllegalStateException("Review capacity record is missing"));
-    MBlob row = entityManager.find(MBlob.class, id, LockModeType.PESSIMISTIC_WRITE, NOWAIT);
-    // Initialization and admission may share a request-bound persistence context across commits.
-    // Always reload the reservations while holding the database lock before updating them.
-    if (row != null) entityManager.refresh(row, LockModeType.PESSIMISTIC_WRITE, NOWAIT);
-    return row;
-  }
-
-  private synchronized void initializeCapacity() {
-    if (initialized) return;
-    try {
-      tx(
-          () -> {
-            if (blobs.findIdByName(CAPACITY_NAME).isEmpty()) {
-              MBlob row = new MBlob();
-              row.setName(CAPACITY_NAME);
-              writeCapacity(row, new Capacity(new HashMap<>()));
-              // No expiration: this is admission state, not an evictable cache.
-              blobs.saveAndFlush(row);
-            }
-            return null;
-          });
-    } catch (DataIntegrityViolationException race) {
-      // Another pod created the unique row. Inspect it in a new transaction below.
-    }
-    tx(
-        () -> {
-          capacity(lockCapacity());
-          return null;
-        });
-    initialized = true;
-  }
-
-  private Capacity capacity(MBlob row) {
-    if (row == null || row.getContent() == null)
-      throw new IllegalStateException("Missing review capacity");
-    Capacity parsed =
-        mapper.readValueUnchecked(
-            new String(row.getContent(), StandardCharsets.UTF_8), Capacity.class);
-    if (parsed == null
-        || parsed.reservations() == null
-        || parsed.reservations().entrySet().stream()
-            .anyMatch(
-                entry ->
-                    entry.getKey() == null
-                        || entry.getValue() == null
-                        || entry.getValue().deadline() == null)) {
-      throw new IllegalStateException("Invalid review capacity state");
-    }
-    return new Capacity(new HashMap<>(parsed.reservations()));
-  }
-
-  private void writeCapacity(MBlob row, Capacity capacity) {
-    row.setContent(mapper.writeValueAsStringUnchecked(capacity).getBytes(StandardCharsets.UTF_8));
-  }
-
   private State state(PollableTask task) {
     String message = task.getMessage();
     if (message == null || !message.contains(SCHEMA)) return null;
@@ -408,6 +364,21 @@ public class AiReviewExecutionStore {
   private Claim claim(Disposition disposition, State state) {
     return new Claim(
         disposition, state == null ? null : state.token(), state == null ? null : state.deadline());
+  }
+
+  private <T> T claimTransaction(long taskId, Supplier<T> action) {
+    for (int attempt = 0; ; attempt++) {
+      try {
+        return tx(action);
+      } catch (RuntimeException exception) {
+        if (!isLockContention(exception)) throw exception;
+        if (attempt == 2) {
+          logger.warn("AI review task claim contended, taskId={}", taskId, exception);
+          throw new ResponseStatusException(
+              HttpStatus.SERVICE_UNAVAILABLE, "AI review task is busy. Please retry.", exception);
+        }
+      }
+    }
   }
 
   private <T> T tx(Supplier<T> action) {

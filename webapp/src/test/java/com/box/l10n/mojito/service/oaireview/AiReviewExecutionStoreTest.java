@@ -7,9 +7,16 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -22,11 +29,13 @@ import com.box.l10n.mojito.rest.textunit.AiReviewChatWS.AiReviewChatResponse;
 import com.box.l10n.mojito.service.DBUtils;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
+import com.box.l10n.mojito.service.oaireview.AiReviewCapacityStore.Admission;
 import com.box.l10n.mojito.service.oaireview.AiReviewExecutionStore.Claim;
 import com.box.l10n.mojito.service.oaireview.AiReviewExecutionStore.Disposition;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskRepository;
 import com.box.l10n.mojito.service.security.user.UserRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceContext;
@@ -40,12 +49,14 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import javax.sql.DataSource;
 import org.junit.After;
 import org.junit.Before;
@@ -53,12 +64,14 @@ import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.jpa.EntityManagerHolder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 /** Exercises independent worker instances against the same real database transactions. */
 @TestPropertySource(properties = "l10n.org.quartz.scheduler.enabled=false")
@@ -165,13 +178,13 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
         worker(outputs).tryClaim(taskForUser(user()), "other-user-process").disposition());
 
     store.stageResult(firstTask, first.token(), result("Cancelled transport settled"));
+    store.releaseCapacity(first.token());
     Claim next = worker(outputs).tryClaim(nextTask, "second-process");
     assertEquals(Disposition.START, next.disposition());
     store.stageResult(
         nextTask,
         next.token(),
-        new AiReviewChatJob.Result(null, new AiReviewChatJob.Error(409, "Cancelled")),
-        false);
+        new AiReviewChatJob.Result(null, new AiReviewChatJob.Error(409, "Cancelled")));
     assertEquals(
         Disposition.WAIT, store.tryClaim(taskForUser(userId), "third-process").disposition());
 
@@ -237,20 +250,149 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
             assertTrue(rows.next());
           }
         }
-        // Verify both normal admission and a restarted instance's first capacity inspection.
+        // A held accounting row cannot prevent either an existing or restarted process from
+        // claiming a new task. Each bounded write attempt may wait for its one-second timeout.
         for (AiReviewExecutionStore contender : List.of(store, worker(outputs))) {
+          long contenderTask = contender == store ? taskId : task(0, 3600);
           Claim claim =
               executor
-                  .submit(() -> contender.tryClaim(taskId, "contending-process"))
-                  .get(2, TimeUnit.SECONDS);
-          assertEquals(Disposition.WAIT, claim.disposition());
+                  .submit(() -> contender.tryClaim(contenderTask, "contending-process"))
+                  .get(8, TimeUnit.SECONDS);
+          assertEquals(Disposition.START, claim.disposition());
+          assertTrue(contender.isActive(contenderTask, claim.token()));
+          Claim duplicate = worker(outputs).tryClaim(contenderTask, "duplicate-process");
+          assertEquals(Disposition.WAIT, duplicate.disposition());
+          assertEquals(claim.token(), duplicate.token());
         }
       } finally {
         locker.rollback();
       }
     }
     assertEquals(0, reservations());
+    assertEquals(Disposition.WAIT, store.tryClaim(taskId, "after-lock-release").disposition());
+  }
+
+  @Test
+  public void mysqlTaskRowContentionReturnsUnavailableWithoutReservingCapacity() throws Exception {
+    assumeTrue("MySQL-specific NOWAIT semantics", dbUtils.isMysql());
+    long taskId = task(0, 3600);
+    try (Connection locker = dataSource.getConnection();
+        var executor = Executors.newSingleThreadExecutor()) {
+      locker.setAutoCommit(false);
+      try {
+        lockTaskRow(locker, taskId);
+        ResponseStatusException error =
+            executor
+                .submit(
+                    () ->
+                        assertThrows(
+                            ResponseStatusException.class,
+                            () -> store.tryClaim(taskId, "contending-process")))
+                .get(5, TimeUnit.SECONDS);
+        assertEquals(503, error.getStatusCode().value());
+      } finally {
+        locker.rollback();
+      }
+    }
+    assertEquals(0, reservations());
+    assertNull(tasks.findById(taskId).orElseThrow().getMessage());
     assertEquals(Disposition.START, store.tryClaim(taskId, "after-lock-release").disposition());
+  }
+
+  @Test
+  public void cancellationDuringReservationPreventsStartingAndReleasesProvisionalCapacity() {
+    long taskId = task(0, 3600);
+    AiReviewCapacityStore capacity = capacityWithAdmissionHook(token -> store.cancel(taskId));
+    AiReviewExecutionStore contender = worker(outputs, capacity);
+
+    Claim claim = contender.tryClaim(taskId, "cancelled-process");
+
+    assertEquals(Disposition.FINISH, claim.disposition());
+    assertNull(claim.token());
+    assertEquals(409, contender.getStagedResult(taskId).orElseThrow().error().status());
+    assertEquals(0, reservations());
+    verifyNoInteractions(outputs);
+  }
+
+  @Test
+  public void finishingDuringReservationPreventsStartingAndReleasesProvisionalCapacity() {
+    long taskId = task(0, 3600);
+    AiReviewCapacityStore capacity =
+        capacityWithAdmissionHook(
+            token ->
+                new TransactionTemplate(transactions)
+                    .executeWithoutResult(
+                        status ->
+                            entityManager
+                                .find(PollableTask.class, taskId)
+                                .setFinishedDate(ZonedDateTime.now(clock))));
+    AiReviewExecutionStore contender = worker(outputs, capacity);
+
+    Claim claim = contender.tryClaim(taskId, "finished-process");
+
+    assertEquals(Disposition.DONE, claim.disposition());
+    assertNull(claim.token());
+    assertNotNull(tasks.findById(taskId).orElseThrow().getFinishedDate());
+    assertEquals(0, reservations());
+    verifyNoInteractions(outputs);
+  }
+
+  @Test
+  public void mysqlTaskClaimFailureReleasesItsProvisionalCapacity() throws Exception {
+    assumeTrue("MySQL-specific NOWAIT semantics", dbUtils.isMysql());
+    long taskId = task(0, 3600);
+    try (Connection locker = dataSource.getConnection()) {
+      locker.setAutoCommit(false);
+      try {
+        AiReviewCapacityStore capacity =
+            capacityWithAdmissionHook(
+                token -> {
+                  try {
+                    lockTaskRow(locker, taskId);
+                  } catch (java.sql.SQLException exception) {
+                    throw new IllegalStateException(exception);
+                  }
+                });
+        AiReviewExecutionStore contender = worker(outputs, capacity);
+
+        ResponseStatusException error =
+            assertThrows(
+                ResponseStatusException.class,
+                () -> contender.tryClaim(taskId, "contending-process"));
+
+        assertEquals(503, error.getStatusCode().value());
+        assertEquals(0, reservations());
+      } finally {
+        locker.rollback();
+      }
+    }
+    assertNull(tasks.findById(taskId).orElseThrow().getMessage());
+    assertEquals(Disposition.START, store.tryClaim(taskId, "after-lock-release").disposition());
+  }
+
+  @Test
+  public void completedResultCanFinishEvenWhenCapacityReleaseMustRetry() {
+    AiReviewCapacityStore capacity = spy(capacityStore());
+    AiReviewExecutionStore completing = worker(outputs, capacity);
+    long taskId = task(0, 3600);
+    Claim claim = completing.tryClaim(taskId, "provider-process");
+    AiReviewChatJob.Result completed =
+        result("The result is durable despite accounting contention");
+    doReturn(false).when(capacity).release(anyString(), any(Instant.class));
+
+    completing.stageResult(taskId, claim.token(), completed);
+
+    assertEquals(1, reservations());
+    assertEquals(completed, worker(outputs).getStagedResult(taskId).orElseThrow());
+    assertTrue(worker(outputs).finishStaged(taskId));
+    assertNotNull(tasks.findById(taskId).orElseThrow().getFinishedDate());
+    verify(outputs).saveOutput(taskId, completed);
+    assertFalse(completing.releaseCapacity(claim.token()));
+    assertEquals(1, reservations());
+    doCallRealMethod().when(capacity).release(anyString(), any(Instant.class));
+    assertTrue(completing.releaseCapacity(claim.token()));
+    assertEquals(0, reservations());
+    assertEquals(completed, completing.getStagedResult(taskId).orElseThrow());
   }
 
   @Test
@@ -290,6 +432,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
           () -> {
             AiReviewExecutionStore completing = worker(outputs);
             completing.stageResult(taskId, claim.token(), completed);
+            completing.releaseCapacity(claim.token());
             return completing.finishStaged(taskId);
           });
       assertNull(cached.getFinishedDate());
@@ -384,6 +527,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     AiReviewChatJob.Result result = result("Reviewed translation 😀");
 
     store.stageResult(taskId, claim.token(), result);
+    store.releaseCapacity(claim.token());
     assertEquals(0, reservations());
     assertNull(tasks.findById(taskId).orElseThrow().getFinishedDate());
 
@@ -404,6 +548,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     Claim claim = store.tryClaim(taskId, "first-worker");
     AiReviewChatJob.Result result = result("Durable result");
     store.stageResult(taskId, claim.token(), result);
+    store.releaseCapacity(claim.token());
     doThrow(new IllegalStateException("Temporary output storage failure"))
         .when(outputs)
         .saveOutput(taskId, result);
@@ -434,8 +579,10 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     assertEquals(1, reservations());
 
     store.stageResult(cancelledTask, "unrelated-token", result("Wrong attempt"));
+    store.releaseCapacity("unrelated-token");
     assertEquals(1, reservations());
     store.stageResult(cancelledTask, claim.token(), result("Late provider response"));
+    store.releaseCapacity(claim.token());
 
     assertEquals(cancellation, store.getStagedResult(cancelledTask).orElseThrow());
     assertEquals(0, reservations());
@@ -450,10 +597,12 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     Claim oldClaim = store.tryClaim(oldTask, "first-worker");
     AiReviewChatJob.Result firstResult = result("First result");
     store.stageResult(oldTask, oldClaim.token(), firstResult);
+    store.releaseCapacity(oldClaim.token());
     Claim nextClaim = store.tryClaim(nextTask, "second-worker");
     assertEquals(Disposition.START, nextClaim.disposition());
 
     store.stageResult(oldTask, oldClaim.token(), result("Duplicate completion"));
+    store.releaseCapacity(oldClaim.token());
 
     assertEquals(1, reservations());
     assertTrue(store.isActive(nextTask, nextClaim.token()));
@@ -469,7 +618,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
         new AiReviewChatJob.Result(
             null, new AiReviewChatJob.Error(409, "AI review was cancelled."));
 
-    store.stageResult(cancelledTask, claim.token(), cancellation, false);
+    store.stageResult(cancelledTask, claim.token(), cancellation);
     assertTrue(store.finishStaged(cancelledTask));
 
     assertEquals(1, reservations());
@@ -512,6 +661,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     assertEquals(
         Disposition.START, recovered.tryClaim(freshTask, "replacement-worker").disposition());
     recovered.stageResult(abandonedTask, original.token(), result("Too late"));
+    recovered.releaseCapacity(original.token());
     assertEquals(1, reservations());
     assertEquals(504, recovered.getStagedResult(abandonedTask).orElseThrow().error().status());
   }
@@ -523,6 +673,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     clock.advance(Duration.ofSeconds(180));
 
     store.stageResult(taskId, claim.token(), result("After the deadline"));
+    store.releaseCapacity(claim.token());
 
     assertEquals(504, store.getStagedResult(taskId).orElseThrow().error().status());
     assertFalse(store.isActive(taskId, claim.token()));
@@ -618,6 +769,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     Claim staged = store.tryClaim(stagedTask, "worker");
     AiReviewChatJob.Result saved = result("Completed before its deadline");
     store.stageResult(stagedTask, staged.token(), saved);
+    store.releaseCapacity(staged.token());
 
     worker(outputs).expire(activeTask);
     worker(outputs).expire(abandonedTask);
@@ -691,11 +843,52 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   private AiReviewExecutionStore worker(PollableTaskBlobStorage outputStorage) {
+    return worker(outputStorage, capacityStore());
+  }
+
+  private AiReviewExecutionStore worker(
+      PollableTaskBlobStorage outputStorage, AiReviewCapacityStore capacityStore) {
     AiReviewExecutionStore worker =
-        new AiReviewExecutionStore(blobs, outputStorage, mapper, configuration, transactions);
+        new AiReviewExecutionStore(
+            capacityStore, outputStorage, mapper, configuration, transactions);
     worker.entityManager = entityManager;
     worker.clock = clock;
     return worker;
+  }
+
+  private AiReviewCapacityStore capacityStore() {
+    return new AiReviewCapacityStore(
+        blobs,
+        mapper,
+        configuration,
+        transactions,
+        new JdbcTemplate(dataSource),
+        new SimpleMeterRegistry());
+  }
+
+  private AiReviewCapacityStore capacityWithAdmissionHook(Consumer<String> afterReservation) {
+    AiReviewCapacityStore capacity = spy(capacityStore());
+    doAnswer(
+            invocation -> {
+              Admission admission = (Admission) invocation.callRealMethod();
+              assertEquals(Admission.RESERVED, admission);
+              assertEquals(1, reservations());
+              afterReservation.accept(invocation.getArgument(0));
+              return admission;
+            })
+        .when(capacity)
+        .reserve(anyString(), nullable(Long.class), any(Instant.class), any(Instant.class));
+    return capacity;
+  }
+
+  private void lockTaskRow(Connection connection, long taskId) throws java.sql.SQLException {
+    try (var statement =
+        connection.prepareStatement("select id from pollable_task where id=? for update")) {
+      statement.setLong(1, taskId);
+      try (var rows = statement.executeQuery()) {
+        assertTrue(rows.next());
+      }
+    }
   }
 
   private long task(long ageSeconds, long timeoutSeconds) {
@@ -739,16 +932,18 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   private void initializeWorkers(AiReviewExecutionStore... workers) {
-    long completedTask = task(0, 3600);
-    new TransactionTemplate(transactions)
-        .executeWithoutResult(
-            status ->
-                entityManager
-                    .find(PollableTask.class, completedTask)
-                    .setFinishedDate(ZonedDateTime.now(clock)));
     for (AiReviewExecutionStore worker : workers) {
-      assertEquals(
-          Disposition.DONE, worker.tryClaim(completedTask, "initialization").disposition());
+      long completedTask = task(0, 3600);
+      Claim claim = worker.tryClaim(completedTask, "initialization");
+      assertEquals(Disposition.START, claim.disposition());
+      worker.stageResult(completedTask, claim.token(), result("Initialization"));
+      worker.releaseCapacity(claim.token());
+      new TransactionTemplate(transactions)
+          .executeWithoutResult(
+              status ->
+                  entityManager
+                      .find(PollableTask.class, completedTask)
+                      .setFinishedDate(ZonedDateTime.now(clock)));
     }
   }
 
@@ -800,10 +995,14 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   private AiReviewExecutionStore.Capacity capacity() {
-    MBlob capacity = blobs.findByName(AiReviewExecutionStore.CAPACITY_NAME).orElseThrow();
-    return mapper.readValueUnchecked(
-        new String(capacity.getContent(), StandardCharsets.UTF_8),
-        AiReviewExecutionStore.Capacity.class);
+    return blobs
+        .findByName(AiReviewExecutionStore.CAPACITY_NAME)
+        .map(
+            capacity ->
+                mapper.readValueUnchecked(
+                    new String(capacity.getContent(), StandardCharsets.UTF_8),
+                    AiReviewExecutionStore.Capacity.class))
+        .orElseGet(() -> new AiReviewExecutionStore.Capacity(Map.of()));
   }
 
   private void removeCapacity() {

@@ -145,9 +145,11 @@ public class AiReviewDispatchService {
 
   private void complete(long taskId, Claim claim, AiReviewChatJob.Result result) {
     try {
-      store.stageResult(taskId, claim.token(), result, true);
+      store.stageResult(taskId, claim.token(), result);
       inFlight.remove(claim.token());
       finish(taskId);
+      // Make the result available before any contended capacity-accounting writes.
+      if (!store.releaseCapacity(claim.token())) retryCapacityRelease(claim, 1);
     } catch (RuntimeException exception) {
       logger.warn("AI review completion will retry, taskId={}", taskId, exception);
       if (!completions.isShutdown() && Instant.now().isBefore(claim.deadline().plusSeconds(30))) {
@@ -157,6 +159,17 @@ public class AiReviewDispatchService {
         // Cleanup materializes a staged result or fails at the original deadline.
       }
     }
+  }
+
+  private void retryCapacityRelease(Claim claim, int delaySeconds) {
+    if (completions.isShutdown() || !Instant.now().isBefore(claim.deadline())) return;
+    completions.schedule(
+        () -> {
+          if (!store.releaseCapacity(claim.token()))
+            retryCapacityRelease(claim, Math.min(delaySeconds * 2, 10));
+        },
+        delaySeconds,
+        TimeUnit.SECONDS);
   }
 
   private void finish(long taskId) {
