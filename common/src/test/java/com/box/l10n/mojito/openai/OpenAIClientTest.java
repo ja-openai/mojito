@@ -576,11 +576,6 @@ public class OpenAIClientTest {
                         .build(),
                     userMessageBuilder().content("This is a unit test").build()))
             .build();
-    OpenAIClient.builder()
-        .apiKey(API_KEY)
-        .build()
-        .getChatCompletions(chatCompletionsRequest().build(), Duration.of(5, ChronoUnit.SECONDS));
-
     String jsonResponse =
         """
         {
