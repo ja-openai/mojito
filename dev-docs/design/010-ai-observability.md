@@ -157,10 +157,11 @@ through periodic checks. Cancellation propagates to the underlying HTTP request.
 
 ### Interactive provider capacity and deadlines
 
-`l10n.ai-review.execution.max-in-flight` defaults to **800 across all instances**, independent of
-Quartz threads or replica count. `max-in-flight-per-user` defaults to **6 per authenticated user**,
-including admins, shared across instances. These are approximate concurrent-request limits, not
-requests-per-minute limits or a separate HTTP connection pool. New interactive reviews do not wait
+`l10n.ai-review.execution.max-in-flight` defaults to a **warning threshold of 800 across all
+instances**, independent of Quartz threads or replica count. The existing property name is retained,
+but crossing it does not reject a review. `max-in-flight-per-user` defaults to **6 per authenticated
+user**, including admins, shared across instances. This is an approximate concurrent-request limit,
+not a requests-per-minute limit or a separate HTTP connection pool. New interactive reviews do not wait
 in a Quartz backlog; HTTP server threads, database connections, and provider execution still have
 their own capacity and waiting behavior.
 
@@ -172,15 +173,18 @@ each write statement.
 Capacity transactions never run inside the per-task transaction. They do not use `SELECT FOR UPDATE`;
 the conditional MySQL update still takes a brief row lock and is bounded by its statement timeout.
 
-A valid snapshot at either limit returns a retryable **429 busy** result. If a valid snapshot is below
-both limits but concurrent updates defeat all reservation attempts, admission proceeds as
+A valid snapshot at the per-user limit returns a retryable **429 busy** result. Global occupancy
+at or above the warning threshold is logged and admission continues, so other users' work cannot
+alone block someone's first review. If a valid snapshot is below the per-user limit but concurrent
+updates defeat all reservation attempts, admission proceeds as
 `best_effort` without adding a reservation. Failed reads or invalid stored state remain errors;
-they do not justify this fallback. Counts can therefore understate active work, and either limit
-can temporarily be exceeded. A failed release can instead overstate active work until a later
+they do not justify this fallback. Counts can therefore understate active work, and the per-user
+limit can temporarily be exceeded. There is no global admission ceiling. A failed release can
+instead overstate active work until a later
 release succeeds or the reservation reaches its original deadline, based on the selected speed
-budget below. Start generously at 6 per user and 800 overall to accommodate normal navigation
-bursts and many concurrent reviewers. Tighten these initial limits only if observed provider
-pressure or application resource use justifies it.
+budget below. Start generously at 6 per user and observe global occupancy above 800 to accommodate
+normal navigation bursts and many concurrent reviewers. Revisit admission limits only if observed
+provider pressure or application resource use justifies it.
 
 This approximation is intentional. The previous global `NOWAIT` row lock could turn overlapping
 requests from different users into busy responses even when both limits had room. An optional
@@ -199,13 +203,21 @@ is materialized before its capacity release attempt, and failed releases retry i
 result persistence. These bounded accounting calls still share the completion executor, so sustained
 database contention can delay later completions.
 
-`AiReviewExecution.admission` records `reason={reserved|user_limit|global_limit|best_effort}` for
-admission decisions and `reason={optimistic_conflict|bounded_write_contention}` for conflicting
+`AiReviewExecution.admission` records `reason={reserved|user_limit|best_effort}` for admission
+decisions, `reason=global_threshold` at most once per reservation check at/above the warning threshold,
+and `reason={optimistic_conflict|bounded_write_contention}` for conflicting
 attempts. A recognized write timeout records both conflict reasons, and a request can make multiple
 attempts, so summing every reason is not a request count. `AiReviewExecution.capacityRelease` records
 `reason={optimistic_conflict|bounded_write_contention|deferred}` for release contention and exhausted
-release attempts. These metrics distinguish actual observed limits from accounting contention
-before changing the configured limits.
+release attempts. The threshold event can accompany an admitted request, so it is not a rejection
+count. These metrics distinguish per-user limits and global occupancy from accounting contention.
+
+Logs are sufficient for inspecting these events; no dedicated alert is configured. Search
+`AI review global capacity threshold reached` for a WARN containing `userId`, `globalInFlight`,
+`globalThreshold`, `userInFlight`, and `userLimit`. This log is emitted at most once per reservation
+check even if optimistic updates retry. Search `AI review admission rejected: reason=user_limit`
+for a per-user rejection, including the task ID, user ID, and configured limit. Neither log includes
+translation or chat text. Global-threshold warnings do not mean that the user's request was blocked.
 
 Each review has a total speed-specific budget, persisted in the existing `PollableTask.timeout` and
 measured from task creation:

@@ -139,7 +139,7 @@ public class AiReviewExecutionStore {
                 if (existing != null) return existing;
                 State state = state(task);
                 Instant deadline = state == null ? deadline(task) : state.deadline();
-                if (admission == Admission.USER_LIMIT || admission == Admission.GLOBAL_LIMIT) {
+                if (admission == Admission.USER_LIMIT) {
                   if (state == null)
                     writeState(task, new State(SCHEMA, null, null, null, deadline, null));
                   return new Claim(Disposition.WAIT, null, deadline);
@@ -150,6 +150,15 @@ public class AiReviewExecutionStore {
                 return claim(Disposition.START, claimedState);
               });
       started = claimed.disposition() == Disposition.START;
+      if (claimed.disposition() == Disposition.WAIT && claimed.token() == null) {
+        logger.warn(
+            "AI review admission rejected: reason={}, taskId={}, userId={}, userLimit={}, globalThreshold={}",
+            "user_limit",
+            taskId,
+            eligibility.userId(),
+            configuration.getMaxInFlightPerUser(),
+            configuration.getMaxInFlight());
+      }
       return claimed;
     } finally {
       // Duplicate or cancelled tasks release any provisional reservation independently.

@@ -11,7 +11,10 @@ import java.sql.SQLTimeoutException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -26,10 +29,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Approximate admission accounting, independent of the mandatory pollable-task lifecycle. Each
  * compare-and-set uses a fresh, short transaction. Contention may admit an uncounted request after
- * three under-capacity snapshots; it must not masquerade as a full provider limit.
+ * three snapshots below the user's allowance. Global occupancy is logged but never rejects work.
  */
 @Service
 public class AiReviewCapacityStore {
+  private static final Logger logger = LoggerFactory.getLogger(AiReviewCapacityStore.class);
   private static final int ATTEMPTS = 3;
   private final MBlobRepository blobs;
   private final ObjectMapper mapper;
@@ -59,7 +63,6 @@ public class AiReviewCapacityStore {
   public enum Admission {
     RESERVED,
     USER_LIMIT,
-    GLOBAL_LIMIT,
     BEST_EFFORT
   }
 
@@ -68,6 +71,7 @@ public class AiReviewCapacityStore {
     Objects.requireNonNull(deadline);
     Objects.requireNonNull(now);
     initializeCapacity();
+    AtomicBoolean globalThresholdReported = new AtomicBoolean();
     for (int attempt = 0; attempt < ATTEMPTS; attempt++) {
       Admission admission;
       try {
@@ -87,8 +91,19 @@ public class AiReviewCapacityStore {
                           .count();
                   if (userCount >= configuration.getMaxInFlightPerUser())
                     return Admission.USER_LIMIT;
-                  if (capacity.reservations().size() >= configuration.getMaxInFlight())
-                    return Admission.GLOBAL_LIMIT;
+                  if (capacity.reservations().size() >= configuration.getMaxInFlight()
+                      && globalThresholdReported.compareAndSet(false, true)) {
+                    // Global occupancy is diagnostic only. Other users' work must not prevent
+                    // this user from starting a review within their own allowance.
+                    metric("global_threshold");
+                    logger.warn(
+                        "AI review global capacity threshold reached: userId={}, globalInFlight={}, globalThreshold={}, userInFlight={}, userLimit={}",
+                        userId,
+                        capacity.reservations().size(),
+                        configuration.getMaxInFlight(),
+                        userCount,
+                        configuration.getMaxInFlightPerUser());
+                  }
                   capacity.reservations().put(token, new Reservation(userId, deadline));
                   return compareAndSet(snapshot, bytes(capacity)) == 1 ? Admission.RESERVED : null;
                 });
@@ -102,7 +117,7 @@ public class AiReviewCapacityStore {
       }
       metric("optimistic_conflict");
     }
-    // Each attempt read valid counts below both limits. Only accounting is relaxed here; the
+    // Each attempt read valid counts below the user limit. Only accounting is relaxed here; the
     // caller must still durably claim and fence the task before starting the provider request.
     metric("best_effort");
     return Admission.BEST_EFFORT;
