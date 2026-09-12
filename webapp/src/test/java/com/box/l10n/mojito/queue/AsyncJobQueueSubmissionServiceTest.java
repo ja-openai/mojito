@@ -567,9 +567,60 @@ public class AsyncJobQueueSubmissionServiceTest {
   public void enqueuePropagatesFatalMetricFailures() {
     for (boolean immediate : List.of(true, false)) {
       for (boolean failIncrement : List.of(false, true)) {
-        SubmissionFixture fixture = new SubmissionFixture(immediate, NOW);
         FatalTestError fatal = new FatalTestError("fatal metric");
-        fixture.failMetric(failIncrement, fatal, "asyncJobQueue.enqueue", "result", "succeeded");
+        for (Throwable failure : fatalFailures(fatal)) {
+          SubmissionFixture fixture = new SubmissionFixture(immediate, NOW);
+          fixture.failMetric(
+              failIncrement, failure, "asyncJobQueue.enqueue", "result", "succeeded");
+
+          assertThatThrownBy(fixture::enqueue).isSameAs(fatal);
+
+          fixture.verifySingleStoreCall();
+          fixture.verifyWakeups(false);
+          fixture.verifyNoFailedEnqueueMetric();
+        }
+      }
+    }
+  }
+
+  @Test
+  public void enqueuePropagatesFatalFailureMetricErrors() {
+    for (boolean immediate : List.of(true, false)) {
+      for (boolean failIncrement : List.of(false, true)) {
+        FatalTestError fatal = new FatalTestError("fatal failure metric");
+        for (Throwable failure : fatalFailures(fatal)) {
+          SubmissionFixture fixture = new SubmissionFixture(immediate, NOW);
+          fixture.failMetric(failIncrement, failure, "asyncJobQueue.enqueue", "result", "failed");
+          IllegalStateException storeFailure = new IllegalStateException("database unavailable");
+          if (immediate) {
+            when(fixture.store.enqueueNow("assetlocalize", "{}")).thenThrow(storeFailure);
+          } else {
+            when(fixture.store.enqueue("assetlocalize", "{}", NOW)).thenThrow(storeFailure);
+          }
+
+          assertThatThrownBy(fixture::enqueue).isSameAs(fatal);
+
+          fixture.verifySingleStoreCall();
+          fixture.verifyWakeups(false);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void enqueuePropagatesFatalLoggingFailures() {
+    for (boolean immediate : List.of(true, false)) {
+      FatalTestError fatal = new FatalTestError("fatal logging");
+      for (Throwable failure : fatalFailures(fatal)) {
+        SubmissionFixture fixture = new SubmissionFixture(immediate, NOW);
+        fixture.failMetric(
+            MetricFailure.REGISTRY_EXCEPTION, "asyncJobQueue.enqueue", "result", "succeeded");
+        AsyncJobQueueSubmissionService.logger =
+            mock(
+                Logger.class,
+                invocation -> {
+                  throw failure;
+                });
 
         assertThatThrownBy(fixture::enqueue).isSameAs(fatal);
 
@@ -581,47 +632,82 @@ public class AsyncJobQueueSubmissionServiceTest {
   }
 
   @Test
-  public void enqueuePropagatesFatalFailureMetricErrors() {
+  public void nestedStoreFatalsStopBeforeTelemetryOrWakeup() {
     for (boolean immediate : List.of(true, false)) {
-      for (boolean failIncrement : List.of(false, true)) {
+      FatalTestError fatal = new FatalTestError("fatal store");
+      for (Throwable failure : fatalFailures(fatal)) {
         SubmissionFixture fixture = new SubmissionFixture(immediate, NOW);
-        FatalTestError fatal = new FatalTestError("fatal failure metric");
-        fixture.failMetric(failIncrement, fatal, "asyncJobQueue.enqueue", "result", "failed");
-        IllegalStateException storeFailure = new IllegalStateException("database unavailable");
         if (immediate) {
-          when(fixture.store.enqueueNow("assetlocalize", "{}")).thenThrow(storeFailure);
+          when(fixture.store.enqueueNow("assetlocalize", "{}")).thenThrow(failure);
         } else {
-          when(fixture.store.enqueue("assetlocalize", "{}", NOW)).thenThrow(storeFailure);
+          when(fixture.store.enqueue("assetlocalize", "{}", NOW)).thenThrow(failure);
         }
 
         assertThatThrownBy(fixture::enqueue).isSameAs(fatal);
 
         fixture.verifySingleStoreCall();
         fixture.verifyWakeups(false);
+        verifyNoInteractions(fixture.registry);
       }
     }
   }
 
   @Test
-  public void enqueuePropagatesFatalLoggingFailures() {
+  public void nestedWakeupFatalsPreserveAcceptedEnqueueAndStopFurtherWork() {
     for (boolean immediate : List.of(true, false)) {
-      SubmissionFixture fixture = new SubmissionFixture(immediate, NOW);
-      fixture.failMetric(
-          MetricFailure.REGISTRY_EXCEPTION, "asyncJobQueue.enqueue", "result", "succeeded");
-      FatalTestError fatal = new FatalTestError("fatal logging");
-      AsyncJobQueueSubmissionService.logger =
-          mock(
-              Logger.class,
-              invocation -> {
-                throw fatal;
-              });
+      for (boolean remote : List.of(false, true)) {
+        FatalTestError fatal = new FatalTestError("fatal wakeup");
+        for (Throwable failure : fatalFailures(fatal)) {
+          SubmissionFixture fixture = new SubmissionFixture(immediate, NOW);
+          if (remote) {
+            doThrow(failure)
+                .when(fixture.notifier)
+                .notifyJobAvailable("assetlocalize", fixture.jobId);
+          } else {
+            doThrow(failure).when(fixture.coordinator).triggerPollNow("assetlocalize");
+          }
+
+          assertThatThrownBy(fixture::enqueue).isSameAs(fatal);
+
+          fixture.verifySingleStoreCall();
+          verify(fixture.coordinator).triggerPollNow("assetlocalize");
+          if (remote) {
+            verify(fixture.notifier).notifyJobAvailable("assetlocalize", fixture.jobId);
+          } else {
+            verifyNoInteractions(fixture.notifier);
+          }
+          verifyNoMoreInteractions(fixture.coordinator, fixture.notifier);
+          verify(fixture.registry)
+              .counter(
+                  "asyncJobQueue.enqueue", "queueName", "assetlocalize", "result", "succeeded");
+          verifyNoMoreInteractions(fixture.registry);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void nestedClockFatalsStopBeforeWakeupWithoutReclassifyingEnqueue() {
+    FatalTestError fatal = new FatalTestError("fatal clock");
+    for (Throwable failure : fatalFailures(fatal)) {
+      SubmissionFixture fixture = new SubmissionFixture(false, NOW);
+      fixture.clock = mock(Clock.class);
+      when(fixture.clock.instant()).thenThrow(failure);
 
       assertThatThrownBy(fixture::enqueue).isSameAs(fatal);
 
       fixture.verifySingleStoreCall();
       fixture.verifyWakeups(false);
-      fixture.verifyNoFailedEnqueueMetric();
+      verify(fixture.registry)
+          .counter("asyncJobQueue.enqueue", "queueName", "assetlocalize", "result", "succeeded");
+      verifyNoMoreInteractions(fixture.registry);
     }
+  }
+
+  private List<Throwable> fatalFailures(Error fatal) {
+    RuntimeException suppressed = new IllegalStateException("ordinary cleanup failure");
+    suppressed.addSuppressed(fatal);
+    return List.of(fatal, new IllegalStateException("wrapped failure", fatal), suppressed);
   }
 
   private enum MetricFailure {

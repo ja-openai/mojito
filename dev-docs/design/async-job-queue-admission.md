@@ -227,6 +227,11 @@ must replace that uncertainty later. Current repair cannot reverse historical fa
 Do not clear arbitrary errors: timeout, generation failure and false rejection share `finishedDate`.
 An enqueue that returned its ID is known committed at the store seam; subsequent nonfatal
 metrics/wakeup failures must not reject it. The telemetry correction handles that different mode.
+Generic submission propagates JVM-fatal causes and suppressed errors from the store,
+metrics, logging, wakeup-timing clock and local/remote hints. A post-enqueue fatal
+stops subsequent work without retry or compensation; it does not undo the accepted
+row or give the caller a durable retry handle. These error boundaries are not an
+alternative to the proposed same-key recovery protocol.
 
 `PollableTaskBlobStorage.saveInput` also isolates its own summary, duration and log
 diagnostics from the write outcome. Nonfatal telemetry failures cannot block the

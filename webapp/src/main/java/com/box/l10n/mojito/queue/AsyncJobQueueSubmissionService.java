@@ -83,9 +83,7 @@ public class AsyncJobQueueSubmissionService {
     try {
       asyncJobId = asyncJobStore.enqueueNow(validatedQueueName, validatedJobData);
     } catch (Throwable exception) {
-      if (isJvmFatal(exception)) {
-        throw (Error) exception;
-      }
+      rethrowJvmFatal(exception);
       incrementEnqueueCounter(validatedQueueName, "failed");
       warnSafely("Failed to enqueue async job for queue {}", validatedQueueName, exception);
       throw unchecked(exception);
@@ -104,9 +102,7 @@ public class AsyncJobQueueSubmissionService {
       asyncJobId =
           asyncJobStore.enqueue(validatedQueueName, validatedJobData, validatedAvailableAt);
     } catch (Throwable exception) {
-      if (isJvmFatal(exception)) {
-        throw (Error) exception;
-      }
+      rethrowJvmFatal(exception);
       incrementEnqueueCounter(validatedQueueName, "failed");
       warnSafely("Failed to enqueue async job for queue {}", validatedQueueName, exception);
       throw unchecked(exception);
@@ -122,9 +118,7 @@ public class AsyncJobQueueSubmissionService {
     try {
       return !availableAt.isAfter(clock.instant());
     } catch (Throwable exception) {
-      if (isJvmFatal(exception)) {
-        throw (Error) exception;
-      }
+      rethrowJvmFatal(exception);
       incrementCounter("asyncJobQueue.enqueueWakeup.decision.failed", "queueName", queueName);
       warnSafely(
           "Failed to determine async job queue wakeup timing after enqueue for queue {}; "
@@ -157,9 +151,7 @@ public class AsyncJobQueueSubmissionService {
     try {
       asyncJobQueueCoordinator.triggerPollNow(queueName);
     } catch (Throwable exception) {
-      if (isJvmFatal(exception)) {
-        throw (Error) exception;
-      }
+      rethrowJvmFatal(exception);
       incrementCounter("asyncJobQueue.enqueueWakeup.failed", "queueName", queueName);
       warnSafely(
           "Failed to trigger async job queue wakeup after enqueue for queue {}, job {}",
@@ -170,9 +162,7 @@ public class AsyncJobQueueSubmissionService {
     try {
       asyncJobQueueWakeupNotifier.notifyJobAvailable(queueName, asyncJobId);
     } catch (Throwable exception) {
-      if (isJvmFatal(exception)) {
-        throw (Error) exception;
-      }
+      rethrowJvmFatal(exception);
       incrementCounter("asyncJobQueue.enqueueWakeup.notify.failed", "queueName", queueName);
       warnSafely(
           "Failed to publish async job queue wakeup after enqueue for queue {}, job {}",
@@ -190,9 +180,7 @@ public class AsyncJobQueueSubmissionService {
     try {
       meterRegistry.counter(name, tags).increment();
     } catch (Throwable exception) {
-      if (isJvmFatal(exception)) {
-        throw (Error) exception;
-      }
+      rethrowJvmFatal(exception);
       warnSafely("Failed to record async job queue metric {}", name, exception);
     }
   }
@@ -201,15 +189,16 @@ public class AsyncJobQueueSubmissionService {
     try {
       logger.warn(message, arguments);
     } catch (Throwable exception) {
-      if (isJvmFatal(exception)) {
-        throw (Error) exception;
-      }
+      rethrowJvmFatal(exception);
       // A broken logging backend must not change the submission outcome or prevent wakeups.
     }
   }
 
-  private boolean isJvmFatal(Throwable throwable) {
-    return AsyncJobQueueFatalErrors.isJvmFatal(throwable);
+  private void rethrowJvmFatal(Throwable failure) {
+    Error fatal = AsyncJobQueueFatalErrors.findJvmFatal(failure);
+    if (fatal != null) {
+      throw fatal;
+    }
   }
 
   private RuntimeException unchecked(Throwable throwable) {

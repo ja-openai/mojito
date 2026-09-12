@@ -10,8 +10,8 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has seven local review commits (four original chunks, CI and
-  status-sampling corrections, and policy clarifications) over `7fcc341457`. Local master at this
+- The queue worktree has eight local review commits (four original chunks plus CI,
+  failure-boundary and policy follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
   `V109__AI_Review_Request_Usage.sql`. The queue branch's two V109 scripts are
@@ -131,6 +131,25 @@ passed 105 tests with zero skips, failures or reruns using `-Pno-local-config`
 Existing ThreadDeath deprecation and application AspectJ weaving warnings remain.
 This is local core/configuration evidence, not new real-database, packaged-consumer
 or production monitoring proof; all readiness gates above remain open.
+
+Scoped submission-boundary correction, 2026-09-12: generic submission checked only
+top-level JVM-fatal errors. A wrapped/suppressed fatal from post-enqueue diagnostics,
+clock or wakeup could be swallowed, while a wrapped store fatal entered ordinary
+failure reporting. All seven catch sites now use the shared cause/suppression-aware
+classifier. Existing ordinary failure behavior is unchanged; fatal propagation
+neither retries nor compensates an acknowledged enqueue and is not evidence of
+rollback. Three new tests and three expanded tests reproduced the prior behavior
+(`/tmp/queue-submission-fatal-boundary-red-20260912.log`) across both enqueue APIs,
+metric registration/increment, logging, clock and local/remote wakeups.
+
+The focused submission/configuration/classifier/asset-adapter selection, including
+the 35 existing HSQL JPA/JDBC transaction contracts, passed 132 tests with zero
+failures, skips or reruns using `-Pno-local-config`
+(`/tmp/queue-submission-fatal-boundary-verified-20260912.log`); root formatting passed.
+Existing deprecation and application weaving warnings remain. New error-graph
+cases use controlled collaborators, not actual JVM exhaustion or database/network
+failures. No schema, public API, routing, module extraction or durable-admission
+protocol changed; target-database and unknown-commit recovery gates remain open.
 
 Scoped repair correction, 2026-09-10: a request-bound Hibernate persistence context
 could retain an open PollableTask after another transaction finished it. Both DONE
