@@ -64,10 +64,7 @@ public class JsonObjectRemoverByValue {
 
   static boolean isObjectFieldWithNestedValue(String valueToRemove, JsonNode jsonNode) {
     return Streams.stream(jsonNode.fields())
-        .filter(f -> f.getValue().asText().equals(valueToRemove))
-        .findFirst()
-        .map(Map.Entry::getKey)
-        .isPresent();
+        .anyMatch(f -> f.getValue().asText().equals(valueToRemove));
   }
 
   static boolean isTextutalFieldWithValue(String valueToRemove, JsonNode jsonNode) {
