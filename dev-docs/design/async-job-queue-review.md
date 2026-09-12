@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has eighteen local review commits (four original chunks plus CI,
+- The queue worktree has nineteen local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -71,10 +71,11 @@ not close its current gates.
   lost acknowledgements, not durable reservations, HTTP recovery or actual network
   failure. It uses application mappings, not the standalone-JAR consumer.
 - The [native PostgreSQL asset-adapter run](#native-postgresql-asset-adapter-2026-09-12-utc)
-  passes the existing database method's 15 internal retry/publication scenarios as
-  one JUnit test, with no skips or reruns. Application state and blobs remain in
-  private HSQL, separate from PostgreSQL queue rows. This does not prove atomic
-  admission, full-application PostgreSQL support or queue-owned blob lifetime.
+  and [native MySQL 8.0.43 run](#native-mysql-asset-adapter-2026-09-12-utc) each pass
+  the existing database method's 15 internal retry/publication scenarios as one
+  JUnit test, with no skips or reruns. Application state and blobs remain in
+  private HSQL, separate from queue rows. These do not prove atomic admission,
+  full-application database compatibility or queue-owned blob lifetime.
 - The two [native PostgreSQL listener contracts](#native-postgresql-listener-sessions-2026-09-12-utc)
   pass real pooled-session cleanup and reconnect after backend termination despite
   injected metrics failure. This is session-loss evidence, not network partition,
@@ -775,6 +776,39 @@ not network loss. Separate databases cannot prove atomic admission, and these
 scenarios do not implement durable recovery identities, business fencing or blob
 pins. Required MySQL 8.4/full CI and rollout gates remain open. No production or
 maintained test source, migration, routing flag or remote ref changed.
+
+## Native MySQL Asset Adapter (2026-09-12 UTC)
+
+The original `mysqlQueueRetriesOutputAndRejectsTrackedWork` method passed on
+installed MySQL 8.0.43 in 8.540 seconds, including Spring startup: one JUnit test,
+15 internal scenarios, no failures, ignored/assumption skips or automatic reruns.
+It exercises the same [scenario set and fault boundaries](#native-postgresql-asset-adapter-2026-09-12-utc)
+as the PostgreSQL run above. In particular, durable DONE survives a thrown
+commit acknowledgement and repairs without rerunning generation; rollback before
+commit permits a fresh-token attempt after explicitly expiring only the fixture's
+lease, rejecting stale completion. This is not natural-expiry or network-loss proof.
+
+Only container lifecycle and connection metadata were substituted. The original
+Spring runner, security/setup lifecycle, SQL and assertions remained. The adapter
+verified the private MySQL datadir/version and encrypted TLS, then checked the
+application datasource was `jdbc:hsqldb:mem:queue_output_retry`. TLS was required,
+but this self-signed fixture did not verify certificates/hostnames. Local user
+configuration was excluded and HTTP/MySQL listeners bound only to loopback. Real
+generation, task and blob services ran on HSQL; separate databases do not establish
+atomic admission, MySQL ORM compatibility, business fencing or pinned blob lifetime.
+The native selection does not include the HSQL-only expired-winner cleanup cases.
+
+Artifacts under `/tmp/queue-mysql-asset.bKqgPk/` are `native-asset.log`,
+`NativeMysqlAssetVerification.java`, `asset_probe.rb`, `asset-control.log`,
+`initdb.log`, `server.log` and `spotless.log`. The fresh `-Pno-local-config`
+control passed 15 tests with two database skips and no failures/errors/reruns;
+root formatting passed. Native execution and initialization succeeded on their
+first approved attempts. Spring/Tomcat/Quartz/Hikari cleanup completed, followed
+by clean private MySQL shutdown on port 45196 and removal of its datadir. More than
+28 GiB remained free. Existing Hibernate/JDK/Mockito, self-signed fixture and
+expected injected-failure warnings remain. No production/test source, migration,
+primary-master files, routing or remote refs changed. MySQL 8.4/full CI, schema
+adoption and business rollout gates remain open.
 
 ## Native PostgreSQL JPA/JDBC Contracts (2026-09-12 UTC)
 
