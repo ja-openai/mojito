@@ -10,8 +10,8 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has six local review commits (four original chunks, a CI
-  correction and policy clarifications) over `7fcc341457`. Local master at this
+- The queue worktree has seven local review commits (four original chunks, CI and
+  status-sampling corrections, and policy clarifications) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
   `V109__AI_Review_Request_Usage.sql`. The queue branch's two V109 scripts are
@@ -112,6 +112,25 @@ or PostgreSQL 16 adapter execution. Require both database methods without skips
 in hosted CI before closing that evidence gap. No production code, migrations,
 flags, deployment or rollout decision changed; the earlier disk restriction has
 cleared, not the production-readiness gates.
+
+Scoped status-sampling correction, 2026-09-12: failure logging or failure-counter
+registration/increment could abort the metrics pass before later queues were
+sampled. Wrapped or suppressed JVM-fatal errors were also treated as ordinary
+sampling failures. Six new regressions failed against the prior implementation
+(`/tmp/queue-status-metrics-isolation-red-20260912.log`). The reporter now gives
+logging and counter reporting independent, non-recursive best-effort attempts,
+and uses the shared cause/suppression-aware fatal classifier for sampling and
+diagnostics. Fatal errors stop the pass and retain their identity; ordinary
+diagnostic failures do not prevent later queues from being sampled. No new metrics,
+retries, SQL or scheduling changes were introduced. Existing gauges can still be
+stale after failed reads and are not an atomic cross-query snapshot.
+
+The focused reporter/configuration/retention/inspection/fatal-classifier selection
+passed 105 tests with zero skips, failures or reruns using `-Pno-local-config`
+(`/tmp/queue-status-metrics-isolation-verified-20260912.log`); root formatting passed.
+Existing ThreadDeath deprecation and application AspectJ weaving warnings remain.
+This is local core/configuration evidence, not new real-database, packaged-consumer
+or production monitoring proof; all readiness gates above remain open.
 
 Scoped repair correction, 2026-09-10: a request-bound Hibernate persistence context
 could retain an open PollableTask after another transaction finished it. Both DONE

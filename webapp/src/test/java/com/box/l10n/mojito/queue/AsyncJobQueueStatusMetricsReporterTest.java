@@ -2,24 +2,35 @@ package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.Mockito.RETURNS_DEFAULTS;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import org.junit.After;
 import org.junit.Test;
+import org.slf4j.Logger;
 
 public class AsyncJobQueueStatusMetricsReporterTest {
 
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+  private final Logger originalLogger = AsyncJobQueueStatusMetricsReporter.logger;
 
   @After
   public void tearDown() {
+    AsyncJobQueueStatusMetricsReporter.logger = originalLogger;
     meterRegistry.close();
   }
 
@@ -171,6 +182,140 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertThat(assertThrows(FatalTestError.class, reporter::reportStatusCounts))
         .isSameAs(fatalTestError);
     assertNoFailedCounter("assetlocalize");
+  }
+
+  @Test
+  public void wrappedAndSuppressedStoreFatalsStopSampling() {
+    FatalTestError fatal = new FatalTestError("fatal");
+    RuntimeException suppressed = new IllegalStateException("cleanup failed");
+    suppressed.addSuppressed(fatal);
+    for (Throwable failure : List.of(new IllegalStateException(fatal), suppressed)) {
+      AsyncJobStore store = storeWithFirstQueueFailure(failure);
+      assertThat(assertThrows(FatalTestError.class, reporter(store)::reportStatusCounts))
+          .isSameAs(fatal);
+      verify(store, never()).countByStatus("assetlocalize");
+      assertNoFailedCounter("broken");
+    }
+  }
+
+  @Test
+  public void loggingFailureDoesNotPreventCounterOrLaterQueueSampling() {
+    failLogging(new AssertionError("logger unavailable"));
+    AsyncJobStore store =
+        storeWithFirstQueueFailure(new IllegalStateException("store unavailable"));
+
+    reporter(store).reportStatusCounts();
+
+    assertFailedCounter("broken", 1);
+    assertLaterQueueSampled(store);
+  }
+
+  @Test
+  public void failureCounterRegistrationDoesNotPreventLaterQueueSampling() {
+    failCounterRegistration(new IllegalStateException("counter registration unavailable"));
+    AsyncJobStore store =
+        storeWithFirstQueueFailure(new IllegalStateException("store unavailable"));
+
+    reporter(store).reportStatusCounts();
+
+    assertNoFailedCounter("broken");
+    assertLaterQueueSampled(store);
+  }
+
+  @Test
+  public void counterIncrementAndLoggingFailuresDoNotPreventLaterQueueSampling() {
+    failLogging(new IllegalStateException("logger unavailable"));
+    Counter counter = mock(Counter.class);
+    doThrow(new AssertionError("counter increment unavailable")).when(counter).increment();
+    SimpleMeterRegistry registry = spy(meterRegistry);
+    doReturn(counter)
+        .when(registry)
+        .counter("asyncJobQueue.statusMetrics.failed", "queueName", "broken");
+    AsyncJobStore store =
+        storeWithFirstQueueFailure(new IllegalStateException("store unavailable"));
+    AsyncJobQueueStatusMetricsReporter reporter =
+        new AsyncJobQueueStatusMetricsReporter(
+            store, queueProperties("broken", "assetlocalize"), List.of(), registry);
+
+    reporter.reportStatusCounts();
+
+    verify(counter).increment();
+    assertLaterQueueSampled(store);
+  }
+
+  @Test
+  public void wrappedLoggingFatalStopsSampling() {
+    FatalTestError fatal = new FatalTestError("fatal logging");
+    failLogging(new IllegalStateException(fatal));
+    AsyncJobStore store =
+        storeWithFirstQueueFailure(new IllegalStateException("store unavailable"));
+
+    assertThat(assertThrows(FatalTestError.class, reporter(store)::reportStatusCounts))
+        .isSameAs(fatal);
+    verify(store, never()).countByStatus("assetlocalize");
+    assertNoFailedCounter("broken");
+  }
+
+  @Test
+  public void suppressedCounterFatalStopsSampling() {
+    FatalTestError fatal = new FatalTestError("fatal counter");
+    RuntimeException failure = new IllegalStateException("counter registration failed");
+    failure.addSuppressed(fatal);
+    failCounterRegistration(failure);
+    AsyncJobStore store =
+        storeWithFirstQueueFailure(new IllegalStateException("store unavailable"));
+
+    assertThat(assertThrows(FatalTestError.class, reporter(store)::reportStatusCounts))
+        .isSameAs(fatal);
+    verify(store, never()).countByStatus("assetlocalize");
+    assertNoFailedCounter("broken");
+  }
+
+  private AsyncJobStore storeWithFirstQueueFailure(Throwable failure) {
+    AsyncJobStore store = spy(new InMemoryAsyncJobStore());
+    doThrow(failure).when(store).countByStatus("broken");
+    return store;
+  }
+
+  private AsyncJobQueueStatusMetricsReporter reporter(AsyncJobStore store) {
+    return new AsyncJobQueueStatusMetricsReporter(
+        store, queueProperties("broken", "assetlocalize"), List.of(), meterRegistry);
+  }
+
+  private void assertLaterQueueSampled(AsyncJobStore store) {
+    verify(store).countByStatus("assetlocalize");
+    verify(store).readyStatus("assetlocalize");
+    verify(store).expiredLeaseStatus("assetlocalize");
+    assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 0);
+    assertReadyCountGaugeValue("assetlocalize", 0);
+    assertExpiredLeaseCountGaugeValue("assetlocalize", 0);
+  }
+
+  private void failLogging(Throwable failure) {
+    AsyncJobQueueStatusMetricsReporter.logger =
+        mock(
+            Logger.class,
+            invocation -> {
+              if (invocation.getMethod().getName().equals("warn")) {
+                throw failure;
+              }
+              return RETURNS_DEFAULTS.answer(invocation);
+            });
+  }
+
+  private void failCounterRegistration(RuntimeException failure) {
+    meterRegistry
+        .config()
+        .meterFilter(
+            new MeterFilter() {
+              @Override
+              public Meter.Id map(Meter.Id id) {
+                if (id.getName().equals("asyncJobQueue.statusMetrics.failed")) {
+                  throw failure;
+                }
+                return id;
+              }
+            });
   }
 
   @Test

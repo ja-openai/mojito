@@ -57,13 +57,19 @@ public class AsyncJobQueueStatusMetricsReporter {
       try {
         reportStatusCounts(queueName);
       } catch (Throwable e) {
-        if (isJvmFatal(e)) {
-          throw (Error) e;
+        Error fatal = AsyncJobQueueFatalErrors.findJvmFatal(e);
+        if (fatal != null) {
+          throw fatal;
         }
-        logger.warn("Failed to report async job queue status metrics for {}", queueName, e);
-        meterRegistry
-            .counter("asyncJobQueue.statusMetrics.failed", "queueName", queueName)
-            .increment();
+        recordFailureDiagnostic(
+            () ->
+                logger.warn(
+                    "Failed to report async job queue status metrics for {}", queueName, e));
+        recordFailureDiagnostic(
+            () ->
+                meterRegistry
+                    .counter("asyncJobQueue.statusMetrics.failed", "queueName", queueName)
+                    .increment());
       }
     }
   }
@@ -171,8 +177,16 @@ public class AsyncJobQueueStatusMetricsReporter {
             .toMillis());
   }
 
-  private boolean isJvmFatal(Throwable throwable) {
-    return AsyncJobQueueFatalErrors.isJvmFatal(throwable);
+  private void recordFailureDiagnostic(Runnable diagnostic) {
+    try {
+      diagnostic.run();
+    } catch (Throwable failure) {
+      Error fatal = AsyncJobQueueFatalErrors.findJvmFatal(failure);
+      if (fatal != null) {
+        throw fatal;
+      }
+      // Do not recurse into telemetry or block later queues on nonfatal diagnostic failures.
+    }
   }
 
   private record StatusMetricKey(String queueName, AsyncJobStatus status) {}
