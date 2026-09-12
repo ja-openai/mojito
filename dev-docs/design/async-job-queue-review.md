@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty-nine local commits (four original chunks plus CI,
+- The queue worktree has thirty local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -110,8 +110,11 @@ not close its current gates.
   passes on native MySQL 8.0.43 after SIGKILL and PostgreSQL 16.15 after immediate
   shutdown, with durability settings enabled. Committed rows survive, uncommitted
   input disappears, the original pool reconnects and expired owners remain fenced.
-  The Docker kill/start paths and MySQL 8.4 remain unverified; runtime failover
-  and network blackhole tests are separate requirements.
+  The [runtime extension](#runtime-database-restart-recovery-2026-09-12-utc) also
+  passes on those native versions: the same coordinator rejects stale completion,
+  reclaims naturally expired work and processes a new job without restart or an
+  external wakeup. The Docker kill/start paths, MySQL 8.4, listener-aware failover
+  and network blackholes remain unverified.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -406,6 +409,55 @@ Existing weaving/JDK/build warnings and npm audit findings remain. This closes a
 reproduced control-flow defect, not admission, migration adoption, target-version
 database CI or staging/network-failover gates.
 
+## Runtime Database Restart Recovery (2026-09-12 UTC)
+
+The shared restart suite now adds a second method per dialect, running the real
+coordinator, executor, heartbeat scheduler and JDBC store with one Hikari connection
+and one handler slot. A gated handler spans abrupt database shutdown. The test
+observes a real heartbeat SQL failure from a call started after confirmed shutdown,
+keeps the server down for a full lease without modifying timestamps, and restarts
+the same database. The original pool reconnects; renewal rejects the expired token
+while the original handler still owns its local capacity slot.
+
+Releasing that handler makes its stale DONE update return false, without changing
+the retained input or invoking a completion callback. The same coordinator then
+reclaims attempt two with a fresh token, persists its recovered output and delivers
+only the replacement callback. A separately enqueued job completes through polling,
+with no coordinator restart, manual claim or external hint. Assertions also cover
+one rejected-DONE metric, three handler invocations and released executor/pool
+capacity. The observing store delegates every SQL operation and propagates errors;
+it does not synthesize outcomes. This is queue-result and callback fencing, not
+exactly-once business effects or interruption of a handler that already started.
+
+Both maintained runtime methods passed together once in 10.873 seconds on native
+MySQL 8.0.43 (verified owned-process SIGKILL, exit 137) and PostgreSQL 16.15
+(immediate shutdown and WAL recovery), with zero failures, ignored tests, assumption
+skips or reruns. The private lifecycle wrapper leaves production runtime, SQL,
+transactions and assertions unchanged. Durability checks remain enabled; MySQL
+requires TLS without verifying the self-signed CA/hostname, while PostgreSQL uses
+certificate and hostname verification. Both servers shut down cleanly, their
+45198/59406 listeners closed, and more than 27 GiB remained free.
+
+Artifacts are `/tmp/queue-runtime-restart.jpGsht/native-runtime-restart.log`,
+`mysql-server.log`, `pg-server.log`, `NativeRuntimeRestartVerification.java` and
+`restart_probe.rb`. Sandbox-only initialization first failed before queue SQL:
+MySQL exited on signal 11 and PostgreSQL could not allocate shared memory. Approved
+initialization of the same private fixtures succeeded; these setup failures are
+not hidden queue-test retries. The separate Maven control passed 189 tests and
+explicitly skipped eight opt-in database cases across five suites, with reruns
+disabled. Its log is `/tmp/queue-runtime-restart-control-20260912.log`.
+The final pre-commit selection repeats 189 passes and eight explicit skips in
+`/tmp/queue-runtime-restart-final-control-20260912.log`; all five Surefire XML reports
+record zero reruns and no failure/error/flaky/rerun elements. Root formatting passed
+in `/tmp/queue-runtime-restart-spotless-final-20260912.log`. Existing npm audit
+findings (two moderate, one high) remain outside this test-only change.
+
+This closes the scoped single-coordinator restart/callback execution gap, not
+Docker/MySQL 8.4 certification, listener failover, network blackholes, multi-host
+soak, durable lost-commit admission recovery or business/blob publication ownership.
+No production code, schema, routing defaults, primary-master files or remote refs
+changed. The earlier store-only evidence below remains a separate selection.
+
 ## MySQL And PostgreSQL Restart Matrix (2026-09-12 UTC)
 
 The earlier PostgreSQL-only fixture is now the parameterized
@@ -448,7 +500,8 @@ Both servers shut down cleanly after verification and their loopback listeners o
 self-signed/private-fixture and existing build/JDK warnings remain visible.
 
 This closes the narrower MySQL 8.0 store-restart execution gap and rechecks
-PostgreSQL after sharing the fixture. Runtime/callback/listener failover, actual
+PostgreSQL after sharing the fixture. The runtime extension above subsequently
+adds single-coordinator recovery and callback fencing. Listener failover, actual
 network blackholes, the full target-version CI lane, lost-commit admission recovery,
 schema adoption and business/blob ownership remain open. No production code,
 migration, routing defaults, primary-master files or remote refs changed.

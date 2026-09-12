@@ -7,11 +7,14 @@ import static org.junit.Assume.assumeTrue;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
@@ -23,6 +26,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -44,18 +48,140 @@ public class JdbcAsyncJobStoreDatabaseRestartIntegrationTest {
   }
 
   @Test(timeout = 120_000)
+  public void runningWorkerRecoversAfterRestartWithoutPublishingItsExpiredAttempt()
+      throws Exception {
+    assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
+    try (JdbcDatabaseContainer<?> database = database()) {
+      database.start();
+      installSchema(database);
+      SimpleMeterRegistry meters = new SimpleMeterRegistry();
+      try (AutoCloseable metersCleanup = meters::close;
+          HikariDataSource pool = pool(database)) {
+        JdbcTemplate jdbc = new JdbcTemplate(pool);
+        jdbc.setQueryTimeout(2);
+        RestartObservedStore store = new RestartObservedStore(jdbc, dialect, pool);
+        RestartHandler handler = new RestartHandler();
+        AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
+        properties.setStore("jdbc");
+        AsyncJobQueueProperties.QueueSettings settings =
+            new AsyncJobQueueProperties.QueueSettings();
+        settings.setMaxConcurrency(1);
+        settings.setClaimBatchSize(1);
+        settings.setPollIntervalMs(25);
+        settings.setMaxPollIntervalMs(100);
+        settings.setPollJitterPercent(0);
+        settings.setHeartbeatIntervalMs(100);
+        settings.setLeaseDurationMs(LEASE.toMillis());
+        settings.setShutdownAwaitTerminationMs(5000);
+        properties.getQueues().put(handler.queueName(), settings);
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setAwaitTerminationMillis(5000);
+        scheduler.setThreadNamePrefix("restart-test-poll-");
+        try (AutoCloseable schedulerCleanup = scheduler::shutdown) {
+          scheduler.initialize();
+          AsyncJobQueueCoordinator coordinator =
+              new AsyncJobQueueCoordinator(store, properties, List.of(handler), scheduler, meters);
+          try (AutoCloseable coordinatorCleanup = coordinator::stop) {
+            try {
+              assertDurabilitySettings(jdbc);
+              Instant previousStart =
+                  dialect == AsyncJobQueueJdbcDialect.POSTGRESQL ? postmasterStartedAt(jdbc) : null;
+              AsyncJobId id = store.enqueueNow(handler.queueName(), "original input");
+              coordinator.start();
+              AsyncJobRecord original = handler.started.get(10, TimeUnit.SECONDS);
+              assertThat(original.id()).isEqualTo(id);
+              assertThat(original.attemptCount()).isEqualTo(1);
+              database
+                  .getDockerClient()
+                  .killContainerCmd(database.getContainerId())
+                  .withSignal("KILL")
+                  .exec();
+              await("the database container stops", () -> !database.isRunning());
+              store.observeOutage = true;
+              assertThat(store.renewalFailure.get(10, TimeUnit.SECONDS))
+                  .hasCauseInstanceOf(SQLException.class);
+              assertThat(handler.release.getCount()).isEqualTo(1);
+              assertThat(handler.callbacks).isEmpty();
+              assertThat(meters.get("asyncJobQueue.inflight").gauge().value()).isEqualTo(1);
+
+              // Deliberately keep the server down for a full lease; do not rewrite queue
+              // timestamps.
+              TimeUnit.MILLISECONDS.sleep(LEASE.toMillis());
+              database.getDockerClient().startContainerCmd(database.getContainerId()).exec();
+              await("the original runtime pool reconnects", () -> recovered(jdbc, previousStart));
+              assertThat(database.isRunning()).isTrue();
+              assertDurabilitySettings(jdbc);
+              assertThat(store.rejectedRenewal.get(10, TimeUnit.SECONDS)).isFalse();
+              assertThat(store.expiredLeaseStatus(handler.queueName()).count()).isEqualTo(1);
+              AsyncJobRecord stranded = row(store, id);
+              assertThat(stranded.status()).isEqualTo(AsyncJobStatus.RUNNING);
+              assertThat(stranded.leaseToken()).isEqualTo(original.leaseToken());
+              assertThat(stranded.attemptCount()).isEqualTo(1);
+              assertThat(stranded.jobData()).isEqualTo("original input");
+              assertThat(handler.attempts).hasSize(1);
+
+              handler.release.countDown();
+              assertThat(store.staleCompletion.get(10, TimeUnit.SECONDS)).isFalse();
+              await(
+                  "the same runtime reclaims and completes the expired job",
+                  () ->
+                      handler.callbacks.size() == 1
+                          && row(store, id).status() == AsyncJobStatus.DONE);
+              assertThat(handler.attempts).hasSize(2);
+              AsyncJobRecord replacement = handler.attempts.get(1);
+              assertThat(replacement.id()).isEqualTo(id);
+              assertThat(replacement.workerId()).isEqualTo(original.workerId());
+              assertThat(replacement.attemptCount()).isEqualTo(2);
+              assertThat(replacement.leaseReclaimed()).isTrue();
+              assertThat(replacement.leaseToken()).isNotEqualTo(original.leaseToken());
+              assertThat(replacement.jobData()).isEqualTo("original input");
+              assertThat(handler.callbacks.getFirst().attemptCount()).isEqualTo(2);
+              assertThat(row(store, id).jobData()).isEqualTo("recovered output");
+
+              // No coordinator restart, manual claim or external wakeup may be needed after
+              // recovery.
+              AsyncJobId next = store.enqueueNow(handler.queueName(), "new input");
+              await(
+                  "polling processes new work after recovery",
+                  () ->
+                      handler.callbacks.size() == 2
+                          && row(store, next).status() == AsyncJobStatus.DONE);
+              assertThat(handler.attempts).hasSize(3);
+              assertThat(handler.attempts.get(2).id()).isEqualTo(next);
+              assertThat(handler.attempts.get(2).attemptCount()).isEqualTo(1);
+              assertThat(handler.callbacks.get(1).id()).isEqualTo(next);
+              await(
+                  "runtime releases handler and executor capacity",
+                  () ->
+                      meters.get("asyncJobQueue.inflight").gauge().value() == 0
+                          && meters.get("asyncJobQueue.executor.active").gauge().value() == 0
+                          && meters.get("asyncJobQueue.executor.queued").gauge().value() == 0
+                          && meters.get("asyncJobQueue.processing.latency").timer().count() == 3);
+              assertThat(
+                      meters
+                          .get("asyncJobQueue.transition.failed")
+                          .tag("transition", "done")
+                          .counter()
+                          .count())
+                  .isEqualTo(1);
+            } finally {
+              handler.release.countDown();
+            }
+          }
+        }
+        assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
+        assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
+      }
+    }
+  }
+
+  @Test(timeout = 120_000)
   public void databaseRestartPreservesCommittedRowsAndFencesExpiredOwners() throws Exception {
     assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
     try (JdbcDatabaseContainer<?> database = database()) {
       database.start();
-      try (Connection connection = database.createConnection("")) {
-        ScriptUtils.executeSqlScript(
-            connection,
-            new ClassPathResource(
-                dialect == AsyncJobQueueJdbcDialect.MYSQL
-                    ? "db/migration/V109__Async_Job_Queue.sql"
-                    : "db/postgresql/migration/V109__Async_Job_Queue.sql"));
-      }
+      installSchema(database);
       try (HikariDataSource pool = pool(database)) {
         JdbcTemplate jdbc = new JdbcTemplate(pool);
         jdbc.setQueryTimeout(2);
@@ -193,6 +319,83 @@ public class JdbcAsyncJobStoreDatabaseRestartIntegrationTest {
 
   private static AsyncJobRecord row(JdbcAsyncJobStore store, AsyncJobId id) {
     return store.getByIds(List.of(id)).getFirst();
+  }
+
+  private void installSchema(JdbcDatabaseContainer<?> database) throws SQLException {
+    try (Connection connection = database.createConnection("")) {
+      ScriptUtils.executeSqlScript(
+          connection,
+          new ClassPathResource(
+              dialect == AsyncJobQueueJdbcDialect.MYSQL
+                  ? "db/migration/V109__Async_Job_Queue.sql"
+                  : "db/postgresql/migration/V109__Async_Job_Queue.sql"));
+    }
+  }
+
+  private static final class RestartHandler implements AsyncJobHandler {
+    private final CompletableFuture<AsyncJobRecord> started = new CompletableFuture<>();
+    private final CountDownLatch release = new CountDownLatch(1);
+    private final List<AsyncJobRecord> attempts = new CopyOnWriteArrayList<>();
+    private final List<AsyncJobRecord> callbacks = new CopyOnWriteArrayList<>();
+
+    @Override
+    public String queueName() {
+      return "runtime-restart";
+    }
+
+    @Override
+    public AsyncJobHandlerResult process(AsyncJobRecord job) throws Exception {
+      attempts.add(job);
+      if (started.complete(job)) {
+        assertTrue("test releases the original handler", release.await(90, TimeUnit.SECONDS));
+        return AsyncJobHandlerResult.done("stale output");
+      }
+      return AsyncJobHandlerResult.done("recovered output");
+    }
+
+    @Override
+    public void onJobDone(AsyncJobRecord job, AsyncJobHandlerResult result) {
+      callbacks.add(job);
+    }
+  }
+
+  private static final class RestartObservedStore extends JdbcAsyncJobStore {
+    private final CompletableFuture<RuntimeException> renewalFailure = new CompletableFuture<>();
+    private final CompletableFuture<Boolean> rejectedRenewal = new CompletableFuture<>();
+    private final CompletableFuture<Boolean> staleCompletion = new CompletableFuture<>();
+    private volatile boolean observeOutage;
+
+    private RestartObservedStore(
+        JdbcTemplate jdbc, AsyncJobQueueJdbcDialect dialect, HikariDataSource pool) {
+      super(new NamedParameterJdbcTemplate(jdbc), dialect, new DataSourceTransactionManager(pool));
+    }
+
+    @Override
+    public boolean heartbeat(
+        String queue, AsyncJobId id, String worker, String token, Duration duration) {
+      boolean observeFailure = observeOutage;
+      try {
+        boolean renewed = super.heartbeat(queue, id, worker, token, duration);
+        if (!renewed) {
+          rejectedRenewal.complete(false);
+        }
+        return renewed;
+      } catch (RuntimeException failure) {
+        if (observeFailure) {
+          renewalFailure.complete(failure);
+        }
+        throw failure;
+      }
+    }
+
+    @Override
+    public boolean markDone(String queue, AsyncJobId id, String worker, String token, String data) {
+      boolean persisted = super.markDone(queue, id, worker, token, data);
+      if ("stale output".equals(data)) {
+        staleCompletion.complete(persisted);
+      }
+      return persisted;
+    }
   }
 
   private JdbcDatabaseContainer<?> database() {

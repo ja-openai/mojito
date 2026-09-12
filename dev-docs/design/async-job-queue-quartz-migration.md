@@ -840,8 +840,13 @@ database across abrupt shutdown/restart. It checks committed state, rollback of
 uncommitted input and expired-token fencing with durability settings enabled.
 The [native MySQL 8.0/PostgreSQL 16 restart matrix](async-job-queue-review.md#mysql-and-postgresql-restart-matrix-2026-09-12-utc)
 passes, but the required Docker SIGKILL paths, MySQL 8.4 and full CI selection
-remain unverified. It is a store contract, not runtime/callback/listener failover,
-lost-commit recovery or network-partition proof.
+remain unverified. Its additional [runtime restart contract](async-job-queue-review.md#runtime-database-restart-recovery-2026-09-12-utc)
+also passes on those native versions: a real coordinator holds handler capacity
+across an outage, rejects the expired attempt's result without a success callback,
+reclaims with a fresh token and processes new work through polling. No coordinator
+restart or external hint is supplied. This does not undo effects of the first
+handler or certify listener failover, lost-commit admission recovery, network
+partitions or sustained multi-host operation.
 
 Source wiring alone does not establish the adapter's real-database retry,
 commit-uncertainty, tracked-work rejection or publication/repair contracts.
