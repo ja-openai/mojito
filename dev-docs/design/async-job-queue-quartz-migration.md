@@ -489,6 +489,15 @@ repair binaries before relying on this behavior; existing task errors are not
 rewritten. This is repair-specific data minimization, not a change to task access
 policy or comprehensive confidentiality for legacy callbacks and other workloads.
 
+Repair metrics and logging are best-effort: ordinary diagnostic failures do not
+turn an acknowledged finish into an API failure or replace the original typed
+lookup/publication/finish error. JVM-fatal causes and suppressed errors still
+propagate, even after task completion. A lost finish acknowledgement therefore
+remains an uncertain outcome, not proof of rollback; a subsequent terminal repair
+reads the task and leaves an already-finished row unchanged. This does not add
+automatic reconciliation or extend retained output lifetime. See the
+[repair diagnostic regressions](async-job-queue-review.md#repair-diagnostic-isolation-2026-09-12-utc).
+
 Queue submission preparation failures also store only a cause-free unexpected
 task error with its task ID. Raw storage/serialization exceptions remain available
 to the submitting caller and in best-effort correlated operator logs, not the task

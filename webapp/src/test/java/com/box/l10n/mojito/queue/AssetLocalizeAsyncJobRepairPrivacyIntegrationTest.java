@@ -14,6 +14,10 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.admin.AssetLocalizeAsyncJobRepairWS;
@@ -32,6 +36,7 @@ import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLo
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobSubmissionService;
 import com.box.l10n.mojito.service.tm.GenerateLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.LocalizedAssetGenerationService;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityNotFoundException;
@@ -40,8 +45,10 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.jpa.EntityManagerHolder;
@@ -86,6 +93,51 @@ public class AssetLocalizeAsyncJobRepairPrivacyIntegrationTest extends ServiceTe
   public void lostTaskFinishAcknowledgementKeepsGenericFailureAndRepairIsIdempotent()
       throws Exception {
     assertFailedRepair(true);
+  }
+
+  @Test
+  public void committedRepairSurvivesMetricCollisionAndBrokenLogging() throws Exception {
+    assertFailedRepairWithBrokenLogging(false);
+  }
+
+  @Test
+  public void lostFinishAcknowledgementSurvivesMetricCollisionAndBrokenLogging() throws Exception {
+    assertFailedRepairWithBrokenLogging(true);
+  }
+
+  private void assertFailedRepairWithBrokenLogging(boolean loseFinishAcknowledgement)
+      throws Exception {
+    Gauge.builder("assetLocalizeAsyncJob.repair", () -> 1.0)
+        .tags(
+            "queueName",
+            QUEUE,
+            "status",
+            "failed",
+            "result",
+            loseFinishAcknowledgement ? "finishFailed" : "repaired")
+        .register(metrics);
+    Logger logger = (Logger) LoggerFactory.getLogger(AssetLocalizeAsyncJobRepairService.class);
+    Level originalLevel = logger.getLevel();
+    @SuppressWarnings("unchecked")
+    Appender<ILoggingEvent> appender = mock(Appender.class);
+    AtomicInteger attemptedLogs = new AtomicInteger();
+    doAnswer(
+            invocation -> {
+              attemptedLogs.incrementAndGet();
+              throw new AssertionError("repair appender failed");
+            })
+        .when(appender)
+        .doAppend(any(ILoggingEvent.class));
+    logger.setLevel(Level.INFO);
+    logger.addAppender(appender);
+    try {
+      // Reuse real task persistence, response redaction and already-finished row checks.
+      assertFailedRepair(loseFinishAcknowledgement);
+      assertThat(attemptedLogs.get()).isPositive();
+    } finally {
+      logger.detachAppender(appender);
+      logger.setLevel(originalLevel);
+    }
   }
 
   @Test

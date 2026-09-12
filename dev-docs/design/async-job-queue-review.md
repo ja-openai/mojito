@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has nineteen local review commits (four original chunks plus CI,
+- The queue worktree has twenty local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -273,6 +273,37 @@ plans when Docker is available. The index prefilter is not proof of an unchanged
 plan or disjoint lock ranges for case-equivalent queues. Encoding cannot recover
 already-lossy identities; old binaries still need draining before relying on the
 guard. No admission, schema-adoption, business-fencing or rollout gate is closed.
+
+## Repair Diagnostic Isolation (2026-09-12 UTC)
+
+The repair service could replace an acknowledged task finish with a logging
+failure, or replace the actual lookup/publication/finish exception when both a
+counter and its fallback logger failed. The expanded red run reproduced 14 failing
+cases across 43 tests (12 failures, two errors, no skips or reruns), including real
+HSQL task persistence and a failure injected after committed `finishTask` returned.
+
+Metrics and success/failure logs now share a local best-effort boundary with one
+guarded fallback warning. Ordinary diagnostic failures preserve repaired and
+already-finished results and the original typed repair error/cause. JVM-fatal
+errors still escape, including causes, suppressed errors and subclasses; identity
+traversal handles cycles without modifying the throwable graph. Wrapped fatal
+lookup/finish failures escape before diagnostics. Fatal propagation after a finish
+does not imply that committed state rolled back.
+
+Focused verification passed 119 tests across six suites with two opt-in database
+skips and zero failures, errors or XML rerun/flaky entries: repair service (30),
+HSQL repair privacy integration (13), repair WS (10), handler (34), submission
+service (17) and output-retry integration (15 passed, two skipped). The committed
+finish/lost-ack fixtures also assert translator HTTP redaction, retained operator
+diagnostics and unchanged rows on repeated repair. They inject acknowledgement
+loss at the service boundary, not in JDBC or a network connection.
+
+Evidence: `/private/tmp/queue-repair-diagnostics-expanded-red-20260912.log` and
+`/private/tmp/queue-repair-diagnostics-final-20260912.log`. Root formatting and diff
+checks pass; existing deprecation/weaving, frontend, test-agent and fixture warnings
+remain. No real MySQL/PostgreSQL run is claimed for this correction. Generic queue
+sources, publication order, retries, transaction ownership, schema and routing
+defaults are unchanged; admission, lifetime, migration and rollout gates remain.
 
 ## Bounded MySQL Claim Locks (2026-09-12 UTC)
 

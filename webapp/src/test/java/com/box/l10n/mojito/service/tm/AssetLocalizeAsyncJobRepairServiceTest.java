@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.RETURNS_DEFAULTS;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -39,6 +41,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.slf4j.Logger;
 
 @RunWith(MockitoJUnitRunner.class)
 public class AssetLocalizeAsyncJobRepairServiceTest {
@@ -51,6 +54,7 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
   ObjectMapper objectMapper = new ObjectMapper();
   SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   AssetLocalizeAsyncJobRepairService repairService;
+  private final Logger originalLogger = AssetLocalizeAsyncJobRepairService.logger;
 
   @Before
   public void setUp() {
@@ -61,6 +65,7 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
 
   @After
   public void closeMeterRegistry() {
+    AssetLocalizeAsyncJobRepairService.logger = originalLogger;
     meterRegistry.close();
   }
 
@@ -293,6 +298,7 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
 
   @Test
   public void doneRepairSurvivesCounterTypeCollisionAfterFinishing() {
+    failLogging(new AssertionError("diagnostic logger failed"));
     collideRepairCounter("done", "repaired");
     when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, false));
 
@@ -309,6 +315,7 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
 
   @Test
   public void failedRepairSurvivesCounterTypeCollisionAfterFinishing() {
+    failLogging(new IllegalStateException("diagnostic logger failed"));
     collideRepairCounter("failed", "repaired");
     when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, false));
 
@@ -329,6 +336,7 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
 
   @Test
   public void alreadyFinishedRemainsANoOpDespiteCounterTypeCollision() {
+    failLogging(new AssertionError("diagnostic logger failed"));
     collideRepairCounter("done", "alreadyFinished");
     when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, true));
 
@@ -345,6 +353,7 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
 
   @Test
   public void lookupFailureRetainsItsClassificationAndCauseDespiteCounterTypeCollision() {
+    failLogging(new IllegalStateException("diagnostic logger failed"));
     collideRepairCounter("unknown", "jobLookupFailed");
     IllegalStateException original = new IllegalStateException("database unavailable");
     when(asyncJobStore.getByIds(List.of(new AsyncJobId("1")))).thenThrow(original);
@@ -358,6 +367,7 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
 
   @Test
   public void finishFailureRetainsItsClassificationAndCauseDespiteCounterTypeCollision() {
+    failLogging(new AssertionError("diagnostic logger failed"));
     collideRepairCounter("done", "finishFailed");
     IllegalStateException original = new IllegalStateException("finish failed");
     when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, false));
@@ -395,6 +405,153 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
   public void threadDeathFromTelemetryStillPropagates() throws Exception {
     assertFatalMetricErrorPropagates(
         (Error) Class.forName("java.lang.ThreadDeath").getDeclaredConstructor().newInstance());
+  }
+
+  @Test
+  public void successfulRepairSurvivesLoggingFailureWithoutMisclassifyingIt() {
+    failLogging(new IllegalStateException("success logger failed"));
+    when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, false));
+
+    assertThat(
+            repairService.repairTerminalPollableTask(
+                asyncJobRecord(AsyncJobStatus.DONE, "1", null)))
+        .isEqualTo(
+            new AssetLocalizeAsyncJobRepairService.RepairResult("1", 42L, "done", "repaired"));
+
+    verify(outputStorage).publishOutput(new AssetLocalizeAsyncJobPayload(42L));
+    verify(pollableTaskService).finishTask(42L, null, null, null);
+    assertRepairCounter("done", "repaired", 1);
+    assertThat(
+            meterRegistry
+                .find("assetLocalizeAsyncJob.repair")
+                .tag("result", "finishFailed")
+                .counter())
+        .isNull();
+  }
+
+  @Test
+  public void outputFailureRetainsItsCauseDespiteBrokenFailureLogging() {
+    failLogging(new AssertionError("failure logger failed"));
+    RuntimeException original = new IllegalStateException("output unavailable");
+    when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, false));
+    doThrow(original).when(outputStorage).publishOutput(new AssetLocalizeAsyncJobPayload(42L));
+
+    assertThatThrownBy(
+            () ->
+                repairService.repairTerminalPollableTask(
+                    asyncJobRecord(AsyncJobStatus.DONE, "1", null)))
+        .isExactlyInstanceOf(AssetLocalizePollableTaskRepairException.class)
+        .hasCause(original);
+
+    verify(pollableTaskService, never()).finishTask(eq(42L), any(), any(), any());
+    assertRepairCounter("done", "finishFailed", 1);
+  }
+
+  @Test
+  public void nestedFatalCounterFailureEscapesAfterRepairWithoutFallbackLogging() {
+    Error fatal = new InternalError("fatal counter");
+    RuntimeException wrapper = new IllegalStateException("counter wrapper", fatal);
+    meterRegistry
+        .config()
+        .onMeterAdded(
+            meter -> {
+              throw wrapper;
+            });
+    failLogging(new AssertionError("must not attempt logging after a fatal"));
+    when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, false));
+
+    assertThatThrownBy(
+            () ->
+                repairService.repairTerminalPollableTask(
+                    asyncJobRecord(AsyncJobStatus.DONE, "1", null)))
+        .isSameAs(fatal);
+
+    verify(outputStorage).publishOutput(new AssetLocalizeAsyncJobPayload(42L));
+    verify(pollableTaskService).finishTask(42L, null, null, null);
+    verifyNoInteractions(AssetLocalizeAsyncJobRepairService.logger);
+  }
+
+  @Test
+  @SuppressWarnings("removal")
+  public void suppressedFatalFallbackLoggerFailureEscapesAfterRepair() {
+    Error fatal = new ThreadDeath() {};
+    RuntimeException wrapper = new IllegalStateException("logger wrapper");
+    wrapper.addSuppressed(fatal);
+    // Include a nonfatal cycle; classification must not recurse or rewrite the graph.
+    wrapper.initCause(new IllegalStateException("cycle", wrapper));
+    failLogging(wrapper);
+    collideRepairCounter("done", "repaired");
+    when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, false));
+
+    assertThatThrownBy(
+            () ->
+                repairService.repairTerminalPollableTask(
+                    asyncJobRecord(AsyncJobStatus.DONE, "1", null)))
+        .isSameAs(fatal);
+
+    verify(outputStorage).publishOutput(new AssetLocalizeAsyncJobPayload(42L));
+    verify(pollableTaskService).finishTask(42L, null, null, null);
+    assertThat(wrapper.getSuppressed()).containsExactly(fatal);
+  }
+
+  @Test
+  public void fatalSuccessLoggingEscapesAfterRepair() {
+    Error fatal = new InternalError("fatal success logger");
+    failLogging(new IllegalStateException("logging wrapper", fatal));
+    when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, false));
+
+    assertThatThrownBy(
+            () ->
+                repairService.repairTerminalPollableTask(
+                    asyncJobRecord(AsyncJobStatus.DONE, "1", null)))
+        .isSameAs(fatal);
+
+    verify(outputStorage).publishOutput(new AssetLocalizeAsyncJobPayload(42L));
+    verify(pollableTaskService).finishTask(42L, null, null, null);
+    assertRepairCounter("done", "repaired", 1);
+  }
+
+  @Test
+  public void wrappedFatalLookupStopsBeforeRepairDiagnostics() {
+    Error fatal = new InternalError("fatal lookup");
+    when(asyncJobStore.getByIds(List.of(new AsyncJobId("1"))))
+        .thenThrow(new IllegalStateException("lookup wrapper", fatal));
+
+    assertThatThrownBy(() -> repairService.repairTerminalPollableTask("1")).isSameAs(fatal);
+
+    assertThat(meterRegistry.getMeters()).isEmpty();
+    verifyNoInteractions(pollableTaskService, outputStorage);
+  }
+
+  @Test
+  public void suppressedFatalFinishStopsBeforeRepairDiagnostics() {
+    Error fatal = new InternalError("fatal finish");
+    RuntimeException wrapper = new IllegalStateException("finish wrapper");
+    wrapper.addSuppressed(fatal);
+    when(pollableTaskService.getFreshPollableTask(42L)).thenReturn(pollableTask(42L, false));
+    doThrow(wrapper).when(pollableTaskService).finishTask(42L, null, null, null);
+
+    assertThatThrownBy(
+            () ->
+                repairService.repairTerminalPollableTask(
+                    asyncJobRecord(AsyncJobStatus.DONE, "1", null)))
+        .isSameAs(fatal);
+
+    assertThat(meterRegistry.getMeters()).isEmpty();
+    verify(outputStorage).publishOutput(new AssetLocalizeAsyncJobPayload(42L));
+    verify(pollableTaskService).finishTask(42L, null, null, null);
+  }
+
+  private void failLogging(Throwable failure) {
+    AssetLocalizeAsyncJobRepairService.logger =
+        mock(
+            Logger.class,
+            invocation -> {
+              if (List.of("info", "warn").contains(invocation.getMethod().getName())) {
+                throw failure;
+              }
+              return RETURNS_DEFAULTS.answer(invocation);
+            });
   }
 
   private void assertFatalMetricErrorPropagates(Error failure) {

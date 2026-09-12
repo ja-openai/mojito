@@ -8,8 +8,12 @@ import com.box.l10n.mojito.queue.AsyncJobStore;
 import com.box.l10n.mojito.service.pollableTask.ExceptionHolder;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -44,6 +48,7 @@ public class AssetLocalizeAsyncJobRepairService {
     try {
       asyncJobId = new AsyncJobId(asyncJobIdValue);
     } catch (RuntimeException exception) {
+      rethrowJvmFatal(exception);
       recordRepair("unknown", "invalidJobId");
       throw exception;
     }
@@ -52,6 +57,7 @@ public class AssetLocalizeAsyncJobRepairService {
     try {
       asyncJobRecords = asyncJobStore.getByIds(List.of(asyncJobId));
     } catch (RuntimeException exception) {
+      rethrowJvmFatal(exception);
       recordRepair("unknown", "jobLookupFailed");
       throw new AssetLocalizeAsyncJobLookupException(
           "Failed to look up asset localize async job: " + asyncJobId.value(), exception);
@@ -93,6 +99,7 @@ public class AssetLocalizeAsyncJobRepairService {
     try {
       payload = AssetLocalizeAsyncJobPayload.fromJson(asyncJobRecord.jobData());
     } catch (RuntimeException exception) {
+      rethrowJvmFatal(exception);
       recordRepair(asyncJobRecord.status(), "invalidPayload");
       throw new AssetLocalizeAsyncJobInvalidPayloadException(
           "Invalid asset localize async job payload: " + asyncJobRecord.id().value(), exception);
@@ -101,6 +108,7 @@ public class AssetLocalizeAsyncJobRepairService {
     try {
       pollableTask = pollableTaskService.getFreshPollableTask(payload.pollableTaskId());
     } catch (RuntimeException exception) {
+      rethrowJvmFatal(exception);
       recordRepair(asyncJobRecord.status(), "pollableTaskLookupFailed");
       throw new AssetLocalizePollableTaskLookupException(
           "Failed to look up pollable task: " + payload.pollableTaskId(), exception);
@@ -134,12 +142,15 @@ public class AssetLocalizeAsyncJobRepairService {
         pollableTaskService.finishTask(pollableTask.getId(), null, null, null);
       }
     } catch (RuntimeException exception) {
+      rethrowJvmFatal(exception);
       recordRepair(asyncJobRecord.status(), "finishFailed");
-      logger.warn(
-          "Failed to repair assetlocalize pollable task {} for terminal async job {}",
-          pollableTask.getId(),
-          asyncJobRecord.id().value(),
-          exception);
+      recordDiagnostic(
+          () ->
+              logger.warn(
+                  "Failed to repair assetlocalize pollable task {} for terminal async job {}",
+                  pollableTask.getId(),
+                  asyncJobRecord.id().value(),
+                  exception));
       throw new AssetLocalizePollableTaskRepairException(
           "Failed to repair pollable task "
               + pollableTask.getId()
@@ -149,11 +160,13 @@ public class AssetLocalizeAsyncJobRepairService {
     }
 
     recordRepair(asyncJobRecord.status(), "repaired");
-    logger.info(
-        "Repaired assetlocalize pollable task {} for terminal async job {} with status {}",
-        pollableTask.getId(),
-        asyncJobRecord.id().value(),
-        asyncJobRecord.status().getDatabaseValue());
+    recordDiagnostic(
+        () ->
+            logger.info(
+                "Repaired assetlocalize pollable task {} for terminal async job {} with status {}",
+                pollableTask.getId(),
+                asyncJobRecord.id().value(),
+                asyncJobRecord.status().getDatabaseValue()));
     return new RepairResult(
         asyncJobRecord.id().value(),
         pollableTask.getId(),
@@ -166,7 +179,7 @@ public class AssetLocalizeAsyncJobRepairService {
   }
 
   private void recordRepair(String status, String result) {
-    recordMetric(
+    recordDiagnostic(
         () ->
             meterRegistry
                 .counter(
@@ -180,16 +193,50 @@ public class AssetLocalizeAsyncJobRepairService {
                 .increment());
   }
 
-  private void recordMetric(Runnable recording) {
+  private void recordDiagnostic(Runnable recording) {
     try {
       recording.run();
     } catch (Throwable failure) {
-      if (failure instanceof VirtualMachineError
-          || "java.lang.ThreadDeath".equals(failure.getClass().getName())) {
-        throw (Error) failure;
+      rethrowJvmFatal(failure);
+      try {
+        logger.warn("Failed to record assetlocalize repair diagnostic", failure);
+      } catch (Throwable loggingFailure) {
+        rethrowJvmFatal(loggingFailure);
+        // A failed diagnostic must not replace a repair outcome; do not retry logging.
       }
-      logger.warn("Failed to record assetlocalize repair metric", failure);
     }
+  }
+
+  private static void rethrowJvmFatal(Throwable failure) {
+    if (isJvmFatal(failure)) {
+      throw (Error) failure;
+    }
+    // Transaction and diagnostic wrappers can retain fatal causes or suppressed errors.
+    // Track identity to handle cycles without recursion or changing the original graph.
+    Set<Throwable> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+    ArrayDeque<Throwable> pending = new ArrayDeque<>();
+    pending.add(failure);
+    while (!pending.isEmpty()) {
+      Throwable current = pending.removeFirst();
+      if (!visited.add(current)) {
+        continue;
+      }
+      if (isJvmFatal(current)) {
+        throw (Error) current;
+      }
+      Throwable cause = current.getCause();
+      if (cause != null) {
+        pending.addLast(cause);
+      }
+      for (Throwable suppressed : current.getSuppressed()) {
+        pending.addLast(suppressed);
+      }
+    }
+  }
+
+  @SuppressWarnings("removal")
+  private static boolean isJvmFatal(Throwable throwable) {
+    return throwable instanceof VirtualMachineError || throwable instanceof ThreadDeath;
   }
 
   public record RepairResult(
