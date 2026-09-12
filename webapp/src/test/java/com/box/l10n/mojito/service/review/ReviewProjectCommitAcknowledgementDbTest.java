@@ -9,6 +9,9 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
@@ -33,6 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.hibernate.Session;
 import org.junit.Rule;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.ConnectionCallback;
@@ -60,6 +64,116 @@ public class ReviewProjectCommitAcknowledgementDbTest extends ServiceTestBase {
   @Autowired private PlatformTransactionManager transactionManager;
   @MockitoSpyBean private RepositoryStatisticsUpdatedReactor statisticsReactor;
   @MockitoSpyBean private JdbcTemplate jdbcTemplate;
+
+  @Test
+  public void attributionUsesCommittedServerIdentityWithoutTrustingClientClaims() throws Exception {
+    Fixture fixture = fixture(true);
+    var request = decisionRequest(fixture);
+    request.setClientContext(
+        new ReviewProjectClientContext(
+            1,
+            "11111111-1111-4111-8111-111111111111",
+            "22222222-2222-4222-8222-222222222222",
+            1L,
+            "index-example123.js",
+            "review_save",
+            new ReviewProjectClientContext.Owner(
+                fixture.projectId(),
+                fixture.rowId() + 1,
+                fixture.tmTextUnitId(),
+                request.getExpectedReviewStateRevision()),
+            null,
+            null));
+    Logger logger = (Logger) LoggerFactory.getLogger(ReviewProjectSaveTrace.class);
+    var logs = new ListAppender<ILoggingEvent>();
+    logs.start();
+    logger.addAppender(logs);
+    try {
+      var response = reviewProjectWS.saveDecision(fixture.rowId(), request);
+      assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+      assertThat(logs.list).hasSize(1);
+      String message = logs.list.getFirst().getFormattedMessage();
+      Long savedVariantId =
+          currentRepository
+              .findByLocale_IdAndTmTextUnit_Id(fixture.localeId(), fixture.tmTextUnitId())
+              .getTmTextUnitVariant()
+              .getId();
+      assertThat(message)
+          .contains(
+              "transaction=committed",
+              "methodResult=success",
+              "draftIdentity=row_mismatch",
+              "rowId=" + fixture.rowId(),
+              "afterVariantId=" + savedVariantId,
+              "clientClaims=untrusted");
+      assertThat(message).doesNotContain(request.getTarget());
+    } finally {
+      logger.detachAppender(logs);
+      logs.stop();
+    }
+  }
+
+  @Test
+  public void conflictingSaveAttributionReportsRollbackNotSuccess() throws Exception {
+    Fixture fixture = fixture(true);
+    var request = decisionRequest(fixture);
+    request.setExpectedCurrentTmTextUnitVariantId(-1L);
+    Logger logger = (Logger) LoggerFactory.getLogger(ReviewProjectSaveTrace.class);
+    var logs = new ListAppender<ILoggingEvent>();
+    logs.start();
+    logger.addAppender(logs);
+    try {
+      var response = reviewProjectWS.saveDecision(fixture.rowId(), request);
+      assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+      assertThat(logs.list).hasSize(1);
+      assertThat(logs.list.getFirst().getFormattedMessage())
+          .contains(
+              "transaction=rolled_back", "methodResult=conflict", "clientClaims=legacy_unknown")
+          .doesNotContain("afterVariantId", request.getTarget());
+    } finally {
+      logger.detachAppender(logs);
+      logs.stop();
+    }
+  }
+
+  @Test
+  public void successfulMethodDoesNotClaimCommitWhenItsOuterTransactionRollsBack()
+      throws Exception {
+    Fixture fixture = fixture(true);
+    var request = decisionRequest(fixture);
+    Logger logger = (Logger) LoggerFactory.getLogger(ReviewProjectSaveTrace.class);
+    var logs = new ListAppender<ILoggingEvent>();
+    logs.start();
+    logger.addAppender(logs);
+    try {
+      new TransactionTemplate(transactionManager)
+          .executeWithoutResult(
+              status -> {
+                try {
+                  var response = reviewProjectWS.saveDecision(fixture.rowId(), request);
+                  assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+                  assertThat(logs.list).isEmpty();
+                  status.setRollbackOnly();
+                } catch (Exception failure) {
+                  throw new RuntimeException(failure);
+                }
+              });
+      assertThat(logs.list).hasSize(1);
+      assertThat(logs.list.getFirst().getFormattedMessage())
+          .contains("transaction=rolled_back", "methodResult=success")
+          .doesNotContain("transaction=committed", request.getTarget());
+      assertThat(
+              currentRepository
+                  .findByLocale_IdAndTmTextUnit_Id(fixture.localeId(), fixture.tmTextUnitId())
+                  .getTmTextUnitVariant()
+                  .getContent())
+          .isEqualTo("Original");
+      assertThat(decisionRepository.findByReviewProjectTextUnitId(fixture.rowId())).isEmpty();
+    } finally {
+      logger.detachAppender(logs);
+      logs.stop();
+    }
+  }
 
   @Test
   public void firstDecisionAcknowledgesCommitWithoutPreloadingTheAssetRepository()
