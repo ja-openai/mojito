@@ -450,7 +450,8 @@ remaining material issue in this bounded change.
 ## Finite Extraction Gates
 
 The [poll-logging recovery correction](async-job-queue-review.md#poll-logging-recovery-2026-09-12-utc)
-is confined to the generic runtime and is included in the rebuilt ordinary JAR.
+and [listener recovery-log correction](async-job-queue-review.md#listener-recovery-logging-2026-09-12-utc)
+are confined to the generic engine and included in the rebuilt ordinary JAR.
 Fresh independent JPA and clean lean consumer lanes pass with explicit real-DB
 skips; no new facade, dependency, schema resource or Mojito business import is
 added. This source correction does not replace the target-version database and

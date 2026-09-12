@@ -157,15 +157,19 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
           }
           if (running) {
             incrementListenCounter("failed");
-            logger.warn(
-                "PostgreSQL async queue wakeup listener failed for channel {}; reconnecting",
-                channel,
-                exception);
+            logRecoverySafely(
+                () ->
+                    logger.warn(
+                        "PostgreSQL async queue wakeup listener failed for channel {}; reconnecting",
+                        channel,
+                        exception));
           } else {
-            logger.debug(
-                "PostgreSQL async queue wakeup listener stopped for channel {}",
-                channel,
-                exception);
+            logRecoverySafely(
+                () ->
+                    logger.debug(
+                        "PostgreSQL async queue wakeup listener stopped for channel {}",
+                        channel,
+                        exception));
           }
         }
         sleepBeforeReconnect();
@@ -379,11 +383,25 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
         return;
       }
       incrementCounter("asyncJobQueue.wakeup.listener.reconnectSleepInterrupted");
-      logger.warn(
-          "PostgreSQL async queue wakeup listener reconnect sleep was interrupted for channel {}; "
-              + "continuing without preserving the interrupt flag to avoid a reconnect spin",
-          channel,
-          exception);
+      logRecoverySafely(
+          () ->
+              logger.warn(
+                  "PostgreSQL async queue wakeup listener reconnect sleep was interrupted for channel {}; "
+                      + "continuing without preserving the interrupt flag to avoid a reconnect spin",
+                  channel,
+                  exception));
+    }
+  }
+
+  private void logRecoverySafely(Runnable diagnostic) {
+    try {
+      diagnostic.run();
+    } catch (Throwable failure) {
+      Error fatal = AsyncJobQueueFatalErrors.findJvmFatal(failure);
+      if (fatal != null) {
+        throw fatal;
+      }
+      // Logging must not terminate reconnect recovery or escape an orderly listener shutdown.
     }
   }
 

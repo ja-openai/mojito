@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty-eight local commits (four original chunks plus CI,
+- The queue worktree has twenty-nine local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -85,6 +85,9 @@ not close its current gates.
   pass real pooled-session cleanup and reconnect after backend termination despite
   injected metrics failure. This is session-loss evidence, not network partition,
   database failover or shared-pool capacity proof.
+  The [recovery logging correction](#listener-recovery-logging-2026-09-12-utc)
+  additionally preserves reconnect and orderly thread exit despite ordinary logger
+  failures; its new fault tests use mocked JDBC, not a fresh database-outage run.
 - Eight [native PostgreSQL store contract groups](#native-postgresql-store-contracts-2026-09-12-utc)
   pass, including expiry during row-lock waits, concurrent retention updates and
   renewal contention. The 1,000-job performance smoke is a local diagnostic, not
@@ -368,6 +371,40 @@ authorization/serialization regression coverage, not a new vulnerability fix,
 authentication-provider/CSRF proof, database execution or staging verification.
 The generic engine and its ordinary JAR are unchanged. No migration, queue flag,
 production policy, primary-master file or rollout gate was changed.
+
+## Listener Recovery Logging (2026-09-12 UTC)
+
+An ordinary logger failure in the connection-failure catch or interrupted-reconnect
+warning could terminate the listener instead of reconnecting. The stopped-connection
+debug log could also escape shutdown. Durable polling remains the fallback; this is
+loss of optional wakeup availability, not loss of queue rows. The three recovery
+logs now use one guarded helper. Nonfatal failures cannot interrupt recovery, and
+the existing cause/suppressed-graph classifier propagates the original JVM-fatal
+Error. SQL, subscription cleanup, timing, metrics and lifecycle policy are unchanged.
+This is not global notifier/listener logging containment or automatic fatal restart.
+
+All eight regression cases failed before the fix with zero reruns, then passed.
+They cover RuntimeException/AssertionError recovery and stopped-thread paths plus
+wrapped VirtualMachineError and suppressed ThreadDeath subclasses. Each verifies
+the faulted log call; owned threads are joined and the original logger restored.
+The earlier registry AutoCloseable compilation failure was fixture setup, not a
+product reproduction. Final focused verification passed 126 tests with five real-DB
+opt-in skips across ten suites, no failures/errors/flaky/rerun elements. Logs:
+`/tmp/queue-listener-logging-reproduction-20260912.log` and
+`/tmp/queue-listener-logging-final-20260912.log`. Root Spotless passed.
+
+The plain-javac engine was rebuilt and its separate ordinary-JAR consumer passed
+11 tests with seven DB skips; the clean JPA-host consumer passed 17 with 19 DB skips.
+Neither consumer had failures or reruns. Engine JAR SHA-256:
+`d10a292547070c50e773672fee6d98bfad8034757d44791fdddc7a783aafcda1`.
+Logs are `/tmp/queue-listener-logging-engine-verified-20260912.log`,
+`/tmp/queue-listener-logging-consumer-20260912.log` and
+`/tmp/queue-listener-logging-jpa-consumer-20260912.log`. The first install was blocked
+by local-cache sandbox permissions; the approved local-only install succeeded.
+No application dependency, schema, adapter, routing flag or remote ref changed.
+Existing weaving/JDK/build warnings and npm audit findings remain. This closes a
+reproduced control-flow defect, not admission, migration adoption, target-version
+database CI or staging/network-failover gates.
 
 ## MySQL And PostgreSQL Restart Matrix (2026-09-12 UTC)
 
