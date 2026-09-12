@@ -33,6 +33,7 @@ public class AsyncJobQueueRealDatabaseCiContractTest {
         .contains(
             JdbcAsyncJobStoreDatabaseIntegrationTest.class.getSimpleName(),
             JdbcAsyncJobStorePoolIntegrationTest.class.getSimpleName(),
+            JdbcAsyncJobStoreNetworkIntegrationTest.class.getSimpleName(),
             JdbcAsyncJobStoreDatabaseRestartIntegrationTest.class.getSimpleName(),
             JdbcAsyncJobStoreTimezoneIntegrationTest.class.getSimpleName(),
             AsyncJobQueueJpaTransactionIntegrationTest.class.getSimpleName(),

@@ -901,6 +901,14 @@ Do not count the separate workflow/HSQL checks as database execution.
 | Mixed versions and rollback | Old producer/new consumer and new producer/retained compatible consumer fixtures; route flip with active Quartz parents and delayed queue rows. Prove old canonical-writing consumers are absent before the private-output fence is relied upon. Complete a bounded 1,000-job drain within 30 minutes under declared fixture runtimes, accounting separately for expected terminal failures. |
 | Database adoption | Migration validation from the selected master's actual migration history, no version collision or checksum rewrite, and fresh-schema install. MySQL production gate is mandatory; PostgreSQL runtime tests are mandatory for any claimed PostgreSQL support, while full application/PostgreSQL deployment remains a separate certification. |
 
+The required CI selector also includes `JdbcAsyncJobStoreNetworkIntegrationTest`.
+Its enqueue and completion lost-reply cases now pass on native MySQL 8.4.11 and
+PostgreSQL 16.15: a real TCP reply blackhole produces a driver timeout after an
+independently observed commit, then the same pool reconnects without duplicate work
+or replaying DONE. See the [bounded transport proof](async-job-queue-review.md#lost-tcp-commit-replies-2026-09-12-utc).
+It does not implement caller identity/reconciliation or certify sustained runtime
+and listener partitions, multi-host failover, capacity or the full Docker/Linux job.
+
 If any fixture cannot meet its finite runtime bound, diagnose it and revise the
 test design explicitly; do not repeatedly extend a rollout until it appears green.
 The end state of this plan is a proven `assetlocalize` execution replacement,

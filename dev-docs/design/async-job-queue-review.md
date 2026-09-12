@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty-seven local commits (four original chunks plus CI,
+- The queue worktree has thirty-eight local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -141,7 +141,13 @@ not close its current gates.
   external wakeup. Both restart methods now also pass on
   [native MySQL 8.4.11](#native-mysql-84-fault-recovery-2026-09-12-utc), together with
   two pool/session-loss and two worker-JVM crash cases. The Docker kill/start paths,
-  listener-aware failover and network blackholes remain unverified.
+  listener-aware failover and sustained network blackholes remain unverified.
+- The new [lost TCP commit-reply contracts](#lost-tcp-commit-replies-2026-09-12-utc)
+  pass both enqueue and completion on native MySQL 8.4.11 and PostgreSQL 16.15.
+  The database commits while the caller blocks, real JDBC socket timeouts surface,
+  and the original pool replaces the failed connection without duplicating the row
+  or reclaiming terminal DONE. These are bounded one-way transport failures, not
+  durable request-identity recovery, runtime/listener partition soak or failover.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -317,6 +323,55 @@ plans when Docker is available. The index prefilter is not proof of an unchanged
 plan or disjoint lock ranges for case-equivalent queues. Encoding cannot recover
 already-lossy identities; old binaries still need draining before relying on the
 guard. No admission, schema-adoption, business-fencing or rollout gate is closed.
+
+## Lost TCP Commit Replies (2026-09-12 UTC)
+
+`JdbcAsyncJobStoreNetworkIntegrationTest` adds two opt-in contracts per database
+to the required zero-rerun CI selector, protected by the workflow contract test.
+A loopback byte relay passes the existing driver protocol, including TLS, without
+terminating or inspecting it. A connection wrapper arms reply discard immediately
+before invoking the real JDBC `commit()`; it does not throw an injected exception.
+Client requests continue to reach the database while server replies are discarded.
+
+For enqueue and fenced completion, a direct independent connection must observe
+the committed row while the caller is still waiting. The call must then fail with
+an actual `SocketTimeoutException`, with discarded server bytes and exactly one
+commit invocation recorded. Restoring replies must let the same Hikari pool use
+a newly accepted physical connection. Enqueued work remains one claimable job;
+committed DONE retains its payload, cannot be claimed again and rejects a stale
+completion. All rows and attempt counts are asserted; executors, relay sockets and
+pool borrowers must drain. No production queue code, schema or routing flag changed.
+
+Fresh verification used the maintained methods and assertions, substituting only
+container metadata/lifecycle for uniquely named schemas on private native servers:
+
+- MySQL 8.4.11: two tests passed in 11.111 seconds, zero ignored tests, assumptions
+  or failures. TLS was required, with `innodb_flush_log_at_trx_commit=1`,
+  `sync_binlog=1` and doublewrite enabled. The self-signed server certificate was
+  not hostname-authenticated.
+- PostgreSQL 16.15: two tests passed in 11.466 seconds, zero ignored tests,
+  assumptions or failures. TLS used `verify-full` with the private test certificate;
+  fsync, synchronous commit and full-page writes were enabled.
+- Focused Maven control: 47 passed and four expected database opt-in skips across
+  three suites, no failures, errors or automatic reruns. Root
+  `mvn -Pno-local-config spotless:apply` passed. Required Docker/Linux CI remains
+  unverified; neither skipped control methods nor native adapters certify it.
+
+The first PostgreSQL attempt correctly failed both observer assertions: the test
+queried uppercase statuses while the schema stores lowercase strings. MySQL's
+case-insensitive comparison had hidden this fixture error. The observer now uses
+`AsyncJobStatus.getDatabaseValue()`; the same pool-replacement assertion was also
+strengthened to require a new relay session after fault entry. Both dialects were
+explicitly rerun against corrected compiled sources with unchanged outcome checks.
+The failed and corrected logs, native wrapper sources and count-guarded runners
+remain in `/private/tmp/queue-mysql84-network.0Xruvm/`; the private servers were
+cleanly stopped and their datadirs removed after verification.
+
+This closes a finite lost-reply execution gap, not durable caller recovery: enqueue
+still throws without returning the committed ID, and the test oracle is not an
+application recovery API. Persisted admission identity, unknown-commit reconciliation,
+callback delivery, lease-loss/runtime behavior during sustained partitions, shared
+pool headroom, multi-host soak and replica failover remain separate gates.
 
 ## Foundation History Dependency (2026-09-12 UTC)
 
