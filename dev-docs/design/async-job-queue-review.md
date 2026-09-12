@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty-three local commits (four original chunks plus CI,
+- The queue worktree has twenty-four local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -20,8 +20,8 @@ not close its current gates.
 - The original admin chunk is not independently buildable: its configuration test
   references repair classes introduced only by the following asset-adapter chunk.
   The [foundation history audit](#foundation-history-dependency-2026-09-12-utc)
-  records the exact dependency and required split. Passing tests at HEAD do not
-  certify intermediate commits or make the first two commits a standalone landing.
+  records the exact dependency and current fixture split. Passing tests at HEAD
+  do not certify intermediate commits or make the first two commits a standalone landing.
 - Recent changes have not been pushed, merged, deployed or enabled. Unrelated
   primary-master edits are outside this work. Remote-tracking refs are cached, not
   fresh origin evidence. The initial published branch is not the latest reviewed
@@ -291,9 +291,9 @@ therefore cannot compile its tests independently. This is source-tree evidence,
 not a Maven run at the historical revision.
 
 Before a foundation-only landing, keep generic admin activation tests in the
-admin chunk and move repair activation tests/fixtures to the asset-adapter chunk.
-The later `f6018ee944` HTTP test deliberately covers both real controllers and
-also needs splitting if generic admin authorization is landed without repair.
+admin chunk and place repair activation tests/fixtures in the asset-adapter chunk.
+The later `f6018ee944` HTTP test originally covered both real controllers; its
+generic and repair cases must also belong to their respective chunks.
 Do not silently include repair or its business services to satisfy those tests.
 Rebuild from current reviewed content, including subsequent core corrections,
 rather than cherry-picking only the original core/admin commits. Run formatting,
@@ -302,17 +302,39 @@ final tree alone is insufficient. Keep migration adoption as its separate gate.
 
 No history, branch reference, source code, migration or primary-master file was
 rewritten during this audit. This records a required correction, not a completed
-restack or an independently verified foundation. The current HEAD configuration
-and authorization selection passes nine tests with no failures/errors/skips or
+restack or an independently verified foundation. At the audit revision, the configuration
+and authorization selection passed nine tests with no failures/errors/skips or
 automatic reruns (`/private/tmp/queue-foundation-history-head-tests-20260912.log`);
-root Spotless passes. These checks are separate from the historical diagnosis.
+root Spotless passed. These checks are separate from the historical diagnosis.
+
+### Current Fixture Separation
+
+The current tree now separates `AsyncJobQueueAdminWSConfigurationTest` and
+`AsyncJobQueueAdminAuthorizationTest` from
+`AssetLocalizeAsyncJobRepairWSConfigurationTest` and
+`AssetLocalizeAsyncJobRepairAuthorizationTest`. Generic tests import no repair
+controller or business service; each fixture registers only its own controller
+and mocked service. Both flag matrices, anonymous/non-admin denial, admin reads
+with payload redaction, one repair invocation and unsupported-method checks are
+preserved. The increase from nine combined tests to sixteen separated tests is
+fixture partitioning, not seven new behavior guarantees.
+
+Root Spotless and the focused admin/inspection/web/MCP selection pass **82 tests
+across nine suites**, with no failures, errors, skips, flakes or automatic reruns
+(`/private/tmp/queue-admin-test-boundaries-tests-20260912.log`). Select both
+`AsyncJobQueueAdmin*` and `AssetLocalizeAsyncJobRepair*` when checking these
+boundaries. Runtime, security policy, migrations and flag defaults are unchanged.
+This prepares source boundaries only: historical commits have not been rewritten
+or individually rebuilt, and the foundation history/base/schema gate stays open.
 
 ## Admin HTTP Authorization (2026-09-12 UTC)
 
-Added five `AsyncJobQueueAdminAuthorizationTest` cases using Spring MockMvc, the
-production `WebSecurityConfig.setAuthorizationRequests` rules and both real queue
+Originally added five `AsyncJobQueueAdminAuthorizationTest` cases using Spring
+MockMvc, the production `WebSecurityConfig.setAuthorizationRequests` rules and both real queue
 controllers. Only inspection and repair services are mocked. The existing direct
-controller/configuration tests did not exercise request authorization.
+controller/configuration tests did not exercise request authorization. The
+[current fixture separation](#current-fixture-separation) preserves these contracts
+in controller-specific tests; the counts below describe the earlier combined run.
 
 - Anonymous callers and each USER, TRANSLATOR and PM role are denied at all five
   inspection GET routes and the repair POST, with no service invocation.

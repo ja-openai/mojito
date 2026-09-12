@@ -23,10 +23,7 @@ import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobExpiredL
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobReadyStatusSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobSummary;
-import com.box.l10n.mojito.rest.admin.AssetLocalizeAsyncJobRepairWS;
 import com.box.l10n.mojito.rest.admin.AsyncJobQueueAdminWS;
-import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService;
-import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.RepairResult;
 import java.time.Instant;
 import java.util.List;
 import org.junit.Before;
@@ -52,18 +49,12 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 @RunWith(SpringRunner.class)
 @WebAppConfiguration
 @ContextConfiguration(classes = AsyncJobQueueAdminAuthorizationTest.TestConfiguration.class)
-@TestPropertySource(
-    properties = {
-      "l10n.org.async-job-queue.enabled=true",
-      "l10n.org.async-job-queue.asset-localize.enabled=true"
-    })
+@TestPropertySource(properties = "l10n.org.async-job-queue.enabled=true")
 public class AsyncJobQueueAdminAuthorizationTest {
 
-  private static final String QUEUE = "assetlocalize";
+  private static final String QUEUE = "test-queue";
   private static final String QUEUE_PATH = "/api/admin/async-job-queue/queues/" + QUEUE;
   private static final String JOB_PATH = QUEUE_PATH + "/jobs/42";
-  private static final String REPAIR_PATH =
-      "/api/admin/async-job-queue/assetlocalize/jobs/42/pollable-task/repair";
   private static final List<String> READ_PATHS =
       List.of(
           QUEUE_PATH + "/status-counts",
@@ -75,35 +66,31 @@ public class AsyncJobQueueAdminAuthorizationTest {
 
   @Autowired WebApplicationContext context;
   @Autowired AsyncJobQueueInspectionService inspection;
-  @Autowired AssetLocalizeAsyncJobRepairService repair;
 
   private MockMvc mvc;
 
   @Before
   public void setUp() {
-    reset(inspection, repair);
+    reset(inspection);
     mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
   }
 
   @Test
-  public void anonymousRequestsCannotInspectOrRepairJobs() throws Exception {
+  public void anonymousRequestsCannotInspectJobs() throws Exception {
     for (String path : READ_PATHS) {
       mvc.perform(get(path)).andExpect(status().isForbidden());
     }
-    mvc.perform(post(REPAIR_PATH)).andExpect(status().isForbidden());
-    verifyNoInteractions(inspection, repair);
+    verifyNoInteractions(inspection);
   }
 
   @Test
-  public void nonAdministratorsCannotInspectOrRepairJobs() throws Exception {
+  public void nonAdministratorsCannotInspectJobs() throws Exception {
     for (String role : List.of("USER", "TRANSLATOR", "PM")) {
       for (String path : READ_PATHS) {
         mvc.perform(get(path).with(user("caller").roles(role))).andExpect(status().isForbidden());
       }
-      mvc.perform(post(REPAIR_PATH).with(user("caller").roles(role)))
-          .andExpect(status().isForbidden());
     }
-    verifyNoInteractions(inspection, repair);
+    verifyNoInteractions(inspection);
   }
 
   @Test
@@ -168,21 +155,6 @@ public class AsyncJobQueueAdminAuthorizationTest {
     verify(inspection).findJobs(QUEUE, "failed", 7);
     verify(inspection).getJob(QUEUE, "42");
     verifyNoMoreInteractions(inspection);
-    verifyNoInteractions(repair);
-  }
-
-  @Test
-  public void administratorsCanInvokeRepairExactlyOnce() throws Exception {
-    when(repair.repairTerminalPollableTask("42"))
-        .thenReturn(new RepairResult("42", 73L, "done", "finished"));
-
-    mvc.perform(post(REPAIR_PATH).with(user("admin").roles("ADMIN")))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.asyncJobId").value("42"))
-        .andExpect(jsonPath("$.pollableTaskId").value(73));
-    verify(repair).repairTerminalPollableTask("42");
-    verifyNoMoreInteractions(repair);
-    verifyNoInteractions(inspection);
   }
 
   @Test
@@ -191,15 +163,13 @@ public class AsyncJobQueueAdminAuthorizationTest {
         .andExpect(status().isNotFound());
     mvc.perform(delete(JOB_PATH).with(user("admin").roles("ADMIN")))
         .andExpect(status().isMethodNotAllowed());
-    mvc.perform(get(REPAIR_PATH).with(user("admin").roles("ADMIN")))
-        .andExpect(status().isMethodNotAllowed());
-    verifyNoInteractions(inspection, repair);
+    verifyNoInteractions(inspection);
   }
 
   @Configuration
   @EnableWebMvc
   @EnableWebSecurity
-  @Import({AsyncJobQueueAdminWS.class, AssetLocalizeAsyncJobRepairWS.class})
+  @Import(AsyncJobQueueAdminWS.class)
   static class TestConfiguration {
 
     @Bean
@@ -213,11 +183,6 @@ public class AsyncJobQueueAdminAuthorizationTest {
     @Bean
     AsyncJobQueueInspectionService inspectionService() {
       return mock(AsyncJobQueueInspectionService.class);
-    }
-
-    @Bean
-    AssetLocalizeAsyncJobRepairService repairService() {
-      return mock(AssetLocalizeAsyncJobRepairService.class);
     }
   }
 }
