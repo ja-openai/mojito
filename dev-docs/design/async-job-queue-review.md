@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty local review commits (four original chunks plus CI,
+- The queue worktree has twenty-one local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -273,6 +273,42 @@ plans when Docker is available. The index prefilter is not proof of an unchanged
 plan or disjoint lock ranges for case-equivalent queues. Encoding cannot recover
 already-lossy identities; old binaries still need draining before relying on the
 guard. No admission, schema-adoption, business-fencing or rollout gate is closed.
+
+## Poll Logging Recovery (2026-09-12 UTC)
+
+A broken logger could permanently strand the adaptive poll loop while reporting
+a transient claim failure or next-poll scheduling failure. Six deterministic red
+cases reproduced interrupted recovery/masked fatal logging (19 tests, five
+failures and one error); a separate real scheduler/executor test then timed out
+with queued work still unprocessed after the first injected claim/log failure.
+The latter uses in-memory queue state, not an actual database outage.
+
+Only the three poll-failure/next-schedule/recovery-schedule logging sites now use
+a guarded diagnostic boundary. Ordinary logger failures do not interrupt existing
+metrics or recovery scheduling. A fatal logging cause/suppressed error still
+escapes as the original Error after releasing the active-poll latch. There is no
+logger retry, additional database retry, scheduler watchdog or global logging
+rewrite. If both scheduling attempts genuinely fail, the loop still reports
+unscheduled and needs an external hint or lifecycle restart after scheduler recovery;
+the regression verifies that hint can resume polling.
+
+Focused runtime/coordinator/submission/fatal/public-composition verification passed
+423 tests across 19 suites with seven opt-in database skips and zero failures,
+errors or XML flaky/rerun entries. The 20-test lifecycle suite includes actual
+poller recovery to DONE at attempt one, compound logger/metric failures, transient
+warning and ordinary error paths, unscheduled diagnostics and fatal propagation.
+Both owned test executors terminate; shared logger state is restored.
+
+The ordinary 29-source engine rebuilt; its independent JPA consumer passed 17
+tests with 19 opt-in skips, followed by a clean lean consumer with 11 passed and
+seven skipped. Both pass all-class JAR provenance and byte equality with zero
+failure/error/flaky/rerun entries. Built and resolved JAR SHA-256:
+`f42f5c0674713bedb5da845ebec3a0acfc87bf087d47b7ff525e5ef468954495`.
+Logs are `/private/tmp/queue-poll-log-recovery-{red,real-red,verified,engine,consumer-jpa,consumer-lean}-20260912.log`.
+Root formatting and diff checks pass; existing deprecation/weaving, frontend,
+test-agent and fixture warnings remain. No MySQL/PostgreSQL execution is claimed
+for this runtime revision; earlier native runs remain historical evidence. No
+schema, transaction, attempt-budget, publication or rollout contract changed.
 
 ## Repair Diagnostic Isolation (2026-09-12 UTC)
 

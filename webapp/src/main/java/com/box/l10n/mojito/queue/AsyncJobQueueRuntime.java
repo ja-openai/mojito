@@ -539,7 +539,8 @@ class AsyncJobQueueRuntime {
       if (isJvmFatal(e)) {
         throw (Error) e;
       }
-      logger.warn("Failed to schedule next poll for queue {}", queueName, e);
+      logPollDiagnostic(
+          () -> logger.warn("Failed to schedule next poll for queue {}", queueName, e));
       recordPollScheduleFailure();
       scheduleRecoveryPollAfterScheduleFailure();
     }
@@ -552,7 +553,8 @@ class AsyncJobQueueRuntime {
       if (isJvmFatal(e)) {
         throw (Error) e;
       }
-      logger.warn("Failed to schedule recovery poll for queue {}", queueName, e);
+      logPollDiagnostic(
+          () -> logger.warn("Failed to schedule recovery poll for queue {}", queueName, e));
       recordPollScheduleFailure();
       recordPollUnscheduled();
     }
@@ -1324,11 +1326,27 @@ class AsyncJobQueueRuntime {
   }
 
   private void logPollFailure(Throwable e) {
-    String failureKind = claimFailureKind(e);
-    if (isTransientClaimFailure(failureKind)) {
-      logger.warn("Transient async queue poll failed for queue {}: {}", queueName, failureKind, e);
-    } else {
-      logger.error("Async queue poll failed for queue {}", queueName, e);
+    logPollDiagnostic(
+        () -> {
+          String failureKind = claimFailureKind(e);
+          if (isTransientClaimFailure(failureKind)) {
+            logger.warn(
+                "Transient async queue poll failed for queue {}: {}", queueName, failureKind, e);
+          } else {
+            logger.error("Async queue poll failed for queue {}", queueName, e);
+          }
+        });
+  }
+
+  private void logPollDiagnostic(Runnable logging) {
+    try {
+      logging.run();
+    } catch (Throwable failure) {
+      Error fatal = AsyncJobQueueFatalErrors.findJvmFatal(failure);
+      if (fatal != null) {
+        throw fatal;
+      }
+      // Do not retry a broken logger or strand the next poll/recovery attempt.
     }
   }
 

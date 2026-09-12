@@ -449,6 +449,13 @@ remaining material issue in this bounded change.
 
 ## Finite Extraction Gates
 
+The [poll-logging recovery correction](async-job-queue-review.md#poll-logging-recovery-2026-09-12-utc)
+is confined to the generic runtime and is included in the rebuilt ordinary JAR.
+Fresh independent JPA and clean lean consumer lanes pass with explicit real-DB
+skips; no new facade, dependency, schema resource or Mojito business import is
+added. This source correction does not replace the target-version database and
+release gates below.
+
 1. Preserve external-package execution/inspection, optional PostgreSQL wakeup and
    producer-only composition, and explicit scheduled maintenance. These contracts
    remain in webapp's source tree and are also reused by the separate artifact
