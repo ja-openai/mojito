@@ -10,8 +10,8 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has eight local review commits (four original chunks plus CI,
-  failure-boundary and policy follow-ups) over `7fcc341457`. Local master at this
+- The queue worktree has nine local review commits (four original chunks plus CI,
+  failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
   `V109__AI_Review_Request_Usage.sql`. The queue branch's two V109 scripts are
@@ -49,10 +49,12 @@ not close its current gates.
   the opt-in flag. A [native consumer run](#native-mysql-ordinary-jar-consumer-2026-09-12-utc)
   now verifies two existing public execution/maintenance contracts plus two JAR
   boundary tests on MySQL 8.0.43, without application classes. These separate runs
-  are not an additive coverage total. Required MySQL 8.4/PostgreSQL 16 CI remains
-  unverified on this revision; Docker's local socket is absent. In particular,
-  fresh PostgreSQL wakeup/caller-transaction execution and target-version JPA proof
-  remain open. Asynchronous handler completion is still proposed, not implemented.
+  are not an additive coverage total. A separate [native PostgreSQL 16.15 run](#native-postgresql-ordinary-jar-consumer-2026-09-12-utc)
+  passes five existing execution/maintenance/wakeup contracts plus two JAR-boundary
+  tests, including successful hints and caller commit/rollback isolation. Required
+  MySQL 8.4/PostgreSQL 16 CI and target-version JPA proof remain unverified;
+  Docker's local socket is absent. Asynchronous handler completion is still proposed,
+  not implemented.
 - The application JPA/JDBC fixture now passes all 35 existing tests on native
   MySQL 8.0.43 with Hibernate 6.6.49.Final, separately from its fresh 35-test HSQL
   control. The [native JPA evidence](#native-mysql-jpajdbc-contracts-2026-09-12-utc)
@@ -74,7 +76,7 @@ not close its current gates.
 | Parent fan-out recovery | Separate default-off fan-out flag, resolution preflight and reproduced partial-admission failures. | Build on durable admission with frozen manifests and stable child slots. Approve duplicate-tag/size policy; crash and concurrent resume must retain exactly N child identities and reconstruct the same output map. |
 | Business publication and replay | Attempt-private output plus fenced DONE selection; all non-null pull-run tracking excluded; terminal-task replay containment. | Approve the [lineage authority contract](async-job-queue-lineage.md#exact-scope-and-owner-decisions), retire old writers, implement business-generation fencing and fresh linked replay. Queue-row leases alone do not fence shared caches, branch state or lineage writes. |
 | Input/output lifetime | Database retention corrections and regression demonstrating expired winning output cannot be repaired. | Agree result/repair/replay horizons and backend lifecycle exclusions; implement queue-owned pinned keys and reference-aware cleanup across fallback copies. Accepted work and unresolved publication must survive cleanup races. |
-| Database and rollout proof | Historical MySQL/PostgreSQL contracts, current native MySQL 8.0/HSQL/runtime/JAR tests, stricter CI selection, bounded canary/rollback design. | Run required target-version real-DB cases with zero reruns and no required skips, then approved pool/network/multi-host soak and workload canary/rollback gates. Smoke throughput and a passing workflow parse are not capacity or hosted-CI proof. |
+| Database and rollout proof | Historical MySQL/PostgreSQL contracts, current native MySQL 8.0/HSQL/runtime/JAR tests, PostgreSQL 16.15 public-consumer contracts, stricter CI selection, bounded canary/rollback design. | Run required target-version real-DB cases with zero reruns and no required skips, then approved pool/network/multi-host soak and workload canary/rollback gates. Smoke throughput and a passing workflow parse are not capacity or hosted-CI proof. |
 | Standalone OSS module | Independent ordinary-JAR compilation and external Spring consumer contracts; no Mojito business imports in the core. | Agree extraction, artifact/API/configuration naming and schema ownership; make Mojito a real module consumer and establish upgrade, compatibility and release provenance. See [finite extraction gates](async-job-queue-library.md#finite-extraction-gates). Do not equate the probe with a released library. |
 
 The main next implementation is durable admission, followed by parent recovery and
@@ -340,6 +342,52 @@ Artifacts are `/tmp/queue-mysql-consumer.vLe6Z8/consumer-lean.log`, `native-cons
 the expected permanent-handler-failure log remain visible. The private server on
 loopback port 45190 was shut down and its data directory removed. No application
 database, primary worktree, migration, routing flag or remote ref changed.
+
+## Native PostgreSQL Ordinary-JAR Consumer (2026-09-12 UTC)
+
+The ordinary queue JAR at source revision `f8025ec5ca` passed seven direct JUnit
+checks against a private PostgreSQL 16.15 server: the five existing PostgreSQL
+execution, maintenance and wakeup contracts plus two JAR-boundary tests. The
+approved run had zero failures, ignored tests, assumption skips or automatic
+reruns. The preparatory clean lean Maven run passed 11 tests and skipped seven
+opt-in database cases; these overlapping runs are not additive coverage.
+
+The wakeup cases verify successful hints without committing a resumed caller's
+business transaction, observing both commit and rollback through an independent
+connection. A producer with no local handler wakes a separate consumer after its
+initial empty poll and established LISTEN subscription, ahead of its one-minute
+periodic poll. An injected notification-connection failure leaves the job durable
+at attempt zero; a later polling-only consumer completes it after producer shutdown.
+The latter is controlled hint failure, not a real network partition. Execution and
+maintenance retain their existing transaction, permanent-failure, inspection,
+restart, bounded-retention and host-resource cleanup assertions.
+
+Only Testcontainers construction/lifecycle and connection metadata were substituted.
+The existing methods, SQL, fixture DDL and assertions were unchanged. Before every
+UUID database creation, the adapter checked the exact private data directory,
+server version `160015` and active TLS; all JDBC URLs used `sslmode=verify-full`
+with the private certificate. The lean classpath excluded webapp and reactor engine
+classes. All-class JAR provenance, absence of Mojito/Quartz/AspectJ/Hibernate and
+built-versus-resolved byte equality passed. Both JAR SHA-256 values were
+`8678855c68e05f5502c1cfb771f5285e6edcf5484b8ef5ab095a19eef13cf54f`.
+
+The server was built privately from the official PostgreSQL mirror's `REL_16_15`
+commit `7d3e000c5961a544302072058a1184e9a588837b`, without installing a Homebrew
+service. Artifacts are in `/tmp/queue-postgres16.FgSYLH`: `consumer-native-approved.log`,
+`consumer-lean.log`, `NativePostgresJarConsumerTest.java`, `NativeConsumerRunner.java`,
+`consumer_probe.rb`, build/install logs and `server.log`. Initial sandbox attempts
+failed on shared-memory allocation and loopback connections before queue SQL;
+approved access resolved those environment failures without changing deadlines,
+adding test retries or disabling TLS. JDK/Mockito warnings and expected injected
+handler/notification failure logs remain visible.
+
+More than 24 GiB remained free before and after execution. The loopback server on
+port 59396 shut down cleanly, its listener closed and its private data directory
+was removed. This closes the fresh PostgreSQL public-consumer execution gap, not
+the full configured CI selection, application JPA/asset adapter, Flyway upgrade,
+pool/network/failover soak, extraction or production-readiness gates. No production
+or maintained test source, migration, primary worktree, routing flag or remote ref
+changed.
 
 ## Native MySQL JPA/JDBC Contracts (2026-09-12 UTC)
 

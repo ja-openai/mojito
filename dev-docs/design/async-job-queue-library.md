@@ -320,8 +320,10 @@ rejected `pg_notify`. After the fix that business write rolls back while the que
 row remains accepted. This is real transaction evidence on a deliberately failed
 notification, not successful PostgreSQL execution. The external PostgreSQL
 consumer contract additionally checks successful hints with caller commit and
-rollback and an independent pre-commit observer; refresh it on a real database
-before claiming that path verified. Listener cleanup still orders UNLISTEN before
+rollback and an independent pre-commit observer. It now passes on native PostgreSQL
+16.15 through the ordinary JAR; see the [scoped evidence](async-job-queue-review.md#native-postgresql-ordinary-jar-consumer-2026-09-12-utc).
+This does not certify arbitrary datasource wrappers or network/failover behavior.
+Listener cleanup still orders UNLISTEN before
 auto-commit restoration and connection return. This fixes connection ownership,
 not durable admission, exactly-once notification or the open readiness gates.
 
@@ -521,8 +523,15 @@ MySQL 8.0.43 run passed the two existing public execution/maintenance methods an
 ordinary-JAR boundary tests, without webapp classes or a reactor shortcut. Real JDBC
 and the original assertions ran; only container orchestration/connection settings
 were substituted. See the [consumer evidence and limits](async-job-queue-review.md#native-mysql-ordinary-jar-consumer-2026-09-12-utc).
-This is not a refreshed full MySQL 8.4/PostgreSQL 16 consumer lane, real-DB JPA proof,
-or extraction/release approval. Earlier dated results below remain historical.
+The latest JAR at `f8025ec5ca` also passes a separate native PostgreSQL 16.15 run:
+five existing execution/maintenance/wakeup methods and two JAR-boundary tests,
+with no skips or automatic reruns. Successful notifications preserve caller
+commit/rollback isolation, and polling recovers an injected failed hint after
+producer shutdown. Only container orchestration/connection settings were adapted;
+verified TLS, real SQL and ordinary-JAR provenance were checked. See the
+[PostgreSQL evidence and limits](async-job-queue-review.md#native-postgresql-ordinary-jar-consumer-2026-09-12-utc).
+Neither native run is the full configured CI lane, real-DB JPA matrix, or
+extraction/release approval. Earlier dated results below remain historical.
 
 Verification (2026-09-09): isolated `clean install` compiles all 28 sources and
 the separate `spotless:check clean test` consumer passes all **16 tests across
