@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -344,6 +345,150 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
       }
       insert.executeBatch();
       connection.commit();
+    }
+  }
+
+  @Test
+  public void mysqlRetentionBatchKeepsPeerReplayAndBoundedRecordLocks() throws Exception {
+    assumeContainerTestsEnabled();
+    // Root is fixture-only: observing performance_schema locks needs more than schema DML grants.
+    try (MySQLContainer<?> container =
+        mysqlContainer().withUsername("root").withUrlParam("rewriteBatchedStatements", "true")) {
+      container.start();
+      runMigration(container, "db/migration/V109__Async_Job_Queue.sql");
+      DataSource dataSource = dataSource(container);
+      for (AsyncJobStatus status : List.of(AsyncJobStatus.DONE, AsyncJobStatus.FAILED)) {
+        for (String fixture : List.of("terminal", "foreign", "recent", "active", "tied")) {
+          for (int batch : List.of(1, 3)) {
+            assertMysqlRetentionLockFootprint(dataSource, status, fixture, batch);
+          }
+        }
+      }
+    }
+  }
+
+  private void assertMysqlRetentionLockFootprint(
+      DataSource dataSource, AsyncJobStatus status, String fixture, int batch) throws Exception {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    jdbc.setQueryTimeout(10);
+    jdbc.execute("TRUNCATE TABLE async_job_queue");
+    try (Connection connection = dataSource.getConnection();
+        var insert =
+            connection.prepareStatement(
+                "INSERT INTO async_job_queue(queue_name,status,available_at,job_data,updated_date,last_error) VALUES(?,?,'2020-01-01','{}',?,?)")) {
+      connection.setAutoCommit(false);
+      for (int i = 0; i <= 1500; i++) {
+        boolean excluded = i < 500;
+        insert.setString(
+            1, fixture.equals("foreign") && excluded ? "Retention-Plan" : "retention-plan");
+        String rowStatus =
+            i == 1500
+                ? "failed"
+                : fixture.equals("active") && excluded ? "queued" : status.getDatabaseValue();
+        insert.setString(2, rowStatus);
+        insert.setObject(
+            3,
+            LocalDateTime.of(fixture.equals("recent") && excluded ? 2022 : 2020, 1, 1, 0, 0)
+                .plusSeconds(fixture.equals("tied") && i < 1500 ? 0 : i));
+        insert.setString(4, rowStatus.equals("failed") ? "old failure" : null);
+        insert.addBatch();
+      }
+      insert.executeBatch();
+      connection.commit();
+    }
+    jdbc.execute("ANALYZE TABLE async_job_queue");
+    List<Map<String, Object>> before =
+        jdbc.queryForList("SELECT * FROM async_job_queue ORDER BY id");
+    CountDownLatch deleted = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    AsyncJobStore purgingStore =
+        new JdbcAsyncJobStore(
+            new NamedParameterJdbcTemplate(jdbc) {
+              @Override
+              public int update(String sql, SqlParameterSource params) {
+                int result = super.update(sql, params);
+                if (sql.stripLeading().startsWith("DELETE FROM async_job_queue")) {
+                  deleted.countDown();
+                  try {
+                    if (!release.await(15, TimeUnit.SECONDS)) {
+                      throw new IllegalStateException("Retention transaction release timed out");
+                    }
+                  } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(exception);
+                  }
+                }
+                return result;
+              }
+            },
+            AsyncJobQueueJdbcDialect.MYSQL,
+            new DataSourceTransactionManager(dataSource));
+    AsyncJobStore peerStore = jdbcStore(dataSource, AsyncJobQueueJdbcDialect.MYSQL);
+    // A failed tail row is outside every purge batch and must remain replayable before commit.
+    AsyncJobId peerId = new AsyncJobId("1501");
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<Integer> purge =
+          executor.submit(
+              () ->
+                  purgingStore.deleteTerminalJobs(
+                      "retention-plan", status, Instant.parse("2021-01-01T00:00:00Z"), batch));
+      assertThat(deleted.await(10, TimeUnit.SECONDS)).as("retention DELETE completed").isTrue();
+      Map<String, Long> locks = new LinkedHashMap<>();
+      jdbc.query(
+          """
+          SELECT INDEX_NAME, COUNT(*) AS lock_count
+          FROM performance_schema.data_locks
+          WHERE OBJECT_SCHEMA = DATABASE() AND OBJECT_NAME = 'async_job_queue'
+            AND LOCK_TYPE = 'RECORD'
+          GROUP BY INDEX_NAME
+          """,
+          rs -> {
+            locks.put(rs.getString("INDEX_NAME"), rs.getLong("lock_count"));
+          });
+      Future<Boolean> replay =
+          executor.submit(() -> peerStore.requeueFailedNow("retention-plan", peerId, null));
+      // Replay must commit while purge still holds all its locks, not after the latch times out.
+      assertThat(replay.get(5, TimeUnit.SECONDS)).isTrue();
+      release.countDown();
+      assertThat(purge.get(10, TimeUnit.SECONDS)).isEqualTo(batch);
+
+      SoftAssertions results = new SoftAssertions();
+      results
+          .assertThat(locks.getOrDefault("PRIMARY", 0L))
+          .as("retained primary locks: %s %s batch=%s", status, fixture, batch)
+          .isEqualTo((long) batch);
+      results
+          .assertThat(locks.values().stream().mapToLong(Long::longValue).sum())
+          .as("retained index record locks: %s %s batch=%s", status, fixture, batch)
+          .isLessThanOrEqualTo(4L * batch);
+      long oldestId = List.of("foreign", "recent", "active").contains(fixture) ? 501 : 1;
+      Set<Long> deletedIds = new HashSet<>();
+      for (long id = oldestId; id < oldestId + batch; id++) {
+        deletedIds.add(id);
+      }
+      List<Map<String, Object>> after =
+          jdbc.queryForList("SELECT * FROM async_job_queue ORDER BY id");
+      results.assertThat(after).hasSize(before.size() - batch);
+      results
+          .assertThat(
+              after.stream().filter(row -> ((Number) row.get("id")).longValue() != 1501).toList())
+          .as("only oldest eligible rows are deleted; every other row except replay is unchanged")
+          .containsExactlyElementsOf(
+              before.stream()
+                  .filter(
+                      row ->
+                          !deletedIds.contains(((Number) row.get("id")).longValue())
+                              && ((Number) row.get("id")).longValue() != 1501)
+                  .toList());
+      results
+          .assertThat(peerStore.getByIds(List.of(peerId)).get(0).status())
+          .isEqualTo(AsyncJobStatus.QUEUED);
+      results.assertAll();
+    } finally {
+      release.countDown();
+      executor.shutdownNow();
+      assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
     }
   }
 

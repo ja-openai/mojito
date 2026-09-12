@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty-six local commits (four original chunks plus CI,
+- The queue worktree has thirty-seven local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -32,6 +32,9 @@ not close its current gates.
   and case/padding/legacy-encoding identity matrix. The [retention diagnostic](#native-mysql-retention-plan-2026-09-12-utc)
   adds one held-open DELETE/peer-replay plan, not another JUnit result. These are
   scoped proofs, not a full application run, target-version certification or capacity.
+  The subsequent [maintained retention regression](#bounded-mysql-retention-regression-2026-09-12-utc)
+  passes all 20 status/backlog/batch scenarios on native MySQL 8.4.11, protecting
+  bounded held locks and concurrent peer replay, not optimizer scan cost or capacity.
   The [native timezone matrix](#native-mysql-timezone-contracts-2026-09-12-utc)
   separately passes 14 tests in each isolated UTC and America/Los_Angeles JVM;
   these new-write checks do not establish historical timestamp provenance.
@@ -1081,6 +1084,53 @@ transactions. Artifacts are `/tmp/queue-mysql-retention.aU6WKO/probe.log` and
 down. This is one diagnostic scenario, not an additional JUnit result, MySQL 8.4 or
 PostgreSQL proof, a sustained-load test, or coverage of all status/collation/backlog
 shapes. Target-version plans and the existing retention/replay CI gates remain open.
+
+## Bounded MySQL Retention Regression (2026-09-12 UTC)
+
+`JdbcAsyncJobStoreDatabaseIntegrationTest.mysqlRetentionBatchKeepsPeerReplayAndBoundedRecordLocks`
+turns the earlier one-off diagnostic into a maintained MySQL 8.4 contract. It
+runs 20 internal scenarios: DONE/FAILED, batches one/three, and five 1,501-row
+fixtures covering a terminal backlog, case-distinct foreign queues, rows newer
+than the fixed cutoff, nonterminal QUEUED rows, and equal-timestamp ID ordering.
+Each fixture includes an unselected FAILED tail row for an independent replay.
+
+The real production DELETE finishes but its transaction remains open behind a
+latch. A separate connection counts `performance_schema.data_locks` records;
+the test requires exactly B retained primary records and at most 4B total index
+records. A peer must commit replay before the purge latch is released. After
+commit, exactly the oldest eligible B rows are gone, every other row except the
+replayed tail is byte/value-equivalent to its snapshot, and that tail is QUEUED.
+Fixture root privileges are needed only for lock observation. Each case resets
+its disposable queue table and checks worker termination; no production setting
+or retention SQL changed. The existing opted-in, zero-rerun CI selector already
+includes the containing test class; Docker execution still needs verification.
+
+The new method passed all 20 scenarios on private native MySQL 8.4.11 in 2.440
+seconds, reported as **one JUnit pass**, with no failures, ignored/assumption skips
+or automatic reruns. Only native connection/container metadata were adapted; the
+maintained method and assertions ran unchanged. The initial run failed during
+fixture setup because synthetic FAILED rows lacked the existing schema's required
+`last_error`; it never reached retention. Adding valid failure diagnostics to the
+seed data corrected that test-only error without weakening constraints/assertions.
+
+The fresh `-Pno-local-config` store/DB/CI-contract control passed **51 tests with
+14 explicit database skips**, 65 selected across three suites, zero failures,
+errors or rerun/flaky entries. The new test is one of those skips; the native
+pass above is its execution evidence. Root Spotless and diff checks passed.
+Existing frontend audit findings (two moderate, one high), JDK/Mockito and
+self-signed fixture warnings remain. Artifacts are under
+`/private/tmp/queue-mysql84-retention.Jo8ZSH/`: both native logs, the native adapter
+and count-checking runner, `probe.rb`, original/corrected controls, formatting and
+server logs. The identity-checked TLS-required loopback fixture used port 45205;
+certificate/hostname authentication was not enabled. Its server was shut down and
+only its disposable datadir removed, leaving more than 27 GiB free.
+
+This protects retained lock footprint and correctness on these fixture shapes,
+not the number of scanned rows, arbitrary optimizer plans, all collations,
+sustained throughput, Linux/Docker CI or production capacity. The older EXPLAIN
+diagnostic remains separate evidence. Historical migration adoption, durable
+admission, publication/blob ownership and rollout gates remain open. Primary
+master, remote refs and queue routing are unchanged.
 
 ## Native MySQL Ordinary-JAR Consumer (2026-09-12 UTC)
 
