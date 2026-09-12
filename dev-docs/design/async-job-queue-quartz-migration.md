@@ -819,7 +819,8 @@ mvn -pl webapp -Pno-local-config \
 ```
 
 The dedicated GitHub Actions database job explicitly includes timezone and JPA/JDBC
-transaction contracts in addition to store, pool, wakeup and worker-crash suites.
+transaction contracts in addition to store, pool, wakeup, worker-crash and
+PostgreSQL database-restart suites.
 It disables Surefire reruns so an initially failed contract cannot turn green on
 automatic retry. The ordinary webapp default stays at one rerun unless overridden;
 readiness verification must opt out and inspect skipped cases. Performance smoke
@@ -829,10 +830,18 @@ The 2026-09-12 CI audit found that
 `AssetLocalizeAsyncJobOutputRetryIntegrationTest` was absent from that database
 job's explicit `-Dtest` list. Its MySQL/PostgreSQL methods require the container
 opt-in property, which the ordinary `mvn test` job does not set. The dedicated
-job now selects the adapter as well as the six core database suites, with the
+job now selects the adapter as well as seven core database suites, with the
 opt-in property and zero reruns. `AsyncJobQueueRealDatabaseCiContractTest`
 regression-checks those requirements against the parsed workflow, rather than
 accepting a class name or flag mentioned elsewhere in the file.
+
+`JdbcAsyncJobStorePostgresRestartIntegrationTest` keeps one Hikari pool and the same
+database across abrupt shutdown/restart. It checks committed state, rollback of
+uncommitted input and expired-token fencing with durability settings enabled.
+The [native PostgreSQL crash-recovery run](async-job-queue-review.md#postgresql-database-restart-2026-09-12-utc)
+passes, but the required Docker SIGKILL path and full CI selection remain unverified.
+It is a store contract, not runtime/callback/listener failover, MySQL restart,
+lost-commit recovery or network-partition proof.
 
 Source wiring alone does not establish the adapter's real-database retry,
 commit-uncertainty, tracked-work rejection or publication/repair contracts.

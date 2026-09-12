@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty-six local commits (four original chunks plus CI,
+- The queue worktree has twenty-seven local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -103,6 +103,12 @@ not close its current gates.
   pass: running work reclaims only after natural expiry with a fresh token, while
   committed DONE remains terminal without replaying its missed callback. Repeated
   business probes demonstrate at-least-once effects, not exactly-once execution.
+- The new [PostgreSQL database-restart contract](#postgresql-database-restart-2026-09-12-utc)
+  passes against a private 16.15 server with crash recovery and durability settings
+  enabled. Committed rows survive, uncommitted input disappears, the original pool
+  reconnects and expired owners remain fenced. The Docker kill/start path is now
+  selected in CI but has not run here; runtime failover, MySQL restart and network
+  blackhole tests remain separate requirements.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -362,6 +368,54 @@ authorization/serialization regression coverage, not a new vulnerability fix,
 authentication-provider/CSRF proof, database execution or staging verification.
 The generic engine and its ordinary JAR are unchanged. No migration, queue flag,
 production policy, primary-master file or rollout gate was changed.
+
+## PostgreSQL Database Restart (2026-09-12 UTC)
+
+`JdbcAsyncJobStorePostgresRestartIntegrationTest` adds one opted-in database test,
+selected explicitly alongside existing store/adapter contracts in the zero-rerun
+CI job and required by `AsyncJobQueueRealDatabaseCiContractTest`. It kills and
+starts the same PostgreSQL container, without replacing its data directory or
+rerunning DDL. The fixture enables and checks `fsync`, `synchronous_commit` and
+`full_page_writes` before and after restart. Connections, SQL waits and readiness
+polling are bounded; one Hikari pool remains alive throughout the outage.
+
+The test verifies acknowledged QUEUED, RUNNING and DONE rows are unchanged after
+recovery, while a separate connection's uncommitted input update disappears. A
+failed direct connection and real pooled heartbeat establish database unavailability;
+a later `pg_postmaster_start_time()` establishes a new server process. After
+natural database-clock lease expiry, the old token cannot renew, complete, fail
+or retry, even before another worker claims. A replacement with the same worker
+ID obtains attempt two and a new token. The same four stale operations reject
+without changing that active row; the replacement completes, queued work remains
+executable, DONE does not reclaim, and a new enqueue gets a fresh identity. The
+pool ends with no borrowed connections or waiting threads.
+
+The maintained method passed once on native PostgreSQL 16.15 in 3.132 seconds,
+with zero failures, ignored tests, assumption skips or reruns. A temporary wrapper
+substituted only Testcontainers lifecycle/connection metadata: native
+`pg_ctl -m immediate stop` stood in for Docker KILL, followed by restarting the
+same private cluster. SQL, transactions, pool, lease clock and assertions were
+unchanged. Server logs confirm interrupted shutdown, WAL redo and end-of-recovery
+checkpoint. This is native immediate-shutdown/crash-recovery evidence, not an
+execution of Docker's SIGKILL path, a power-loss test or a hosted-CI result.
+
+The wrapper verified exact datadir, version and active TLS before stopping and
+after restarting; JDBC retained certificate/hostname verification. Artifacts are
+`/tmp/queue-postgres-restart.OUQczF/native-restart.log`, `server.log`,
+`NativePostgresRestartVerification.java` and `restart_probe.rb`. The private
+loopback server on port 59404 shut down cleanly afterwards, with no listener left.
+More than 30 GiB remained free. The separate Maven control with `-Pno-local-config`
+passed 56 tests and skipped this one opt-in case across four suites, with no
+failures or reruns (`/tmp/queue-db-restart-verified-20260912.log`); root Spotless
+passed. Expected connection-reset, startup and existing build/JDK warnings remain
+visible rather than being hidden by retries.
+
+This closes a scoped PostgreSQL store-restart execution gap only. No runtime
+handler, callback, business transaction, notification listener, network blackhole,
+replica promotion or lost-COMMIT-ack recovery protocol is tested here. MySQL restart,
+the full configured database CI lane, runtime failover/soak, migration adoption,
+durable admission and publication/blob ownership remain open. No production code,
+migration, routing defaults, master files or remote refs changed.
 
 ## Retention Clock Fixture (2026-09-12 UTC)
 
