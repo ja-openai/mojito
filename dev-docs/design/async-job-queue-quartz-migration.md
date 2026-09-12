@@ -489,6 +489,12 @@ repair binaries before relying on this behavior; existing task errors are not
 rewritten. This is repair-specific data minimization, not a change to task access
 policy or comprehensive confidentiality for legacy callbacks and other workloads.
 
+The [admin HTTP regression](async-job-queue-review.md#admin-http-authorization-2026-09-12-utc)
+exercises production role rules with real inspection/repair controllers: non-admin
+requests never reach services, ADMIN responses omit payload/preview fields, and no
+raw replay/delete route exists. It uses mocked services and injected principals;
+production authentication, CSRF and staging access still need independent checks.
+
 Repair metrics and logging are best-effort: ordinary diagnostic failures do not
 turn an acknowledged finish into an API failure or replace the original typed
 lookup/publication/finish error. JVM-fatal causes and suppressed errors still

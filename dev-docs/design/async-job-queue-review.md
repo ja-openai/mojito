@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty-one local review commits (four original chunks plus CI,
+- The queue worktree has twenty-two local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -273,6 +273,40 @@ plans when Docker is available. The index prefilter is not proof of an unchanged
 plan or disjoint lock ranges for case-equivalent queues. Encoding cannot recover
 already-lossy identities; old binaries still need draining before relying on the
 guard. No admission, schema-adoption, business-fencing or rollout gate is closed.
+
+## Admin HTTP Authorization (2026-09-12 UTC)
+
+Added five `AsyncJobQueueAdminAuthorizationTest` cases using Spring MockMvc, the
+production `WebSecurityConfig.setAuthorizationRequests` rules and both real queue
+controllers. Only inspection and repair services are mocked. The existing direct
+controller/configuration tests did not exercise request authorization.
+
+- Anonymous callers and each USER, TRANSLATOR and PM role are denied at all five
+  inspection GET routes and the repair POST, with no service invocation.
+- ADMIN reaches all five reads and one repair invocation. Serialized list/detail
+  responses omit payload and preview fields and a payload sentinel, while retaining
+  the intentional admin diagnostic and payload-length fields.
+- ADMIN still has no raw replay or delete HTTP operation. Unsupported methods do
+  not reach either service. Separate existing configuration tests retain default-off
+  and both-flags-required controller activation coverage.
+
+Mutation check: temporarily removing only the queue ADMIN matcher made the
+non-admin regression fail with HTTP 200 instead of 403 (one test, one failure,
+no errors/skips/reruns; `/private/tmp/queue-admin-authorization-mutation-20260912.log`).
+The production file was restored byte-for-byte before final verification; no
+authorization behavior changed. The fixture disables CSRF so it cannot mask a
+missing role guard and injects principals rather than testing login providers.
+Anonymous HTTP 403 here is the fixture's entry-point behavior, not a promise about
+production login/redirect configuration.
+
+Root `mvn -Pno-local-config spotless:apply` passes. The focused queue admin,
+inspection and existing web/MCP authorization selection passes **75 tests across
+seven suites**, with no failures/errors/skips or automatic reruns
+(`/private/tmp/queue-admin-authorization-verified-20260912.log`). This is HTTP
+authorization/serialization regression coverage, not a new vulnerability fix,
+authentication-provider/CSRF proof, database execution or staging verification.
+The generic engine and its ordinary JAR are unchanged. No migration, queue flag,
+production policy, primary-master file or rollout gate was changed.
 
 ## Poll Logging Recovery (2026-09-12 UTC)
 
