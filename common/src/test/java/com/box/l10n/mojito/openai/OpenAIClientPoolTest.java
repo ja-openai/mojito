@@ -29,19 +29,7 @@ public class OpenAIClientPoolTest {
 
   static Logger logger = LoggerFactory.getLogger(OpenAIClientPoolTest.class);
 
-  static final String API_KEY;
-
-  static {
-    try {
-      //      API_KEY =
-      //
-      // Files.readString(Paths.get(System.getProperty("user.home")).resolve(".keys/openai"))
-      //              .trim();
-      API_KEY = "test-api-key";
-    } catch (Throwable e) {
-      throw new RuntimeException(e);
-    }
-  }
+  static final String API_KEY = "test-api-key";
 
   @Test
   public void test() {
