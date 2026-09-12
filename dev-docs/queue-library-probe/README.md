@@ -43,17 +43,25 @@ An optional **test-only** JPA host lane consumes the same engine JAR:
 
 ```sh
 mvn -f dev-docs/queue-library-probe/consumer/pom.xml -Pjpa spotless:check clean test
+# Include the same host contracts on MySQL 8.4 and PostgreSQL 16 (requires Docker):
+mvn -f dev-docs/queue-library-probe/consumer/pom.xml -Pjpa spotless:check clean test -Dmojito.asyncJobQueue.testcontainers=true
 ```
 
 It adds Hibernate ORM and HSQL only to the consumer's test classpath, with a tiny
 host entity and explicit `JpaTransactionManager`/`TransactionTemplate` wiring.
-Six tests exercise public queue bootstrap and enqueue: physical JDBC isolation
+Six parameterized tests exercise public queue bootstrap and enqueue: physical JDBC isolation
 and resource suspension/restoration, independent queue commit after host rollback,
 read-only host suspension, real INSERT rollback without poisoning host commit,
 worker-owned business transactions, and both datasource mismatch guards. No
 Mojito entities, AspectJ advice or package-private enqueue primitive are used.
+HSQL always runs; without opt-in the six MySQL and six PostgreSQL cases skip.
+Each opted-in real-database case owns a fresh container, explicitly installs its
+queue DDL fixture, and closes the host context/factory and container even after
+setup or assertion failure. This favors isolation over container-startup speed.
 The host uses `HibernateJpaDialect` and `DELAYED_ACQUISITION_AND_HOLD`; this is not
-a provider/version compatibility matrix or real MySQL/PostgreSQL JPA proof.
+an arbitrary provider/version compatibility matrix. The [native PostgreSQL JPA run](../design/async-job-queue-review.md#independent-jar-jpa-database-lanes-2026-09-12-utc)
+verifies these six contracts plus both ordinary-JAR boundary tests. MySQL 8.4 and
+the complete configured CI lane still require execution.
 Public enqueue deliberately commits independently, not atomically with host work.
 
 Always use `clean test` when switching lanes. The boundary test requires both
@@ -62,8 +70,10 @@ lane; it must not pass because stale compiled classes survived a profile switch.
 
 Without the Testcontainers flag, database cases skip; do not report that run as
 the full consumer proof. Test reports are in `consumer/target/surefire-reports`.
-The existing database CI job runs the engine, lean real-DB consumer and optional
-HSQL JPA consumer separately; adding those steps does not
+The existing database CI job runs the engine, lean real-DB consumer and opted-in
+HSQL/MySQL/PostgreSQL JPA consumer separately; a workflow regression requires
+the JPA profile, clean build, real-database opt-in and zero automatic reruns together.
+Configuring those steps does not
 claim remote CI has passed. No automatic Surefire retries are configured. For
 dependency inspection and local test formatting:
 

@@ -510,16 +510,20 @@ restoration, independent queue commit after outer rollback, writable enqueue fro
 a read-only host, rollback after a real INSERT while the outer JPA work commits,
 worker-owned business transactions with no bound resources before/after, and both
 datasource mismatch guards. The host supplies `HibernateJpaDialect` with
-`DELAYED_ACQUISITION_AND_HOLD`. This is pinned Hibernate/HSQL compatibility evidence,
-not public atomic enlistment, another provider/version matrix or fresh real-DB
-JPA coverage. Public enqueue remains REQUIRES_NEW. Both profile lanes require
+`DELAYED_ACQUISITION_AND_HOLD`. These six contracts are parameterized across HSQL
+and opt-in MySQL 8.4/PostgreSQL 16, with a disposable container per real-DB case.
+The [independent PostgreSQL JPA run](async-job-queue-review.md#independent-jar-jpa-database-lanes-2026-09-12-utc)
+now verifies all six plus both ordinary-JAR provenance tests; MySQL 8.4 and full
+CI execution remain outstanding. This is not public atomic enlistment or an
+arbitrary provider/version compatibility matrix. Public enqueue remains REQUIRES_NEW. Both profile lanes require
 `clean test`; the boundary test explicitly requires/rejects Hibernate and the
 optional compiled test class according to the chosen mode.
 Mockito uses Byte Buddy in the consumer's test scope; this
 is not a claim that every test runs without any instrumentation agent.
 
 The existing real-database CI job runs the engine, lean real-DB consumer and
-optional HSQL JPA consumer separately. The probe
+opted-in HSQL/MySQL/PostgreSQL JPA consumer separately, with zero automatic reruns
+and a workflow regression preventing an accidentally HSQL-only JPA invocation. The probe
 retains Mojito's current package/config conventions and is intentionally not a
 releaseable Maven module. It supplies a concrete, tested extraction starting
 point without changing production wiring or closing the business rollout gates.

@@ -47,4 +47,6 @@ jobs:
       - name: Verify separate consumer of the ordinary queue JAR
         run: mvn -f dev-docs/queue-library-probe/consumer/pom.xml spotless:check clean test -Dmojito.asyncJobQueue.testcontainers=true
       - name: Verify host-owned JPA transactions without Mojito or AspectJ
-        run: mvn -f dev-docs/queue-library-probe/consumer/pom.xml -Pjpa spotless:check clean test
+        run: >-
+          mvn -f dev-docs/queue-library-probe/consumer/pom.xml -Pjpa spotless:check clean test
+          -Dmojito.asyncJobQueue.testcontainers=true -Dsurefire.rerunFailingTestsCount=0

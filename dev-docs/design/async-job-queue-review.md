@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has sixteen local review commits (four original chunks plus CI,
+- The queue worktree has seventeen local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -45,16 +45,22 @@ not close its current gates.
   before database/build/stress work. This does not authorize automatic cleanup of
   unrelated files or caches, or close the remaining database and rollout gates.
 - The rebuilt ordinary JAR passed 17 tests in the HSQL JPA-consumer lane; the latest separate
-  clean lean run passed 11. Each Maven lane skips seven real-database tests without
-  the opt-in flag. A [native consumer run](#native-mysql-ordinary-jar-consumer-2026-09-12-utc)
+  clean lean run passed 11. The expanded JPA lane skips 19 real-database cases without
+  opt-in (12 host contracts and seven public-consumer cases); the lean lane skips seven.
+  A [native consumer run](#native-mysql-ordinary-jar-consumer-2026-09-12-utc)
   now verifies two existing public execution/maintenance contracts plus two JAR
   boundary tests on MySQL 8.0.43, without application classes. These separate runs
   are not an additive coverage total. A separate [native PostgreSQL 16.15 run](#native-postgresql-ordinary-jar-consumer-2026-09-12-utc)
   passes five existing execution/maintenance/wakeup contracts plus two JAR-boundary
   tests, including successful hints and caller commit/rollback isolation. Required
-  MySQL 8.4/PostgreSQL 16 CI and the standalone host's real-DB JPA matrix remain unverified;
+  MySQL 8.4/PostgreSQL 16 CI and the standalone host's MySQL 8.4 JPA lane remain unverified;
   Docker's local socket is absent. Asynchronous handler completion is still proposed,
   not implemented.
+- The [independent JAR's JPA-host suite](#independent-jar-jpa-database-lanes-2026-09-12-utc)
+  now includes both real databases in CI. Its six PostgreSQL 16.15 cases plus two
+  JAR-boundary tests pass natively with no skips; HSQL and clean lean controls pass
+  separately. These public independent-enqueue tests do not implement atomic
+  admission or certify Mojito's business integrations.
 - The application JPA/JDBC fixture now passes all 35 existing tests on native
   MySQL 8.0.43 and [PostgreSQL 16.15](#native-postgresql-jpajdbc-contracts-2026-09-12-utc)
   with Hibernate 6.6.49.Final, separately from its fresh 35-test HSQL control.
@@ -503,6 +509,50 @@ visible. No schema version, routing, master file or remote ref changed. Full
 target-version CI, historical Flyway adoption and workload rollout gates remain
 open. This selection does not execute PostgreSQL timezone, crash or outage cases;
 the subsequent timezone matrix is recorded separately below.
+
+## Independent JAR JPA Database Lanes (2026-09-12 UTC)
+
+`QueueJpaConsumerTest` now runs its same six public-API contracts on HSQL and
+opt-in MySQL 8.4/PostgreSQL 16. Each real-DB case owns a disposable container and
+installs the existing dialect migration only as a fixture. Context, scheduler,
+worker, entity factory and database cleanup remain bounded; skipped cases allocate
+no fixture. No engine source, POM dependencies, public API or schema version changed.
+
+The dedicated CI JPA invocation now explicitly opts into databases with zero
+Surefire reruns. Its new workflow regression failed on the previous HSQL-only
+command (`ci-red.log`), then both workflow tests passed with `-Pno-local-config`
+and no skips/reruns (`ci-green.log`). This is maintained selection coverage, not
+evidence that hosted CI or MySQL 8.4 actually ran.
+
+After rebuilding and locally installing the ordinary 29-source engine JAR, the
+independent JPA consumer passed 17 tests with 19 opt-in skips; a clean switch to
+the lean consumer passed 11 with seven skips. A separate native PostgreSQL 16.15
+run passed all six JPA cases plus both JAR-boundary tests in 2.120 seconds, with
+zero failures, ignored/assumption skips or automatic reruns. The original
+Parameterized runner, fixtures, lifecycle and assertions remained; only dialect
+selection and container orchestration/metadata were adapted. Both resolved/built
+JARs have SHA-256 `3266c1ea5bf0365da64eee6f0657df19b6ac2bbaa67d707e20f63746ca76be25`.
+Boundary tests verify every engine class's ordinary-JAR origin, identical bytes,
+and absence of Mojito business, Quartz and AspectJ classes.
+
+Real PostgreSQL/Hibernate transactions verified READ_COMMITTED queue versus
+SERIALIZABLE host isolation, distinct connections, suspended/restored host resources,
+independent queue durability despite host rollback, writable enqueue from a
+read-only host, actual INSERT rollback without poisoning host commit, worker-owned
+business transactions and both datasource mismatch guards. Public enqueue remains
+REQUIRES_NEW; these are not atomic task/queue admission or unknown-commit recovery.
+
+Artifacts are under `/tmp/queue-jar-jpa-realdb.4sjwfA/`: `native-jpa.log`,
+`NativeJarJpaVerification.java`, `jpa_probe.rb`, `consumer-jpa-hsql.log`,
+`consumer-lean.log`, `ci-red.log`, `ci-green.log`, `engine.log` and `spotless.log`.
+The native runner rejects webapp output; each UUID database checks the private
+datadir, version and TLS with certificate/hostname verification. Its loopback-only
+server on port 59404 shut down cleanly and its datadir was removed; more than 31 GiB
+remained free. Initial local Maven-cache installation was sandbox-denied, then the
+scoped approved install succeeded without publishing. Expected negative-bootstrap,
+JDK/Mockito, deprecated ThreadDeath and existing build warnings remain visible.
+Full CI, MySQL 8.4 JPA, historical adoption, extraction agreement and production
+rollout remain open; primary master, remote refs and routing are unchanged.
 
 ## Native PostgreSQL Worker-JVM Crashes (2026-09-12 UTC)
 
