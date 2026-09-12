@@ -1,6 +1,8 @@
 import { type QueryClient, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
+import type { ReviewProjectTargetOrigin } from '../../api/review-project-client-context';
+
 export type ReviewProjectDraftStatus =
   | 'ACCEPTED'
   | 'NEEDS_REVIEW'
@@ -19,6 +21,7 @@ export type ReviewProjectDecisionSnapshot = {
   statusChoice: ReviewProjectDraftStatus;
   decisionState: 'PENDING' | 'DECIDED';
   suggestionSourceLabel: string | null;
+  targetOrigin?: ReviewProjectTargetOrigin;
 };
 
 export type ReviewProjectDraftValues = {
@@ -26,6 +29,7 @@ export type ReviewProjectDraftValues = {
   statusChoice: ReviewProjectDraftStatus;
   comment: string;
   decisionNotes: string;
+  targetOrigin?: ReviewProjectTargetOrigin;
 };
 
 type DraftSession = {
@@ -72,6 +76,7 @@ function valuesFromSnapshot(snapshot: ReviewProjectDecisionSnapshot): ReviewProj
     statusChoice: snapshot.statusChoice,
     comment: snapshot.comment ?? '',
     decisionNotes: snapshot.decisionNotes ?? '',
+    ...(snapshot.targetOrigin ? { targetOrigin: snapshot.targetOrigin } : {}),
   };
 }
 
@@ -281,6 +286,10 @@ export function useReviewProjectDraft(
                   current.values.target === discarded.target
                     ? savedValues.target
                     : current.values.target,
+                targetOrigin:
+                  current.values.target === discarded.target
+                    ? savedValues.targetOrigin
+                    : current.values.targetOrigin,
                 statusChoice:
                   current.values.statusChoice === discarded.statusChoice
                     ? savedValues.statusChoice

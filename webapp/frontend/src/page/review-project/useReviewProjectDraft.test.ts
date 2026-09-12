@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { ReviewProjectTargetOrigin } from '../../api/review-project-client-context';
 import { type ReviewProjectDecisionSnapshot, useReviewProjectDraft } from './useReviewProjectDraft';
 
 const initial: ReviewProjectDecisionSnapshot = {
@@ -48,6 +49,76 @@ function mountDraft(client = new QueryClient()) {
 }
 
 describe('review project draft acknowledgements', () => {
+  it('retains target ownership atomically across navigation and rejects late owner callbacks', () => {
+    const origin: ReviewProjectTargetOrigin = {
+      kind: 'ai_suggestion',
+      owner: {
+        projectId: 7,
+        textUnitId: 101,
+        tmTextUnitId: 201,
+        reviewStateRevision: initial.reviewStateRevision,
+      },
+      aiRequestId: 'request-a',
+    };
+    const first = mountDraft();
+    const lateUpdate = first.result.current.updateValues;
+    act(() =>
+      first.result.current.updateValues((values) => ({
+        ...values,
+        target: 'AI draft',
+        targetOrigin: origin,
+      })),
+    );
+    first.unmount();
+    const next = mountDraft(first.client);
+    act(() =>
+      lateUpdate((values) => ({
+        ...values,
+        target: 'Late target',
+        targetOrigin: { ...origin, kind: 'editor' },
+      })),
+    );
+    expect(next.result.current.session.values).toMatchObject({
+      target: 'AI draft',
+      targetOrigin: origin,
+    });
+    act(() => next.result.current.reset());
+    expect(next.result.current.session.values.target).toBe(initial.target);
+    expect(next.result.current.session.values.targetOrigin).toBeUndefined();
+  });
+
+  it('keeps an edit made during save together with its own origin', () => {
+    const aiOrigin: ReviewProjectTargetOrigin = {
+      kind: 'ai_suggestion',
+      owner: {
+        projectId: 7,
+        textUnitId: 101,
+        tmTextUnitId: 201,
+        reviewStateRevision: initial.reviewStateRevision,
+      },
+    };
+    const editorOrigin: ReviewProjectTargetOrigin = { ...aiOrigin, kind: 'editor' };
+    const { result } = mountDraft();
+    act(() => {
+      result.current.updateValues((values) => ({
+        ...values,
+        target: 'AI draft',
+        targetOrigin: aiOrigin,
+      }));
+      result.current.startOperation(1);
+      result.current.updateValues((values) => ({
+        ...values,
+        target: 'New edit',
+        targetOrigin: editorOrigin,
+      }));
+      result.current.finishOperation(1, { ...saved, targetOrigin: aiOrigin }, false, false);
+    });
+    expect(result.current.session.values).toMatchObject({
+      target: 'New edit',
+      targetOrigin: editorOrigin,
+    });
+  });
+
   it('keeps an acknowledged save available for Reset before detail props catch up', () => {
     const { result, rerender } = mountDraft();
     act(() => {

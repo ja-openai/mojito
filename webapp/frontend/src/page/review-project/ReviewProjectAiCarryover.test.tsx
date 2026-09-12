@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { flushSync } from 'react-dom';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AiReviewRequest } from '../../api/ai-review';
 import type { ApiReviewProjectDetail } from '../../api/review-projects';
@@ -10,7 +10,10 @@ import type { ApiUserProfile } from '../../api/users';
 import { UserContext } from '../../hooks/useUser';
 import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
 import { buildCarryoverProject, carryoverFixtures } from './review-project-carryover.fixtures';
-import type { ReviewProjectMutationControls } from './review-project-mutations';
+import type {
+  ReviewProjectMutationControls,
+  SaveDecisionRequest,
+} from './review-project-mutations';
 import { ReviewProjectPageView } from './ReviewProjectPageView';
 
 const requestAiReviewMock = vi.hoisted(() => vi.fn());
@@ -96,6 +99,8 @@ beforeEach(() => {
   requestAiReviewMock.mockReset();
 });
 
+afterEach(() => vi.unstubAllGlobals());
+
 function renderProject(project: ApiReviewProjectDetail) {
   const onRequestSaveDecision = vi.fn();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -141,6 +146,39 @@ function reviewResponse(content: string, target: string) {
 }
 
 describe('Review Project AI suggestion ownership', () => {
+  it.each(['missing', 'throwing'])(
+    'can review and save when diagnostic UUID support is %s',
+    async (support) => {
+      vi.stubGlobal(
+        'crypto',
+        support === 'missing'
+          ? undefined
+          : {
+              randomUUID: () => {
+                throw new Error('UUID unavailable');
+              },
+            },
+      );
+      const project = buildCarryoverProject(carryoverFixtures[0]);
+      const target = 'સુધારેલ અનુવાદ';
+      requestAiReviewMock.mockResolvedValueOnce(reviewResponse('Current row review', target));
+      const onRequestSaveDecision = renderProject(project);
+      fireEvent.click(await screen.findByRole('button', { name: 'Use' }));
+      fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+      expect(onRequestSaveDecision).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          textUnitId: project.reviewProjectTextUnits[0].id,
+          target,
+        }),
+      );
+      const submitted = onRequestSaveDecision.mock.calls[0][0] as SaveDecisionRequest;
+      expect(submitted.clientContext).toMatchObject({
+        operationId: 'unavailable',
+        targetOrigin: { aiRequestId: 'unavailable' },
+      });
+    },
+  );
+
   it.each(carryoverFixtures)(
     'does not apply project $projectId previous-row suggestions during a selection commit',
     async (fixture) => {
@@ -199,6 +237,20 @@ describe('Review Project AI suggestion ownership', () => {
       }),
     );
     expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
+    const submitted = onRequestSaveDecision.mock.calls[0][0] as SaveDecisionRequest;
+    expect(submitted.clientContext).toMatchObject({
+      operationOrigin: 'review_accept',
+      owner: {
+        projectId: project.id,
+        textUnitId: project.reviewProjectTextUnits[0].id,
+        tmTextUnitId: project.reviewProjectTextUnits[0].tmTextUnit!.id,
+      },
+      targetOrigin: {
+        kind: 'ai_suggestion',
+        owner: { textUnitId: project.reviewProjectTextUnits[0].id },
+      },
+    });
+    expect(submitted.clientContext?.targetOrigin?.aiRequestId).toEqual(expect.any(String));
   });
 
   it('ignores a previous-row review response arriving after the new row review', async () => {

@@ -6,6 +6,10 @@ import {
   type AgentReviewDecision,
   saveAgentReviewOutcome,
 } from '../../api/agent-reviews';
+import {
+  recoverReviewProjectClientContext,
+  type ReviewProjectClientContext,
+} from '../../api/review-project-client-context';
 import type {
   ApiReviewProjectDetail,
   ApiReviewProjectStatus,
@@ -43,6 +47,7 @@ import {
 
 export type SaveDecisionRequest = {
   textUnitId: number;
+  clientContext?: ReviewProjectClientContext;
   agentReview?: AgentReviewDecision;
   tmTextUnitId: number | null;
   reportUrl?: string | null;
@@ -60,6 +65,7 @@ export type SaveDecisionRequest = {
 
 export type DecisionStateRequest = {
   textUnitId: number;
+  clientContext?: ReviewProjectClientContext;
   agentReview?: AgentReviewDecision;
   decisionState: 'PENDING' | 'DECIDED';
   expectedCurrentTmTextUnitVariantId?: number | null;
@@ -385,6 +391,7 @@ export function useReviewProjectMutations(
       if (action.kind === 'save-decision') {
         return saveReviewProjectTextUnitDecision({
           textUnitId: action.request.textUnitId,
+          clientContext: action.request.clientContext,
           target: action.request.target,
           comment: action.request.comment,
           status: action.request.status,
@@ -409,6 +416,7 @@ export function useReviewProjectMutations(
       if (action.request.agentReview) {
         return saveAgentReviewOutcome({
           textUnitId: action.request.textUnitId,
+          clientContext: action.request.clientContext,
           decisionState: action.request.decisionState,
           expectedCurrentTmTextUnitVariantId: action.request.expectedCurrentTmTextUnitVariantId,
           expectedReviewStateRevision: action.request.expectedReviewStateRevision,
@@ -417,6 +425,7 @@ export function useReviewProjectMutations(
       }
       return setReviewProjectTextUnitDecisionState({
         textUnitId: action.request.textUnitId,
+        clientContext: action.request.clientContext,
         decisionState: action.request.decisionState,
         expectedCurrentTmTextUnitVariantId: action.request.expectedCurrentTmTextUnitVariantId,
         expectedReviewStateRevision: action.request.expectedReviewStateRevision,
@@ -972,6 +981,15 @@ export function useReviewProjectMutations(
           decisionState: requestedDecisionState,
           expectedCurrentTmTextUnitVariantId: current.currentTmTextUnitVariant?.id ?? null,
           expectedReviewStateRevision: current.reviewStateRevision,
+          ...('clientContext' in originalAction.request && originalAction.request.clientContext
+            ? {
+                clientContext: recoverReviewProjectClientContext(
+                  originalAction.request.clientContext,
+                  current.reviewStateRevision,
+                  'use_current',
+                ),
+              }
+            : {}),
         },
       },
       false,
@@ -1027,6 +1045,15 @@ export function useReviewProjectMutations(
             // Approve only the version shown in this conflict. A later edit must conflict again.
             overrideChangedCurrent: false,
             expectedReviewStateRevision: actionState.textUnit.reviewStateRevision,
+            ...(action.request.clientContext
+              ? {
+                  clientContext: recoverReviewProjectClientContext(
+                    action.request.clientContext,
+                    actionState.textUnit.reviewStateRevision,
+                    'use_mine',
+                  ),
+                }
+              : {}),
           },
         } as PendingAction,
         false,

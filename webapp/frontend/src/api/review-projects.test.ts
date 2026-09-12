@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createReviewProjectClientContext } from './review-project-client-context';
 import {
   saveReviewProjectTextUnitDecision,
   setReviewProjectTextUnitDecisionState,
@@ -22,6 +23,38 @@ const request = {
 };
 
 describe('Review Project decision revision transport', () => {
+  it.each([
+    ['translation', saveReviewProjectTextUnitDecision],
+    ['state only', setReviewProjectTextUnitDecisionState],
+  ] as const)(
+    'sends %s context with stable operation and separate transport sequences',
+    async (_label, save) => {
+      const clientContext = createReviewProjectClientContext('review_save', {
+        projectId: 7,
+        textUnitId: 17,
+        tmTextUnitId: 117,
+        reviewStateRevision: request.expectedReviewStateRevision,
+      });
+      const bodies: Record<string, unknown>[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((_url, init: RequestInit) => {
+          if (typeof init.body !== 'string') throw new Error('Expected JSON body');
+          bodies.push(JSON.parse(init.body) as Record<string, unknown>);
+          return Promise.resolve(new Response(JSON.stringify({ id: 17 }), { status: 200 }));
+        }),
+      );
+      await save({ ...request, clientContext });
+      await save({ ...request, clientContext });
+      const first = bodies[0].clientContext as typeof clientContext;
+      const second = bodies[1].clientContext as typeof clientContext;
+      expect(second.operationId).toBe(first.operationId);
+      expect(second.requestSequence).toBe(first.requestSequence! + 1);
+      expect(JSON.stringify(first)).not.toContain(request.target);
+      expect(JSON.stringify(first)).not.toContain(request.comment);
+    },
+  );
+
   it.each([
     ['translation', saveReviewProjectTextUnitDecision],
     ['state only', setReviewProjectTextUnitDecisionState],

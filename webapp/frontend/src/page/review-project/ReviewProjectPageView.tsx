@@ -22,6 +22,15 @@ import {
   fetchGlossaryTerms,
   matchGlossaryTerms,
 } from '../../api/glossaries';
+import {
+  createReviewProjectClientContext,
+  createReviewProjectDiagnosticId,
+  ownReviewProjectAiSuggestions,
+  reviewProjectAiSuggestionOrigin,
+  type ReviewProjectClientContext,
+  type ReviewProjectClientOwner,
+  type ReviewProjectTargetOrigin,
+} from '../../api/review-project-client-context';
 import type {
   ApiReviewProjectAssignmentHistoryEntry,
   ApiReviewProjectDetail,
@@ -809,11 +818,21 @@ function isEditableKeyboardTarget(target: EventTarget | null) {
   );
 }
 
-function buildSnapshot(textUnit: ApiReviewProjectTextUnit): DecisionSnapshot {
+function buildSnapshot(textUnit: ApiReviewProjectTextUnit, projectId: number): DecisionSnapshot {
   const current =
     textUnit.currentTmTextUnitVariant?.id != null ? textUnit.currentTmTextUnitVariant : null;
   const baseVariant = current ?? textUnit.baselineTmTextUnitVariant;
   const suggestion = textUnit.reviewProjectTextUnitSuggestion;
+  const proposal =
+    textUnit.agentReview && ['OPEN', 'ROUTED'].includes(textUnit.agentReview.disposition)
+      ? textUnit.agentReview
+      : null;
+  const owner: ReviewProjectClientOwner = {
+    projectId,
+    textUnitId: textUnit.id,
+    tmTextUnitId: textUnit.tmTextUnit?.id ?? null,
+    reviewStateRevision: textUnit.reviewStateRevision ?? null,
+  };
   const statusChoice = mapVariantToChoice(
     baseVariant?.status ?? null,
     baseVariant?.includedInLocalizedFile ?? null,
@@ -825,18 +844,23 @@ function buildSnapshot(textUnit: ApiReviewProjectTextUnit): DecisionSnapshot {
     messageFormat: textUnit.tmTextUnit?.messageFormat,
     expectedCurrentVariantId: current?.id ?? null,
     reviewStateRevision: textUnit.reviewStateRevision ?? null,
-    target:
-      suggestion?.target ??
-      (textUnit.agentReview && ['OPEN', 'ROUTED'].includes(textUnit.agentReview.disposition)
-        ? textUnit.agentReview.proposedTarget
-        : null) ??
-      baseVariant?.content ??
-      '',
+    target: suggestion?.target ?? proposal?.proposedTarget ?? baseVariant?.content ?? '',
     comment: baseVariant?.comment ?? null,
     decisionNotes: textUnit.reviewProjectTextUnitDecision?.notes ?? null,
     statusChoice,
     decisionState: getDecisionState(textUnit),
     suggestionSourceLabel: getSuggestionSourceLabel(suggestion?.source),
+    targetOrigin:
+      suggestion?.target != null
+        ? { kind: 'staged_suggestion', owner, suggestionId: suggestion.id ?? undefined }
+        : proposal?.proposedTarget != null
+          ? {
+              kind: 'agent_proposal',
+              owner,
+              proposalId: proposal.proposalId,
+              proposalRevision: proposal.proposalRevision,
+            }
+          : { kind: 'server_snapshot', owner },
   };
 }
 
@@ -1974,7 +1998,7 @@ function DetailPane({
     startOperation: startAgentFeedbackOperation,
     reset: resetAgentFeedback,
   } = agentFeedback;
-  const snapshot = useMemo(() => buildSnapshot(textUnit), [textUnit]);
+  const snapshot = useMemo(() => buildSnapshot(textUnit, projectId), [textUnit, projectId]);
   const draft = useReviewProjectDraft(user.username, projectId, textUnit.id, snapshot);
   const sourceChanged = draft.sourceChanged;
   const { base: draftBase, values: translationDraft } = draft.session;
@@ -2059,13 +2083,35 @@ function DetailPane({
     reset: resetDraft,
   } = draft;
   const setDraftTarget = useCallback(
-    (next: React.SetStateAction<string>) => {
+    (next: React.SetStateAction<string>, targetOrigin?: ReviewProjectTargetOrigin) => {
+      const current = readDraft();
+      if (!current) return;
+      const owner: ReviewProjectClientOwner = {
+        projectId,
+        textUnitId: current.textUnitId,
+        tmTextUnitId: current.base.tmTextUnitId,
+        reviewStateRevision: current.base.reviewStateRevision,
+      };
       updateTranslationDraft((values) => ({
         ...values,
         target: typeof next === 'function' ? next(values.target) : next,
+        targetOrigin: targetOrigin ?? { kind: 'editor', owner },
       }));
     },
-    [updateTranslationDraft],
+    [projectId, readDraft, updateTranslationDraft],
+  );
+  const createAiSuggestionOrigin = useCallback(
+    (reviewStateRevision = draftBase.reviewStateRevision): ReviewProjectTargetOrigin => ({
+      kind: 'ai_suggestion',
+      owner: {
+        projectId,
+        textUnitId: textUnit.id,
+        tmTextUnitId: workbenchTextUnitId,
+        reviewStateRevision,
+      },
+      aiRequestId: createReviewProjectDiagnosticId(),
+    }),
+    [projectId, textUnit.id, workbenchTextUnitId, draftBase.reviewStateRevision],
   );
   const setDraftStatusChoice = useCallback(
     (next: React.SetStateAction<StatusChoice>) => {
@@ -2132,12 +2178,12 @@ function DetailPane({
     } else if (action.phase === 'succeeded' && action.textUnit.id === textUnit.id) {
       finishOperation(
         action.operationId,
-        buildSnapshot(action.textUnit),
+        buildSnapshot(action.textUnit, projectId),
         action.resolution === 'use-current',
         action.action.kind === 'decision-state' && !action.action.request.agentReview,
       );
     }
-  }, [cancelOperation, finishOperation, mutations.actionState, textUnit.id]);
+  }, [cancelOperation, finishOperation, mutations.actionState, projectId, textUnit.id]);
   const hasIcuMessage = useMemo(
     () => !sourceIsMf2 && (hasIcuParameters(source) || hasIcuParameters(draftTarget)),
     [draftTarget, source, sourceIsMf2],
@@ -2632,6 +2678,7 @@ function DetailPane({
     }
 
     const abortController = new AbortController();
+    const suggestionOrigin = createAiSuggestionOrigin(snapshot.reviewStateRevision);
     aiRequestAbortControllerRef.current = abortController;
     setIsAiResponding(true);
     setIsAiCollapsed(false);
@@ -2679,7 +2726,7 @@ function DetailPane({
             id: `assistant-${Date.now()}`,
             sender: 'assistant',
             content: response.message.content,
-            suggestions: response.suggestions,
+            suggestions: ownReviewProjectAiSuggestions(response.suggestions, suggestionOrigin),
             review: response.review,
           },
         ]);
@@ -2727,11 +2774,13 @@ function DetailPane({
     aiPreferencesReady,
     aiAutomaticDisabled,
     agentReview,
+    createAiSuggestionOrigin,
     glossaryMatchesQuery.data,
     glossaryMatchesQuery.isLoading,
     isTerminologyProject,
     localeTag,
     setAiMessages,
+    snapshot.reviewStateRevision,
     snapshot.target,
     source,
     sourceChanged,
@@ -2860,11 +2909,13 @@ function DetailPane({
       statusChoiceOverride,
       commentOverride,
       decisionNotesOverride,
+      operationOrigin = 'review_save',
     }: {
       targetOverride?: string;
       statusChoiceOverride?: StatusChoice;
       commentOverride?: string | null;
       decisionNotesOverride?: string | null;
+      operationOrigin?: ReviewProjectClientContext['operationOrigin'];
     } = {}) => {
       const currentDraft = readDraft();
       if (!currentDraft || compositionRef.current || mutations.isSaving) return;
@@ -2878,6 +2929,16 @@ function DetailPane({
       const nextStatusApi = mapChoiceToApi(nextStatusChoice);
       const operationId = mutations.onRequestSaveDecision({
         textUnitId: currentDraft.textUnitId,
+        clientContext: createReviewProjectClientContext(
+          operationOrigin,
+          {
+            projectId,
+            textUnitId: currentDraft.textUnitId,
+            tmTextUnitId: currentDraft.base.tmTextUnitId,
+            reviewStateRevision: currentDraft.base.reviewStateRevision,
+          },
+          targetOverride === undefined ? currentDraft.values.targetOrigin : snapshot.targetOrigin,
+        ),
         tmTextUnitId: currentDraft.base.tmTextUnitId,
         reportUrl:
           workbenchTextUnitId != null
@@ -2924,6 +2985,7 @@ function DetailPane({
     },
     [
       readDraft,
+      snapshot.targetOrigin,
       startOperation,
       agentReview,
       agentReviewCompleted,
@@ -2947,6 +3009,12 @@ function DetailPane({
       if (!sameReviewProjectSource(currentDraft.base, currentDraft.remote)) return;
       const operationId = mutations.onRequestDecisionState({
         textUnitId: currentDraft.textUnitId,
+        clientContext: createReviewProjectClientContext('review_state_change', {
+          projectId,
+          textUnitId: currentDraft.textUnitId,
+          tmTextUnitId: currentDraft.base.tmTextUnitId,
+          reviewStateRevision: currentDraft.base.reviewStateRevision,
+        }),
         decisionState,
         expectedCurrentTmTextUnitVariantId: currentDraft.base.expectedCurrentVariantId,
         expectedReviewStateRevision: currentDraft.base.reviewStateRevision,
@@ -2954,7 +3022,7 @@ function DetailPane({
       if (typeof operationId === 'number') startOperation(operationId);
       return operationId;
     },
-    [agentReview, mutations, readDraft, startOperation],
+    [agentReview, mutations, projectId, readDraft, startOperation],
   );
 
   const requestAgentOutcome = useCallback(
@@ -2973,6 +3041,12 @@ function DetailPane({
         return;
       const operationId = mutations.onRequestDecisionState({
         textUnitId: textUnit.id,
+        clientContext: createReviewProjectClientContext('agent_outcome', {
+          projectId,
+          textUnitId: currentDraft.textUnitId,
+          tmTextUnitId: currentDraft.base.tmTextUnitId,
+          reviewStateRevision: currentDraft.base.reviewStateRevision,
+        }),
         decisionState: action === 'DEFER' ? 'PENDING' : 'DECIDED',
         expectedCurrentTmTextUnitVariantId: currentDraft.base.expectedCurrentVariantId,
         expectedReviewStateRevision: currentDraft.base.reviewStateRevision,
@@ -2997,6 +3071,7 @@ function DetailPane({
       agentReviewCompleted,
       isTranslationReviewDirty,
       mutations,
+      projectId,
       readAgentFeedback,
       readDraft,
       startOperation,
@@ -3234,7 +3309,10 @@ function DetailPane({
       }
       return requestSaveTerminologyFeedback();
     }
-    return requestSaveDecision({ statusChoiceOverride: 'ACCEPTED' });
+    return requestSaveDecision({
+      statusChoiceOverride: 'ACCEPTED',
+      operationOrigin: 'review_accept',
+    });
   }, [
     isPmTerminologyProject,
     isTerminologyProject,
@@ -3261,6 +3339,7 @@ function DetailPane({
         return;
       }
       requestSaveDecision({
+        operationOrigin: 'review_status_change',
         statusChoiceOverride: next,
         targetOverride: snapshot.target,
         commentOverride: snapshot.comment,
@@ -3300,6 +3379,7 @@ function DetailPane({
     const requestAttempt = (aiRequestAttemptRef.current += 1);
     aiRequestAbortControllerRef.current?.abort();
     const abortController = new AbortController();
+    const suggestionOrigin = createAiSuggestionOrigin();
     aiRequestAbortControllerRef.current = abortController;
     setAiMessages((previous) => [...previous, userMessage]);
     setAiInput('');
@@ -3343,7 +3423,7 @@ function DetailPane({
           id: `assistant-${Date.now()}`,
           sender: 'assistant',
           content: response.message.content,
-          suggestions: response.suggestions,
+          suggestions: ownReviewProjectAiSuggestions(response.suggestions, suggestionOrigin),
           review: response.review,
         };
 
@@ -3378,6 +3458,7 @@ function DetailPane({
     aiPreferencesReady,
     aiInput,
     aiMessages,
+    createAiSuggestionOrigin,
     draftTarget,
     glossaryMatchesQuery.data,
     isAiResponding,
@@ -3414,6 +3495,7 @@ function DetailPane({
       const requestAttempt = (aiRequestAttemptRef.current += 1);
       aiRequestAbortControllerRef.current?.abort();
       const abortController = new AbortController();
+      const suggestionOrigin = createAiSuggestionOrigin();
       aiRequestAbortControllerRef.current = abortController;
       void (async () => {
         try {
@@ -3442,7 +3524,7 @@ function DetailPane({
             id: `assistant-${Date.now()}`,
             sender: 'assistant',
             content: response.message.content,
-            suggestions: response.suggestions,
+            suggestions: ownReviewProjectAiSuggestions(response.suggestions, suggestionOrigin),
             review: response.review,
           };
           setAiMessages((previous) => [
@@ -3479,6 +3561,7 @@ function DetailPane({
       aiReviewStyle,
       aiPreferencesReady,
       aiMessages,
+      createAiSuggestionOrigin,
       draftTarget,
       glossaryMatchesQuery.data,
       isAiResponding,
@@ -3508,9 +3591,20 @@ function DetailPane({
       const current = readDraft();
       if (!current || !sameReviewProjectSource(current.base, current.remote)) return;
       if (getAiSuggestionError(suggestion)) return;
-      setDraftTarget(suggestion.content);
+      setDraftTarget(
+        suggestion.content,
+        reviewProjectAiSuggestionOrigin(suggestion) ?? {
+          kind: 'unknown',
+          owner: {
+            projectId,
+            textUnitId: current.textUnitId,
+            tmTextUnitId: current.base.tmTextUnitId,
+            reviewStateRevision: current.base.reviewStateRevision,
+          },
+        },
+      );
     },
-    [getAiSuggestionError, readDraft, setDraftTarget],
+    [getAiSuggestionError, projectId, readDraft, setDraftTarget],
   );
 
   const getFocusedDetailEditor = useCallback(() => {
@@ -3696,7 +3790,7 @@ function DetailPane({
 
   const conflictVariant = conflictTextUnit ? getEffectiveVariant(conflictTextUnit) : null;
   const conflictStatusKey = getStatusKey(conflictVariant);
-  const conflictSnapshot = conflictTextUnit ? buildSnapshot(conflictTextUnit) : null;
+  const conflictSnapshot = conflictTextUnit ? buildSnapshot(conflictTextUnit, projectId) : null;
 
   useEffect(() => {
     if (currentScreenshotIdx !== safeScreenshotIdx) {
@@ -4344,7 +4438,19 @@ function DetailPane({
                       type="button"
                       className="review-project-detail__actions-button"
                       disabled={isSavingGlobal || isComposing || agentReview.stale}
-                      onClick={() => setDraftTarget(agentReview.proposedTarget!)}
+                      onClick={() =>
+                        setDraftTarget(agentReview.proposedTarget!, {
+                          kind: 'agent_proposal',
+                          owner: {
+                            projectId,
+                            textUnitId: textUnit.id,
+                            tmTextUnitId: textUnit.tmTextUnit?.id ?? null,
+                            reviewStateRevision: textUnit.reviewStateRevision ?? null,
+                          },
+                          proposalId: agentReview.proposalId,
+                          proposalRevision: agentReview.proposalRevision,
+                        })
+                      }
                     >
                       Use agent proposal
                     </button>

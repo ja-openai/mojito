@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { createReviewProjectClientContext } from '../../api/review-project-client-context';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
 import type { ApiUserProfile } from '../../api/users';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
@@ -965,6 +966,25 @@ describe('Review Project save operation outcomes', () => {
     decisionState: 'DECIDED',
     expectedCurrentTmTextUnitVariantId: null,
     expectedReviewStateRevision: 'draft-row-revision',
+    clientContext: createReviewProjectClientContext(
+      'review_save',
+      {
+        projectId: project.id,
+        textUnitId: textUnit.id,
+        tmTextUnitId: 3,
+        reviewStateRevision: 'draft-row-revision',
+      },
+      {
+        kind: 'ai_suggestion',
+        owner: {
+          projectId: project.id,
+          textUnitId: textUnit.id,
+          tmTextUnitId: 3,
+          reviewStateRevision: 'draft-row-revision',
+        },
+        aiRequestId: 'ai-request-1',
+      },
+    ),
   });
   const current = (
     id: number,
@@ -1016,6 +1036,7 @@ describe('Review Project save operation outcomes', () => {
       request.target = 'Changed after submit';
       request.expectedCurrentTmTextUnitVariantId = 99;
       request.expectedReviewStateRevision = 'mutated-after-submit';
+      request.clientContext!.targetOrigin!.owner.textUnitId = 999;
     });
     await waitFor(() => expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce());
     expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledWith(
@@ -1030,6 +1051,8 @@ describe('Review Project save operation outcomes', () => {
       operationId: operationId!,
       action: { request: { target: 'Local translation' } },
     });
+    const submitted = saveReviewProjectTextUnitDecisionMock.mock.calls[0][0] as SaveDecisionRequest;
+    expect(submitted.clientContext?.targetOrigin?.owner.textUnitId).toBe(textUnit.id);
     await act(async () => {
       resolve(saved(31));
       await Promise.resolve();
@@ -1100,6 +1123,12 @@ describe('Review Project save operation outcomes', () => {
       phase: 'conflict',
       operationId: operationId!,
     });
+    const retried = saveReviewProjectTextUnitDecisionMock.mock.calls[1][0] as SaveDecisionRequest;
+    expect(retried.clientContext).toMatchObject({
+      owner: { reviewStateRevision: 'row-revision-31' },
+      targetOrigin: { owner: { reviewStateRevision: 'draft-row-revision' } },
+      recovery: 'use_mine',
+    });
     expect(
       result.current.actionState.phase !== 'idle' && result.current.actionState.attemptId,
     ).toBeGreaterThan(firstAttempt);
@@ -1128,6 +1157,16 @@ describe('Review Project save operation outcomes', () => {
       result.current.onUseConflictCurrent();
     });
     await waitFor(() => expect(setReviewProjectTextUnitDecisionStateMock).toHaveBeenCalledOnce());
+    const recovered = (
+      setReviewProjectTextUnitDecisionStateMock.mock.calls[0][0] as SaveDecisionRequest
+    ).clientContext;
+    const submitted = saveReviewProjectTextUnitDecisionMock.mock.calls[0][0] as SaveDecisionRequest;
+    expect(recovered).toMatchObject({
+      owner: { reviewStateRevision: 'row-revision-31' },
+      recovery: 'use_current',
+      operationId: submitted.clientContext?.operationId,
+    });
+    expect(recovered?.targetOrigin).toBeUndefined();
     expect(result.current.actionState).toMatchObject({
       phase: 'pending',
       operationId: operationId!,
