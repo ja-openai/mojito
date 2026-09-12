@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twelve local review commits (four original chunks plus CI,
+- The queue worktree has thirteen local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -71,6 +71,11 @@ not close its current gates.
   pass real pooled-session cleanup and reconnect after backend termination despite
   injected metrics failure. This is session-loss evidence, not network partition,
   database failover or shared-pool capacity proof.
+- Eight [native PostgreSQL store contract groups](#native-postgresql-store-contracts-2026-09-12-utc)
+  pass, including expiry during row-lock waits, concurrent retention updates and
+  renewal contention. The 1,000-job performance smoke is a local diagnostic, not
+  production capacity. No MySQL half, historical upgrade or full CI lane ran in
+  this selection.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -441,6 +446,49 @@ server on port 45191 was shut down and its data directory removed. Existing
 JDK/Mockito agent, compilation/weaving and expected injected-failure diagnostics
 were not suppressed. No production/test source, migration, runtime flag, primary
 worktree or remote ref changed.
+
+## Native PostgreSQL Store Contracts (2026-09-12 UTC)
+
+Eight selected groups from `JdbcAsyncJobStoreDatabaseIntegrationTest` passed on
+private PostgreSQL 16.15 in 33.414 seconds, with zero failures, ignored/assumption
+skips or automatic reruns. Four existing PostgreSQL methods cover the store,
+notification delivery, persistable failure diagnostics and portable payload writes.
+Four shared helpers ran only their PostgreSQL halves: concurrent retention,
+lease expiry during lock waits, contended renewal and the opt-in performance smoke.
+These are eight temporary JUnit wrappers around existing contracts, not eight new
+maintained tests or execution of their MySQL halves. The separate Maven control
+with `-Pno-local-config` and zero reruns passed four tests and skipped 13 opt-in
+cases; those skips are not real-database evidence.
+
+The store contract checks bounded attempts, reclaim tokens, stale-owner rejection,
+terminal inspection/replay/cleanup, concurrent claims and runtime draining. All
+five lease mutations reject ownership that naturally expires while waiting on a
+row lock. Retention rechecks status and cutoff after a concurrent transaction
+commits a replay-like status change or newer timestamp; both rows survive. The
+renewal fixture keeps 24 handlers alive through contention and 221 competing polls,
+with 960 successful renewals, no duplicate starts or peer reclaim, and every job
+DONE on attempt one. The separate smoke drained 1,000 jobs in 1,070 ms, with 266
+polls and zero poll failures. This single local sample is not a throughput SLO,
+multi-host benchmark or shared-pool sizing result.
+
+Only Testcontainers lifecycle and connection metadata were substituted. Real
+JDBC/SQL, transactions, row locks, deadlines and existing assertions remained;
+the helpers were selected by reflection without editing application or test source.
+The temporary adapter checked the exact private datadir, version and active TLS
+before each UUID database, using certificate/hostname verification throughout.
+It uses the application test classpath, not the independent ordinary-JAR host.
+
+Artifacts are `/tmp/queue-postgres-store.n6bIi2/native-store.log`,
+`NativePostgresStoreVerification.java`, `store_probe.rb` and `server.log`; the
+control is `/tmp/queue-postgres16.FgSYLH/store-control.log`. The fresh pre-commit
+control repeated four passes and 13 opt-in skips in the probe's `commit-control.log`;
+root `mvn -Pno-local-config spotless:apply` passed in `spotless.log`.
+The private 16.15 binary served a new loopback-only cluster on port 59400, shut down cleanly, and its datadir
+was removed. More than 31 GiB remained free after cleanup. Expected constraint,
+handler-failure and stale-owner diagnostics plus JDK/Mockito warnings remain
+visible. No schema version, routing, master file or remote ref changed. Full
+target-version CI, PostgreSQL timezone/crash/outage coverage, historical Flyway
+adoption and workload rollout gates remain open.
 
 ## Native PostgreSQL Listener Sessions (2026-09-12 UTC)
 
