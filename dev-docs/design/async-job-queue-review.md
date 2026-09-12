@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has ten local review commits (four original chunks plus CI,
+- The queue worktree has eleven local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -62,6 +62,11 @@ not close its current gates.
   covers actual commit/rollback, provisional IDs, consumer visibility and injected
   lost acknowledgements, not durable reservations, HTTP recovery or actual network
   failure. It uses application mappings, not the standalone-JAR consumer.
+- The [native PostgreSQL asset-adapter run](#native-postgresql-asset-adapter-2026-09-12-utc)
+  passes the existing database method's 15 internal retry/publication scenarios as
+  one JUnit test, with no skips or reruns. Application state and blobs remain in
+  private HSQL, separate from PostgreSQL queue rows. This does not prove atomic
+  admission, full-application PostgreSQL support or queue-owned blob lifetime.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -432,6 +437,43 @@ server on port 45191 was shut down and its data directory removed. Existing
 JDK/Mockito agent, compilation/weaving and expected injected-failure diagnostics
 were not suppressed. No production/test source, migration, runtime flag, primary
 worktree or remote ref changed.
+
+## Native PostgreSQL Asset Adapter (2026-09-12 UTC)
+
+The unchanged `postgresqlQueueRetriesOutputAndRejectsTrackedWork` method in
+`AssetLocalizeAsyncJobOutputRetryIntegrationTest` passed on private PostgreSQL
+16.15 in 8.468 seconds, including Spring startup. This is **one JUnit test** with
+15 internal scenarios, not 15 independently reported tests: three output retries,
+tracked-work rejection, two enqueue acknowledgement timings, two completion
+commit outcomes, four publication failures, malformed-winner repair, raw replay
+containment and timeout-before-callback handling. The launcher required one test,
+one PostgreSQL container substitution, one application-database identity check,
+zero failures and no ignored/assumption skips; no automatic reruns were used.
+The separate fresh Maven control passed 15 tests with two opt-in database skips.
+
+The native adapter kept the original Spring runner, security/setup lifecycle,
+fixture method, SQL and assertions. Only container orchestration and connection
+metadata were substituted. It checked PostgreSQL version, private data directory
+and verified TLS before queue DDL, and confirmed application writes used the
+original `jdbc:hsqldb:mem:queue_output_retry` fixture. Classpath-only configuration
+excluded local user config; the embedded HTTP test server bound only to loopback.
+The Spring context closed explicitly, with Tomcat, Quartz and Hikari shutdown
+recorded. The private PostgreSQL listener on port 59398 then closed cleanly and
+its data directory was removed. No non-fixture database or primary worktree changed.
+
+Artifacts are `/tmp/queue-postgres-asset.nBttAG/native-asset.log`,
+`NativePostgresAssetVerification.java`, `asset_probe.rb` and `server.log`; the Maven
+control is `/tmp/queue-postgres16.FgSYLH/asset-hsql-control.log`. The existing private
+PostgreSQL 16.15 build was reused with a fresh cluster. JDK/Mockito, Hibernate
+metamodel, open-in-view and authentication configuration warnings remain visible,
+along with expected injected/rejected-handler diagnostics. This is current
+PostgreSQL queue plus real HSQL generation/blob/service evidence, not a full
+application PostgreSQL deployment. Completion faults enter the actual queue JDBC
+commit seam; enqueue/publication faults remain controlled adapter/service failures,
+not network loss. Separate databases cannot prove atomic admission, and these
+scenarios do not implement durable recovery identities, business fencing or blob
+pins. Required MySQL 8.4/full CI and rollout gates remain open. No production or
+maintained test source, migration, routing flag or remote ref changed.
 
 ## Native PostgreSQL JPA/JDBC Contracts (2026-09-12 UTC)
 

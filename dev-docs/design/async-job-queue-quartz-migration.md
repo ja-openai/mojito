@@ -786,7 +786,7 @@ hits. Approve thresholds before starting, not retroactively after seeing results
 
 ### Required Real-Database And Compatibility Evidence
 
-The real-database gates require Docker-backed tests. Historically the container
+The configured real-database CI uses Docker-backed tests. Historically the container
 tests are opt-in and can be skipped while Maven reports success:
 [Q: JdbcAsyncJobStoreDatabaseIntegrationTest:51](../../webapp/src/test/java/com/box/l10n/mojito/queue/JdbcAsyncJobStoreDatabaseIntegrationTest.java#L51)
 defines `mojito.asyncJobQueue.testcontainers` and a separate
@@ -826,8 +826,14 @@ Require a fresh target-version run where both
 `postgresqlQueueRetriesOutputAndRejectsTrackedWork` execute without reruns or
 skips. The fixture combines a real queue database with the application test
 context; it is not full application/PostgreSQL or atomic admission certification.
-The local workflow regression and HSQL/application fixture results are separate
-from the still-required MySQL 8.4/PostgreSQL 16 execution evidence.
+The PostgreSQL method now passes on a private native 16.15 server with the original
+Spring lifecycle and assertions, substituting only container orchestration and
+connection metadata. Its 15 internal scenarios are one JUnit result, with no skips
+or reruns; application state and blobs remain in isolated HSQL. See the
+[dated adapter evidence](async-job-queue-review.md#native-postgresql-asset-adapter-2026-09-12-utc).
+This closes the scoped PostgreSQL execution gap, not the full configured CI job,
+the fresh MySQL 8.4 adapter run, historical migration or workload-adoption gates.
+Do not count the separate workflow/HSQL checks as database execution.
 
 | Required case | Finite acceptance |
 | --- | --- |
