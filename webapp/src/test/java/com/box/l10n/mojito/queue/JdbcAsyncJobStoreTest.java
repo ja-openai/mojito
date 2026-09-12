@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -135,13 +136,15 @@ public class JdbcAsyncJobStoreTest {
   }
 
   private void assertScheduledRetentionUsesDatabaseClock(Duration clockOffset) {
-    Instant databaseNow = Instant.now().truncatedTo(ChronoUnit.SECONDS).plus(clockOffset);
+    // Keep seconds at zero: LocalDateTime.toString() omits them, unlike an SQL timestamp literal.
+    Instant databaseNow = Instant.now().truncatedTo(ChronoUnit.MINUTES).plus(clockOffset);
     JdbcAsyncJobStore store =
         new JdbcAsyncJobStore(
             new NamedParameterJdbcTemplate(jdbcTemplate),
             AsyncJobQueueJdbcDialect.HSQL,
             "VALUES TIMESTAMP '"
-                + LocalDateTime.ofInstant(databaseNow, ZoneOffset.UTC).toString().replace('T', ' ')
+                + LocalDateTime.ofInstant(databaseNow, ZoneOffset.UTC)
+                    .format(DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss"))
                 + "'");
     AsyncJobId fresh = store.enqueueNow("assetlocalize", "fresh");
     AsyncJobId expired = store.enqueueNow("assetlocalize", "expired");

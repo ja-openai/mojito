@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty-five local commits (four original chunks plus CI,
+- The queue worktree has twenty-six local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -362,6 +362,22 @@ authorization/serialization regression coverage, not a new vulnerability fix,
 authentication-provider/CSRF proof, database execution or staging verification.
 The generic engine and its ordinary JAR are unchanged. No migration, queue flag,
 production policy, primary-master file or rollout gate was changed.
+
+## Retention Clock Fixture (2026-09-12 UTC)
+
+The focused store control exposed a time-dependent failure in both scheduled
+retention clock-skew tests: at second zero, `LocalDateTime.toString()` omits the
+seconds field, producing an invalid HSQL timestamp literal. This was a test
+fixture error, not evidence of a production retention failure. Both tests now
+intentionally truncate their shifted clocks to minute boundaries and use an
+explicit seconds-bearing formatter. The host-ahead/behind and retention assertions
+remain unchanged.
+
+The deterministic minute-boundary reproduction failed both methods with the old
+formatter, without reruns (`/tmp/queue-retention-clock-red-20260912.log`). After the
+fix, all 45 `JdbcAsyncJobStoreTest` cases passed with zero skips or reruns in
+`/tmp/queue-db-restart-verified-20260912.log`; root Spotless passed. This narrows a
+source of false CI failures and does not extend database-version or rollout proof.
 
 ## Handler Diagnostic Containment (2026-09-12 UTC)
 
