@@ -16,39 +16,45 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.testcontainers.containers.JdbcDatabaseContainer;
+import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /** Disposable database crash/restart, not a network partition or business-side fencing proof. */
-public class JdbcAsyncJobStorePostgresRestartIntegrationTest {
+@RunWith(Parameterized.class)
+public class JdbcAsyncJobStoreDatabaseRestartIntegrationTest {
 
-  private static final AsyncJobQueueJdbcDialect DIALECT = AsyncJobQueueJdbcDialect.POSTGRESQL;
   private static final Duration LEASE = Duration.ofSeconds(2);
+  private final AsyncJobQueueJdbcDialect dialect;
+
+  @Parameterized.Parameters(name = "{0}")
+  public static List<AsyncJobQueueJdbcDialect> databases() {
+    return List.of(AsyncJobQueueJdbcDialect.MYSQL, AsyncJobQueueJdbcDialect.POSTGRESQL);
+  }
+
+  public JdbcAsyncJobStoreDatabaseRestartIntegrationTest(AsyncJobQueueJdbcDialect dialect) {
+    this.dialect = dialect;
+  }
 
   @Test(timeout = 120_000)
   public void databaseRestartPreservesCommittedRowsAndFencesExpiredOwners() throws Exception {
     assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
-    try (PostgreSQLContainer<?> database =
-        new PostgreSQLContainer<>("postgres:16")
-            .withCommand(
-                "postgres",
-                "-c",
-                "fsync=on",
-                "-c",
-                "synchronous_commit=on",
-                "-c",
-                "full_page_writes=on")
-            .withConnectTimeoutSeconds(10)
-            .withUrlParam("connectTimeout", "1")
-            .withUrlParam("socketTimeout", "2")) {
+    try (JdbcDatabaseContainer<?> database = database()) {
       database.start();
       try (Connection connection = database.createConnection("")) {
         ScriptUtils.executeSqlScript(
-            connection, new ClassPathResource("db/postgresql/migration/V109__Async_Job_Queue.sql"));
+            connection,
+            new ClassPathResource(
+                dialect == AsyncJobQueueJdbcDialect.MYSQL
+                    ? "db/migration/V109__Async_Job_Queue.sql"
+                    : "db/postgresql/migration/V109__Async_Job_Queue.sql"));
       }
       try (HikariDataSource pool = pool(database)) {
         JdbcTemplate jdbc = new JdbcTemplate(pool);
@@ -56,10 +62,11 @@ public class JdbcAsyncJobStorePostgresRestartIntegrationTest {
         JdbcAsyncJobStore store =
             new JdbcAsyncJobStore(
                 new NamedParameterJdbcTemplate(jdbc),
-                DIALECT,
+                dialect,
                 new DataSourceTransactionManager(pool));
         assertDurabilitySettings(jdbc);
-        Instant beforeRestart = postmasterStartedAt(jdbc);
+        Instant beforeRestart =
+            dialect == AsyncJobQueueJdbcDialect.POSTGRESQL ? postmasterStartedAt(jdbc) : null;
         AsyncJobId queuedId = store.enqueueNow("restart-queued", "original input");
         AsyncJobId doneId = store.enqueueNow("restart-done", "done input");
         AsyncJobRecord doneClaim =
@@ -112,8 +119,9 @@ public class JdbcAsyncJobStorePostgresRestartIntegrationTest {
 
         database.getDockerClient().startContainerCmd(database.getContainerId()).exec();
         await(
-            "the existing worker pool reconnects to a new postmaster",
+            "the existing worker pool reconnects after database restart",
             () -> recovered(jdbc, beforeRestart));
+        assertThat(database.isRunning()).isTrue();
         assertDurabilitySettings(jdbc);
         assertThat(row(store, queuedId)).isEqualTo(queued);
         assertThat(row(store, doneId)).isEqualTo(done);
@@ -187,7 +195,33 @@ public class JdbcAsyncJobStorePostgresRestartIntegrationTest {
     return store.getByIds(List.of(id)).getFirst();
   }
 
-  private static HikariDataSource pool(PostgreSQLContainer<?> database) {
+  private JdbcDatabaseContainer<?> database() {
+    if (dialect == AsyncJobQueueJdbcDialect.MYSQL) {
+      return new MySQLContainer<>("mysql:8.4")
+          .withCommand(
+              "mysqld",
+              "--innodb-flush-log-at-trx-commit=1",
+              "--sync-binlog=1",
+              "--innodb-doublewrite=ON")
+          .withConnectTimeoutSeconds(10)
+          .withUrlParam("connectTimeout", "1000")
+          .withUrlParam("socketTimeout", "2000");
+    }
+    return new PostgreSQLContainer<>("postgres:16")
+        .withCommand(
+            "postgres",
+            "-c",
+            "fsync=on",
+            "-c",
+            "synchronous_commit=on",
+            "-c",
+            "full_page_writes=on")
+        .withConnectTimeoutSeconds(10)
+        .withUrlParam("connectTimeout", "1")
+        .withUrlParam("socketTimeout", "2");
+  }
+
+  private static HikariDataSource pool(JdbcDatabaseContainer<?> database) {
     HikariConfig config = new HikariConfig();
     config.setPoolName("queue-database-restart");
     config.setJdbcUrl(database.getJdbcUrl());
@@ -201,7 +235,14 @@ public class JdbcAsyncJobStorePostgresRestartIntegrationTest {
     return new HikariDataSource(config);
   }
 
-  private static void assertDurabilitySettings(JdbcTemplate jdbc) {
+  private void assertDurabilitySettings(JdbcTemplate jdbc) {
+    if (dialect == AsyncJobQueueJdbcDialect.MYSQL) {
+      assertThat(jdbc.queryForObject("SELECT @@innodb_flush_log_at_trx_commit", Integer.class))
+          .isEqualTo(1);
+      assertThat(jdbc.queryForObject("SELECT @@sync_binlog", Integer.class)).isEqualTo(1);
+      assertThat(jdbc.queryForObject("SELECT @@innodb_doublewrite", String.class)).isEqualTo("ON");
+      return;
+    }
     for (String setting : List.of("fsync", "synchronous_commit", "full_page_writes")) {
       assertThat(jdbc.queryForObject("SHOW " + setting, String.class)).isEqualTo("on");
     }
@@ -209,12 +250,15 @@ public class JdbcAsyncJobStorePostgresRestartIntegrationTest {
 
   private static Instant postmasterStartedAt(JdbcTemplate jdbc) {
     return jdbc.queryForObject(
-        "SELECT pg_postmaster_start_time()", (rs, row) -> DIALECT.readTimestamp(rs, 1));
+        "SELECT pg_postmaster_start_time()",
+        (rs, row) -> AsyncJobQueueJdbcDialect.POSTGRESQL.readTimestamp(rs, 1));
   }
 
   private static boolean recovered(JdbcTemplate jdbc, Instant previousStart) {
     try {
-      return postmasterStartedAt(jdbc).isAfter(previousStart);
+      return previousStart == null
+          ? jdbc.queryForObject("SELECT 1", Integer.class) == 1
+          : postmasterStartedAt(jdbc).isAfter(previousStart);
     } catch (org.springframework.dao.DataAccessException unavailable) {
       return false;
     }

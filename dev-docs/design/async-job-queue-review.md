@@ -10,10 +10,10 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty-seven local commits (four original chunks plus CI,
+- The queue worktree has twenty-eight local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
-  checkpoint is `71946547c7`, which
-  has 34 commits not in the queue branch and owns migrations through V112, including
+  checkpoint is `730b0a3cb0`, which
+  has 36 commits not in the queue branch and owns migrations through V112, including
   `V109__AI_Review_Request_Usage.sql`. The queue branch's two V109 scripts are
   collision-free only on its older base. A passing branch-local collision test
   is not evidence that merging into current master is safe.
@@ -103,12 +103,12 @@ not close its current gates.
   pass: running work reclaims only after natural expiry with a fresh token, while
   committed DONE remains terminal without replaying its missed callback. Repeated
   business probes demonstrate at-least-once effects, not exactly-once execution.
-- The new [PostgreSQL database-restart contract](#postgresql-database-restart-2026-09-12-utc)
-  passes against a private 16.15 server with crash recovery and durability settings
-  enabled. Committed rows survive, uncommitted input disappears, the original pool
-  reconnects and expired owners remain fenced. The Docker kill/start path is now
-  selected in CI but has not run here; runtime failover, MySQL restart and network
-  blackhole tests remain separate requirements.
+- The shared [MySQL/PostgreSQL database-restart contract](#mysql-and-postgresql-restart-matrix-2026-09-12-utc)
+  passes on native MySQL 8.0.43 after SIGKILL and PostgreSQL 16.15 after immediate
+  shutdown, with durability settings enabled. Committed rows survive, uncommitted
+  input disappears, the original pool reconnects and expired owners remain fenced.
+  The Docker kill/start paths and MySQL 8.4 remain unverified; runtime failover
+  and network blackhole tests are separate requirements.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -369,7 +369,57 @@ authentication-provider/CSRF proof, database execution or staging verification.
 The generic engine and its ordinary JAR are unchanged. No migration, queue flag,
 production policy, primary-master file or rollout gate was changed.
 
+## MySQL And PostgreSQL Restart Matrix (2026-09-12 UTC)
+
+The earlier PostgreSQL-only fixture is now the parameterized
+`JdbcAsyncJobStoreDatabaseRestartIntegrationTest`. MySQL 8.4 and PostgreSQL 16 use
+the same committed-state, uncommitted-rollback, pool-recovery and expired-owner
+assertions, without a second maintained copy. CI and its workflow contract require
+the renamed suite. MySQL startup explicitly enables and checks
+`innodb_flush_log_at_trx_commit=1`, `sync_binlog=1` and `innodb_doublewrite=ON` before
+and after restart; PostgreSQL retains all three previous durability checks and its
+postmaster-start-time assertion. Both require actual connection/heartbeat failure
+while the server is stopped and reuse the original Hikari pool after restart.
+
+Both native cases passed once, together in 7.507 seconds, with zero failures,
+ignored tests, assumption skips or reruns. The MySQL wrapper verified the private
+datadir, 8.0.43 version, PID-file location, owned child PID and active TLS before
+SIGKILL. That child exited 137; a new mysqld process started on the same datadir,
+and the server log records crash recovery. MySQL connections required TLS but did
+not certify the generated self-signed CA or hostname. PostgreSQL repeated immediate
+shutdown/WAL recovery on a new private 16.15 cluster, retaining certificate and
+hostname verification. The wrappers substitute container lifecycle/metadata only;
+production store SQL, transactions, pools, natural lease expiry and every shared
+test assertion remain real and unchanged. These native cases do not execute Docker
+or certify the configured MySQL 8.4 image, power-loss safety or replica failover.
+
+A clean `mvn -Pno-local-config -pl webapp -am clean test` control selected the shared
+restart suite, CI contract, 45 store tests and nine permanent-failure runtime tests:
+56 passed, two opt-in database cases skipped, no failures/errors/reruns. Cleaning
+also removes the renamed class's stale bytecode. Root Spotless passed. The logs are
+`/tmp/queue-mysql-restart-control-20260912.log` and
+`/tmp/queue-mysql-restart-spotless-20260912.log`; native artifacts are
+`/tmp/queue-mysql-restart.DkgDrx/native-restart.log`, `mysql-server.log`,
+`pg-server.log`, `NativeDatabaseRestartVerification.java` and `restart_probe.rb`.
+The final pre-commit control repeated the same 56 passes and two opt-in skips;
+its four Surefire XML reports contain zero failure/error/flaky/rerun elements and
+explicitly record reruns disabled. That log is
+`/tmp/queue-mysql-restart-final-control-20260912.log`; final formatting is recorded in
+`/tmp/queue-mysql-restart-spotless-final-20260912.log`.
+Both servers shut down cleanly after verification and their loopback listeners on
+45197/59405 closed. More than 27 GiB stayed free. Expected killed-connection,
+self-signed/private-fixture and existing build/JDK warnings remain visible.
+
+This closes the narrower MySQL 8.0 store-restart execution gap and rechecks
+PostgreSQL after sharing the fixture. Runtime/callback/listener failover, actual
+network blackholes, the full target-version CI lane, lost-commit admission recovery,
+schema adoption and business/blob ownership remain open. No production code,
+migration, routing defaults, primary-master files or remote refs changed.
+
 ## PostgreSQL Database Restart (2026-09-12 UTC)
+
+This is the initial PostgreSQL-only run. The shared matrix above subsequently
+renames the maintained class and adds native MySQL 8.0 store-restart evidence.
 
 `JdbcAsyncJobStorePostgresRestartIntegrationTest` adds one opted-in database test,
 selected explicitly alongside existing store/adapter contracts in the zero-rerun

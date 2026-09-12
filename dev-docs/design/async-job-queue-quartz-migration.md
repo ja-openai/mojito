@@ -820,7 +820,7 @@ mvn -pl webapp -Pno-local-config \
 
 The dedicated GitHub Actions database job explicitly includes timezone and JPA/JDBC
 transaction contracts in addition to store, pool, wakeup, worker-crash and
-PostgreSQL database-restart suites.
+MySQL/PostgreSQL database-restart suites.
 It disables Surefire reruns so an initially failed contract cannot turn green on
 automatic retry. The ordinary webapp default stays at one rerun unless overridden;
 readiness verification must opt out and inspect skipped cases. Performance smoke
@@ -835,12 +835,12 @@ opt-in property and zero reruns. `AsyncJobQueueRealDatabaseCiContractTest`
 regression-checks those requirements against the parsed workflow, rather than
 accepting a class name or flag mentioned elsewhere in the file.
 
-`JdbcAsyncJobStorePostgresRestartIntegrationTest` keeps one Hikari pool and the same
+`JdbcAsyncJobStoreDatabaseRestartIntegrationTest` keeps one Hikari pool and the same
 database across abrupt shutdown/restart. It checks committed state, rollback of
 uncommitted input and expired-token fencing with durability settings enabled.
-The [native PostgreSQL crash-recovery run](async-job-queue-review.md#postgresql-database-restart-2026-09-12-utc)
-passes, but the required Docker SIGKILL path and full CI selection remain unverified.
-It is a store contract, not runtime/callback/listener failover, MySQL restart,
+The [native MySQL 8.0/PostgreSQL 16 restart matrix](async-job-queue-review.md#mysql-and-postgresql-restart-matrix-2026-09-12-utc)
+passes, but the required Docker SIGKILL paths, MySQL 8.4 and full CI selection
+remain unverified. It is a store contract, not runtime/callback/listener failover,
 lost-commit recovery or network-partition proof.
 
 Source wiring alone does not establish the adapter's real-database retry,
