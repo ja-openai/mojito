@@ -830,8 +830,10 @@ The [native MySQL 8.4.11 store run](async-job-queue-review.md#native-mysql-84-st
 passes nine existing contract groups, including held-open bounded claim locks,
 identity/collation, retention/replay and lease/renewal contention. It uses the
 official macOS ARM64 binary and replaces only test-container orchestration.
-This narrows the target-version gap without certifying Docker/Linux CI, the 8.4
-JPA/adapter/crash lanes or production capacity; retain those separate gates.
+The separate [JPA proofs](async-job-queue-review.md#native-mysql-84-jpa-transactions-2026-09-12-utc)
+and [six fault-recovery cases](async-job-queue-review.md#native-mysql-84-fault-recovery-2026-09-12-utc)
+also pass on that native version. Together these narrow the version gap, not
+Docker/Linux CI, the remaining adapter/consumer lanes or production capacity.
 
 The 2026-09-12 CI audit found that
 `AssetLocalizeAsyncJobOutputRetryIntegrationTest` was absent from that database
@@ -846,8 +848,9 @@ accepting a class name or flag mentioned elsewhere in the file.
 database across abrupt shutdown/restart. It checks committed state, rollback of
 uncommitted input and expired-token fencing with durability settings enabled.
 The [native MySQL 8.0/PostgreSQL 16 restart matrix](async-job-queue-review.md#mysql-and-postgresql-restart-matrix-2026-09-12-utc)
-passes, but the required Docker SIGKILL paths, MySQL 8.4 and full CI selection
-remain unverified. Its additional [runtime restart contract](async-job-queue-review.md#runtime-database-restart-recovery-2026-09-12-utc)
+passes, and both MySQL methods now also pass in the native 8.4.11 fault run.
+The required Docker SIGKILL paths and full CI selection remain unverified.
+Its additional [runtime restart contract](async-job-queue-review.md#runtime-database-restart-recovery-2026-09-12-utc)
 also passes on those native versions: a real coordinator holds handler capacity
 across an outage, rejects the expired attempt's result without a success callback,
 reclaims with a fresh token and processes new work through polling. No coordinator

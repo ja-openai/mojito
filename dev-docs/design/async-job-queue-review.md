@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty-four local commits (four original chunks plus CI,
+- The queue worktree has thirty-five local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -128,8 +128,10 @@ not close its current gates.
   The [runtime extension](#runtime-database-restart-recovery-2026-09-12-utc) also
   passes on those native versions: the same coordinator rejects stale completion,
   reclaims naturally expired work and processes a new job without restart or an
-  external wakeup. The Docker kill/start paths, MySQL 8.4, listener-aware failover
-  and network blackholes remain unverified.
+  external wakeup. Both restart methods now also pass on
+  [native MySQL 8.4.11](#native-mysql-84-fault-recovery-2026-09-12-utc), together with
+  two pool/session-loss and two worker-JVM crash cases. The Docker kill/start paths,
+  listener-aware failover and network blackholes remain unverified.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -867,8 +869,8 @@ process exited zero, and port 45201 is closed; its disposable datadir was remove
 More than 27 GiB was available before database/build/test work. Keep checking the
 5 GiB floor before reusing the retained binary for another private fixture.
 
-Required Docker-backed CI, MySQL 8.4 timezone/adapter/restart/session-loss/crash
-lanes, full independent-consumer proof on 8.4, sustained load/network behavior and
+Required Docker-backed CI, MySQL 8.4 timezone/adapter lanes, full
+independent-consumer proof on 8.4, sustained load/network behavior and
 historical schema adoption remain open. This source-in-place verification does not resolve
 durable admission, parent recovery, business publication or blob lifetime.
 
@@ -927,6 +929,64 @@ recovery or HTTP admission. Full configured CI, remaining 8.4 database lanes,
 historical migration adoption, publication/lifetime ownership and actual module
 extraction/release still require their separate gates. Master and remote refs are
 unchanged; no queue enrollment or deployment occurred.
+
+## Native MySQL 8.4 Fault Recovery (2026-09-12 UTC)
+
+Six maintained failure contracts now also pass on native MySQL 8.4.11, without
+JUnit failures, ignored/assumption skips or automatic reruns. The two database
+restart methods pass in 10.749 seconds; the two pool/session-loss and two
+worker-JVM crash methods pass in a separate 14.175-second JUnit selection.
+These are existing tests with native lifecycle adapters, not six new test methods
+or a fresh execution of their PostgreSQL halves.
+
+- Store restart preserves acknowledged rows, rolls back uncommitted input and
+  rejects expired owners after the original Hikari pool reconnects.
+- Runtime restart retains the gated handler's capacity through an observed
+  heartbeat failure, rejects its stale result/callback, reclaims with a new token
+  and processes another job through polling with the same coordinator.
+- Pool starvation and terminated-session/blocked-login cases preserve the live
+  replacement lease, reject the stale heartbeat/completion and release capacity.
+- Killing a worker during its handler permits reclaim only after natural lease
+  expiry; repeated business probes preserve the explicit at-least-once contract.
+  Killing after committed DONE retains that result without replaying the missed
+  best-effort callback. Durable callback delivery remains a separate obligation.
+
+The database wrapper verifies version, datadir, PID-file identity, owned process
+PID and active TLS before killing its child. Both database kills exit 137, then
+restart the same private datadir; server logs record crash recovery. Durability
+assertions remain `innodb_flush_log_at_trx_commit=1`, `sync_binlog=1` and
+`innodb_doublewrite=ON`. The two original worker processes also exit 137; their
+retained logs and unchanged persisted probe assertions distinguish actual JVM
+death from a mocked handler exception. No queue SQL, handler, lease
+timestamp or maintained assertion changed. Native setup replaces container
+metadata/lifecycle only; the original worker process launcher remains in use.
+
+The Maven control passes 11 tests and explicitly skips 12 opt-in database cases
+(23 selected, five suites), with zero failures/errors or XML flaky/rerun entries.
+It selects the restart, pool, process-crash, permanent-failure and real-database CI
+contract suites using `-Pno-local-config -pl webapp -am` and
+`surefire.rerunFailingTestsCount=0`. The skips are not native evidence; the separate
+runner asserts all six real-MySQL cases execute without assumptions.
+Root formatting and diff checks pass. Existing frontend audit findings (two
+moderate, one high), JDK instrumentation, self-signed TLS and deliberately induced
+connection/lease failure logs remain visible.
+
+Artifacts are in `/private/tmp/queue-mysql84-faults.EKEjZq`: `native-faults.log`,
+`mysql-server.log`, `worker-running.log`, `worker-done.log`, `initialize.log`,
+`control.log`, `compile.log`, `spotless.log`, the native Java adapters/runner and
+`fault_probe.rb`. The [checksum-verified private binary](#native-mysql-84-store-contracts-2026-09-12-utc)
+is unchanged. Its loopback-only port 45203 is closed after orderly cleanup, final
+server exits are zero and the owned datadir was removed. More than 27 GiB was
+available before heavy work; the wrapper also checks the 5 GiB floor before
+every database start/restart. No installed service, application database, master
+file, remote ref or queue enrollment changed.
+
+This macOS ARM64 fixture requires TLS but does not verify its self-signed server
+certificate/hostname, and uses `lower_case_table_names=2`. Docker/Linux execution,
+replica promotion, blackholed networks, sustained/shared-pool load and exactly-once
+business publication are not established. Remaining 8.4 timezone/adapter/consumer
+lanes, historical schema adoption, durable admission and blob lifetime retain
+their separate gates.
 
 ## Native MySQL Retention Plan (2026-09-12 UTC)
 
