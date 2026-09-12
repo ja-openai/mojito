@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has fourteen local review commits (four original chunks plus CI,
+- The queue worktree has fifteen local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -81,6 +81,10 @@ not close its current gates.
   covering both configured preparation modes and cross-session timestamp semantics.
   New-write consistency does not establish historical timestamp provenance or a
   safe mixed-version migration.
+- Both [native PostgreSQL pool/session-loss contracts](#native-postgresql-pool-and-session-loss-2026-09-12-utc)
+  pass: starvation and real worker-session termination preserve the replacement
+  lease after recovery, reject stale completion and release runtime capacity.
+  Blocked reauthentication is not network-partition or shared-pool sizing proof.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -495,6 +499,43 @@ visible. No schema version, routing, master file or remote ref changed. Full
 target-version CI, historical Flyway adoption and workload rollout gates remain
 open. This selection does not execute PostgreSQL timezone, crash or outage cases;
 the subsequent timezone matrix is recorded separately below.
+
+## Native PostgreSQL Pool And Session Loss (2026-09-12 UTC)
+
+Both existing PostgreSQL methods in `JdbcAsyncJobStorePoolIntegrationTest` passed
+on private PostgreSQL 16.15 in 5.556 seconds, with zero failures, ignored/assumption
+skips or automatic reruns. The separate `-Pno-local-config` Maven control rebuilt
+the selection but skipped all four opt-in MySQL/PostgreSQL cases; it is not the
+native result. Two temporary wrappers selected the PostgreSQL methods, replacing
+only container lifecycle and connection metadata. Real Hikari pools, production
+coordinator/executor/heartbeat construction, SQL, timeouts and assertions remained.
+
+Each method starts a handler, then prevents renewal through its one-slot pool.
+The starvation case holds that connection; the disconnect case terminates its
+actual backend, returns the dead connection and proves the dedicated worker role
+cannot log in. Both observe the actual JDBC/pool failure, wait for natural
+database-clock lease expiry and reclaim with the same worker ID and a new token.
+After restoring access, the old heartbeat and completion both return false, the
+active replacement row is unchanged, and no stale success callback runs. Runtime
+in-flight/executor counts return to zero; the replacement alone commits its DONE
+payload. Pool cleanup leaves no borrowed connections or waiting threads. These
+assertions fence queue-row state, not arbitrary external business side effects.
+
+Artifacts are `/tmp/queue-postgres-pool.8gwhlD/native-pool.log`,
+`NativePostgresPoolVerification.java`, `pool_probe.rb` and `server.log`; the Maven
+control is `/tmp/queue-postgres16.FgSYLH/pool-control.log`. Before each UUID database,
+the adapter checked the exact private datadir, version and active TLS, retaining
+certificate/hostname verification. The fixture used a new loopback-only cluster
+on port 59402. Both pools closed, the server shut down cleanly, and the private
+datadir including the disposable worker role was removed; more than 31 GiB stayed
+free. Expected connection timeout, termination/NOLOGIN and stale-owner diagnostics
+plus JDK/Mockito warnings remain visible.
+
+No production/test source, migration, master file, routing or remote ref changed.
+This is application-classpath session-loss and blocked-reauthentication evidence,
+not a network blackhole, database restart, separate worker-JVM crash, sustained
+multi-host soak, independent-JAR host or pool-capacity certification. Full CI,
+historical migration, durable admission and workload rollout gates remain open.
 
 ## Native PostgreSQL Timezone Contracts (2026-09-12 UTC)
 
