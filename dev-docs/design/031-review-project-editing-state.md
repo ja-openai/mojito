@@ -148,6 +148,44 @@ not receive the additional protection against stale notes/suggestions. A release
 must therefore include client refresh and served-bundle verification; deploying
 backend code alone does not complete this work.
 
+## Content-free decision attribution (REVIEW-07)
+
+The September 11 source change adds optional `clientContext` to decision requests.
+It is diagnostic metadata, not authenticated proof of input origin or ownership.
+Older callers remain compatible and are identified as lacking client context.
+No new database table or translation-content logging is introduced.
+
+The context identifies the executing JavaScript artifact using the basename of
+`import.meta.url`, rather than querying the current server version. It includes a
+page-instance UUID, stable operation UUID, monotonic HTTP request sequence,
+operation origin, and the draft's project/review-row/TM/review-revision identity.
+Diagnostic UUID creation is best-effort: unavailable browser support emits an
+invalid-ID sentinel rather than preventing an AI review or translation save.
+Each draft retains its target and target origin together across same-app
+navigation and pending saves. Origins distinguish a server snapshot, staged
+suggestion, agent proposal, AI suggestion, editor change, and unknown input.
+These labels describe application paths, never whether a human or CUA operated
+the editor. No `isTrusted` inference, keystrokes, clipboard content, source or
+target text, content hashes, comments, or prompts are captured in this context.
+
+AI suggestion ownership is captured before its asynchronous request and attached
+to the resulting suggestion object, not reconstructed from the row selected when
+Use is clicked. Agent/staged suggestions retain their proposal or suggestion ID.
+The mutation copies the complete request before asynchronous work. Retries keep
+the operation identity and get a new transport sequence. Explicit Use mine
+updates the submitted draft-owner revision but retains the original suggestion
+revision, with a recovery label; Use external omits target-origin attribution.
+
+Server diagnostics compare bounded, sanitized client claims with the authorized
+row identity and expected revision. Mismatches are logged with reasons, without
+changing the existing save guards or blocking a previously permitted recovery.
+Successful outcomes are recorded only after commit. These logs can associate a
+future saved variant with its declared application path and loaded artifact;
+they cannot prove who operated the client or retroactively reconstruct an older
+incident. Rollout, log retention/access, and both fresh-load and long-open-tab
+verification remain required. This paragraph records local source work, not a
+deployment claim.
+
 ## Verification and release criteria
 
 The permanent tests exercise the real page/router and mutation hook for failed

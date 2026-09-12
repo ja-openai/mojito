@@ -2,6 +2,10 @@ import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
 import { isTransientHttpError, poll } from '../utils/poller';
 import type { AgentReviewDecision, ApiAgentReviewContext } from './agent-reviews';
 import type { ApiGlossaryTermEvidence } from './glossaries';
+import {
+  type ReviewProjectClientContext,
+  reviewProjectContextForTransport,
+} from './review-project-client-context';
 
 // Keep in sync with com.box.l10n.mojito.entity.review.ReviewProjectStatus
 export const REVIEW_PROJECT_STATUSES = ['OPEN', 'CLOSED'] as const;
@@ -965,6 +969,7 @@ export const adminRecomputeReviewProjectRequestDecidedCounts = async (
 
 export const saveReviewProjectTextUnitDecision = async ({
   textUnitId,
+  clientContext,
   target,
   comment,
   status,
@@ -977,6 +982,7 @@ export const saveReviewProjectTextUnitDecision = async ({
   agentReview,
 }: {
   textUnitId: number;
+  clientContext?: ReviewProjectClientContext;
   agentReview?: AgentReviewDecision;
   target: string;
   comment: string | null;
@@ -994,6 +1000,7 @@ export const saveReviewProjectTextUnitDecision = async ({
     credentials: 'include',
     headers: jsonHeaders,
     body: JSON.stringify({
+      clientContext: reviewProjectContextForTransport(clientContext),
       target,
       comment,
       status,
@@ -1225,12 +1232,14 @@ export const updateReviewProjectTextUnitTerminologyMetadata = async ({
 
 export const setReviewProjectTextUnitDecisionState = async ({
   textUnitId,
+  clientContext,
   decisionState,
   expectedCurrentTmTextUnitVariantId,
   expectedReviewStateRevision,
   overrideChangedCurrent = false,
 }: {
   textUnitId: number;
+  clientContext?: ReviewProjectClientContext;
   decisionState: 'PENDING' | 'DECIDED';
   expectedCurrentTmTextUnitVariantId?: number | null;
   expectedReviewStateRevision?: string | null;
@@ -1241,6 +1250,7 @@ export const setReviewProjectTextUnitDecisionState = async ({
     credentials: 'include',
     headers: jsonHeaders,
     body: JSON.stringify({
+      clientContext: reviewProjectContextForTransport(clientContext),
       decisionState,
       expectedCurrentTmTextUnitVariantId,
       expectedReviewStateRevision,

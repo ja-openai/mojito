@@ -1,3 +1,7 @@
+import {
+  type ReviewProjectClientContext,
+  reviewProjectContextForTransport,
+} from './review-project-client-context';
 import type { ApiReviewProjectTextUnit } from './review-projects';
 
 export type AgentReviewDecision = {
@@ -79,9 +83,11 @@ export async function fetchAgentReviewFeedback(
 /** A proposal outcome never sends translation fields. */
 export async function saveAgentReviewOutcome({
   textUnitId,
+  clientContext,
   ...request
 }: {
   textUnitId: number;
+  clientContext?: ReviewProjectClientContext;
   decisionState: 'PENDING' | 'DECIDED';
   expectedCurrentTmTextUnitVariantId?: number | null;
   expectedReviewStateRevision?: string | null;
@@ -91,7 +97,10 @@ export async function saveAgentReviewOutcome({
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
+    body: JSON.stringify({
+      ...request,
+      clientContext: reviewProjectContextForTransport(clientContext),
+    }),
   });
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {

@@ -1199,12 +1199,14 @@ one {{Você tem {$count} arquivo.}}
 
     fireEvent.click(screen.getByRole('button', { name: 'Decided' }));
 
-    expect(onRequestDecisionState).toHaveBeenCalledWith({
-      decisionState: 'DECIDED',
-      expectedCurrentTmTextUnitVariantId: null,
-      expectedReviewStateRevision: null,
-      textUnitId: rejectedMf2TextUnit.id,
-    });
+    expect(onRequestDecisionState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        decisionState: 'DECIDED',
+        expectedCurrentTmTextUnitVariantId: null,
+        expectedReviewStateRevision: null,
+        textUnitId: rejectedMf2TextUnit.id,
+      }),
+    );
     expect(onRequestSaveDecision).not.toHaveBeenCalled();
   });
 

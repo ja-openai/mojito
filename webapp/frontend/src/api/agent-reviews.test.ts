@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { fetchAgentReviewFeedback, saveAgentReviewOutcome } from './agent-reviews';
+import { createReviewProjectClientContext } from './review-project-client-context';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -14,8 +15,15 @@ describe('Agent review outcome transport', () => {
         .fn()
         .mockResolvedValue(new Response(JSON.stringify({ id: 17 }), { status: 200 }));
       vi.stubGlobal('fetch', fetchMock);
+      const clientContext = createReviewProjectClientContext('agent_outcome', {
+        projectId: 7,
+        textUnitId: 17,
+        tmTextUnitId: 117,
+        reviewStateRevision: 'checked-row',
+      });
       await saveAgentReviewOutcome({
         textUnitId: 17,
+        clientContext,
         decisionState: action === 'DEFER' ? 'PENDING' : 'DECIDED',
         expectedCurrentTmTextUnitVariantId: 22,
         expectedReviewStateRevision: 'checked-row',
@@ -39,6 +47,8 @@ describe('Agent review outcome transport', () => {
       });
       expect(body.expectedCurrentTmTextUnitVariantId).toBe(22);
       expect(body.expectedReviewStateRevision).toBe('checked-row');
+      expect(body.clientContext).toMatchObject(clientContext);
+      expect(body.clientContext).toHaveProperty('requestSequence', expect.any(Number));
       for (const field of ['target', 'status', 'includedInLocalizedFile', 'comment'])
         expect(body).not.toHaveProperty(field);
     },
