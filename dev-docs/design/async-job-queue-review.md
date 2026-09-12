@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirteen local review commits (four original chunks plus CI,
+- The queue worktree has fourteen local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -76,6 +76,11 @@ not close its current gates.
   renewal contention. The 1,000-job performance smoke is a local diagnostic, not
   production capacity. No MySQL half, historical upgrade or full CI lane ran in
   this selection.
+- The [native PostgreSQL timezone matrix](#native-postgresql-timezone-contracts-2026-09-12-utc)
+  passes 14 existing tests in each of separate UTC and America/Los_Angeles JVMs,
+  covering both configured preparation modes and cross-session timestamp semantics.
+  New-write consistency does not establish historical timestamp provenance or a
+  safe mixed-version migration.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -487,8 +492,46 @@ The private 16.15 binary served a new loopback-only cluster on port 59400, shut 
 was removed. More than 31 GiB remained free after cleanup. Expected constraint,
 handler-failure and stale-owner diagnostics plus JDK/Mockito warnings remain
 visible. No schema version, routing, master file or remote ref changed. Full
-target-version CI, PostgreSQL timezone/crash/outage coverage, historical Flyway
-adoption and workload rollout gates remain open.
+target-version CI, historical Flyway adoption and workload rollout gates remain
+open. This selection does not execute PostgreSQL timezone, crash or outage cases;
+the subsequent timezone matrix is recorded separately below.
+
+## Native PostgreSQL Timezone Contracts (2026-09-12 UTC)
+
+All seven existing `JdbcAsyncJobStoreTimezoneIntegrationTest` methods passed in
+both configured PostgreSQL preparation modes on private PostgreSQL 16.15. Separate
+UTC and America/Los_Angeles JVMs each executed 14 tests with zero failures,
+ignored/assumption skips or automatic reruns, in 4.519 and 4.212 seconds respectively.
+The Maven control with `-Pno-local-config` refreshed classes and classpath but ran
+zero tests because the opt-in class bootstrap was disabled; it is build evidence,
+not part of the native test count.
+
+The temporary adapter replaced only dialect selection and database bootstrap,
+retaining the original Parameterized runner, session setup, ErrorCollector rules,
+seven test methods and class teardown. It asserted one bootstrap and a cleared
+fixture map. Real JDBC connections retained the fixture's explicit session-zone
+and `prepareThreshold` checks; no temporal SQL, bindings, readback, transactions
+or timing bounds were mocked. Each JVM used a new UUID database, after checking
+the private datadir, version and active TLS with certificate/hostname verification.
+
+Numeric database-clock bounds, absolute scheduling, leases/heartbeats, retry/replay,
+terminal cutoffs, epoch/maximum and DST-adjacent instants, and out-of-range rejection
+passed across UTC, Tokyo and Los Angeles sessions. No future job was claimed early
+and no live lease was reclaimed by a differently zoned peer. Preparation settings
+were checked on connections, not independently certified for every SQL statement.
+This is application-test-classpath evidence for new writes, not historical row
+interpretation, mixed-worker cutover, full target-version CI or the standalone host.
+
+Artifacts are `/tmp/queue-postgres-timezone.NIJ8Cw/native-utc.log`,
+`native-los-angeles.log`, `NativePostgresTimezoneVerification.java`,
+`timezone_probe.rb` and `server.log`; the Maven control is
+`/tmp/queue-postgres16.FgSYLH/timezone-control.log`. Root formatting passed with
+`mvn -Pno-local-config spotless:apply` (`spotless.log` in the probe directory).
+The isolated loopback server on
+port 59401 shut down cleanly with no ERROR/FATAL/PANIC entries, and its private
+datadir was removed. More than 31 GiB remained free. Existing JDK/Mockito agent
+warnings remain visible. No maintained production/test source, migration, master
+file, routing or remote ref changed; adoption and rollout gates remain open.
 
 ## Native PostgreSQL Listener Sessions (2026-09-12 UTC)
 
