@@ -534,4 +534,35 @@ describe('Review Project actual editor adversarial interactions', () => {
       }),
     );
   });
+
+  it('cannot undo an earlier source into a row after source remapping and explicit reset', async () => {
+    const harness = await mountEditor('assisted');
+    act(() => placeCaret(harness.editor));
+    await userEvent.setup().keyboard('Old source edit ');
+    const changed = structuredClone(harness.project);
+    const row = changed.reviewProjectTextUnits[0];
+    row.tmTextUnit = { ...row.tmTextUnit!, id: 777, content: 'New source' };
+    row.currentTmTextUnitVariant = {
+      ...row.currentTmTextUnitVariant!,
+      id: 778,
+      content: 'New source translation',
+    };
+    row.reviewStateRevision = 'new-source-revision';
+    await act(() => harness.refresh(changed));
+    expect(await screen.findByText(/source text changed/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    const editor = screen.getByRole('textbox', { name: 'Translation' });
+    expect(editor).toHaveTextContent('New source translation');
+    act(() => placeCaret(editor));
+    fireEvent.keyDown(editor, { key: 'z', ctrlKey: true });
+    expect(editor).toHaveTextContent('New source translation');
+    submit(editor);
+    await waitFor(() => expect(saveMock).toHaveBeenCalledTimes(1));
+    expect(saveMock.mock.calls[0][0]).toMatchObject({
+      textUnitId: row.id,
+      target: 'New source translation',
+      expectedCurrentTmTextUnitVariantId: 778,
+      expectedReviewStateRevision: 'new-source-revision',
+    });
+  });
 });

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { flushSync } from 'react-dom';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -90,8 +90,10 @@ beforeEach(() => {
 
 type SaveRequest = Parameters<typeof ReviewProjectsApi.saveReviewProjectTextUnitDecision>[0];
 
-function mountProject(fixture: CarryoverFixture, { deferSaves = false } = {}) {
-  const project = buildCarryoverProject(fixture);
+function mountProject(
+  fixture: CarryoverFixture,
+  { deferSaves = false, project = buildCarryoverProject(fixture) } = {},
+) {
   const queryKey = [...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id];
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -408,3 +410,75 @@ describe.each(carryoverFixtures)('Review Project $projectId carryover matrix', (
     });
   });
 });
+
+describe.each([true, false])(
+  'Review Project reordered row ownership, assisted = %s',
+  (assisted) => {
+    it.each(['Ascending', 'Descending'])(
+      'keeps source and target together with %s project row IDs and opposite TM ID order',
+      async (order) => {
+        assistedMock.mockReturnValue(assisted);
+        const fixture = carryoverFixtures[0];
+        const project = buildCarryoverProject(fixture);
+        const [low, high] = project.reviewProjectTextUnits;
+        low.id = 501;
+        low.tmTextUnit = { ...low.tmTextUnit!, id: 9002 };
+        high.id = 502;
+        high.tmTextUnit = { ...high.tmTextUnit!, id: 9001 };
+        const harness = mountProject(fixture, { project });
+        fireEvent.click(screen.getByRole('button', { name: 'Filter text units' }));
+        const menu = screen.getByRole('menu');
+        fireEvent.click(within(menu).getByRole('button', { name: 'ID' }));
+        fireEvent.click(within(menu).getByRole('button', { name: order }));
+        fireEvent.click(screen.getByRole('button', { name: 'Filter text units' }));
+        const [origin, destination] = order === 'Ascending' ? [low, high] : [high, low];
+        fireEvent.click(harness.container.querySelectorAll('.review-project-row')[0]);
+        expect(editorTarget()).toBe(origin.currentTmTextUnitVariant!.content);
+        const oldEditor = screen.getByRole('textbox', { name: 'Translation' });
+        const editedTarget = `${origin.currentTmTextUnitVariant!.content} (સમીક્ષિત)`;
+        replaceTranslation(editedTarget);
+        accept({ advance: true });
+        await waitFor(() =>
+          expect(editorTarget()).toBe(destination.currentTmTextUnitVariant!.content),
+        );
+        // Finish the originating save's callbacks before issuing a second save.
+        // The editor can commit while the first operation's finalizer is still queued.
+        await act(async () => Promise.resolve());
+
+        // An input/paste queued against the detached editor cannot change the new row.
+        expect(oldEditor).not.toBeInTheDocument();
+        if (oldEditor instanceof HTMLTextAreaElement) {
+          fireEvent.change(oldEditor, { target: { value: editedTarget } });
+        } else {
+          fireEvent.paste(oldEditor, { clipboardData: { getData: () => editedTarget } });
+          const nextEditor = screen.getByRole('textbox', { name: 'Translation' });
+          // The real ProseMirror undo/redo commands must not recover the prior row's document.
+          fireEvent.keyDown(nextEditor, { key: 'z', ctrlKey: true });
+          expect(editorTarget()).toBe(destination.currentTmTextUnitVariant!.content);
+          fireEvent.keyDown(nextEditor, { key: 'z', ctrlKey: true, shiftKey: true });
+          expect(editorTarget()).toBe(destination.currentTmTextUnitVariant!.content);
+        }
+        accept();
+        await waitFor(() => expect(saveMock).toHaveBeenCalledTimes(2));
+        expect(
+          saveMock.mock.calls.map(([request]) => ({
+            row: request.textUnitId,
+            target: request.target,
+            expectedVariant: request.expectedCurrentTmTextUnitVariantId,
+          })),
+        ).toEqual([
+          {
+            row: origin.id,
+            target: editedTarget,
+            expectedVariant: origin.currentTmTextUnitVariant!.id,
+          },
+          {
+            row: destination.id,
+            target: destination.currentTmTextUnitVariant!.content,
+            expectedVariant: destination.currentTmTextUnitVariant!.id,
+          },
+        ]);
+      },
+    );
+  },
+);
