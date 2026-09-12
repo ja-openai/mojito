@@ -60,8 +60,9 @@ queue DDL fixture, and closes the host context/factory and container even after
 setup or assertion failure. This favors isolation over container-startup speed.
 The host uses `HibernateJpaDialect` and `DELAYED_ACQUISITION_AND_HOLD`; this is not
 an arbitrary provider/version compatibility matrix. The [native PostgreSQL JPA run](../design/async-job-queue-review.md#independent-jar-jpa-database-lanes-2026-09-12-utc)
-verifies these six contracts plus both ordinary-JAR boundary tests. MySQL 8.4 and
-the complete configured CI lane still require execution.
+and [native MySQL 8.0.43 run](../design/async-job-queue-review.md#native-mysql-independent-jpa-host-2026-09-12-utc)
+each verify these six contracts plus both ordinary-JAR boundary tests. MySQL 8.4
+and the complete configured CI lane still require execution.
 Public enqueue deliberately commits independently, not atomically with host work.
 
 Always use `clean test` when switching lanes. The boundary test requires both

@@ -513,8 +513,10 @@ datasource mismatch guards. The host supplies `HibernateJpaDialect` with
 `DELAYED_ACQUISITION_AND_HOLD`. These six contracts are parameterized across HSQL
 and opt-in MySQL 8.4/PostgreSQL 16, with a disposable container per real-DB case.
 The [independent PostgreSQL JPA run](async-job-queue-review.md#independent-jar-jpa-database-lanes-2026-09-12-utc)
-now verifies all six plus both ordinary-JAR provenance tests; MySQL 8.4 and full
-CI execution remain outstanding. This is not public atomic enlistment or an
+now verifies all six plus both ordinary-JAR provenance tests. The same eight
+checks pass on [native MySQL 8.0.43](async-job-queue-review.md#native-mysql-independent-jpa-host-2026-09-12-utc)
+after private-fixture setup corrections; MySQL 8.4 and full CI execution remain
+outstanding. This is not public atomic enlistment or an
 arbitrary provider/version compatibility matrix. Public enqueue remains REQUIRES_NEW. Both profile lanes require
 `clean test`; the boundary test explicitly requires/rejects Hibernate and the
 optional compiled test class according to the chosen mode.

@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has seventeen local review commits (four original chunks plus CI,
+- The queue worktree has eighteen local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -58,9 +58,11 @@ not close its current gates.
   not implemented.
 - The [independent JAR's JPA-host suite](#independent-jar-jpa-database-lanes-2026-09-12-utc)
   now includes both real databases in CI. Its six PostgreSQL 16.15 cases plus two
-  JAR-boundary tests pass natively with no skips; HSQL and clean lean controls pass
-  separately. These public independent-enqueue tests do not implement atomic
-  admission or certify Mojito's business integrations.
+  JAR-boundary tests pass natively with no skips. The same eight checks also pass
+  on [native MySQL 8.0.43](#native-mysql-independent-jpa-host-2026-09-12-utc), after
+  correcting private-fixture startup/authentication. HSQL and clean lean controls
+  pass separately. These public independent-enqueue tests do not implement atomic
+  admission, certify MySQL 8.4 or certify Mojito's business integrations.
 - The application JPA/JDBC fixture now passes all 35 existing tests on native
   MySQL 8.0.43 and [PostgreSQL 16.15](#native-postgresql-jpajdbc-contracts-2026-09-12-utc)
   with Hibernate 6.6.49.Final, separately from its fresh 35-test HSQL control.
@@ -553,6 +555,44 @@ scoped approved install succeeded without publishing. Expected negative-bootstra
 JDK/Mockito, deprecated ThreadDeath and existing build warnings remain visible.
 Full CI, MySQL 8.4 JPA, historical adoption, extraction agreement and production
 rollout remain open; primary master, remote refs and routing are unchanged.
+
+## Native MySQL Independent JPA Host (2026-09-12 UTC)
+
+The six maintained `QueueJpaConsumerTest` contracts plus two `QueueJarBoundaryTest`
+checks passed on installed MySQL 8.0.43 in 1.411 seconds, with no failures,
+ignored/assumption skips or automatic reruns. This exercises the independent
+ordinary-JAR consumer, not the application's separate 35-test JPA fixture.
+The engine build and resolved artifact still match SHA-256
+`3266c1ea5bf0365da64eee6f0657df19b6ac2bbaa67d707e20f63746ca76be25`.
+
+The temporary adapter changes only parameter selection and container lifecycle/
+connection metadata. Each case uses a new UUID database on the identity-checked
+private instance, with real SQL, original assertions and JUnit setup/cleanup.
+The runner rejects webapp output. READ_COMMITTED queue versus SERIALIZABLE host
+isolation, distinct physical connections, host suspension/restoration, independent
+commit/rollback, worker-owned business transactions and datasource mismatch guards
+all pass. TLS encryption is required, but this disposable self-signed fixture does
+not verify server certificates or hostnames; it is not production TLS evidence.
+
+Two earlier setup failures remain visible: sandboxed initialization received
+signal 11 before queue SQL, while the same initialization succeeded with scoped
+approval. The first test attempt then failed six cases before queue SQL because
+the fresh socket-only root account rejected TCP loopback. A private loopback-only
+test account corrected authentication for the explicit second run. No queue SQL,
+assertions, timeouts or TLS requirements were weakened; this was not a first-attempt
+pass. Logs and the adapter remain under `/tmp/queue-jar-jpa-mysql.nm3JQm/`:
+`initdb.log`, `initdb-native.log`, `native-jpa.log`, `native-jpa-verified.log`,
+`NativeMysqlJarJpaVerification.java` and `jpa_probe.rb`.
+
+The fresh HSQL/JPA control passed 17 of 36 selected tests, with 19 opt-in skips
+(`/tmp/queue-jar-jpa-realdb.4sjwfA/consumer-jpa-mysql-control.log`). The subsequent
+clean lean control passed 11 with seven skips (`consumer-lean.log`); neither is
+additional real-DB evidence. Root formatting passed. The loopback-only server on
+port 45195 shut down cleanly, its private datadir was removed, and more than 29 GiB
+remained free. Expected negative-bootstrap, JDK/Mockito and self-signed fixture
+warnings remain visible. No production code, schema, defaults or primary-master
+files changed. MySQL 8.4/full CI, historical schema adoption, durable admission,
+business fencing, blob ownership and extraction agreement remain open.
 
 ## Native PostgreSQL Worker-JVM Crashes (2026-09-12 UTC)
 
