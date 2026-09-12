@@ -533,6 +533,13 @@ verified TLS, real SQL and ordinary-JAR provenance were checked. See the
 Neither native run is the full configured CI lane, real-DB JPA matrix, or
 extraction/release approval. Earlier dated results below remain historical.
 
+A separate [application JPA/JDBC run on PostgreSQL 16.15](async-job-queue-review.md#native-postgresql-jpajdbc-contracts-2026-09-12-utc)
+now passes all 35 existing transaction/fault tests, including atomic caller-owned
+task/queue insertion and ambiguous commit outcomes. This uses the application's
+limited entity graph and test classpath, not the independent ordinary-JAR host
+fixture. It supports the enlistment primitive, not completed durable admission or
+an arbitrary provider/datasource compatibility claim.
+
 Verification (2026-09-09): isolated `clean install` compiles all 28 sources and
 the separate `spotless:check clean test` consumer passes all **16 tests across
 four suites**, including real MySQL/PostgreSQL checks, with zero failures/errors/

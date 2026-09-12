@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has nine local review commits (four original chunks plus CI,
+- The queue worktree has ten local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -52,12 +52,13 @@ not close its current gates.
   are not an additive coverage total. A separate [native PostgreSQL 16.15 run](#native-postgresql-ordinary-jar-consumer-2026-09-12-utc)
   passes five existing execution/maintenance/wakeup contracts plus two JAR-boundary
   tests, including successful hints and caller commit/rollback isolation. Required
-  MySQL 8.4/PostgreSQL 16 CI and target-version JPA proof remain unverified;
+  MySQL 8.4/PostgreSQL 16 CI and the standalone host's real-DB JPA matrix remain unverified;
   Docker's local socket is absent. Asynchronous handler completion is still proposed,
   not implemented.
 - The application JPA/JDBC fixture now passes all 35 existing tests on native
-  MySQL 8.0.43 with Hibernate 6.6.49.Final, separately from its fresh 35-test HSQL
-  control. The [native JPA evidence](#native-mysql-jpajdbc-contracts-2026-09-12-utc)
+  MySQL 8.0.43 and [PostgreSQL 16.15](#native-postgresql-jpajdbc-contracts-2026-09-12-utc)
+  with Hibernate 6.6.49.Final, separately from its fresh 35-test HSQL control.
+  The [native MySQL JPA evidence](#native-mysql-jpajdbc-contracts-2026-09-12-utc)
   covers actual commit/rollback, provisional IDs, consumer visibility and injected
   lost acknowledgements, not durable reservations, HTTP recovery or actual network
   failure. It uses application mappings, not the standalone-JAR consumer.
@@ -431,6 +432,39 @@ server on port 45191 was shut down and its data directory removed. Existing
 JDK/Mockito agent, compilation/weaving and expected injected-failure diagnostics
 were not suppressed. No production/test source, migration, runtime flag, primary
 worktree or remote ref changed.
+
+## Native PostgreSQL JPA/JDBC Contracts (2026-09-12 UTC)
+
+All 35 existing `AsyncJobQueueJpaTransactionIntegrationTest` methods passed on
+private PostgreSQL 16.15 with Hibernate 6.6.49.Final in 2.804 seconds. The fresh
+Maven HSQL control separately passed all 35 with zero failures/errors/skips and
+Surefire reruns disabled. The native launcher retained the original Parameterized
+runner, setup/teardown, SQL and assertions. Its only substitutions were selecting
+POSTGRESQL in `databases()` and native connection/orchestration metadata instead
+of starting a container. It required exactly 35 executions, one PostgreSQL fixture,
+zero failures, zero ignored/assumption skips and no automatic reruns.
+
+This repeats the [MySQL fixture's transaction and fault contracts](#native-mysql-jpajdbc-contracts-2026-09-12-utc)
+on the supported PostgreSQL major: actual task/queue enlistment, independent public
+enqueue, consumer visibility, commit uncertainty and lease/claim ownership. The
+commit-then-throw and rollback-then-throw cases still use controlled JDBC fault
+injection. They are not actual network loss or a request-key recovery protocol.
+The fixture creates the queue schema directly and a limited production entity
+graph through Hibernate. It does not test historical Flyway upgrades, the complete
+application mapping graph or the independent JAR's host-owned JPA fixture.
+
+Artifacts are `/tmp/queue-postgres-jpa.GUy4no/native-jpa.log`,
+`NativePostgresJpaVerification.java`, `jpa_probe.rb` and `server.log`; the Maven
+control is `/tmp/queue-postgres16.FgSYLH/jpa-hsql-control.log`. The server used the
+same private 16.15 build as the ordinary-JAR run, but a new private cluster and
+UUID database on loopback port 59397. The adapter verified version, exact data
+directory and TLS before DDL; JDBC kept certificate/hostname verification enabled.
+More than 23 GiB remained free before and after execution. The server shut down
+cleanly, the listener closed and its private data directory was removed. Existing
+JDK/Mockito and injected-failure diagnostics remain visible. Self-review found no
+assertion or lifecycle changes in the adapter; no production or maintained test
+source changed. MySQL 8.4/full CI, admission, fan-out, publication/lifetime and
+rollout gates remain open; master, migrations, remote refs and routing are unchanged.
 
 ## Native MySQL Timezone Contracts (2026-09-12 UTC)
 
