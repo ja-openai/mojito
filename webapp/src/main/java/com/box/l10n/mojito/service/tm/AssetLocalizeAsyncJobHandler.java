@@ -22,7 +22,11 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Objects;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -268,11 +272,44 @@ public class AssetLocalizeAsyncJobHandler implements AsyncJobHandler {
     try {
       recording.run();
     } catch (Throwable failure) {
-      if (failure instanceof VirtualMachineError
-          || "java.lang.ThreadDeath".equals(failure.getClass().getName())) {
-        throw (Error) failure;
+      rethrowJvmFatal(failure);
+      try {
+        logger.warn("Failed to record assetlocalize handler metric", failure);
+      } catch (Throwable loggingFailure) {
+        rethrowJvmFatal(loggingFailure);
+        // Diagnostics cannot discard generated output or replace a callback's outcome.
       }
-      logger.warn("Failed to record assetlocalize handler metric", failure);
     }
+  }
+
+  private static void rethrowJvmFatal(Throwable failure) {
+    if (isJvmFatal(failure)) {
+      throw (Error) failure;
+    }
+    // Diagnostic wrappers may retain fatal causes or suppressed cleanup errors, including cycles.
+    Set<Throwable> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+    ArrayDeque<Throwable> pending = new ArrayDeque<>();
+    pending.add(failure);
+    while (!pending.isEmpty()) {
+      Throwable current = pending.removeFirst();
+      if (!visited.add(current)) {
+        continue;
+      }
+      if (isJvmFatal(current)) {
+        throw (Error) current;
+      }
+      Throwable cause = current.getCause();
+      if (cause != null) {
+        pending.addLast(cause);
+      }
+      for (Throwable suppressed : current.getSuppressed()) {
+        pending.addLast(suppressed);
+      }
+    }
+  }
+
+  @SuppressWarnings("removal")
+  private static boolean isJvmFatal(Throwable throwable) {
+    return throwable instanceof VirtualMachineError || throwable instanceof ThreadDeath;
   }
 }

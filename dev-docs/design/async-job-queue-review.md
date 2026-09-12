@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty-four local commits (four original chunks plus CI,
+- The queue worktree has twenty-five local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -362,6 +362,34 @@ authorization/serialization regression coverage, not a new vulnerability fix,
 authentication-provider/CSRF proof, database execution or staging verification.
 The generic engine and its ordinary JAR are unchanged. No migration, queue flag,
 production policy, primary-master file or rollout gate was changed.
+
+## Handler Diagnostic Containment (2026-09-12 UTC)
+
+The asset handler's metric fallback logger could discard an otherwise successful
+`process` result or replace the original generation/publication/finish exception.
+Six strengthened outcome checks and three new fatal controls reproduced nine
+failures (37 selected, six assertion failures and three errors, no skips/reruns;
+`/private/tmp/queue-handler-diagnostic-red-20260912.log`). These directly invoke
+the real handler with mocked business services; they are not database failures
+or evidence that a deployed job duplicated its effects.
+
+Only the handler's diagnostic boundary changes. Ordinary metric and fallback-log
+failures preserve generated result identity, successful callbacks and original
+business errors. JVM-fatal causes/suppressed errors propagate by identity, including
+ThreadDeath subclasses; iterative identity tracking handles cyclic graphs. A fatal
+after a business effect does not roll it back. The private final logger remains
+unchanged; tests attach a warning-specific, caller-thread-scoped appender and
+restore the previous logger state in `finally`. No global logging framework or
+generic queue API is added.
+
+Root Spotless passes. The handler/output/repair/runtime and existing HSQL adapter
+selection passes **138 tests with two opt-in MySQL/PostgreSQL skips across eight
+suites**, no failures, errors, flakes or automatic reruns
+(`/private/tmp/queue-handler-diagnostic-verified-20260912.log`). The compound-log
+faults are handler-unit tests; the integration cases are compatibility controls.
+SQL, migrations, payloads, retry policy, flag defaults and the generic engine/JAR
+are unchanged. Admission, business fencing, blob lifetime and outage gates remain
+open; callback outcome preservation is not durable callback delivery.
 
 ## Poll Logging Recovery (2026-09-12 UTC)
 

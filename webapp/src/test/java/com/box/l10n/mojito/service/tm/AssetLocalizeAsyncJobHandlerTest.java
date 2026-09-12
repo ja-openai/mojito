@@ -6,13 +6,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.refEq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.queue.AsyncJobHandlerResult;
@@ -29,6 +35,8 @@ import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +44,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.slf4j.LoggerFactory;
 
 @RunWith(MockitoJUnitRunner.class)
 public class AssetLocalizeAsyncJobHandlerTest {
@@ -418,7 +427,7 @@ public class AssetLocalizeAsyncJobHandlerTest {
   }
 
   @Test
-  public void processMetricFailuresDoNotMaskTheGenerationFailure() throws Exception {
+  public void processMetricFailuresDoNotMaskTheGenerationFailure() throws Throwable {
     RuntimeException failure = new IllegalStateException("generation failed");
     meterRegistry.gauge(
         "AssetLocalizeAsyncJobHandler.process", Tags.of("queueName", "assetlocalize"), 1);
@@ -428,12 +437,18 @@ public class AssetLocalizeAsyncJobHandlerTest {
         .thenReturn(objectMapper.writeValueAsBytes(new LocalizedAssetBody()));
     when(localizedAssetGenerationService.generate(any())).thenThrow(failure);
 
-    assertThatThrownBy(() -> handler.process(asyncJobRecord(jobData(42L), 1))).isSameAs(failure);
+    assertThat(
+            withFailedDiagnosticLogging(
+                new IllegalStateException("logger failed"),
+                () ->
+                    assertThatThrownBy(() -> handler.process(asyncJobRecord(jobData(42L), 1)))
+                        .isSameAs(failure)))
+        .isEqualTo(2);
     verifyNoInteractions(outputStorage);
   }
 
   @Test
-  public void processNonFatalMetricErrorsDoNotDiscardSuccessfulOutput() throws Exception {
+  public void processNonFatalMetricErrorsDoNotDiscardSuccessfulOutput() throws Throwable {
     AssetLocalizeAsyncJobPayload completed = stubSuccessfulProcess();
     meterRegistry
         .config()
@@ -445,12 +460,23 @@ public class AssetLocalizeAsyncJobHandlerTest {
               }
             });
 
-    AsyncJobHandlerResult result = handler.process(asyncJobRecord(jobData(42L), 1));
-    assertThat(result.action()).isEqualTo(AsyncJobHandlerResult.Action.DONE);
+    IllegalStateException loggingFailure = new IllegalStateException("logger failed");
+    IllegalStateException cycle = new IllegalStateException("cyclic diagnostic", loggingFailure);
+    loggingFailure.addSuppressed(cycle);
     assertThat(
-            objectMapper.readValueUnchecked(result.jobData(), AssetLocalizeAsyncJobPayload.class))
-        .isEqualTo(completed);
+            withFailedDiagnosticLogging(
+                loggingFailure,
+                () -> {
+                  AsyncJobHandlerResult result = handler.process(asyncJobRecord(jobData(42L), 1));
+                  assertThat(result.action()).isEqualTo(AsyncJobHandlerResult.Action.DONE);
+                  assertThat(
+                          objectMapper.readValueUnchecked(
+                              result.jobData(), AssetLocalizeAsyncJobPayload.class))
+                      .isEqualTo(completed);
+                }))
+        .isEqualTo(2);
     verify(localizedAssetGenerationService).generate(any());
+    verify(outputStorage).saveAttemptOutput(eq(42L), any());
   }
 
   @Test
@@ -470,12 +496,18 @@ public class AssetLocalizeAsyncJobHandlerTest {
   }
 
   @Test
-  public void successfulDoneCallbackIsNotFailedByMetrics() {
+  public void successfulDoneCallbackIsNotFailedByMetrics() throws Throwable {
     conflictWithCounter("assetLocalizeAsyncJob.pollableTask.finished", "result", "succeeded");
     when(pollableTaskService.getPollableTask(42L)).thenReturn(pollableTask(42L));
     String jobData = jobData(42L);
 
-    handler.onJobDone(asyncJobRecord(jobData, 1), AsyncJobHandlerResult.done(jobData));
+    assertThat(
+            withFailedDiagnosticLogging(
+                new IllegalStateException("logger failed"),
+                () ->
+                    handler.onJobDone(
+                        asyncJobRecord(jobData, 1), AsyncJobHandlerResult.done(jobData))))
+        .isEqualTo(1);
 
     verify(outputStorage).publishOutput(new AssetLocalizeAsyncJobPayload(42L));
     verify(pollableTaskService).finishTask(42L, null, null, null);
@@ -484,12 +516,18 @@ public class AssetLocalizeAsyncJobHandlerTest {
   }
 
   @Test
-  public void successfulPermanentFailureCallbackIsNotFailedByMetrics() {
+  public void successfulPermanentFailureCallbackIsNotFailedByMetrics() throws Throwable {
     conflictWithCounter("assetLocalizeAsyncJob.pollableTask.finished", "result", "failed");
     when(pollableTaskService.getPollableTask(42L)).thenReturn(pollableTask(42L));
     RuntimeException failure = new IllegalStateException("business failure");
 
-    handler.onJobFailedPermanently(asyncJobRecord(jobData(42L), 3), failure, "business failure");
+    assertThat(
+            withFailedDiagnosticLogging(
+                new IllegalStateException("logger failed"),
+                () ->
+                    handler.onJobFailedPermanently(
+                        asyncJobRecord(jobData(42L), 3), failure, "business failure")))
+        .isEqualTo(1);
 
     verify(pollableTaskService).finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
     assertThat(meterRegistry.find("assetLocalizeAsyncJob.pollableTask.finish.failed").counter())
@@ -497,35 +535,126 @@ public class AssetLocalizeAsyncJobHandlerTest {
   }
 
   @Test
-  public void failedDoneCallbackPreservesItsFailureWhenMetricsFail() {
+  public void failedDoneCallbackPreservesItsFailureWhenMetricsFail() throws Throwable {
     conflictWithCounter("assetLocalizeAsyncJob.pollableTask.finish.failed", "callback", "done");
     when(pollableTaskService.getPollableTask(42L)).thenReturn(pollableTask(42L));
     RuntimeException failure = new IllegalStateException("publish failed");
     doThrow(failure).when(outputStorage).publishOutput(any());
     String jobData = jobData(42L);
 
-    assertThatThrownBy(
-            () ->
-                handler.onJobDone(asyncJobRecord(jobData, 1), AsyncJobHandlerResult.done(jobData)))
-        .isSameAs(failure);
+    assertThat(
+            withFailedDiagnosticLogging(
+                new IllegalStateException("logger failed"),
+                () ->
+                    assertThatThrownBy(
+                            () ->
+                                handler.onJobDone(
+                                    asyncJobRecord(jobData, 1),
+                                    AsyncJobHandlerResult.done(jobData)))
+                        .isSameAs(failure)))
+        .isEqualTo(1);
     verify(pollableTaskService).getPollableTask(42L);
     verifyNoMoreInteractions(pollableTaskService);
   }
 
   @Test
-  public void failedTerminalCallbackPreservesItsFailureWhenMetricsFail() {
+  public void failedTerminalCallbackPreservesItsFailureWhenMetricsFail() throws Throwable {
     conflictWithCounter("assetLocalizeAsyncJob.pollableTask.finish.failed", "callback", "failed");
     when(pollableTaskService.getPollableTask(42L)).thenReturn(pollableTask(42L));
     RuntimeException failure = new IllegalStateException("finish failed");
     doThrow(failure).when(pollableTaskService).finishTask(eq(42L), isNull(), any(), isNull());
 
-    assertThatThrownBy(
-            () ->
-                handler.onJobFailedPermanently(
-                    asyncJobRecord(jobData(42L), 3),
-                    new IllegalStateException("business failure"),
-                    "failed"))
-        .isSameAs(failure);
+    assertThat(
+            withFailedDiagnosticLogging(
+                new IllegalStateException("logger failed"),
+                () ->
+                    assertThatThrownBy(
+                            () ->
+                                handler.onJobFailedPermanently(
+                                    asyncJobRecord(jobData(42L), 3),
+                                    new IllegalStateException("business failure"),
+                                    "failed"))
+                        .isSameAs(failure)))
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void nestedFatalMetricCauseStillPropagates() throws Exception {
+    stubSuccessfulProcess();
+    OutOfMemoryError fatal = new OutOfMemoryError("synthetic metric failure");
+    meterRegistry
+        .config()
+        .onMeterAdded(
+            meter -> {
+              throw new IllegalStateException(fatal);
+            });
+
+    assertThatThrownBy(() -> handler.process(asyncJobRecord(jobData(42L), 1))).isSameAs(fatal);
+  }
+
+  @Test
+  public void suppressedFatalLoggerErrorStillPropagates() throws Throwable {
+    stubSuccessfulProcess();
+    meterRegistry.gauge(
+        "AssetLocalizeAsyncJobHandler.process", Tags.of("queueName", "assetlocalize"), 1);
+    OutOfMemoryError fatal = new OutOfMemoryError("synthetic logger failure");
+    IllegalStateException loggingFailure = new IllegalStateException("logger wrapper");
+    loggingFailure.addSuppressed(fatal);
+
+    assertThat(
+            withFailedDiagnosticLogging(
+                loggingFailure,
+                () ->
+                    assertThatThrownBy(() -> handler.process(asyncJobRecord(jobData(42L), 1)))
+                        .isSameAs(fatal)))
+        .isEqualTo(1);
+  }
+
+  @Test
+  @SuppressWarnings("removal")
+  public void threadDeathSubclassInMetricsStillPropagates() throws Exception {
+    stubSuccessfulProcess();
+    ThreadDeath fatal = new ThreadDeath() {};
+    meterRegistry
+        .config()
+        .onMeterAdded(
+            meter -> {
+              throw fatal;
+            });
+
+    assertThatThrownBy(() -> handler.process(asyncJobRecord(jobData(42L), 1))).isSameAs(fatal);
+  }
+
+  private int withFailedDiagnosticLogging(Throwable failure, ThrowingCallable action)
+      throws Throwable {
+    Logger logger = (Logger) LoggerFactory.getLogger(AssetLocalizeAsyncJobHandler.class);
+    Level previousLevel = logger.getLevel();
+    Thread caller = Thread.currentThread();
+    AtomicInteger warnings = new AtomicInteger();
+    @SuppressWarnings("unchecked")
+    Appender<ILoggingEvent> appender = mock(Appender.class);
+    doAnswer(
+            invocation -> {
+              ILoggingEvent event = invocation.getArgument(0);
+              if (Thread.currentThread() == caller
+                  && event.getLevel() == Level.WARN
+                  && event.getMessage().equals("Failed to record assetlocalize handler metric")) {
+                warnings.incrementAndGet();
+                throw failure;
+              }
+              return null;
+            })
+        .when(appender)
+        .doAppend(any(ILoggingEvent.class));
+    try {
+      logger.setLevel(Level.WARN);
+      logger.addAppender(appender);
+      action.call();
+      return warnings.get();
+    } finally {
+      logger.detachAppender(appender);
+      logger.setLevel(previousLevel);
+    }
   }
 
   private AssetLocalizeAsyncJobPayload stubSuccessfulProcess() throws Exception {
