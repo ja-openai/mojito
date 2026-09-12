@@ -2426,7 +2426,39 @@ public class ReviewProjectService {
       String decisionNotes,
       String expectedReviewStateRevision,
       AgentReviewDecisionRequest agentReview) {
+    return saveDecision(
+        reviewProjectTextUnitId,
+        target,
+        comment,
+        status,
+        includedInLocalizedFile,
+        decisionState,
+        expectedCurrentTmTextUnitVariantId,
+        overrideChangedCurrent,
+        decisionNotes,
+        expectedReviewStateRevision,
+        agentReview,
+        null);
+  }
 
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public GetProjectDetailView.ReviewProjectTextUnit saveDecision(
+      Long reviewProjectTextUnitId,
+      String target,
+      String comment,
+      String status,
+      Boolean includedInLocalizedFile,
+      DecisionState decisionState,
+      Long expectedCurrentTmTextUnitVariantId,
+      boolean overrideChangedCurrent,
+      String decisionNotes,
+      String expectedReviewStateRevision,
+      AgentReviewDecisionRequest agentReview,
+      ReviewProjectClientContext clientContext) {
+
+    var trace =
+        ReviewProjectSaveTrace.start(
+            clientContext, reviewProjectTextUnitId, expectedReviewStateRevision);
     Stopwatch totalStopwatch = Stopwatch.createStarted();
     String totalResult = "success";
     boolean hasTarget = target != null;
@@ -2482,6 +2514,12 @@ public class ReviewProjectService {
                     currentVariant != null ? currentVariant.getTmTextUnitVariant() : null;
                 Long currentVariantId =
                     currentTmTextUnitVariant != null ? currentTmTextUnitVariant.getId() : null;
+                trace.bind(
+                    currentUser.getId(),
+                    project.getId(),
+                    tmTextUnit.getId(),
+                    project.getLocale().getId(),
+                    currentVariantId);
 
                 AgentReviewDecisionService.Prepared proposalDecision =
                     project.getAgentReviewRunId() == null && agentReview == null
@@ -2547,7 +2585,8 @@ public class ReviewProjectService {
       Optional<ReviewProjectTextUnitDecision> existingDecision = initialRead.existingDecision();
       boolean wasDecided = initialRead.wasDecided();
       if (initialRead.agentReview() != null && initialRead.agentReview().replay()) {
-        return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
+        return trace.completed(
+            fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project));
       }
       if (initialRead.agentReview() == null
           && !hasTarget
@@ -2555,11 +2594,12 @@ public class ReviewProjectService {
           && decisionState == DecisionState.PENDING
           && existingDecision.isEmpty()) {
         totalResult = "noop";
-        return timeSaveDecisionPhase(
-            "detailReload",
-            reviewProjectTextUnitId,
-            hasTarget,
-            () -> fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project));
+        return trace.completed(
+            timeSaveDecisionPhase(
+                "detailReload",
+                reviewProjectTextUnitId,
+                hasTarget,
+                () -> fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project)));
       }
 
       ReviewProjectTextUnitDecision decision =
@@ -2570,6 +2610,7 @@ public class ReviewProjectService {
                 return entity;
               });
       TMTextUnitVariant reviewedVariant =
+          // Historical project baseline, not necessarily the current variant seen before this save.
           baselineVariant != null ? baselineVariant : currentTmTextUnitVariant;
 
       if (hasTarget) {
@@ -2677,11 +2718,12 @@ public class ReviewProjectService {
               reviewProjectTextUnitId,
               hasTarget,
               () -> fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project));
-      return detail;
+      return trace.completed(detail);
     } catch (RuntimeException exception) {
       totalResult = getSaveDecisionResultTag(exception);
       throw exception;
     } finally {
+      trace.finish(totalResult);
       recordSaveDecisionPhase(
           "total", totalResult, reviewProjectTextUnitId, hasTarget, totalStopwatch);
     }

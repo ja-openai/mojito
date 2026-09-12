@@ -2,6 +2,7 @@ package com.box.l10n.mojito.rest.review;
 
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 import com.box.l10n.mojito.service.agentreview.AgentReviewDecisionRequest;
+import com.box.l10n.mojito.service.review.ReviewProjectClientContext;
 
 public class ReviewProjectTextUnitDecisionRequest {
 
@@ -15,6 +16,15 @@ public class ReviewProjectTextUnitDecisionRequest {
   private DecisionState decisionState;
   private String expectedReviewStateRevision;
   private AgentReviewDecisionRequest agentReview;
+  private ReviewProjectClientContext clientContext;
+
+  public ReviewProjectClientContext getClientContext() {
+    return clientContext;
+  }
+
+  public void setClientContext(ReviewProjectClientContext clientContext) {
+    this.clientContext = clientContext;
+  }
 
   public AgentReviewDecisionRequest getAgentReview() {
     return agentReview;

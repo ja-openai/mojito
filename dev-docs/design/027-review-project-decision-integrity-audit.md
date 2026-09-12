@@ -176,6 +176,21 @@ may reach the raw-byte ceiling before the 8,000,000-character semantic limit.
 
 ## Persistence limitation
 
+`reviewed_variant_id` normally points to the Review Project baseline: the save service prefers
+that baseline over the current variant. It is not a reliable record of what the editor displayed
+immediately before a save. Comparing it with the decided target establishes a difference from
+that stored baseline, not a copy operation or an observed correct-to-wrong editor transition.
+Variant creation histories and current-pointer evidence must be evaluated separately.
+
+Decision saves now emit bounded, content-free diagnostics at transaction completion.
+The server records the authorized actor/row identity, before/after variant IDs and
+`transaction` outcome separately from the method result. A successful method can
+still participate in an outer rollback; only `transaction=committed` confirms commit.
+Missing transaction advice is reported as `unknown`, never assumed committed, and
+logging failures must not change a save's result. Optional client claims are sanitized
+and treated as untrusted; callers without metadata remain compatible. These logs are
+not a durable audit table, and production log retention/access still needs validation.
+
 `review_project_text_unit_decision` contains one mutable row per Review Project text unit. The
 timestamp is the latest row modification, not an immutable event log. The audit therefore covers
 latest persisted `DECIDED` mutations in the requested window; an overwritten intermediate click

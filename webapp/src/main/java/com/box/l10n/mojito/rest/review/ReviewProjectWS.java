@@ -406,7 +406,8 @@ public class ReviewProjectWS {
               Boolean.TRUE.equals(request.getOverrideChangedCurrent()),
               request.getDecisionNotes(),
               request.getExpectedReviewStateRevision(),
-              request.getAgentReview());
+              request.getAgentReview(),
+              request.getClientContext());
       return ResponseEntity.ok(toTextUnitResponse(detail));
     } catch (ReviewProjectCurrentVariantConflictException conflict) {
       GetProjectDetailView.ReviewProjectTextUnit currentTextUnit = conflict.getCurrentTextUnit();
