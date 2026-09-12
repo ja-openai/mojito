@@ -10,8 +10,9 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has four implementation/documentation chunks plus a scoped CI
-  correction over `7fcc341457`. Local master at this checkpoint is `71946547c7`, which
+- The queue worktree has six local review commits (four original chunks, a CI
+  correction and policy clarifications) over `7fcc341457`. Local master at this
+  checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
   `V109__AI_Review_Request_Usage.sql`. The queue branch's two V109 scripts are
   collision-free only on its older base. A passing branch-local collision test

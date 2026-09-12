@@ -18,11 +18,25 @@ At local master `b64352ba75`, interactive AI Review already uses the dedicated
 deadline checks. Its dispatcher has no waiting queue. The frontend sends DELETE
 on cancellation; local futures also observe cancellation handled by another pod.
 The global occupancy setting is warning-only, not a cluster-wide execution cap.
+Per-user accounting is also approximate: `AiReviewCapacityStore.reserve` may
+return BEST_EFFORT after three contended updates and admit an uncounted request.
+Persisted task ownership remains mandatory; the capacity fallback does not
+bypass it. Neither the global threshold nor this per-user allowance proves a
+hard bound on outstanding HTTP operations.
 These are source observations, not fresh test or deployment evidence.
 
-Recommended direction: extend the generic engine with optional asynchronous
-completion, retaining existing synchronous handlers. Use a separate named
-`ai-review` queue and explicit policy, not a second persistence/lease engine.
+Recommended direction: retain direct async dispatch for interactive AI Review
+while restart failure is acceptable. Non-blocking HTTP, cancellation and busy/retry
+responses do not by themselves require a durable waiting queue. Strict capacity,
+rate and fairness policies need separate approval and verification; this plan
+does not silently turn master's warning/approximate accounting into hard gates.
+
+If a durable background workload needs non-blocking execution, extend the existing
+generic engine with optional asynchronous completion, retaining synchronous
+handlers rather than creating a second persistence/lease engine. A named
+`ai-review` queue is only a conditional adapter if a later product decision
+requires durable waiting or shared queue admission. It is not the selected next
+interactive implementation or a prerequisite for landing the queue foundation.
 Keep authenticated task access, conversation sequencing, model policy, per-user
 fairness and provider-specific cancellation outside the generic store.
 
@@ -78,19 +92,22 @@ errors; stage callbacks must not silently swallow them into an ignored future.
 
 ## Interactive Policy
 
-For the proposed first AI Review adapter:
+For interactive dispatch, and for any separately approved future queue adapter:
 
 - Bound both pending work and active provider calls. Define the scope of each
   limit explicitly: a per-pod limit is not a cluster-wide cap. Existing occupancy
-  warnings cannot serve as a hard dispatch semaphore.
+  warnings or best-effort accounting cannot serve as a hard dispatch semaphore.
+  Specify burst/rate limits independently of concurrency. These are proposed
+  controls, not claims about current master or authorization to change its policy.
 - Expire old requests and give waiting users a fair opportunity to run; do not
   build an unbounded backlog and rely on frontend retries to drain it.
 - Keep frontend cancellation and the original end-to-end deadline. Offer manual
   retry. The initial adapter must preserve the existing bounded in-attempt
   provider retry policy; changing its status classification or adding jittered
   backoff is a separate behavior change, not implicit in queue enrollment.
-- Do not automatically replay an execution after process death, lease loss or
-  an ambiguous outcome. Restart failure is acceptable here.
+- Do not automatically replay an execution after process death or an ambiguous
+  outcome; the same applies to lease loss if a queue adapter is later chosen.
+  Restart failure is acceptable here.
   A one-claim attempt budget is a candidate building block, not proof of complete
   admission, cancellation or transport behavior. Failure before the first actual
   provider call is possible with this policy and must be reported honestly.
@@ -117,15 +134,18 @@ support. Manual retries are new user requests and can also duplicate remote work
    Flyway and shared task/blob/generation changes are not gated by routing flags.
    Neither this extension nor full Quartz replacement is a prerequisite for a
    separately reviewed, inactive foundation.
-2. Add asynchronous completion as one engine change with no AI Review enrollment.
+2. If a concrete durable workload needs it, add asynchronous completion as one
+   engine change with no AI Review enrollment.
    Prove an incomplete stage releases its worker while retaining capacity and
    renewing its lease; immediate and delayed success/failure must match the
    synchronous contract. Cover null/throwing setup, fatal failures, cancellation,
    expiry, late completion after reclaim, unknown transition commits, completion
    executor rejection, and shutdown/restart with outstanding stages. Use gated
    tests with real executors and both JDBC dialects for ownership races.
-3. Add the AI Review adapter only with a separately reviewed admission and
-   cancellation contract. Test cancellation before dispatch and on another pod,
+3. Keep interactive review on direct dispatch unless durable waiting or shared
+   queue admission is explicitly selected. Only then add an AI Review adapter
+   with a separately reviewed admission and cancellation contract. Test
+   cancellation before dispatch and on another pod,
    cancel-versus-response races, elapsed queue deadlines, transport settlement,
    bounded/fair dispatch, conversation ordering and process death after provider
    submission. Count handler executions and provider invocations separately:
@@ -145,7 +165,7 @@ not close interactive readiness.
 
 ## Review And Verification
 
-This documentation-only plan was cross-checked against the revisions above and
+The initial 2026-09-11 plan was cross-checked against the revisions above and
 independently reviewed. Review corrected a conflation of queue replay with the
 existing provider retry loop; the policy and acceptance counters now distinguish
 them. A fresh synchronous lifecycle baseline passed 87 tests with no failures,
@@ -155,6 +175,23 @@ using `-Pno-local-config` (`/tmp/queue-async-handler-plan-baseline.log`). Existi
 compiler deprecation and AspectJ weaving warnings remain. This run verifies the
 current contract only, not the proposed API, AI Review behavior or real-database
 ownership races. No runtime, schema, feature flag or deployment changed.
+
+The 2026-09-12 scope clarification was checked against master's unchanged
+`b64352ba75` dispatcher, execution store and capacity store: direct dispatch stays
+the interactive default, and approximate accounting is not a strict semaphore.
+Only documentation changed and `git diff --check` passed. Maven formatting and
+tests were not rerun because available disk remained below the 5 GiB safety floor;
+the earlier baseline is not fresh verification of this clarification.
+
+After disk headroom recovered, the pre-commit review at master `71946547c7`
+confirmed its AI Review sources are unchanged from `b64352ba75`. The existing
+three synchronous lifecycle suites above plus
+`AsyncJobQueueJpaTransactionIntegrationTest` passed 122 tests with no failures,
+errors, skips or reruns using `-Pno-local-config` and an isolated HSQL database
+(`/tmp/queue-scope-docs-baseline-20260912.log`). Root formatting and diff checks
+passed. This verifies the current synchronous and independent/enlisted transaction
+contracts, not an implemented admission orchestrator, async handler API, hard AI
+capacity limit or fresh real-database behavior. No runtime or rollout policy changed.
 
 ## Established References
 

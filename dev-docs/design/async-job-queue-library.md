@@ -47,6 +47,9 @@ still synchronous. See the [asynchronous handler plan](async-job-queue-asynchron
 for ownership, transport settlement, cancellation, deadline and no-queue-replay
 requirements. This is a separate follow-up, not implemented support or a new
 prerequisite for a reviewed inactive foundation landing.
+Choose it for a concrete durable workload, not merely because interactive HTTP
+is asynchronous. AI Review can retain its direct dispatcher while restart failure
+is acceptable; a future queue adapter requires a separate admission-policy decision.
 
 Durability of queue rows does not give exactly-once business effects. Handlers can
 run again after a crash or lease loss. Terminal callbacks are best-effort local

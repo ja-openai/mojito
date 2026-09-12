@@ -180,16 +180,23 @@ MBlob/task-specific lifecycle inside the generic library is not an extraction
 shortcut; it couples the engine to Mojito and a different failure policy.
 
 The 2026-09-11 discussion narrows a possible follow-up: reuse the generic engine
-through an asynchronous handler contract, with a dedicated named AI Review queue,
-bounded waiting, cancellation and an admission-based deadline. Restart failure
-remains acceptable; the queue must not replay interrupted or uncertain executions.
+through an asynchronous handler contract if a durable workload needs non-blocking
+execution. Interactive review does not need durable queueing merely to release
+worker threads while HTTP is pending: retain direct dispatch while restart failure
+is acceptable.
+A named AI Review queue with bounded waiting, cancellation and an admission-based
+deadline is conditional on a separate product decision, not the next required
+implementation. Such an adapter must not replay interrupted or uncertain executions.
 Existing bounded retries within an active provider execution are a separate
 policy, not disabled by a one-claim budget. See the
 [separate implementation and acceptance plan](async-job-queue-asynchronous-handlers.md).
 This supersedes any implication that interactive use requires a second queue
 engine; it does not change the current default-off/no-enrollment decision. The
 newer master `b64352ba75` still has no waiting queue and its global occupancy
-threshold only warns. The pinned inventory above is not current capacity policy.
+threshold only warns. Its per-user reservation accounting can admit uncounted
+requests after bounded contention retries; it is not a hard concurrency semaphore.
+Strict capacity/rate limits are separate policy choices, not implied by adopting
+futures or by this queue plan. The pinned inventory above is not current capacity policy.
 
 The batch `AiReviewService`/`AiTranslateService` producers and their provider-batch
 import/polling jobs still schedule Quartz at this same commit. Keep their rows
@@ -832,7 +839,7 @@ from the still-required MySQL 8.4/PostgreSQL 16 execution evidence.
 | Retry/deadline behavior | Poison input, transient failure, always-requeue handler, executor rejection, lease reclaim, and missing input all end in the specified bounded state. No infinite poison loop; workflow polling is tested separately from error retry. |
 | Pollable/API parity | Same task/error/result schema for single and multi-locale; delayed child, child failure, partial fan-out, lost client response, task timeout, output repair, and explicit replay. Check HTTP/CLI polling, not only handler return values. |
 | Mixed versions and rollback | Old producer/new consumer and new producer/retained compatible consumer fixtures; route flip with active Quartz parents and delayed queue rows. Prove old canonical-writing consumers are absent before the private-output fence is relied upon. Complete a bounded 1,000-job drain within 30 minutes under declared fixture runtimes, accounting separately for expected terminal failures. |
-| Database adoption | Migration validation from the actual master schema through V108, no version collision or checksum rewrite, and fresh-schema install. MySQL production gate is mandatory; PostgreSQL runtime tests are mandatory for any claimed PostgreSQL support, while full application/PostgreSQL deployment remains a separate certification. |
+| Database adoption | Migration validation from the selected master's actual migration history, no version collision or checksum rewrite, and fresh-schema install. MySQL production gate is mandatory; PostgreSQL runtime tests are mandatory for any claimed PostgreSQL support, while full application/PostgreSQL deployment remains a separate certification. |
 
 If any fixture cannot meet its finite runtime bound, diagnose it and revise the
 test design explicitly; do not repeatedly extend a rollout until it appears green.

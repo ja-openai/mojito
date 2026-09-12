@@ -397,6 +397,21 @@ there; never edit applied SQL/checksums or infer deployment state from branch/me
 ### Exact Transaction Ownership
 `AssetLocalizeAdmissionService` owns explicit TransactionTemplates using the application's JPA
 transaction manager: TX R/TX A are bounded `REQUIRES_NEW`/`READ_COMMITTED` operations.
+The orchestration entry guard must run before either template suspends a caller
+transaction, and before reservation, blob access or task/queue writes. Reject an
+active caller transaction rather than silently suspending it across upload or
+recovery work; suspension does not release its locks or physical connection.
+Request, reconciliation and parent-resume entry points must obey this rule without
+relying on AspectJ or self-invocation advice. The guard itself must not commit or
+roll back the caller transaction. It is proposed behavior, not an implemented
+admission API.
+
+This restriction belongs to multi-step admission orchestration, not the generic
+public queue enqueue API. The existing public enqueue still commits independently
+of an outer business transaction, as its JPA contract test verifies. Conversely,
+the package-local enlisted primitive below requires TX A to already be active.
+Do not generalize either contract into an ambient-transaction guard on the other.
+
 A non-advised EntityManager.persist/flush helper copies task name/message/parent/count/timeout
 and explicitly persists actor/audit timestamps. Existing `createPollableTask` starts another
 `REQUIRES_NEW` transaction: do not call it inside TX A or change it for other callers.
@@ -527,7 +542,8 @@ Mock exceptions alone cannot prove safety.
 | Throw after task flush, after queue insert, before ACCEPTED update | Real rollback removes both task and queue; request stays PREPARING; no worker observes phantom acceptance. |
 | TX A commit-then-throw; rollback-then-throw; lookup DB unavailable | Same-key retry returns original IDs or creates one pair after rollback; unknown returns no false task failure. |
 | In-flight commit + primary miss + retry; deadlock/lock timeout | Unique request serializes completion; no second executable queue row; deadlines yield explicit uncertainty. |
-| Outer JPA rollback; no AspectJ; wrong/mismatched transaction manager | TX A remains independently durable; failed TX A rolls back both technologies; wrong configuration fails closed. |
+| Admission orchestration called inside writable/read-only/rollback-only JPA transaction | Reject before reservation, blob access or task/queue mutation; preserve the caller's bound resources and let its owner decide commit/rollback. An outer-rollback public-enqueue control is a different API contract, not successful admission. |
+| No ambient caller transaction and no AspectJ; failed TX A; wrong/mismatched manager | Explicit TX A commits task, queue and ACCEPTED together or rolls all three back; wrong configuration fails closed. Enlisted enqueue uses TX A's connection, not a second independent commit. |
 | Metrics, local wakeup, notifier, response serialization fail after commit | Accepted row/task unchanged; lost response recovered by key; no Quartz fallback or compensation. |
 | JSON order/escaping/default/NFC variants; every option mutated | Golden canonical equivalence only where specified; changed semantics conflicts; ordered arrays remain ordered. |
 | Same key different actor/repo; body/path mismatch; revoked caller; forged parent slot | No cross-scope lookup leakage, task/payload exposure, or child insertion; authorization enforced on all reads. |
