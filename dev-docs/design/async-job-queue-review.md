@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty-five local commits (four original chunks plus CI,
+- The queue worktree has thirty-six local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -45,7 +45,9 @@ not close its current gates.
   now passes the same nine store/identity/claim-lock contract groups on macOS ARM64.
   The held-open locking regression includes all ten backlog/batch scenarios, and
   the 1,000-job smoke records zero poll failures. This closes that scoped native
-  version gap, not Docker/Linux CI, JPA/adapter/crash coverage on 8.4 or capacity.
+  version gap, not Docker/Linux CI or capacity. Subsequent JPA, fault-recovery and
+  [timezone/adapter/lean-consumer runs](#native-mysql-84-compatibility-lanes-2026-09-12-utc)
+  cover those separate native 8.4 lanes without certifying the full hosted job.
 - The earlier local disk-capacity blocker has cleared: the crash-test MySQL server
   reported ENOSPC during shutdown, after its two tests passed. Removing its private
   datadir initially left about 398 MiB available on the local data volume; a later
@@ -59,7 +61,9 @@ not close its current gates.
   opt-in (12 host contracts and seven public-consumer cases); the lean lane skips seven.
   A [native consumer run](#native-mysql-ordinary-jar-consumer-2026-09-12-utc)
   now verifies two existing public execution/maintenance contracts plus two JAR
-  boundary tests on MySQL 8.0.43, without application classes. These separate runs
+  boundary tests on MySQL 8.0.43, without application classes. The same four checks
+  now also pass on [native MySQL 8.4.11](#native-mysql-84-compatibility-lanes-2026-09-12-utc)
+  after rebuilding and verifying the ordinary JAR. These separate runs
   are not an additive coverage total. A separate [native PostgreSQL 16.15 run](#native-postgresql-ordinary-jar-consumer-2026-09-12-utc)
   passes five existing execution/maintenance/wakeup contracts plus two JAR-boundary
   tests, including successful hints and caller commit/rollback isolation. Complete
@@ -88,7 +92,10 @@ not close its current gates.
   and [native MySQL 8.0.43 run](#native-mysql-asset-adapter-2026-09-12-utc) each pass
   the existing database method's 15 internal retry/publication scenarios as one
   JUnit test, with no skips or reruns. Application state and blobs remain in
-  private HSQL, separate from queue rows. These do not prove atomic admission,
+  private HSQL, separate from queue rows. The same MySQL method now also passes
+  on [8.4.11](#native-mysql-84-compatibility-lanes-2026-09-12-utc), alongside the
+  timezone suite's 14 cases in each UTC and America/Los_Angeles JVM.
+  These do not prove atomic admission,
   full-application database compatibility or queue-owned blob lifetime.
 - The two [native PostgreSQL listener contracts](#native-postgresql-listener-sessions-2026-09-12-utc)
   pass real pooled-session cleanup and reconnect after backend termination despite
@@ -147,7 +154,7 @@ not close its current gates.
 | Parent fan-out recovery | Separate default-off fan-out flag, resolution preflight and reproduced partial-admission failures. | Build on durable admission with frozen manifests and stable child slots. Approve duplicate-tag/size policy; crash and concurrent resume must retain exactly N child identities and reconstruct the same output map. |
 | Business publication and replay | Attempt-private output plus fenced DONE selection; all non-null pull-run tracking excluded; terminal-task replay containment. | Approve the [lineage authority contract](async-job-queue-lineage.md#exact-scope-and-owner-decisions), retire old writers, implement business-generation fencing and fresh linked replay. Queue-row leases alone do not fence shared caches, branch state or lineage writes. |
 | Input/output lifetime | Database retention corrections and regression demonstrating expired winning output cannot be repaired. | Agree result/repair/replay horizons and backend lifecycle exclusions; implement queue-owned pinned keys and reference-aware cleanup across fallback copies. Accepted work and unresolved publication must survive cleanup races. |
-| Database and rollout proof | Historical MySQL/PostgreSQL contracts, current native MySQL 8.0/HSQL/runtime/JAR tests, PostgreSQL 16.15 public-consumer contracts, stricter CI selection, bounded canary/rollback design. | Run required target-version real-DB cases with zero reruns and no required skips, then approved pool/network/multi-host soak and workload canary/rollback gates. Smoke throughput and a passing workflow parse are not capacity or hosted-CI proof. |
+| Database and rollout proof | Scoped native MySQL 8.0/8.4 and PostgreSQL 16 store, timezone, JPA, adapter, runtime and JAR contracts; HSQL controls, stricter CI selection and bounded canary/rollback design. | Run the full required Docker/Linux matrix with zero reruns and no required skips, then approved pool/network/multi-host soak and workload canary/rollback gates. Native fixture passes, smoke throughput and a passing workflow parse are not capacity or hosted-CI proof. |
 | Standalone OSS module | Independent ordinary-JAR compilation and external Spring consumer contracts; no Mojito business imports in the core. | Agree extraction, artifact/API/configuration naming and schema ownership; make Mojito a real module consumer and establish upgrade, compatibility and release provenance. See [finite extraction gates](async-job-queue-library.md#finite-extraction-gates). Do not equate the probe with a released library. |
 
 The main next implementation is durable admission, followed by parent recovery and
@@ -929,6 +936,73 @@ recovery or HTTP admission. Full configured CI, remaining 8.4 database lanes,
 historical migration adoption, publication/lifetime ownership and actual module
 extraction/release still require their separate gates. Master and remote refs are
 unchanged; no queue enrollment or deployment occurred.
+
+## Native MySQL 8.4 Compatibility Lanes (2026-09-12 UTC)
+
+Three remaining scoped native compatibility lanes now pass on the same official
+MySQL 8.4.11 macOS ARM64 binary used by the store and fault-recovery runs:
+
+- `JdbcAsyncJobStoreTimezoneIntegrationTest`: seven existing methods in both
+  configured preparation modes, **14 passes in UTC (2.809 seconds)** and **14 in
+  America/Los_Angeles (2.636 seconds)**, using separate JVMs and UUID databases.
+  The original session-zone assertions, numeric database time, scheduling,
+  retry/replay, lease/heartbeat and strict terminal-cutoff checks ran unchanged.
+  This is new-write consistency, not historical timestamp or mixed-worker proof.
+- `AssetLocalizeAsyncJobOutputRetryIntegrationTest`'s original MySQL method:
+  **one pass in 8.136 seconds**, including Spring startup and its **15 internal
+  scenarios**. Queue rows use MySQL; real task/generation/blob services use the
+  identity-checked private `jdbc:hsqldb:mem:queue_output_retry` fixture. The existing
+  [publication/commit-fault boundaries](#native-mysql-asset-adapter-2026-09-12-utc)
+  remain; this is not atomic admission, full-application MySQL compatibility or
+  queue-owned blob lifetime. The HSQL-only expired-winner cases are not part of
+  this native method.
+- Independent lean consumer: **four passes in 1.266 seconds**, comprising the two
+  existing public execution/maintenance contracts and both ordinary-JAR boundary
+  tests. Real independent enqueue, handler completion/permanent rejection,
+  inspection, lifecycle and bounded retention ran without application
+  classes, Hibernate, Quartz or AspectJ. Public enqueue remains REQUIRES_NEW, not
+  atomic host acceptance. All engine classes had a unique ordinary-JAR origin;
+  the rebuilt and resolved JAR SHA-256 both equal
+  `6699c3bc77e383bd2d074dfda4840c8555e238bb447b448439546913404f98bb`.
+
+Each native runner asserts its exact execution count and zero failures, ignored
+tests and assumption skips, with no rerun loop. Temporary adapters replace only
+container orchestration/connection metadata and MySQL parameter selection. The
+timezone and asset runs retain the original JUnit/Spring setup and teardown;
+the lean JUnit wrapper calls the unchanged public contract methods, including
+their owned resource cleanup. No JDBC/store operations or assertions are replaced.
+The lean classpath rejects webapp and engine reactor output.
+No production code, maintained test, schema, enrollment or API behavior changed.
+
+The fresh root Maven control used `-Pno-local-config`, the timezone and adapter
+classes plus `AsyncJobQueueRealDatabaseCiContractTest`, with Surefire reruns zero:
+**17 passed, two database methods skipped** across 19 selected tests. The timezone
+class ran **zero** methods because its opt-in class setup was disabled; that
+control is not timezone execution evidence. The fresh separate clean lean Maven
+control passed **11 with seven database skips**; final XML has no failures,
+errors or flaky/rerun entries. Root `mvn -Pno-local-config spotless:apply` passed.
+
+An initial engine build compiled successfully but its local Maven install was
+denied by the sandbox. Running the consumer before resolving that prerequisite
+correctly failed its byte-for-byte provenance assertion against the old cached
+JAR (one failure; no retry). The approved local install and an explicit clean
+consumer run then passed. Both initial logs are retained; no boundary assertion
+was weakened and no artifact was published. Existing frontend audit findings
+(two moderate, one high), JDK/Mockito and injected-fault diagnostics remain.
+
+Artifacts are under `/private/tmp/queue-mysql84-compat.SgXyNL/`: `timezone-utc.log`,
+`timezone-los-angeles.log`, `native-asset.log`, `native-consumer.log`, the three
+native adapters and their Ruby launchers, `NativeMysql84ConsumerRunner.java`,
+`app-control.log`, `engine.log`, `engine-approved.log`, `consumer-control.log`,
+`consumer-control-approved.log`, `spotless.log` and server identity/startup logs.
+The private loopback server on port 45204 checked exact datadir/version and TLS;
+its self-signed certificate/hostname were not authenticated. Durability settings
+were enabled and macOS selected `lower_case_table_names=2`. Its verified process
+exited zero on shutdown, the listener closed and only its disposable datadir was
+removed. More than 27 GiB remained free. Primary master and remote refs are
+unchanged. The full Docker/Linux matrix, historical Flyway rehearsal, network/
+multi-host capacity, durable admission, publication/lifetime and rollout gates
+remain open; these native passes are not merge or production approval.
 
 ## Native MySQL 8.4 Fault Recovery (2026-09-12 UTC)
 

@@ -832,8 +832,12 @@ identity/collation, retention/replay and lease/renewal contention. It uses the
 official macOS ARM64 binary and replaces only test-container orchestration.
 The separate [JPA proofs](async-job-queue-review.md#native-mysql-84-jpa-transactions-2026-09-12-utc)
 and [six fault-recovery cases](async-job-queue-review.md#native-mysql-84-fault-recovery-2026-09-12-utc)
-also pass on that native version. Together these narrow the version gap, not
-Docker/Linux CI, the remaining adapter/consumer lanes or production capacity.
+also pass on that native version. The [remaining native compatibility lanes](async-job-queue-review.md#native-mysql-84-compatibility-lanes-2026-09-12-utc)
+now pass as well: 14 timezone tests in each UTC/Los Angeles JVM, one asset-adapter
+method with 15 internal scenarios, and two lean public-consumer contracts plus
+two JAR-boundary tests. Together these narrow the version gap, not Docker/Linux
+CI or production capacity. The adapter keeps application/blob state in HSQL;
+new-write timezone consistency does not establish historical row provenance.
 
 The 2026-09-12 CI audit found that
 `AssetLocalizeAsyncJobOutputRetryIntegrationTest` was absent from that database

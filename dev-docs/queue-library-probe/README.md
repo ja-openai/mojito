@@ -65,6 +65,10 @@ each verify these six contracts plus both ordinary-JAR boundary tests. The same
 eight checks also pass on [native MySQL 8.4.11](../design/async-job-queue-review.md#native-mysql-84-jpa-transactions-2026-09-12-utc)
 after a fresh engine build and separate JPA/lean controls. This is macOS-native
 JPA evidence, not the complete configured Docker/Linux or lean real-DB lane.
+The separate [native 8.4.11 lean run](../design/async-job-queue-review.md#native-mysql-84-compatibility-lanes-2026-09-12-utc)
+passes two public execution/maintenance contracts plus both JAR-boundary tests
+without Hibernate or application classes. It verifies the resolved artifact
+against the fresh engine build; it is not the complete hosted CI job.
 Public enqueue deliberately commits independently, not atomically with host work.
 
 Always use `clean test` when switching lanes. The boundary test requires both

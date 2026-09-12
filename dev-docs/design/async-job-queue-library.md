@@ -293,8 +293,10 @@ separately verifies six host-owned transaction contracts and two ordinary-JAR
 boundary checks without application output. The 35 application JPA/JDBC cases
 pass in another JVM, not as library-isolation evidence. Public independent enqueue
 and the application's internal enlisted primitive remain different contracts;
-neither implements durable request admission. Preserve the full Docker/Linux,
-remaining consumer and extraction gates despite these scoped native passes.
+neither implements durable request admission. The separate [native 8.4 lean run](async-job-queue-review.md#native-mysql-84-compatibility-lanes-2026-09-12-utc)
+now passes both public execution/maintenance contracts plus the two boundary checks
+without Hibernate or application classes. Preserve the full Docker/Linux and
+extraction gates despite these scoped native passes.
 
 Verification (2026-09-09): all 90 selected external-bootstrap, configuration,
 transaction-binding, coordinator/lifecycle and drain tests pass with real database
@@ -531,8 +533,9 @@ and opt-in MySQL 8.4/PostgreSQL 16, with a disposable container per real-DB case
 The [independent PostgreSQL JPA run](async-job-queue-review.md#independent-jar-jpa-database-lanes-2026-09-12-utc)
 now verifies all six plus both ordinary-JAR provenance tests. The same eight
 checks pass on [native MySQL 8.0.43](async-job-queue-review.md#native-mysql-independent-jpa-host-2026-09-12-utc)
-after private-fixture setup corrections; MySQL 8.4 and full CI execution remain
-outstanding. This is not public atomic enlistment or an
+after private-fixture setup corrections; the same eight also pass on
+[native MySQL 8.4.11](async-job-queue-review.md#native-mysql-84-jpa-transactions-2026-09-12-utc).
+Full configured CI execution remains outstanding. This is not public atomic enlistment or an
 arbitrary provider/version compatibility matrix. Public enqueue remains REQUIRES_NEW. Both profile lanes require
 `clean test`; the boundary test explicitly requires/rejects Hibernate and the
 optional compiled test class according to the chosen mode.
@@ -546,20 +549,25 @@ retains Mojito's current package/config conventions and is intentionally not a
 releaseable Maven module. It supplies a concrete, tested extraction starting
 point without changing production wiring or closing the business rollout gates.
 
-Latest native verification (2026-09-12 UTC): after rebuilding the 29-source engine,
+Native verification (2026-09-12 UTC): after rebuilding the 29-source engine,
 the lean Maven consumer passed 11 tests with seven database skips. A separate native
 MySQL 8.0.43 run passed the two existing public execution/maintenance methods and two
 ordinary-JAR boundary tests, without webapp classes or a reactor shortcut. Real JDBC
 and the original assertions ran; only container orchestration/connection settings
 were substituted. See the [consumer evidence and limits](async-job-queue-review.md#native-mysql-ordinary-jar-consumer-2026-09-12-utc).
-The latest JAR at `f8025ec5ca` also passes a separate native PostgreSQL 16.15 run:
+The JAR at `f8025ec5ca` also passed a separate native PostgreSQL 16.15 run:
 five existing execution/maintenance/wakeup methods and two JAR-boundary tests,
 with no skips or automatic reruns. Successful notifications preserve caller
 commit/rollback isolation, and polling recovers an injected failed hint after
 producer shutdown. Only container orchestration/connection settings were adapted;
 verified TLS, real SQL and ordinary-JAR provenance were checked. See the
 [PostgreSQL evidence and limits](async-job-queue-review.md#native-postgresql-ordinary-jar-consumer-2026-09-12-utc).
-Neither native run is the full configured CI lane, real-DB JPA matrix, or
+A later [native MySQL 8.4.11 lean run](async-job-queue-review.md#native-mysql-84-compatibility-lanes-2026-09-12-utc)
+repeats the four MySQL consumer/boundary checks against the freshly rebuilt JAR,
+with matching build/cache hashes and no webapp or Hibernate classes. Its initial
+stale-cache provenance failure after a denied local install and successful clean
+control after the approved install are recorded, not hidden by reruns.
+None of these lean runs is the full configured CI lane, real-DB JPA matrix, or
 extraction/release approval. Earlier dated results below remain historical.
 
 A separate [application JPA/JDBC run on PostgreSQL 16.15](async-job-queue-review.md#native-postgresql-jpajdbc-contracts-2026-09-12-utc)
