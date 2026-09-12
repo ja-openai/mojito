@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty-two local commits (four original chunks plus CI,
+- The queue worktree has thirty-three local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -41,6 +41,11 @@ not close its current gates.
   Two [native worker-JVM crash cases](#native-mysql-worker-jvm-crashes-2026-09-12-utc)
   pass as well: natural-expiry recovery repeats business effects, while committed
   DONE remains terminal even when its best-effort callback was never delivered.
+- A separate [native MySQL 8.4.11 run](#native-mysql-84-store-contracts-2026-09-12-utc)
+  now passes the same nine store/identity/claim-lock contract groups on macOS ARM64.
+  The held-open locking regression includes all ten backlog/batch scenarios, and
+  the 1,000-job smoke records zero poll failures. This closes that scoped native
+  version gap, not Docker/Linux CI, JPA/adapter/crash coverage on 8.4 or capacity.
 - The earlier local disk-capacity blocker has cleared: the crash-test MySQL server
   reported ENOSPC during shutdown, after its two tests passed. Removing its private
   datadir initially left about 398 MiB available on the local data volume; a later
@@ -806,6 +811,62 @@ passed 11, each with seven real-database skips and no reruns (`engine.log`,
 formatting and diff checks passed. Required MySQL 8.4/PostgreSQL 16 execution, retention
 plans, full migration adoption, admission, publication and rollout gates remain
 open; no application database or enrollment flag changed.
+
+## Native MySQL 8.4 Store Contracts (2026-09-12 UTC)
+
+The nine maintained MySQL store contract groups now also pass on a private native
+MySQL 8.4.11 server in 31.697 seconds, with no JUnit failures, ignored tests,
+assumption skips or automatic reruns in the approved execution. The groups cover
+store transitions, exact identity across collations, persistable failure diagnostics,
+portable payload rejection, retention/replay contention, lease expiry during lock
+waits, contended runtime renewals, performance smoke and bounded claim locks.
+The claim-lock method retains its ten queued/running/mixed/foreign/active-lease
+scenarios at batches one and three; neither its SQL nor its assertions changed.
+The smoke drains 1,000 jobs in 583 ms with 262 polls and zero poll failures. This is
+a local diagnostic, not a benchmarked improvement over the earlier 8.0 run.
+
+The isolated archive comes from the [official MySQL 8.4 download page](https://dev.mysql.com/downloads/mysql/8.4.html):
+`mysql-8.4.11-macos15-arm64.tar.gz`. Its MD5 matches the published
+`6e89113f04f2af85d0a164573493db3a`; the downloaded archive's SHA-256 is
+`b96e00493bc3499b9ffd7f08d65c5d64933af0383a8287d9873b64f94c2d6009`.
+It was extracted only under `/private/tmp/queue-mysql84.z7Xixb`, without a Homebrew
+install, service registration or change to the installed MySQL 8.0 service.
+Each test verifies the exact private datadir, server version and a nonempty TLS
+cipher before creating its UUID-named database. Connections require TLS but do not
+certify the self-signed CA or hostname. The loopback-only server uses a 64 MiB
+buffer pool, 32 MiB redo capacity, `innodb_flush_log_at_trx_commit=1`, `sync_binlog=1`
+and `innodb_doublewrite=ON`. macOS uses `lower_case_table_names=2`, so this is not
+proof of the configured Linux container's filesystem/table-name behavior.
+
+Temporary adapters reuse the maintained tests and their MySQL-specific helpers,
+substituting container orchestration only. No production SQL, fixture assertion,
+queue setting or application migration changed. The first launch was blocked by
+the sandbox's JDBC loopback permission before queue SQL; its nine connection errors
+remain in `native.log`. The approved run of the same code is
+`native-approved.log`, with explicit aggregate assertions for nine runs and zero
+failures/ignored/assumption cases. Do not count the denied launch as a queue defect
+or conceal it as an automatic test retry.
+
+The focused Maven control passes 51 tests with 13 opt-in database skips across
+three suites (64 selected), with zero failures/errors and zero XML rerun/flaky
+entries. The selector is `JdbcAsyncJobStoreTest,JdbcAsyncJobStoreDatabaseIntegrationTest,AsyncJobQueueRealDatabaseCiContractTest`,
+using `-Pno-local-config -pl webapp -am`, `surefire.failIfNoSpecifiedTests=false`
+and `surefire.rerunFailingTestsCount=0`. Root formatting and diff checks pass.
+Existing frontend audit findings (two moderate, one high), fixture TLS warnings
+and expected handler-failure logs remain visible; no dependency update is included.
+
+Artifacts in `/private/tmp/queue-mysql84.z7Xixb` include `control.log`,
+`native.log`, `native-approved.log`, `server-identity.log`, `server.log`,
+`initialize.log`, `compile.log`, `spotless.log`, the two Java contract adapters,
+the aggregate runner and `probe.rb`. The server shut down cleanly, its owned
+process exited zero, and port 45201 is closed; its disposable datadir was removed.
+More than 27 GiB was available before database/build/test work. Keep checking the
+5 GiB floor before reusing the retained binary for another private fixture.
+
+Required Docker-backed CI, MySQL 8.4 timezone/JPA/adapter/restart/session-loss/crash
+lanes, independent-JAR proof on 8.4, sustained load/network behavior and historical
+schema adoption remain open. This source-in-place verification does not resolve
+durable admission, parent recovery, business publication or blob lifetime.
 
 ## Native MySQL Retention Plan (2026-09-12 UTC)
 

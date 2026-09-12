@@ -826,6 +826,13 @@ automatic retry. The ordinary webapp default stays at one rerun unless overridde
 readiness verification must opt out and inspect skipped cases. Performance smoke
 remains separately opt-in, and these workflow changes do not certify a hosted run.
 
+The [native MySQL 8.4.11 store run](async-job-queue-review.md#native-mysql-84-store-contracts-2026-09-12-utc)
+passes nine existing contract groups, including held-open bounded claim locks,
+identity/collation, retention/replay and lease/renewal contention. It uses the
+official macOS ARM64 binary and replaces only test-container orchestration.
+This narrows the target-version gap without certifying Docker/Linux CI, the 8.4
+JPA/adapter/crash lanes or production capacity; retain those separate gates.
+
 The 2026-09-12 CI audit found that
 `AssetLocalizeAsyncJobOutputRetryIntegrationTest` was absent from that database
 job's explicit `-Dtest` list. Its MySQL/PostgreSQL methods require the container
