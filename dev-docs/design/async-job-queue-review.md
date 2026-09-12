@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty local commits (four original chunks plus CI,
+- The queue worktree has thirty-one local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -88,6 +88,10 @@ not close its current gates.
   The [recovery logging correction](#listener-recovery-logging-2026-09-12-utc)
   additionally preserves reconnect and orderly thread exit despite ordinary logger
   failures; its new fault tests use mocked JDBC, not a fresh database-outage run.
+  The additional [listener restart contract](#postgresql-listener-database-restart-2026-09-12-utc)
+  passes natively: the same listener resubscribes after server restart, delivers a
+  new hint and returns an unsubscribed pooled session. Its coordinator is mocked;
+  this is not a combined worker/listener soak or replica-failover test.
 - Eight [native PostgreSQL store contract groups](#native-postgresql-store-contracts-2026-09-12-utc)
   pass, including expiry during row-lock waits, concurrent retention updates and
   renewal contention. The 1,000-job performance smoke is a local diagnostic, not
@@ -408,6 +412,41 @@ No application dependency, schema, adapter, routing flag or remote ref changed.
 Existing weaving/JDK/build warnings and npm audit findings remain. This closes a
 reproduced control-flow defect, not admission, migration adoption, target-version
 database CI or staging/network-failover gates.
+
+## PostgreSQL Listener Database Restart (2026-09-12 UTC)
+
+`JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest` adds one bounded
+server-restart case to its already-required CI suite. The same listener and
+one-connection Hikari pool span abrupt shutdown. An observed listener failure and
+stopped server establish the outage; the listener stays running. After restart,
+the test checks the new postmaster start time and independently observes committed
+LISTEN in `pg_stat_activity`, allowing backend PID reuse across server incarnations.
+A new notification from the independent notifier connection must reach the mock
+coordinator. On stop, the replacement backend returns to the pool with auto-commit
+restored, no subscriptions and no borrowed connections or waiting threads.
+
+The maintained case passed once on native PostgreSQL 16.15 in 1.971 seconds, with
+zero failures, ignored tests, assumption skips or reruns. The wrapper substitutes
+only container lifecycle/metadata; listener, notifier, JDBC and pool operations
+remain real. Immediate shutdown and WAL recovery on the same private cluster stand
+in for Docker SIGKILL/start, with certificate/hostname verification retained.
+Artifacts are `/tmp/queue-listener-restart.4X7u8o/native-listener-restart.log`,
+`pg-server.log`, `NativeListenerRestartVerification.java` and `restart_probe.rb`.
+The server shut down cleanly and loopback port 59407 closed. More than 27 GiB stayed
+free; no unrelated files were removed. Expected disconnect/cleanup warnings remain
+visible rather than being hidden by retries.
+
+The Maven control selected 79 tests across seven suites: 76 passed and the three
+opt-in listener database cases explicitly skipped, with zero reruns. Its log is
+`/tmp/queue-listener-restart-control-20260912.log`. No production class or migration
+changed; this does not require a new generic-library JAR. The final control repeats
+76 passes and three skips in `/tmp/queue-listener-restart-final-control-20260912.log`;
+all seven Surefire XML reports record reruns disabled and no failure/error/flaky/rerun
+elements. Root Spotless passed in `/tmp/queue-listener-restart-spotless-final-20260912.log`.
+Existing npm audit findings (two moderate, one high) remain. This is a scoped
+same-database listener-restart proof, not Docker execution, replica promotion,
+network blackholes, combined worker/listener soak, staging alerts or durable
+notification delivery. Queue rows and polling remain the source of recovery.
 
 ## Runtime Database Restart Recovery (2026-09-12 UTC)
 

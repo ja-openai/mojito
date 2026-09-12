@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,6 +25,121 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 public class JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest {
+
+  @Test(timeout = 120_000)
+  public void restartedDatabaseResubscribesTheSameListenerAndDeliversNewHints() throws Exception {
+    assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
+    try (PostgreSQLContainer<?> postgres =
+        new PostgreSQLContainer<>("postgres:16")
+            .withUrlParam("connectTimeout", "1")
+            .withUrlParam("socketTimeout", "2")) {
+      postgres.start();
+      String applicationName = "async-job-wakeup-database-restart-test";
+      HikariConfig config = new HikariConfig();
+      config.setJdbcUrl(postgres.getJdbcUrl());
+      config.setUsername(postgres.getUsername());
+      config.setPassword(postgres.getPassword());
+      config.setMaximumPoolSize(1);
+      config.setConnectionTimeout(250);
+      config.setValidationTimeout(250);
+      config.addDataSourceProperty("ApplicationName", applicationName);
+      DriverManagerDataSource notifierDataSource =
+          new DriverManagerDataSource(
+              postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+      SimpleMeterRegistry registry = new SimpleMeterRegistry();
+      try (AutoCloseable registryCleanup = registry::close;
+          HikariDataSource pool = new HikariDataSource(config)) {
+        AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+        when(coordinator.hasEnabledConsumers()).thenReturn(true);
+        AsyncJobQueueProperties.WakeupSettings settings =
+            new AsyncJobQueueProperties.WakeupSettings();
+        settings.setPostgresListenTimeoutMs(100);
+        settings.setTriggerJitterMs(0);
+        settings.setReconnectDelayMs(100);
+        settings.setReconnectJitterPercent(0);
+        JdbcPostgresAsyncJobQueueWakeupListener listener =
+            new JdbcPostgresAsyncJobQueueWakeupListener(pool, settings, coordinator, registry);
+        JdbcPostgresAsyncJobQueueWakeupNotifier notifier =
+            new JdbcPostgresAsyncJobQueueWakeupNotifier(
+                notifierDataSource, settings.getPostgresChannel(), registry);
+        int replacementPid;
+        try {
+          listener.start();
+          Instant previousStart;
+          try (Connection admin = notifierDataSource.getConnection()) {
+            awaitListeningSession(admin, applicationName, settings.getPostgresChannel(), 0);
+            previousStart = postmasterStartedAt(admin);
+          }
+          notifier.notifyJobAvailable("before-restart", new AsyncJobId("41"));
+          verify(coordinator, timeout(5_000)).triggerPollNow("before-restart");
+          assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isEqualTo(1);
+
+          postgres
+              .getDockerClient()
+              .killContainerCmd(postgres.getContainerId())
+              .withSignal("KILL")
+              .exec();
+          awaitListenResult(registry, "failed", 1);
+          awaitDatabaseStopped(postgres);
+          assertThat(listener.isRunning()).isTrue();
+          assertThat(registry.get("asyncJobQueue.wakeup.listener.threadAlive").gauge().value())
+              .isEqualTo(1);
+
+          postgres.getDockerClient().startContainerCmd(postgres.getContainerId()).exec();
+          awaitListenResult(registry, "connected", 2);
+          try (Connection admin = notifierDataSource.getConnection()) {
+            assertThat(postmasterStartedAt(admin)).isAfter(previousStart);
+            // A restarted server may reuse backend PIDs; observe its committed LISTEN anew.
+            replacementPid =
+                awaitListeningSession(admin, applicationName, settings.getPostgresChannel(), 0);
+          }
+          notifier.notifyJobAvailable("after-restart", new AsyncJobId("42"));
+          verify(coordinator, timeout(5_000)).triggerPollNow("after-restart");
+          assertThat(listener.isRunning()).isTrue();
+          assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isEqualTo(1);
+        } finally {
+          listener.stop();
+          awaitStopped(registry);
+        }
+
+        assertThat(registry.get("asyncJobQueue.wakeup.listener.connected").gauge().value())
+            .isZero();
+        assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
+        try (Connection connection = pool.getConnection();
+            Statement statement = connection.createStatement()) {
+          statement.setQueryTimeout(2);
+          assertThat(backendPid(connection)).isEqualTo(replacementPid);
+          assertThat(connection.getAutoCommit()).isTrue();
+          try (ResultSet channels = statement.executeQuery("SELECT pg_listening_channels()")) {
+            assertThat(channels.next()).as("returned restarted session must not LISTEN").isFalse();
+          }
+        }
+        assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
+        assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
+      }
+    }
+  }
+
+  private Instant postmasterStartedAt(Connection connection) throws Exception {
+    try (Statement statement = connection.createStatement()) {
+      statement.setQueryTimeout(2);
+      try (ResultSet result = statement.executeQuery("SELECT pg_postmaster_start_time()")) {
+        assertThat(result.next()).isTrue();
+        return result.getTimestamp(1).toInstant();
+      }
+    }
+  }
+
+  private void awaitDatabaseStopped(PostgreSQLContainer<?> postgres) throws InterruptedException {
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+    while (System.nanoTime() < deadline) {
+      if (!postgres.isRunning()) {
+        return;
+      }
+      TimeUnit.MILLISECONDS.sleep(10);
+    }
+    throw new AssertionError("Database did not stop");
+  }
 
   @Test
   public void stoppedListenerReturnsUnsubscribedSessionToPool() throws Exception {
@@ -201,7 +317,7 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest {
       for (int cycle = 1; cycle <= 2; cycle++) {
         try {
           listener.start();
-          awaitConnected(registry, cycle);
+          awaitListenResult(registry, "connected", cycle);
           notifier.notifyJobAvailable("assetlocalize", new AsyncJobId("42"));
           verify(coordinator, timeout(5_000).times(cycle)).triggerPollNow("assetlocalize");
         } finally {
@@ -232,18 +348,17 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest {
     }
   }
 
-  private void awaitConnected(SimpleMeterRegistry registry, int expectedCount)
+  private void awaitListenResult(SimpleMeterRegistry registry, String result, int expectedCount)
       throws InterruptedException {
     long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
     while (System.nanoTime() < deadline) {
-      var counter =
-          registry.find("asyncJobQueue.wakeup.listen").tag("result", "connected").counter();
+      var counter = registry.find("asyncJobQueue.wakeup.listen").tag("result", result).counter();
       if (counter != null && counter.count() >= expectedCount) {
         return;
       }
       TimeUnit.MILLISECONDS.sleep(10);
     }
-    throw new AssertionError("Listener did not subscribe");
+    throw new AssertionError("Listener did not record " + result + " " + expectedCount + " times");
   }
 
   private void awaitStopped(SimpleMeterRegistry registry) throws InterruptedException {

@@ -848,6 +848,13 @@ restart or external hint is supplied. This does not undo effects of the first
 handler or certify listener failover, lost-commit admission recovery, network
 partitions or sustained multi-host operation.
 
+The separate [PostgreSQL listener restart contract](async-job-queue-review.md#postgresql-listener-database-restart-2026-09-12-utc)
+now verifies native same-server recovery as well: the original listener/pool
+resubscribe after abrupt restart, deliver a new hint and return an unsubscribed
+replacement session on stop. That fixture has a mock coordinator; it is not a
+combined runtime/listener soak or replica-promotion test, and does not make
+notifications durable or replace polling fallback.
+
 Source wiring alone does not establish the adapter's real-database retry,
 commit-uncertainty, tracked-work rejection or publication/repair contracts.
 Require a fresh target-version run where both
