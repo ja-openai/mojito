@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has fifteen local review commits (four original chunks plus CI,
+- The queue worktree has sixteen local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -85,6 +85,10 @@ not close its current gates.
   pass: starvation and real worker-session termination preserve the replacement
   lease after recovery, reject stale completion and release runtime capacity.
   Blocked reauthentication is not network-partition or shared-pool sizing proof.
+- Both [native PostgreSQL worker-JVM crash contracts](#native-postgresql-worker-jvm-crashes-2026-09-12-utc)
+  pass: running work reclaims only after natural expiry with a fresh token, while
+  committed DONE remains terminal without replaying its missed callback. Repeated
+  business probes demonstrate at-least-once effects, not exactly-once execution.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -499,6 +503,46 @@ visible. No schema version, routing, master file or remote ref changed. Full
 target-version CI, historical Flyway adoption and workload rollout gates remain
 open. This selection does not execute PostgreSQL timezone, crash or outage cases;
 the subsequent timezone matrix is recorded separately below.
+
+## Native PostgreSQL Worker-JVM Crashes (2026-09-12 UTC)
+
+Both existing PostgreSQL `AsyncJobQueueProcessCrashIntegrationTest` methods passed
+on private PostgreSQL 16.15 in 10.681 seconds, with zero failures, ignored/assumption
+skips or automatic reruns. The unchanged fixture launched and forcibly terminated
+two separate worker JVMs, observing exit 137 for each. The preparatory Maven control
+with `-Pno-local-config` checked build/classpath but skipped all four opt-in cases;
+those skips are not database proof.
+
+In the running-handler case, a real heartbeat extends the lease before process
+death. The parent drains any pending row-lock writer, rejects early reclaim, and
+waits for natural database-clock expiry without rewriting timestamps. A replacement
+using the same worker ID receives attempt two and a new token. Old-token renewal,
+completion, failure and retry all reject without changing its row; the replacement
+finishes and releases capacity. Both attempts' business probes persist, explicitly
+demonstrating at-least-once effects.
+
+The other child dies after DONE commits but before its success callback. Two fresh
+runtime polls stay empty, preserving DONE/output on attempt one, one business probe
+and zero callback probes. This verifies the known best-effort callback limitation,
+not automatic publication repair or a new defect. Domain reconciliation and input/
+output retention therefore remain separate adoption gates.
+
+The temporary adapter substituted only Testcontainers lifecycle and connection
+metadata, invoking the existing public methods unchanged. Before each UUID database
+it checked the exact private datadir, version and active TLS. Both parent and child
+connections used the same certificate/hostname-verifying JDBC URL. This uses the
+application test classpath, not the independently packaged host. No child process,
+queue SQL, clock, assertion or deadline was mocked or altered.
+
+Artifacts are `/tmp/queue-postgres-crash.8BOpqC/native-crash.log`,
+`NativePostgresCrashVerification.java`, `crash_probe.rb` and `server.log`; the parent
+log records the two child-log paths. The control is
+`/tmp/queue-postgres16.FgSYLH/crash-control.log`. The private loopback server on port
+59403 shut down cleanly, its datadir was removed, and more than 31 GiB remained free.
+Existing JDK/Mockito warnings remain visible. No maintained production/test source,
+migration, master file, routing or remote ref changed. These are worker crashes,
+not database crashes, lost-commit network acknowledgements, multi-host soak or full
+target-version CI; schema adoption, durable admission and rollout gates stay open.
 
 ## Native PostgreSQL Pool And Session Loss (2026-09-12 UTC)
 
