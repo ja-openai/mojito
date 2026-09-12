@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has eleven local review commits (four original chunks plus CI,
+- The queue worktree has twelve local review commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
@@ -67,6 +67,10 @@ not close its current gates.
   one JUnit test, with no skips or reruns. Application state and blobs remain in
   private HSQL, separate from PostgreSQL queue rows. This does not prove atomic
   admission, full-application PostgreSQL support or queue-owned blob lifetime.
+- The two [native PostgreSQL listener contracts](#native-postgresql-listener-sessions-2026-09-12-utc)
+  pass real pooled-session cleanup and reconnect after backend termination despite
+  injected metrics failure. This is session-loss evidence, not network partition,
+  database failover or shared-pool capacity proof.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -437,6 +441,37 @@ server on port 45191 was shut down and its data directory removed. Existing
 JDK/Mockito agent, compilation/weaving and expected injected-failure diagnostics
 were not suppressed. No production/test source, migration, runtime flag, primary
 worktree or remote ref changed.
+
+## Native PostgreSQL Listener Sessions (2026-09-12 UTC)
+
+Both existing `JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest`
+methods passed on private PostgreSQL 16.15 in 1.198 seconds, with zero failures,
+ignored/assumption skips or automatic reruns. The separate Maven control passed
+27 listener tests and skipped these two opt-in database methods. Only container
+orchestration and connection metadata were substituted; real Hikari pools, JDBC,
+notification operations, five-second deadlines and existing assertions remained.
+
+The cleanup method reused the same backend PID through two start/stop cycles in
+each auto-commit mode, preserving that mode, clearing LISTEN subscriptions and
+returning borrowed-connection counts to zero. The reconnect method terminated only
+its private listener backend with `pg_terminate_backend`; a replacement PID became
+subscribed and delivered another hint despite the intentionally throwing failure
+counter. Stopping returned that replacement session unsubscribed with restored
+auto-commit. The server log confirms the actual termination. These tests observe
+poll triggers through a mock coordinator, not business-job execution; they do not
+replace the separate public-consumer proof or certify network/database failover.
+
+Artifacts are `/tmp/queue-postgres-listener.VyWtT1/native-listener.log`,
+`NativePostgresListenerVerification.java`, `listener_probe.rb` and `server.log`;
+the control is `/tmp/queue-postgres16.FgSYLH/listener-control.log`. Before each
+UUID database creation the adapter checked the private data directory, version and
+active TLS, with certificate/hostname verification enabled. The existing private
+16.15 binary served a new cluster on loopback port 59399. All test pools closed,
+the server shut down cleanly, its listener closed and its private datadir was
+removed. JDK/Mockito, intentional backend-termination/cleanup and injected-counter
+diagnostics remain visible. More than 33 GiB stayed free. No production/test
+source, schema migration, non-fixture database, master file, routing or remote ref
+changed. Full CI, staged alerting, sustained outage and pool-sizing gates remain open.
 
 ## Native PostgreSQL Asset Adapter (2026-09-12 UTC)
 

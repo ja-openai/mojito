@@ -327,6 +327,13 @@ Listener cleanup still orders UNLISTEN before
 auto-commit restoration and connection return. This fixes connection ownership,
 not durable admission, exactly-once notification or the open readiness gates.
 
+The [native PostgreSQL 16.15 listener fixtures](async-job-queue-review.md#native-postgresql-listener-sessions-2026-09-12-utc)
+also verify clean reuse of a one-slot Hikari pool across auto-commit modes and
+restart, plus successful resubscription after actual listener-backend termination
+despite an injected failure-counter exception. Their coordinator is mocked; they
+verify session cleanup and delivery, not workload execution, arbitrary pool
+compatibility or network/failover capacity.
+
 The 2026-09-11 post-fix ordinary-JAR rebuild passed its separate consumers: 17
 JPA-lane tests and 11 clean lean-lane tests, each with seven real-database skips
 and no reruns. The additional skip is the new PostgreSQL transaction-aware
