@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty-one local commits (four original chunks plus CI,
+- The queue worktree has thirty-two local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -90,8 +90,10 @@ not close its current gates.
   failures; its new fault tests use mocked JDBC, not a fresh database-outage run.
   The additional [listener restart contract](#postgresql-listener-database-restart-2026-09-12-utc)
   passes natively: the same listener resubscribes after server restart, delivers a
-  new hint and returns an unsubscribed pooled session. Its coordinator is mocked;
-  this is not a combined worker/listener soak or replica-failover test.
+  new hint and returns an unsubscribed pooled session. Its [combined extension](#combined-worker-and-listener-restart-2026-09-12-utc)
+  now runs a real worker across the same outage and completes new work after
+  listener shutdown through polling alone. This is a bounded composition check,
+  not sustained worker/listener soak, shared-pool sizing or replica failover.
 - Eight [native PostgreSQL store contract groups](#native-postgresql-store-contracts-2026-09-12-utc)
   pass, including expiry during row-lock waits, concurrent retention updates and
   renewal contention. The 1,000-job performance smoke is a local diagnostic, not
@@ -415,7 +417,7 @@ database CI or staging/network-failover gates.
 
 ## PostgreSQL Listener Database Restart (2026-09-12 UTC)
 
-`JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest` adds one bounded
+`JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest` initially added one bounded
 server-restart case to its already-required CI suite. The same listener and
 one-connection Hikari pool span abrupt shutdown. An observed listener failure and
 stopped server establish the outage; the listener stays running. After restart,
@@ -447,6 +449,53 @@ Existing npm audit findings (two moderate, one high) remain. This is a scoped
 same-database listener-restart proof, not Docker execution, replica promotion,
 network blackholes, combined worker/listener soak, staging alerts or durable
 notification delivery. Queue rows and polling remain the source of recovery.
+
+### Combined Worker And Listener Restart (2026-09-12 UTC)
+
+The same maintained restart method now uses a real JDBC store, coordinator,
+scheduler, executor and handler instead of a mocked coordinator. A delegating
+Mockito spy observes the two delivered hints without replacing coordinator
+behavior. A dedicated one-slot listener pool and separate two-slot worker pool
+remain alive across the outage; this is not a shared-pool capacity test.
+
+The first job completes before shutdown. Both the listener and worker must record
+an outage failure before the database restarts. After observing the new server's
+committed LISTEN and reconnecting the original worker pool, a second job completes
+and a new hint reaches the same coordinator. The first job remains DONE with its
+original output and attempt count. Stopping the listener then leaves the worker
+to complete a third job by polling, without a hint or coordinator restart. All
+three rows and callbacks have the expected identities, output and attempt one.
+Handler/executor capacity drains before shutdown, runtime gauges deregister on
+stop, and both pools have no active borrowers/waiters. The replacement listener
+session still passes the existing exact-PID, auto-commit and UNLISTEN checks.
+Job completion may race a hint through polling: this checks both paths working
+together, not notification latency or proof that a hint caused a particular claim.
+
+The initial native run caught a new test-fixture error after processing completed:
+it required the inflight gauge after normal coordinator shutdown had removed it.
+The corrected assertion checks drained capacity before shutdown and deregistration
+afterward; no production code changed and the failed run remains recorded.
+The corrected maintained case passed once in **2.402 seconds** on PostgreSQL 16.15,
+with no ignored tests, assumptions or automatic reruns. The temporary wrapper
+substitutes only container lifecycle/metadata with private native immediate
+shutdown/restart and verified TLS. WAL recovery and clean final shutdown were
+observed; loopback port 59408 closed. Artifacts are in
+`/tmp/queue-combined-restart.DGevG0/`: `native-combined-restart.log` (initial failure),
+`native-combined-restart-fixed.log`, `native-combined-restart-final.log`, `pg-server.log`,
+`NativeCombinedRestartVerification.java` and `restart_probe.rb`.
+
+The Maven control selected 79 tests: 76 passed, three opt-in database tests skipped,
+no failures/errors/reruns (`/tmp/queue-combined-restart-fixed-control-20260912.log`).
+Final verification repeats that selection in
+`/tmp/queue-combined-restart-final-control-20260912.log`; all seven XML reports
+confirm zero failures/errors/flaky results and automatic reruns disabled. The final
+formatted test, including explicit callback-output assertions, passes natively in
+**2.415 seconds** with no skips or automatic reruns. Root Spotless passes in
+`/tmp/queue-combined-restart-spotless-final-20260912.log`. Existing npm audit findings
+(two moderate, one high) and expected disconnect diagnostics remain visible.
+This test-only extension does not rebuild the unchanged engine JAR, certify Docker
+SIGKILL, replica promotion, network blackholes, multi-host soak or durable
+notifications, and does not close admission or business-publication gates.
 
 ## Runtime Database Restart Recovery (2026-09-12 UTC)
 

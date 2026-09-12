@@ -851,9 +851,13 @@ partitions or sustained multi-host operation.
 The separate [PostgreSQL listener restart contract](async-job-queue-review.md#postgresql-listener-database-restart-2026-09-12-utc)
 now verifies native same-server recovery as well: the original listener/pool
 resubscribe after abrupt restart, deliver a new hint and return an unsubscribed
-replacement session on stop. That fixture has a mock coordinator; it is not a
-combined runtime/listener soak or replica-promotion test, and does not make
-notifications durable or replace polling fallback.
+replacement session on stop. Its [combined extension](async-job-queue-review.md#combined-worker-and-listener-restart-2026-09-12-utc)
+now runs a real coordinator/worker through the same outage, checks completed rows
+and callbacks before/after restart, then stops the listener and completes another
+job through polling without a hint. Separate listener/worker pools recover and
+release their connections. This bounded composition proof is not shared-pool
+sizing, sustained soak, replica promotion or a notification-latency guarantee;
+notifications remain optional and nondurable.
 
 Source wiring alone does not establish the adapter's real-database retry,
 commit-uncertainty, tracked-work rejection or publication/repair contracts.
