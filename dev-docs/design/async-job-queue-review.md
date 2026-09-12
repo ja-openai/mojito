@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty-three local commits (four original chunks plus CI,
+- The queue worktree has thirty-four local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -62,17 +62,19 @@ not close its current gates.
   boundary tests on MySQL 8.0.43, without application classes. These separate runs
   are not an additive coverage total. A separate [native PostgreSQL 16.15 run](#native-postgresql-ordinary-jar-consumer-2026-09-12-utc)
   passes five existing execution/maintenance/wakeup contracts plus two JAR-boundary
-  tests, including successful hints and caller commit/rollback isolation. Required
-  MySQL 8.4/PostgreSQL 16 CI and the standalone host's MySQL 8.4 JPA lane remain unverified;
+  tests, including successful hints and caller commit/rollback isolation. Complete
+  MySQL 8.4/PostgreSQL 16 CI runs remain unverified;
   Docker's local socket is absent. Asynchronous handler completion is still proposed,
   not implemented.
 - The [independent JAR's JPA-host suite](#independent-jar-jpa-database-lanes-2026-09-12-utc)
   now includes both real databases in CI. Its six PostgreSQL 16.15 cases plus two
   JAR-boundary tests pass natively with no skips. The same eight checks also pass
   on [native MySQL 8.0.43](#native-mysql-independent-jpa-host-2026-09-12-utc), after
-  correcting private-fixture startup/authentication. HSQL and clean lean controls
-  pass separately. These public independent-enqueue tests do not implement atomic
-  admission, certify MySQL 8.4 or certify Mojito's business integrations.
+  correcting private-fixture startup/authentication. The same eight checks now also
+  pass on [native MySQL 8.4.11](#native-mysql-84-jpa-transactions-2026-09-12-utc), with a
+  freshly rebuilt JAR and separate HSQL/JPA and clean lean controls. These public
+  independent-enqueue tests do not implement atomic admission, certify the full
+  Docker/Linux matrix or certify Mojito's business integrations.
 - The application JPA/JDBC fixture now passes all 35 existing tests on native
   MySQL 8.0.43 and [PostgreSQL 16.15](#native-postgresql-jpajdbc-contracts-2026-09-12-utc)
   with Hibernate 6.6.49.Final, separately from its fresh 35-test HSQL control.
@@ -80,6 +82,8 @@ not close its current gates.
   covers actual commit/rollback, provisional IDs, consumer visibility and injected
   lost acknowledgements, not durable reservations, HTTP recovery or actual network
   failure. It uses application mappings, not the standalone-JAR consumer.
+  All 35 also pass on [native MySQL 8.4.11](#native-mysql-84-jpa-transactions-2026-09-12-utc)
+  with the same assertions and JUnit lifecycle, separately from the independent host.
 - The [native PostgreSQL asset-adapter run](#native-postgresql-asset-adapter-2026-09-12-utc)
   and [native MySQL 8.0.43 run](#native-mysql-asset-adapter-2026-09-12-utc) each pass
   the existing database method's 15 internal retry/publication scenarios as one
@@ -863,10 +867,66 @@ process exited zero, and port 45201 is closed; its disposable datadir was remove
 More than 27 GiB was available before database/build/test work. Keep checking the
 5 GiB floor before reusing the retained binary for another private fixture.
 
-Required Docker-backed CI, MySQL 8.4 timezone/JPA/adapter/restart/session-loss/crash
-lanes, independent-JAR proof on 8.4, sustained load/network behavior and historical
-schema adoption remain open. This source-in-place verification does not resolve
+Required Docker-backed CI, MySQL 8.4 timezone/adapter/restart/session-loss/crash
+lanes, full independent-consumer proof on 8.4, sustained load/network behavior and
+historical schema adoption remain open. This source-in-place verification does not resolve
 durable admission, parent recovery, business publication or blob lifetime.
+
+## Native MySQL 8.4 JPA Transactions (2026-09-12 UTC)
+
+Two separate native MySQL 8.4.11 runs now pass with Hibernate 6.6.49.Final and no
+JUnit failures, ignored/assumption skips or automatic reruns:
+
+- All 35 maintained `AsyncJobQueueJpaTransactionIntegrationTest` methods pass in
+  2.052 seconds, using the application test classpath and mappings. Real JPA/JDBC
+  commit/rollback, provisional IDs, consumer visibility, enlistment guards and
+  injected lost-acknowledgement outcomes retain their original assertions.
+- The independent ordinary-JAR host passes its six `QueueJpaConsumerTest` methods
+  plus both `QueueJarBoundaryTest` checks in 1.183 seconds. READ_COMMITTED queue
+  transactions remain distinct from SERIALIZABLE host work; resources suspend and
+  restore, independent enqueue survives host rollback/read-only transactions,
+  failed queue INSERT does not poison host commit, handlers own their business
+  transactions, and datasource mismatch guards remain enforced.
+
+The independent runner rejects application output on its classpath. Boundary tests
+check every engine class's unique ordinary-JAR origin, absent Mojito business,
+Quartz and AspectJ classes, and byte equality with the freshly built engine JAR.
+Built and locally resolved JAR SHA-256 both equal
+`c2e53835a7273969fe18b1d3d4af396fd18afc03c8dfd55573467dc9b18d6053`.
+No production source, module structure, dependency, DDL or public API changed.
+Temporary runners adapt only dialect selection and container lifecycle/metadata;
+the original parameterized runners and setup/cleanup execute. Each UUID database
+is created only after private datadir, exact version and active TLS checks.
+
+The fresh application Maven control passes 37 tests (35 HSQL contracts and two CI
+selection guards), with no skips or XML rerun/flaky entries, using
+`-Pno-local-config -pl webapp -am` and `surefire.rerunFailingTestsCount=0`.
+Separate clean independent-consumer controls pass 17 with 19 database skips in JPA
+mode and 11 with seven skips in lean mode, also without failures/errors/reruns.
+Cleaning between profiles prevents stale JPA classes from satisfying the lean
+boundary. Root `mvn -Pno-local-config spotless:apply` and diff checks pass.
+The independent POMs do not inherit the application profile: passing
+`-Pno-local-config` there produced an unused-profile warning, not isolation proof.
+Existing frontend audit findings (two moderate, one high), negative-fixture logs,
+JDK instrumentation and self-signed TLS warnings remain visible.
+
+Artifacts are under `/private/tmp/queue-mysql84-jpa.L1fJd9`: `native-app-jpa.log`,
+`native-jar-jpa.log`, `app-control.log`, `consumer-jpa-control.log`,
+`consumer-lean-control.log`, `engine.log`, `spotless.log`, `server-identity.log`,
+`server.log`, saved JPA control XML in `jpa-reports/`, the Java adapters and Ruby
+classpath runners. The [previously checksum-verified native binary](#native-mysql-84-store-contracts-2026-09-12-utc)
+served only a fresh private datadir on loopback port 45202. It shut down cleanly
+with process exit zero; the port is closed and the owned datadir was removed.
+More than 27 GiB remained available before heavy operations. TLS is required, but
+this fixture does not verify the self-signed server certificate/hostname; macOS
+uses `lower_case_table_names=2`. This is not Docker/Linux or production TLS proof.
+
+Public enqueue is deliberately independent; the internal enlisted primitive and
+injected commit outcomes do not establish persisted reservations, same-key retry
+recovery or HTTP admission. Full configured CI, remaining 8.4 database lanes,
+historical migration adoption, publication/lifetime ownership and actual module
+extraction/release still require their separate gates. Master and remote refs are
+unchanged; no queue enrollment or deployment occurred.
 
 ## Native MySQL Retention Plan (2026-09-12 UTC)
 

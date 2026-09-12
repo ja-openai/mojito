@@ -288,6 +288,14 @@ The original run used webapp's Maven/AspectJ/dependency environment. The same
 source is now also exercised by the isolated ordinary-JAR probe below; keep those
 two verification environments distinct.
 
+The [native MySQL 8.4.11 JPA-host run](async-job-queue-review.md#native-mysql-84-jpa-transactions-2026-09-12-utc)
+separately verifies six host-owned transaction contracts and two ordinary-JAR
+boundary checks without application output. The 35 application JPA/JDBC cases
+pass in another JVM, not as library-isolation evidence. Public independent enqueue
+and the application's internal enlisted primitive remain different contracts;
+neither implements durable request admission. Preserve the full Docker/Linux,
+remaining consumer and extraction gates despite these scoped native passes.
+
 Verification (2026-09-09): all 90 selected external-bootstrap, configuration,
 transaction-binding, coordinator/lifecycle and drain tests pass with real database
 checks enabled, without failures/errors/skips or reruns. See
