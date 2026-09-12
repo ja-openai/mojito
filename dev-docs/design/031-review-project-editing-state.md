@@ -157,6 +157,11 @@ the actual editors and virtual list with controlled responses. Database tests
 must demonstrate concurrent writes against local MySQL, including absent current
 translations and revision changes without a new translation variant.
 
+The carryover regressions also invert project-row and TM-ID ordering in both sort
+directions, exercise detached editor callbacks and undo/redo after navigation,
+and remap a row's source before Reset. They assert submitted row, target and
+revision together; these are local regression checks, not incident attribution.
+
 Before release, record the exact checks that passed and their limits, inspect the
 final diff, and verify the served client/server revisions after an authorized
 deployment. Actual OS input methods, long-lived vendor tabs, and the original
