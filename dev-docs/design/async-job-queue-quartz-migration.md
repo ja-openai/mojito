@@ -803,6 +803,25 @@ automatic retry. The ordinary webapp default stays at one rerun unless overridde
 readiness verification must opt out and inspect skipped cases. Performance smoke
 remains separately opt-in, and these workflow changes do not certify a hosted run.
 
+The 2026-09-12 CI audit found that
+`AssetLocalizeAsyncJobOutputRetryIntegrationTest` was absent from that database
+job's explicit `-Dtest` list. Its MySQL/PostgreSQL methods require the container
+opt-in property, which the ordinary `mvn test` job does not set. The dedicated
+job now selects the adapter as well as the six core database suites, with the
+opt-in property and zero reruns. `AsyncJobQueueRealDatabaseCiContractTest`
+regression-checks those requirements against the parsed workflow, rather than
+accepting a class name or flag mentioned elsewhere in the file.
+
+Source wiring alone does not establish the adapter's real-database retry,
+commit-uncertainty, tracked-work rejection or publication/repair contracts.
+Require a fresh target-version run where both
+`mysqlQueueRetriesOutputAndRejectsTrackedWork` and
+`postgresqlQueueRetriesOutputAndRejectsTrackedWork` execute without reruns or
+skips. The fixture combines a real queue database with the application test
+context; it is not full application/PostgreSQL or atomic admission certification.
+The local workflow regression and HSQL/application fixture results are separate
+from the still-required MySQL 8.4/PostgreSQL 16 execution evidence.
+
 | Required case | Finite acceptance |
 | --- | --- |
 | Real runtime/executor and concurrent claim | Two independent workers, 10,000 short jobs, including bursts at the configured concurrency; all reach the expected terminal result, no false rejected/failed jobs, and active plus reserved work never exceeds the intended bound. Repeat handoff race fixture 100 times. |

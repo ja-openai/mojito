@@ -39,7 +39,7 @@ jobs:
       - name: Run async job queue MySQL/PostgreSQL contract
         run: >-
           mvn -pl webapp -Pno-local-config
-          -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest,JdbcAsyncJobStorePoolIntegrationTest,JdbcAsyncJobStoreTimezoneIntegrationTest,AsyncJobQueueJpaTransactionIntegrationTest,JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest,AsyncJobQueueProcessCrashIntegrationTest
+          -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest,JdbcAsyncJobStorePoolIntegrationTest,JdbcAsyncJobStoreTimezoneIntegrationTest,AsyncJobQueueJpaTransactionIntegrationTest,JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest,AsyncJobQueueProcessCrashIntegrationTest,AssetLocalizeAsyncJobOutputRetryIntegrationTest
           -Dmojito.asyncJobQueue.testcontainers=true
           -Dsurefire.rerunFailingTestsCount=0 test
       - name: Build queue packaging probe without Mojito parent or AspectJ

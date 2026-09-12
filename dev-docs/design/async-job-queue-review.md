@@ -10,9 +10,9 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has four local review chunks over `7fcc341457`. Local master
-  at this checkpoint is `b64352ba75`, which
-  has 31 commits not in the queue branch and owns migrations through V112, including
+- The queue worktree has four implementation/documentation chunks plus a scoped CI
+  correction over `7fcc341457`. Local master at this checkpoint is `71946547c7`, which
+  has 34 commits not in the queue branch and owns migrations through V112, including
   `V109__AI_Review_Request_Usage.sql`. The queue branch's two V109 scripts are
   collision-free only on its older base. A passing branch-local collision test
   is not evidence that merging into current master is safe.
@@ -35,12 +35,14 @@ not close its current gates.
   Two [native worker-JVM crash cases](#native-mysql-worker-jvm-crashes-2026-09-12-utc)
   pass as well: natural-expiry recovery repeats business effects, while committed
   DONE remains terminal even when its best-effort callback was never delivered.
-- Local verification now has a disk-capacity blocker: the crash-test MySQL server
+- The earlier local disk-capacity blocker has cleared: the crash-test MySQL server
   reported ENOSPC during shutdown, after its two tests passed. Removing its private
   datadir initially left about 398 MiB available on the local data volume; a later
-  check recovered to 1.7 GiB, still below the safety floor. Do not launch
-  further database/build/stress runs below a conservative 5 GiB free-space floor.
-  Read-only review remains possible; no unrelated files or caches were removed.
+  check recovered to 1.7 GiB, still below the safety floor. A separate,
+  user-requested cleanup of clean monorepo worktrees restored about 40 GiB before
+  verification resumed. Keep checking the conservative 5 GiB free-space floor
+  before database/build/stress work. This does not authorize automatic cleanup of
+  unrelated files or caches, or close the remaining database and rollout gates.
 - The rebuilt ordinary JAR passed 17 tests in the HSQL JPA-consumer lane; the latest separate
   clean lean run passed 11. Each Maven lane skips seven real-database tests without
   the opt-in flag. A [native consumer run](#native-mysql-ordinary-jar-consumer-2026-09-12-utc)
@@ -88,6 +90,27 @@ Quartz to direct, capacity-limited provider futures, not to this queue. Its
 separates persisted task/result recovery, no automatic provider resend, legacy
 Quartz drain adapters and unchanged batch AI jobs. This docs-only source review
 does not refresh the queue base or close any readiness gate above.
+
+Scoped CI correction, 2026-09-12: the opted-in real-database job omitted
+`AssetLocalizeAsyncJobOutputRetryIntegrationTest`, while the ordinary job skips
+that fixture's MySQL/PostgreSQL methods. The dedicated selector now includes
+the adapter and retains all six core suites, explicit container opt-in and zero
+Surefire reruns. A new ordinary JUnit workflow contract parses the job/step and
+requires those settings together, rejecting duplicate opt-in/rerun arguments.
+It failed against the previous selector specifically because the adapter class
+was missing (`/tmp/queue-ci-adapter-selection-red-20260912.log`).
+
+The focused workflow/migration/asset-fixture run with `-Pno-local-config`, an
+isolated HSQL application database and zero reruns selected 19 tests: 17 passed,
+two Docker-only adapter cases skipped, no failures/errors or flaky/rerun entries
+(`/tmp/queue-ci-adapter-selection-verified-20260912.log`). Root formatting passed.
+Pre-commit verification repeated the same 19-test selection with identical outcomes
+(`/tmp/queue-ci-selection-commit-tests-20260912.log`); formatting passed again.
+This is source wiring and local application-fixture proof, not fresh MySQL 8.4
+or PostgreSQL 16 adapter execution. Require both database methods without skips
+in hosted CI before closing that evidence gap. No production code, migrations,
+flags, deployment or rollout decision changed; the earlier disk restriction has
+cleared, not the production-readiness gates.
 
 Scoped repair correction, 2026-09-10: a request-bound Hibernate persistence context
 could retain an open PollableTask after another transaction finished it. Both DONE
