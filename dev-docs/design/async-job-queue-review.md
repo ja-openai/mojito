@@ -10,13 +10,18 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has twenty-two local review commits (four original chunks plus CI,
+- The queue worktree has twenty-three local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `71946547c7`, which
   has 34 commits not in the queue branch and owns migrations through V112, including
   `V109__AI_Review_Request_Usage.sql`. The queue branch's two V109 scripts are
   collision-free only on its older base. A passing branch-local collision test
   is not evidence that merging into current master is safe.
+- The original admin chunk is not independently buildable: its configuration test
+  references repair classes introduced only by the following asset-adapter chunk.
+  The [foundation history audit](#foundation-history-dependency-2026-09-12-utc)
+  records the exact dependency and required split. Passing tests at HEAD do not
+  certify intermediate commits or make the first two commits a standalone landing.
 - Recent changes have not been pushed, merged, deployed or enabled. Unrelated
   primary-master edits are outside this work. Remote-tracking refs are cached, not
   fresh origin evidence. The initial published branch is not the latest reviewed
@@ -108,7 +113,7 @@ not close its current gates.
 
 | Gate | Implemented evidence | Remaining prerequisite and exit condition |
 | --- | --- | --- |
-| Merge base and schema adoption | One queue migration per dialect on the branch's existing base; collision regression. | Confirm applied queue migration history and timestamp provenance; refresh onto the selected current master, choose unapplied rename versus forward upgrade, and pass fresh-install plus historical-upgrade rehearsal without rewriting applied checksums. |
+| Merge base and schema adoption | One queue migration per dialect on the branch's existing base; collision regression. | Split the premature repair-test dependency from the admin chunk and verify each resulting foundation commit; preserve current core fixes. Confirm applied queue migration history and timestamp provenance; refresh onto the selected current master, choose unapplied rename versus forward upgrade, and pass fresh-install plus historical-upgrade rehearsal without rewriting applied checksums. |
 | Durable direct admission | Frozen request identity, strict body and canonical stored-identity readers, explicit JPA/JDBC enlistment primitive, unknown-enqueue containment and fault fixtures. | Decide the [API/authorization/lifetime contract](async-job-queue-admission.md#decisions-versus-defaults) and schema path; implement persisted reservations, atomic task/queue acceptance, verified inputs and primary-key recovery. Same-key crash/retry tests must return one accepted task/job, not merely avoid false compensation. |
 | Parent fan-out recovery | Separate default-off fan-out flag, resolution preflight and reproduced partial-admission failures. | Build on durable admission with frozen manifests and stable child slots. Approve duplicate-tag/size policy; crash and concurrent resume must retain exactly N child identities and reconstruct the same output map. |
 | Business publication and replay | Attempt-private output plus fenced DONE selection; all non-null pull-run tracking excluded; terminal-task replay containment. | Approve the [lineage authority contract](async-job-queue-lineage.md#exact-scope-and-owner-decisions), retire old writers, implement business-generation fencing and fresh linked replay. Queue-row leases alone do not fence shared caches, branch state or lineage writes. |
@@ -273,6 +278,34 @@ plans when Docker is available. The index prefilter is not proof of an unchanged
 plan or disjoint lock ranges for case-equivalent queues. Encoding cannot recover
 already-lossy identities; old binaries still need draining before relying on the
 guard. No admission, schema-adoption, business-fencing or rollout gate is closed.
+
+## Foundation History Dependency (2026-09-12 UTC)
+
+A Git-object audit found a concrete intermediate-commit dependency, not a defect
+in the current queue runtime. `07b92c144e` adds
+`AsyncJobQueueAdminWSConfigurationTest`, which imports
+`AssetLocalizeAsyncJobRepairService` and registers/asserts
+`AssetLocalizeAsyncJobRepairWS`. Neither class exists anywhere in that commit's
+Java tree; both are first added by the next commit, `123a7eba50`. The admin chunk
+therefore cannot compile its tests independently. This is source-tree evidence,
+not a Maven run at the historical revision.
+
+Before a foundation-only landing, keep generic admin activation tests in the
+admin chunk and move repair activation tests/fixtures to the asset-adapter chunk.
+The later `f6018ee944` HTTP test deliberately covers both real controllers and
+also needs splitting if generic admin authorization is landed without repair.
+Do not silently include repair or its business services to satisfy those tests.
+Rebuild from current reviewed content, including subsequent core corrections,
+rather than cherry-picking only the original core/admin commits. Run formatting,
+compilation and the relevant tests at each resulting stack boundary; a green
+final tree alone is insufficient. Keep migration adoption as its separate gate.
+
+No history, branch reference, source code, migration or primary-master file was
+rewritten during this audit. This records a required correction, not a completed
+restack or an independently verified foundation. The current HEAD configuration
+and authorization selection passes nine tests with no failures/errors/skips or
+automatic reruns (`/private/tmp/queue-foundation-history-head-tests-20260912.log`);
+root Spotless passes. These checks are separate from the historical diagnosis.
 
 ## Admin HTTP Authorization (2026-09-12 UTC)
 
