@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 QUEUE_PACKAGE = "com.box.l10n.mojito.queue."
 CONSUMER_PACKAGE = "example.queue."
 APPLICATION = {
-    "JdbcAsyncJobStoreDatabaseIntegrationTest": {"": 20},
+    "JdbcAsyncJobStoreDatabaseIntegrationTest": {"": 21},
     "JdbcAsyncJobStorePoolIntegrationTest": {"MYSQL": 2, "POSTGRESQL": 2},
     "JdbcAsyncJobStoreNetworkIntegrationTest": {"MYSQL": 5, "POSTGRESQL": 5},
     "JdbcAsyncJobStoreDatabaseRestartIntegrationTest": {"MYSQL": 2, "POSTGRESQL": 2},

@@ -10,18 +10,20 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has forty-four local commits (four original chunks plus CI,
+- The queue worktree has forty-six local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
-  checkpoint is `730b0a3cb0`, which
-  has 36 commits not in the queue branch and owns migrations through V112, including
+  checkpoint is `ed4bc31eda`, which
+  has 38 commits not in the queue branch and owns migrations through V112, including
   `V109__AI_Review_Request_Usage.sql`. The queue branch's two V109 scripts are
   collision-free only on its older base. A passing branch-local collision test
   is not evidence that merging into current master is safe.
 - The [fresh Flyway contract](#fresh-flyway-artifact-contract-2026-09-13-utc)
   passes on native MySQL 8.4.11 and PostgreSQL 16.15: the isolated queue artifact
   installs once, validates, preserves data/history on rerun, and rejects checksum
-  drift. This does not verify the application's migration chain or historical
-  adoption. Flyway 11.7.2 warns that MySQL 8.4 exceeds its tested support range;
+  drift. The [current-branch MySQL application chain](#mysql-application-flyway-chain-2026-09-13-utc)
+  also passes fresh installation and no-op rerun, including its two Java migrations.
+  Neither proves historical adoption or installation on the selected new master base.
+  Flyway 11.7.2 warns that MySQL 8.4 exceeds its tested support range;
   settle the supported Flyway/database baseline before production certification.
 - The original admin chunk is not independently buildable: its configuration test
   references repair classes introduced only by the following asset-adapter chunk.
@@ -180,7 +182,7 @@ not close its current gates.
 
 | Gate | Implemented evidence | Remaining prerequisite and exit condition |
 | --- | --- | --- |
-| Merge base and schema adoption | One queue migration per dialect on the branch's existing base; collision regression; native isolated Flyway install/rerun/checksum contracts for both databases. | Split the premature repair-test dependency from the admin chunk and verify each resulting foundation commit; preserve current core fixes. Confirm applied queue migration history and timestamp provenance; refresh onto the selected current master, choose unapplied rename versus forward upgrade, and pass full-application fresh-install plus historical-upgrade rehearsal without rewriting applied checksums. Resolve the MySQL/Flyway support warning. |
+| Merge base and schema adoption | One queue migration per dialect on the branch's existing base; collision regression; native isolated Flyway install/rerun/checksum contracts for both databases; current-branch MySQL application-classpath installation and no-op rerun. | Split the premature repair-test dependency from the admin chunk and verify each resulting foundation commit; preserve current core fixes. Confirm applied queue migration history and timestamp provenance; refresh onto the selected current master, choose unapplied rename versus forward upgrade, and pass full-application fresh-install plus historical-upgrade rehearsal without rewriting applied checksums. Resolve the MySQL/Flyway support warning. |
 | Durable direct admission | Frozen request identity, strict body and canonical stored-identity readers, explicit JPA/JDBC enlistment primitive, unknown-enqueue containment and fault fixtures. | Decide the [API/authorization/lifetime contract](async-job-queue-admission.md#decisions-versus-defaults) and schema path; implement persisted reservations, atomic task/queue acceptance, verified inputs and primary-key recovery. Same-key crash/retry tests must return one accepted task/job, not merely avoid false compensation. |
 | Parent fan-out recovery | Separate default-off fan-out flag, resolution preflight and reproduced partial-admission failures. | Build on durable admission with frozen manifests and stable child slots. Approve duplicate-tag/size policy; crash and concurrent resume must retain exactly N child identities and reconstruct the same output map. |
 | Business publication and replay | Attempt-private output plus fenced DONE selection; all non-null pull-run tracking excluded; terminal-task replay containment. | Approve the [lineage authority contract](async-job-queue-lineage.md#exact-scope-and-owner-decisions), retire old writers, implement business-generation fencing and fresh linked replay. Queue-row leases alone do not fence shared caches, branch state or lineage writes. |
@@ -551,6 +553,47 @@ collision on current master. MySQL emitted Flyway's tested-version warning
 MySQL TLS is encrypted with a self-signed server certificate, not identity-verified;
 PostgreSQL uses verify-full. No production queue code or migration SQL changed.
 
+## MySQL Application Flyway Chain (2026-09-13 UTC)
+
+The maintained `mysqlApplicationFlywayChainInstallsQueueAndRerunsWithoutChanges`
+contract now scans `classpath:db/migration` on a fresh disposable MySQL schema.
+It requires all **108 migrations: 106 SQL and the Java migrations V9 and V56**,
+successful history states, SQL checksums, and V109 as the final queue migration.
+The Java migrations inherit null checksums; the contract does not invent checksums
+or bypass classpath discovery. A filesystem-only SQL rehearsal missed those two
+migrations; independent review caught that test defect, and the exact JUnit method
+reproduced the 106-versus-108 failure before the assertions were corrected.
+
+After migration and validation, the test enqueues, claims and completes a real
+queue job. A fresh Flyway instance must execute zero migrations and preserve the
+entire history, seeded locale rows and terminal job. Cleaning and baselining are
+disabled. No repair runs, no source SQL changes, and no existing database is touched.
+
+The final formatted JUnit method passed on native MySQL 8.4.11 in **5.012 s**, with one test
+and zero failures, ignored cases or assumptions. Only Testcontainers lifecycle
+and connection metadata were replaced; Flyway 11.7.2, JDBC, both Java migrations
+and all SQL were real. The runner verified the private datadir, server version
+and encrypted connection before allocating a fresh schema, then ran the test as
+a non-root user restricted to test schemas. MySQL used required TLS with a
+self-signed certificate, not identity verification. Evidence, including the
+failing control, is retained in `/private/tmp/queue-app-flyway.moqJXi/`. The private
+server shut down cleanly; its listener/PID disappeared before only its owned
+datadir was removed. More than 26 GiB remained available throughout verification.
+
+Focused Maven controls select 70 tests: **53 pass and 17 opt-in database/performance
+cases skip**, with no failures or reruns. All 11 Python report-validator fixtures
+pass, as does root `mvn -Pno-local-config spotless:apply`. The final independent
+scoped review found no material issue. Existing ThreadDeath and weaving warnings
+remain. The CI store-suite floor rises to 21; the application lane now requires
+195 non-skipped cases plus its sole optional throughput benchmark (196 total).
+
+This proves only fresh installation from this branch's existing migration set.
+It does not exercise Spring Boot's `FlyWayConfig` strategy, legacy upgrades or
+backfills on populated data, the current-master merge, PostgreSQL application
+installation, Docker/Linux CI or capacity. Existing historical SQL deprecation
+warnings and Flyway's MySQL tested-version warning remain. Applied-history,
+timestamp provenance, V109 collision and workload-adoption gates stay open.
+
 ## Required Database Report Gate (2026-09-13 UTC)
 
 The real-database workflow previously opted in and disabled reruns, but Maven
@@ -565,7 +608,7 @@ Missing PostgreSQL cannot be masked by additional HSQL tests. Zero-test
 `BeforeClass` assumption reports fail. The sole allowed skip is
 `JdbcAsyncJobStoreDatabaseIntegrationTest.runtimePerformanceSmokeRunsAgainstRealDatabases`;
 throughput remains opt-in, not a required correctness or capacity claim.
-The current matrix floors are 195 application cases (194 required plus that
+The current matrix floors are 196 application cases (195 required plus that
 benchmark), 18 lean-consumer cases and 36 JPA-consumer cases. Floors are explicit
 maintenance contracts, not semantic validation of method bodies or DB identity.
 

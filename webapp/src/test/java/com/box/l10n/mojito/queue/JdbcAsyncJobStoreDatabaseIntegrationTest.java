@@ -43,6 +43,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.sql.DataSource;
 import org.assertj.core.api.SoftAssertions;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.CoreMigrationType;
+import org.flywaydb.core.api.MigrationInfo;
 import org.flywaydb.core.api.MigrationState;
 import org.flywaydb.core.api.MigrationVersion;
 import org.flywaydb.core.api.exception.FlywayValidateException;
@@ -159,6 +161,68 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("CHECK (id > 0)")
         .contains("CHECK (queue_name ~ '^[A-Za-z0-9._-]+$')")
         .doesNotContain("ON UPDATE");
+  }
+
+  @Test
+  public void mysqlApplicationFlywayChainInstallsQueueAndRerunsWithoutChanges() throws Exception {
+    assumeContainerTestsEnabled();
+    try (MySQLContainer<?> container = mysqlContainer()) {
+      container.start();
+      DataSource dataSource = dataSource(container);
+      Flyway flyway = applicationMysqlFlyway(dataSource);
+      assertThat(flyway.info().applied()).isEmpty();
+      // This branch has version gaps and two Java migrations; scan the full application classpath.
+      assertThat(flyway.info().pending()).hasSize(108);
+      var installed = flyway.migrate();
+      assertThat(installed.success).isTrue();
+      assertThat(installed.migrationsExecuted).isEqualTo(108);
+      var migrations = flyway.info().all();
+      assertThat(migrations)
+          .hasSize(108)
+          .allSatisfy(
+              migration -> assertThat(migration.getState()).isEqualTo(MigrationState.SUCCESS));
+      assertThat(migrations)
+          .filteredOn(migration -> migration.getType() == CoreMigrationType.SQL)
+          .hasSize(106)
+          .allSatisfy(migration -> assertThat(migration.getChecksum()).isNotNull());
+      assertThat(migrations)
+          .filteredOn(migration -> migration.getType() == CoreMigrationType.JDBC)
+          .hasSize(2)
+          .extracting(MigrationInfo::getVersion)
+          .containsExactly(MigrationVersion.fromVersion("9"), MigrationVersion.fromVersion("56"));
+      assertThat(flyway.info().current().getVersion())
+          .isEqualTo(MigrationVersion.fromVersion("109"));
+      assertThat(flyway.info().current().getScript()).isEqualTo("V109__Async_Job_Queue.sql");
+      flyway.validate();
+
+      JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+      assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM locale", Long.class)).isPositive();
+      var locales = jdbc.queryForList("SELECT * FROM locale ORDER BY id");
+      var history =
+          jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank");
+      AsyncJobStore store = jdbcStore(dataSource, AsyncJobQueueJdbcDialect.MYSQL);
+      AsyncJobId id = store.enqueueNow("application-flyway", "{\"installed\":true}");
+      AsyncJobRecord claimed =
+          store.claimNextJobs("application-flyway", 1, "worker", Duration.ofSeconds(30)).get(0);
+      assertThat(claimed.id()).isEqualTo(id);
+      assertThat(
+              store.markDone(
+                  "application-flyway", id, "worker", claimed.leaseToken(), "{\"done\":true}"))
+          .isTrue();
+      var jobs = store.getByIds(List.of(id));
+      assertThat(jobs)
+          .singleElement()
+          .satisfies(job -> assertThat(job.status()).isEqualTo(AsyncJobStatus.DONE));
+
+      // Re-resolve normal application resources with a fresh Flyway instance, without repair.
+      var repeated = applicationMysqlFlyway(dataSource).migrate();
+      assertThat(repeated.success).isTrue();
+      assertThat(repeated.migrationsExecuted).isZero();
+      assertThat(store.getByIds(List.of(id))).isEqualTo(jobs);
+      assertThat(jdbc.queryForList("SELECT * FROM locale ORDER BY id")).isEqualTo(locales);
+      assertThat(jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank"))
+          .isEqualTo(history);
+    }
   }
 
   @Test
@@ -2521,6 +2585,16 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
 
     Files.write(script, original);
     queueFlyway(dataSource, directory).validate();
+  }
+
+  private Flyway applicationMysqlFlyway(DataSource dataSource) {
+    return Flyway.configure()
+        .dataSource(dataSource)
+        .locations("classpath:db/migration")
+        .cleanDisabled(true)
+        .baselineOnMigrate(false)
+        .validateMigrationNaming(true)
+        .load();
   }
 
   private Flyway queueFlyway(DataSource dataSource, Path directory) {

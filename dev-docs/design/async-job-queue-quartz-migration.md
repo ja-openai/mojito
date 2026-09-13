@@ -839,9 +839,13 @@ See the [gate evidence and limits](async-job-queue-review.md#required-database-r
 The required store suite also includes both
 [fresh Flyway artifact contracts](async-job-queue-review.md#fresh-flyway-artifact-contract-2026-09-13-utc):
 native MySQL 8.4.11 and PostgreSQL 16.15 pass install, no-op rerun and checksum
-rejection with unchanged history/data. They isolate V109, not the application's
-fresh-install/upgrade chain; current-master collision and applied-history gates
-remain open. Flyway 11.7.2 reports a MySQL tested-version warning that also needs
+rejection with unchanged history/data. A separate required
+[MySQL application-classpath contract](async-job-queue-review.md#mysql-application-flyway-chain-2026-09-13-utc)
+passes all 108 current-branch migrations (including V9/V56 Java migrations), real
+queue completion and unchanged history/data on rerun. This is not Spring Boot
+startup, populated historical upgrades or installation on the selected new master
+base; current-master collision and applied-history gates remain open.
+Flyway 11.7.2 reports a MySQL tested-version warning that also needs
 resolution before database-adoption approval.
 The [lost-heartbeat transport extension](async-job-queue-review.md#runtime-lost-heartbeat-recovery-2026-09-13-utc)
 now also passes on native MySQL 8.4.11 and PostgreSQL 16.15: an unacknowledged
