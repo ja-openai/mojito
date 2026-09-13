@@ -6,7 +6,7 @@ namespace Mojito\MessageFormat2;
 
 final class FunctionRegistry
 {
-    public function __construct(private array $formatters, private array $selectors, private array $numericFormatters = [])
+    public function __construct(private array $formatters, private array $selectors, private array $numericFormatters = [], private array $builtinNumericFormatters = [])
     {
     }
 
@@ -24,14 +24,14 @@ final class FunctionRegistry
     {
         $formatters = $this->formatters;
         $formatters[$name] = $formatter;
-        return new self($formatters, $this->selectors, array_diff_key($this->numericFormatters, [$name => true]));
+        return new self($formatters, $this->selectors, array_diff_key($this->numericFormatters, [$name => true]), array_diff_key($this->builtinNumericFormatters, [$name => true]));
     }
 
     public function withSelector(string $name, callable $selector): self
     {
         $selectors = $this->selectors;
         $selectors[$name] = $selector;
-        return new self($this->formatters, $selectors, $this->numericFormatters);
+        return new self($this->formatters, $selectors, $this->numericFormatters, $this->builtinNumericFormatters);
     }
 
     /** Registers numeric output with the locale's direction. Ordinary overrides clear the guarantee. */
@@ -39,7 +39,21 @@ final class FunctionRegistry
     {
         $formatters = $this->formatters;
         $formatters[$name] = $formatter;
-        return new self($formatters, $this->selectors, $this->numericFormatters + [$name => true]);
+        return new self($formatters, $this->selectors, $this->numericFormatters + [$name => true], array_diff_key($this->builtinNumericFormatters, [$name => true]));
+    }
+
+    /** @internal Registers the built-in numeric adapter and its operand semantics. */
+    public function withBuiltinNumericFunction(string $name, callable $formatter): self
+    {
+        $registry = $this->withNumericFunction($name, $formatter);
+        $registry->builtinNumericFormatters[$name] = true;
+        return $registry;
+    }
+
+    /** @internal Custom numeric output does not imply built-in operand semantics. */
+    public function isBuiltinNumericFormatter(?array $function): bool
+    {
+        return isset($this->builtinNumericFormatters[$function['name'] ?? '']);
     }
 
     public function isNumericFormatter(?array $function): bool
@@ -229,7 +243,7 @@ final class FormatContext
                 'inheritedSource' => $inputValue['source'],
             ]);
             $sourceValue = $inputValue['source']['value'] ?? $rendered;
-            $this->locals[$name] = ['rawValue' => $formatted, 'source' => $this->functionSource($sourceValue, $functionRef, $inputValue['source'], $bidi)];
+            $this->locals[$name] = ['rawValue' => $formatted, 'source' => $this->functionSource($sourceValue, $functionRef, $inputValue['source'], $bidi, $rendered)];
         } catch (\Throwable $error) {
             if (!$this->fallback) {
                 throw $error;
@@ -294,7 +308,7 @@ final class FormatContext
                 $value,
                 fn(string $optionName, mixed $fallback): mixed => $annotation === null
                     ? $fallback
-                    : $this->resolvedOptionValue($annotation->function, $value['source'], $optionName, $fallback),
+                    : $this->resolvedOptionValue($annotation->function, $value['source'], $optionName, $fallback, $this->functions->isPortableNumericSelector($annotation->function)),
             );
         } catch (\Throwable $error) {
             if (!$this->fallback) throw $error;
@@ -422,7 +436,7 @@ final class FormatContext
                 'inheritedSource' => $source,
             ]);
             $sourceValue = $source['value'] ?? $value;
-            return ['value' => $formatted, 'hadError' => false, 'source' => $this->functionSource($sourceValue, $functionRef, $source, $bidi), 'direction' => $bidi['direction'], 'resolvedDirection' => $bidi['resolvedDirection'], 'forceIsolation' => $bidi['force']];
+            return ['value' => $formatted, 'hadError' => false, 'source' => $this->functionSource($sourceValue, $functionRef, $source, $bidi, $value), 'direction' => $bidi['direction'], 'resolvedDirection' => $bidi['resolvedDirection'], 'forceIsolation' => $bidi['force']];
         } catch (\Throwable $error) {
             if (!$this->fallback) {
                 throw $error;
@@ -492,7 +506,7 @@ final class FormatContext
         ]);
     }
 
-    private function optionValue(array $functionRef, string $optionName, mixed $fallback): mixed
+    private function optionValue(array $functionRef, string $optionName, mixed $fallback, ?bool $numericConsumer = null): mixed
     {
         $option = $functionRef['options'][$optionName] ?? null;
         if ($option === null) {
@@ -506,21 +520,29 @@ final class FormatContext
             if (!$this->hasValue($name)) {
                 throw MF2Error::missingArgument($name);
             }
-            return value_to_string($this->value($name)['rawValue']);
+            $resolved = $this->value($name);
+            if (($numericConsumer ?? $this->functions->isBuiltinNumericFormatter($functionRef))
+                && in_array($optionName, ['add', 'subtract', 'minimumFractionDigits', 'maximumFractionDigits', 'fractionDigits'], true)
+                && ($resolved['source']['builtinNumeric'] ?? false)) {
+                // Numeric options consume the operand, not locale-specific display digits.
+                $operand = numeric_source_operand_text($resolved['source']);
+                if ($operand !== null) return $operand;
+            }
+            return value_to_string($resolved['rawValue']);
         }
         return $fallback;
     }
 
-    private function resolvedOptionValue(array $functionRef, ?array $source, string $optionName, mixed $fallback): mixed
+    private function resolvedOptionValue(array $functionRef, ?array $source, string $optionName, mixed $fallback, ?bool $numericConsumer = null): mixed
     {
         if ($optionName === 'u:dir') return $fallback;
         if (array_key_exists($optionName, $functionRef['options'] ?? [])) {
-            return $this->optionValue($functionRef, $optionName, $fallback);
+            return $this->optionValue($functionRef, $optionName, $fallback, $numericConsumer);
         }
-        return $this->inheritedNumericOptionValue((string) ($functionRef['name'] ?? ''), $source, $optionName, $fallback);
+        return $this->inheritedNumericOptionValue((string) ($functionRef['name'] ?? ''), $source, $optionName, $fallback, $numericConsumer ?? $this->functions->isBuiltinNumericFormatter($functionRef));
     }
 
-    private function inheritedNumericOptionValue(string $targetFunction, ?array $source, string $optionName, mixed $fallback): mixed
+    private function inheritedNumericOptionValue(string $targetFunction, ?array $source, string $optionName, mixed $fallback, bool $numericConsumer): mixed
     {
         if (numeric_option_is_discarded($targetFunction, $optionName)) return $fallback;
         $visited = [];
@@ -536,7 +558,7 @@ final class FormatContext
             }
             if ($memo !== null) $visited[] = $memo;
             if (array_key_exists($optionName, $source['function']['options'] ?? [])) {
-                $result = [true, ($source['optionValue'])($optionName, $fallback)];
+                $result = [true, ($source['optionValue'])($optionName, $fallback, $numericConsumer)];
                 break;
             }
             $targetFunction = $sourceFunction;
@@ -584,7 +606,7 @@ final class FormatContext
         $this->errors[] = $error;
     }
 
-    private function functionSource(string $value, array $functionRef, ?array $inherited, array $bidi): array
+    private function functionSource(string $value, array $functionRef, ?array $inherited, array $bidi, string $inputValue): array
     {
         $cacheable = $this->memoizeSources && ($inherited === null || ($inherited['_memo'] ?? null) !== null);
         foreach ($functionRef['options'] ?? [] as $option) {
@@ -592,11 +614,13 @@ final class FormatContext
         }
         return [
             'value' => $value,
+            'inputValue' => $inputValue,
+            'builtinNumeric' => $this->functions->isBuiltinNumericFormatter($functionRef),
             'function' => $functionRef,
             'inherited' => $inherited,
             'bidi' => $bidi,
             '_memo' => $cacheable ? new SourceMemo() : null,
-            'optionValue' => fn(string $name, mixed $fallback): mixed => $this->optionValue($functionRef, $name, $fallback),
+            'optionValue' => fn(string $name, mixed $fallback, ?bool $numericConsumer = null): mixed => $this->optionValue($functionRef, $name, $fallback, $numericConsumer),
         ];
     }
 
@@ -651,6 +675,7 @@ final class FormatContext
                     $selector['source'],
                     $name,
                     $fallback,
+                    $this->functions->isPortableNumericSelector($selector['function']),
                 ),
                 'inheritedSource' => $selector['source'],
             ]);

@@ -24,6 +24,7 @@ function portable_function_registry(): FunctionRegistry
             'offset' => __NAMESPACE__ . '\\select_offset',
         ],
         ['number' => true, 'integer' => true, 'percent' => true],
+        ['number' => true, 'integer' => true, 'percent' => true, 'offset' => true],
     ));
 }
 
@@ -96,6 +97,7 @@ function inherited_exact_numeric_source(?array $source, string $targetFunction):
     $visited = [];
     $found = false;
     while ($source !== null) {
+        if (($source['builtinNumeric'] ?? true) === false) break;
         $memo = $source['_memo'] ?? null;
         if ($memo !== null && $memo->exact()[0]) {
             $found = $memo->exact()[1];
@@ -349,10 +351,20 @@ function numeric_source_operand_text(?array $source): ?string
     }
     for ($index = count($chain) - 1; $index >= 0; --$index) {
         $current = $chain[$index];
+        if (($current['builtinNumeric'] ?? is_decimal_source_function($current['function'])) === false) {
+            // A custom result is a new value; a later numeric annotation starts from its display.
+            $operand = null;
+            ($current['_memo'] ?? null)?->rememberOperand(null);
+            continue;
+        }
         if ($operand === null) {
-            $operand = parse_decimal_number($current['value']) === null
+            $parent = $current['inherited'];
+            $input = $parent !== null && ($parent['builtinNumeric'] ?? is_decimal_source_function($parent['function'])) === false
+                ? ($current['inputValue'] ?? $current['value'])
+                : $current['value'];
+            $operand = parse_decimal_number($input) === null
                 ? null
-                : value_to_string($current['value']);
+                : value_to_string($input);
         }
         if (is_decimal_source_function($current['function']) && $operand !== null) {
             $operand = match ($current['function']['name'] ?? '') {
