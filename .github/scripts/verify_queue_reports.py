@@ -12,7 +12,7 @@ CONSUMER_PACKAGE = "example.queue."
 APPLICATION = {
     "JdbcAsyncJobStoreDatabaseIntegrationTest": {"": 18},
     "JdbcAsyncJobStorePoolIntegrationTest": {"MYSQL": 2, "POSTGRESQL": 2},
-    "JdbcAsyncJobStoreNetworkIntegrationTest": {"MYSQL": 4, "POSTGRESQL": 4},
+    "JdbcAsyncJobStoreNetworkIntegrationTest": {"MYSQL": 5, "POSTGRESQL": 5},
     "JdbcAsyncJobStoreDatabaseRestartIntegrationTest": {"MYSQL": 2, "POSTGRESQL": 2},
     "JdbcAsyncJobStoreTimezoneIntegrationTest": {
         "MYSQL, serverPrepared=false": 7,

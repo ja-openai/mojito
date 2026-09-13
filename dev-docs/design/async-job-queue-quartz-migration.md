@@ -832,9 +832,12 @@ See the [gate evidence and limits](async-job-queue-review.md#required-database-r
 The [lost-heartbeat transport extension](async-job-queue-review.md#runtime-lost-heartbeat-recovery-2026-09-13-utc)
 now also passes on native MySQL 8.4.11 and PostgreSQL 16.15: an unacknowledged
 committed renewal leaves the handler alive, recovers renewal on the same token
-and attempt, and completes once after replies resume. All four transport methods
-per engine pass; the required report floor now includes both new cases. This is
-bounded pre-expiry recovery, not sustained partitions or business-side fencing.
+and attempt, and completes once after replies resume. The
+[past-expiry extension](async-job-queue-review.md#live-handler-past-transport-lease-expiry-2026-09-13-utc)
+also passes on both engines: a peer reclaims after natural expiry, then the old
+handler's renewal and completion return false without changing the winner.
+All five transport methods per engine pass; the required report floor includes
+them. These are bounded transport cases, not sustained partitions or business-side fencing.
 Performance smoke remains separately opt-in, and these workflow changes do not
 certify a hosted run or the database identity behind a manually supplied report.
 
@@ -922,7 +925,11 @@ Its third case per dialect now also passes on both native versions: the real run
 does not dispatch an unacknowledged claim, waits for natural lease expiry and then
 executes exactly once with attempt count two and a fresh token. Preserve this
 [lost-claim recovery check](async-job-queue-review.md#runtime-lost-claim-recovery-2026-09-13-utc)
-in the required six-case Docker selection; it does not imply exactly-once effects.
+alongside both heartbeat cases in the required ten-case Docker selection. The
+[past-expiry case](async-job-queue-review.md#live-handler-past-transport-lease-expiry-2026-09-13-utc)
+requires normal false returns from the stale heartbeat and completion after
+transport recovery, no success callback and unchanged replacement ownership.
+None of these queue-row contracts implies exactly-once business effects.
 It does not implement caller identity/reconciliation or certify sustained runtime
 and listener partitions, multi-host failover, capacity or the full Docker/Linux job.
 

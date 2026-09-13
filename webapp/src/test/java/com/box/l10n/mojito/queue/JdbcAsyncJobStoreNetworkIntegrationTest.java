@@ -79,6 +79,15 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
 
   @Test
   public void lostHeartbeatReplyKeepsLiveHandlerAndRecoversRenewal() throws Exception {
+    assertLostHeartbeatReply(false);
+  }
+
+  @Test
+  public void lostHeartbeatReplyPastExpiryRejectsStaleHandlerResult() throws Exception {
+    assertLostHeartbeatReply(true);
+  }
+
+  private void assertLostHeartbeatReply(boolean expireLease) throws Exception {
     assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
     try (JdbcDatabaseContainer<?> database = database()) {
       database.start();
@@ -93,6 +102,8 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
       CompletableFuture<AsyncJobRecord> dispatched = new CompletableFuture<>();
       CompletableFuture<AsyncJobRecord> done = new CompletableFuture<>();
       CompletableFuture<AsyncJobRecord> beforeRenewal = new CompletableFuture<>();
+      CompletableFuture<Boolean> rejectedHeartbeat = new CompletableFuture<>();
+      CompletableFuture<Boolean> completion = new CompletableFuture<>();
       AsyncJobHandler handler =
           new AsyncJobHandler() {
             @Override
@@ -134,11 +145,15 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
         try (AutoCloseable schedulerCleanup = scheduler::shutdown) {
           scheduler.initialize();
           AsyncJobQueueProperties properties = runtimeProperties(queue);
-          // Leave room for the failed socket and a replacement connection's handshake timeout.
-          properties.getQueues().get(queue).setLeaseDurationMs(30_000);
+          // Recovery needs handshake time; the expiry case deliberately outlasts a shorter lease.
+          properties.getQueues().get(queue).setLeaseDurationMs(expireLease ? 10_000 : 30_000);
           AsyncJobQueueCoordinator coordinator =
               new AsyncJobQueueCoordinator(
-                  store(source), properties, List.of(handler), scheduler, meters);
+                  observeTransitions(source, rejectedHeartbeat, completion),
+                  properties,
+                  List.of(handler),
+                  scheduler,
+                  meters);
           try (AutoCloseable coordinatorCleanup = coordinator::stop) {
             coordinator.start();
             try {
@@ -172,33 +187,81 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
               assertThat(done.isDone()).isFalse();
               assertThat(peer.claimNextJobs(queue, 1, "peer", Duration.ofSeconds(30))).isEmpty();
 
-              relay.discardReplies.set(false);
-              awaitCondition(
-                  () ->
-                      peer.getByIds(List.of(id))
-                          .getFirst()
-                          .leaseUntil()
-                          .isAfter(unacknowledged.leaseUntil()),
-                  15);
-              AsyncJobRecord renewed = peer.getByIds(List.of(id)).getFirst();
-              assertThat(renewed.workerId()).isEqualTo(original.workerId());
-              assertThat(renewed.leaseToken()).isEqualTo(original.leaseToken());
-              assertThat(renewed.attemptCount()).isEqualTo(1);
-              assertThat(relay.sessions.get()).isGreaterThan(sessionsAtCommit);
-              assertThat(meters.get("asyncJobQueue.heartbeat.failed").counter().count())
-                  .isGreaterThanOrEqualTo(1);
+              if (expireLease) {
+                awaitCondition(
+                    () -> peer.expiredLeaseStatus(queue).count() == 1,
+                    15,
+                    "unacknowledged heartbeat lease expires while replies remain blocked");
+                assertThat(peer.getByIds(List.of(id)).getFirst()).isEqualTo(unacknowledged);
+                List<AsyncJobRecord> reclaimed =
+                    peer.claimNextJobs(queue, 1, original.workerId(), Duration.ofSeconds(30));
+                assertThat(reclaimed).hasSize(1);
+                AsyncJobRecord winner = reclaimed.getFirst();
+                assertThat(winner.id()).isEqualTo(id);
+                assertThat(winner.attemptCount()).isEqualTo(2);
+                assertThat(winner.leaseReclaimed()).isTrue();
+                assertThat(winner.leaseToken()).isNotEqualTo(original.leaseToken());
+                assertThat(winner.updatedDate()).isAfterOrEqualTo(unacknowledged.leaseUntil());
+                AsyncJobRecord winningRow = peer.getByIds(List.of(id)).getFirst();
 
-              release.countDown();
-              assertThat(done.get(10, TimeUnit.SECONDS).status()).isEqualTo(AsyncJobStatus.DONE);
-              awaitDrained(meters);
-              assertThat(invocations.get()).isEqualTo(1);
-              assertThat(callbacks.get()).isEqualTo(1);
-              assertThat(interrupted.get()).isFalse();
-              AsyncJobRecord terminal = peer.getByIds(List.of(id)).getFirst();
-              assertThat(terminal.status()).isEqualTo(AsyncJobStatus.DONE);
-              assertThat(terminal.attemptCount()).isEqualTo(1);
-              assertThat(terminal.jobData()).isEqualTo("{\"renewed\":true}");
-              assertThat(relay.failures).isEmpty();
+                relay.discardReplies.set(false);
+                assertThat(rejectedHeartbeat.get(15, TimeUnit.SECONDS)).isFalse();
+                assertThat(release.getCount()).isEqualTo(1);
+                assertThat(interrupted.get()).isFalse();
+                assertThat(peer.getByIds(List.of(id)).getFirst()).isEqualTo(winningRow);
+                release.countDown();
+                assertThat(completion.get(10, TimeUnit.SECONDS)).isFalse();
+                awaitDrained(meters);
+                assertThat(invocations.get()).isEqualTo(1);
+                assertThat(callbacks.get()).isZero();
+                assertThat(done.isDone()).isFalse();
+                assertThat(
+                        meters
+                            .get("asyncJobQueue.transition.failed")
+                            .tag("transition", "done")
+                            .counter()
+                            .count())
+                    .isEqualTo(1);
+                assertThat(peer.getByIds(List.of(id)).getFirst()).isEqualTo(winningRow);
+                assertThat(
+                        peer.markDone(
+                            queue, id, winner.workerId(), winner.leaseToken(), "{\"winner\":true}"))
+                    .isTrue();
+                AsyncJobRecord terminal = peer.getByIds(List.of(id)).getFirst();
+                assertThat(terminal.status()).isEqualTo(AsyncJobStatus.DONE);
+                assertThat(terminal.attemptCount()).isEqualTo(2);
+                assertThat(terminal.jobData()).isEqualTo("{\"winner\":true}");
+                assertThat(relay.sessions.get()).isGreaterThan(sessionsAtCommit);
+                assertThat(relay.failures).isEmpty();
+              } else {
+                relay.discardReplies.set(false);
+                awaitCondition(
+                    () ->
+                        peer.getByIds(List.of(id))
+                            .getFirst()
+                            .leaseUntil()
+                            .isAfter(unacknowledged.leaseUntil()),
+                    15);
+                AsyncJobRecord renewed = peer.getByIds(List.of(id)).getFirst();
+                assertThat(renewed.workerId()).isEqualTo(original.workerId());
+                assertThat(renewed.leaseToken()).isEqualTo(original.leaseToken());
+                assertThat(renewed.attemptCount()).isEqualTo(1);
+                assertThat(relay.sessions.get()).isGreaterThan(sessionsAtCommit);
+                assertThat(meters.get("asyncJobQueue.heartbeat.failed").counter().count())
+                    .isGreaterThanOrEqualTo(1);
+
+                release.countDown();
+                assertThat(done.get(10, TimeUnit.SECONDS).status()).isEqualTo(AsyncJobStatus.DONE);
+                awaitDrained(meters);
+                assertThat(invocations.get()).isEqualTo(1);
+                assertThat(callbacks.get()).isEqualTo(1);
+                assertThat(interrupted.get()).isFalse();
+                AsyncJobRecord terminal = peer.getByIds(List.of(id)).getFirst();
+                assertThat(terminal.status()).isEqualTo(AsyncJobStatus.DONE);
+                assertThat(terminal.attemptCount()).isEqualTo(1);
+                assertThat(terminal.jobData()).isEqualTo("{\"renewed\":true}");
+                assertThat(relay.failures).isEmpty();
+              }
             } finally {
               relay.discardReplies.set(false);
               release.countDown();
@@ -479,6 +542,32 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
   private JdbcAsyncJobStore store(DataSource source) {
     return new JdbcAsyncJobStore(
         new NamedParameterJdbcTemplate(source), dialect, new DataSourceTransactionManager(source));
+  }
+
+  private JdbcAsyncJobStore observeTransitions(
+      DataSource source,
+      CompletableFuture<Boolean> rejectedHeartbeat,
+      CompletableFuture<Boolean> completion) {
+    return new JdbcAsyncJobStore(
+        new NamedParameterJdbcTemplate(source), dialect, new DataSourceTransactionManager(source)) {
+      @Override
+      public boolean heartbeat(
+          String queue, AsyncJobId id, String worker, String token, Duration duration) {
+        boolean renewed = super.heartbeat(queue, id, worker, token, duration);
+        if (!renewed) {
+          rejectedHeartbeat.complete(false);
+        }
+        return renewed;
+      }
+
+      @Override
+      public boolean markDone(
+          String queue, AsyncJobId id, String worker, String token, String data) {
+        boolean markedDone = super.markDone(queue, id, worker, token, data);
+        completion.complete(markedDone);
+        return markedDone;
+      }
+    };
   }
 
   private JdbcDatabaseContainer<?> database() {
