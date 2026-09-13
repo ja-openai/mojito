@@ -32,6 +32,11 @@ an execution proposal, not rollout approval or evidence of live configuration re
   orchestration was adapted, while SQL and migration strategy ran unchanged.
   The required Linux MySQL/PostgreSQL lanes and deployed startup remain separate
   gates. Flyway's existing MySQL 8.4 support warning remains unresolved.
+- The Boot migration fixture now runs both maintained methods against MySQL 8.0
+  and 8.4, checking the actual server version before migrations. The required
+  report gate demands both methods in each version group with no skips or reruns.
+  This closes a test-selection gap; verify the expanded hosted run at the exact
+  release revision before relying on these contracts.
 - At verification checkpoint `f53ae8c0a5`, the queue worktree had forty-six local
   commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this

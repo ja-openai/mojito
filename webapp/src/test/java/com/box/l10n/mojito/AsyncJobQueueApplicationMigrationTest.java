@@ -14,6 +14,8 @@ import org.flywaydb.core.api.MigrationInfo;
 import org.flywaydb.core.api.MigrationState;
 import org.flywaydb.core.api.MigrationVersion;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationInitializer;
@@ -24,9 +26,17 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.MySQLContainer;
 
 /** Exercises Boot's production migration strategy, not the full application or queue workers. */
+@RunWith(Parameterized.class)
 public class AsyncJobQueueApplicationMigrationTest {
 
   private static final String ENABLE_PROPERTY = "mojito.asyncJobQueue.testcontainers";
+
+  @Parameterized.Parameters(name = "{0}")
+  public static List<String> mysqlVersions() {
+    return List.of("8.0", "8.4");
+  }
+
+  @Parameterized.Parameter public String mysqlVersion = "8.4";
 
   @Test
   public void bootInstallsFullApplicationThroughV113AndRestartsWithoutChanges() {
@@ -198,14 +208,18 @@ public class AsyncJobQueueApplicationMigrationTest {
   }
 
   private MySQLContainer<?> mysqlContainer() {
-    return new MySQLContainer<>("mysql:8.4")
+    return new MySQLContainer<>("mysql:" + mysqlVersion)
         .withConnectTimeoutSeconds(10)
         .withUrlParam("connectTimeout", "5000")
         .withUrlParam("socketTimeout", "30000");
   }
 
   private DataSource dataSource(MySQLContainer<?> container) {
-    return new DriverManagerDataSource(
-        container.getJdbcUrl(), container.getUsername(), container.getPassword());
+    DataSource dataSource =
+        new DriverManagerDataSource(
+            container.getJdbcUrl(), container.getUsername(), container.getPassword());
+    assertThat(new JdbcTemplate(dataSource).queryForObject("SELECT VERSION()", String.class))
+        .startsWith(mysqlVersion + ".");
+    return dataSource;
   }
 }
