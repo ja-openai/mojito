@@ -8,9 +8,12 @@ A separately reviewed inactive foundation can land before workload adoption;
 future AI Review support, full Quartz replacement and an OSS release are not
 prerequisites for that narrower landing. The full branch still includes discovered
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
-not close its current gates.
+not close its current gates. The [deployment and canary runbook](async-job-queue-canary-runbook.md)
+organizes disabled deployment, gated platform tests and producer rollback; it is
+an execution proposal, not rollout approval or evidence of live configuration reload.
 
-- The queue worktree has forty-six local commits (four original chunks plus CI,
+- At verification checkpoint `f53ae8c0a5`, the queue worktree had forty-six local
+  commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `ed4bc31eda`, which
   has 38 commits not in the queue branch and owns migrations through V112, including
