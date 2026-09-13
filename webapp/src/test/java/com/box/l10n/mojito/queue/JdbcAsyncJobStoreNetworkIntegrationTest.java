@@ -205,8 +205,7 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
             }
           }
         }
-        assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
-        assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
+        awaitPoolDrained(pool);
       }
     }
   }
@@ -311,8 +310,7 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
             }
           }
         }
-        assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
-        assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
+        awaitPoolDrained(pool);
       }
     }
   }
@@ -339,6 +337,16 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
             meters.get("asyncJobQueue.inflight").gauge().value() == 0
                 && meters.get("asyncJobQueue.executor.active").gauge().value() == 0
                 && meters.get("asyncJobQueue.executor.queued").gauge().value() == 0);
+  }
+
+  private static void awaitPoolDrained(HikariDataSource pool) throws InterruptedException {
+    // Handler drainage and heartbeat cancellation do not join a renewal already inside JDBC.
+    awaitCondition(
+        () ->
+            pool.getHikariPoolMXBean().getActiveConnections() == 0
+                && pool.getHikariPoolMXBean().getThreadsAwaitingConnection() == 0,
+        15,
+        "heartbeat connections and waiters drain after coordinator shutdown");
   }
 
   private void initializeSchema(JdbcDatabaseContainer<?> database) throws SQLException {
@@ -510,10 +518,16 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
 
   private static void awaitCondition(BooleanSupplier condition, long timeoutSeconds)
       throws InterruptedException {
+    awaitCondition(condition, timeoutSeconds, "independent connection observes the server commit");
+  }
+
+  private static void awaitCondition(
+      BooleanSupplier condition, long timeoutSeconds, String description)
+      throws InterruptedException {
     long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
     CountDownLatch pause = new CountDownLatch(1);
     while (!condition.getAsBoolean()) {
-      assertTrue("independent connection observes the server commit", System.nanoTime() < deadline);
+      assertTrue(description, System.nanoTime() < deadline);
       pause.await(20, TimeUnit.MILLISECONDS);
     }
   }

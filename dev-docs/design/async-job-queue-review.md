@@ -441,8 +441,16 @@ and a possible replacement-handshake timeout; it does not backdate expiry or res
 the runtime. A bounded pre-expiry recovery is not sustained partition, failover,
 shared-pool sizing, business-write fencing or exactly-once effects.
 
-All four maintained transport methods passed on native MySQL 8.4.11 in 32.439
-seconds and PostgreSQL 16.15 in 32.818 seconds, with zero failures, ignored tests
+Independent review identified a possible cleanup race in both runtime transport
+tests: handler/executor drainage and heartbeat cancellation do not join a renewal
+already inside JDBC. Both tests now await zero active pool connections and zero
+connection waiters after coordinator/poll-scheduler shutdown, before closing the
+pool. The 15-second deadline allows pending acquisition and socket timeouts to
+settle but still fails a persistent leak; it is not a production shutdown change.
+This was a code-review finding, not a reproduced transport-recovery failure.
+
+All four maintained transport methods passed again on native MySQL 8.4.11 in 32.454
+seconds and PostgreSQL 16.15 in 32.793 seconds, with zero failures, ignored tests
 or assumptions. Each run includes enqueue, completion, claim and heartbeat, using
 private TLS connections, guarded engine/datadir identity and durability settings.
 Only container orchestration is substituted; the relay, driver, pool, store and
@@ -454,7 +462,8 @@ across three suites and no errors, failures or reruns. All 11 report-gate fixtur
 tests also pass after raising the required network matrix to four cases per
 database (191 application cases including the optional throughput benchmark).
 Root `mvn -Pno-local-config spotless:apply` passed. Sources and logs remain in
-`/private/tmp/queue-network-renewal.BBAVen/`; both private servers were cleanly
+`/private/tmp/queue-network-drain.fnZQqV/` (the earlier renewal run is retained in
+`/private/tmp/queue-network-renewal.BBAVen/`); both private servers were cleanly
 stopped and only their datadirs removed. No queue production code, migration,
 route flag, ordinary-JAR artifact or primary-master file changed.
 
