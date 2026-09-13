@@ -19,7 +19,6 @@ public class StubPhabricatorHttpClient extends PhabricatorHttpClient {
   boolean overrideFiles = false;
   boolean shouldWrite = false;
   boolean overrideIds = true;
-  PhabricatorHttpClient phabricatorHttpClient;
   Map<String, String> phidMap;
 
   public StubPhabricatorHttpClient(
