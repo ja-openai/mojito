@@ -36,17 +36,25 @@ jobs:
           java-version: 21
       - name: Install webapp reactor dependencies
         run: mvn -pl webapp -am -Pno-local-config install -DskipTests
+      - name: Test queue report gate
+        run: python3 -B -m unittest discover -s .github/scripts -p test_verify_queue_reports.py
       - name: Run async job queue MySQL/PostgreSQL contract
         run: >-
           mvn -pl webapp -Pno-local-config
           -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest,JdbcAsyncJobStorePoolIntegrationTest,JdbcAsyncJobStoreNetworkIntegrationTest,JdbcAsyncJobStoreDatabaseRestartIntegrationTest,JdbcAsyncJobStoreTimezoneIntegrationTest,AsyncJobQueueJpaTransactionIntegrationTest,JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest,AsyncJobQueueProcessCrashIntegrationTest,AssetLocalizeAsyncJobOutputRetryIntegrationTest
           -Dmojito.asyncJobQueue.testcontainers=true
-          -Dsurefire.rerunFailingTestsCount=0 test
+          -Dsurefire.rerunFailingTestsCount=0 clean test
+      - name: Verify required application database reports
+        run: python3 -B .github/scripts/verify_queue_reports.py application webapp/target/surefire-reports
       - name: Build queue packaging probe without Mojito parent or AspectJ
         run: mvn -f dev-docs/queue-library-probe/engine/pom.xml clean install
       - name: Verify separate consumer of the ordinary queue JAR
         run: mvn -f dev-docs/queue-library-probe/consumer/pom.xml spotless:check clean test -Dmojito.asyncJobQueue.testcontainers=true
+      - name: Verify required ordinary JAR reports
+        run: python3 -B .github/scripts/verify_queue_reports.py consumer dev-docs/queue-library-probe/consumer/target/surefire-reports
       - name: Verify host-owned JPA transactions without Mojito or AspectJ
         run: >-
           mvn -f dev-docs/queue-library-probe/consumer/pom.xml -Pjpa spotless:check clean test
           -Dmojito.asyncJobQueue.testcontainers=true -Dsurefire.rerunFailingTestsCount=0
+      - name: Verify required JPA consumer reports
+        run: python3 -B .github/scripts/verify_queue_reports.py jpa-consumer dev-docs/queue-library-probe/consumer/target/surefire-reports

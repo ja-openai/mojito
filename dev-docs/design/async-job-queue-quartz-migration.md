@@ -823,8 +823,14 @@ transaction contracts in addition to store, pool, wakeup, worker-crash and
 MySQL/PostgreSQL database-restart suites.
 It disables Surefire reruns so an initially failed contract cannot turn green on
 automatic retry. The ordinary webapp default stays at one rerun unless overridden;
-readiness verification must opt out and inspect skipped cases. Performance smoke
-remains separately opt-in, and these workflow changes do not certify a hosted run.
+readiness verification must opt out and inspect skipped cases. After each clean
+application, lean-consumer and JPA-consumer run, a required Surefire-report gate
+checks suite identities, database parameter groups and test-count floors. It
+rejects missing/empty reports, unexpected skips, failures and automatic-rerun
+artifacts. Only the explicitly named runtime performance benchmark may skip.
+See the [gate evidence and limits](async-job-queue-review.md#required-database-report-gate-2026-09-13-utc).
+Performance smoke remains separately opt-in, and these workflow changes do not
+certify a hosted run or the database identity behind a manually supplied report.
 
 The [native MySQL 8.4.11 store run](async-job-queue-review.md#native-mysql-84-store-contracts-2026-09-12-utc)
 passes nine existing contract groups, including held-open bounded claim locks,

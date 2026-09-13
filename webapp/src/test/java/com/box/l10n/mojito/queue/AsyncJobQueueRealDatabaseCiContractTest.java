@@ -23,7 +23,7 @@ public class AsyncJobQueueRealDatabaseCiContractTest {
 
     assertThat(commands).as("the opted-in application database test invocation").hasSize(1);
     List<String> arguments = Arrays.asList(commands.getFirst().strip().split("\\s+"));
-    assertThat(arguments).contains("-Pno-local-config", "test");
+    assertThat(arguments).contains("-Pno-local-config", "clean", "test");
     assertDatabaseOptInWithoutReruns(arguments);
     List<String> selectors =
         arguments.stream().filter(argument -> argument.startsWith("-Dtest=")).toList();
@@ -57,6 +57,37 @@ public class AsyncJobQueueRealDatabaseCiContractTest {
             "test",
             "spotless:check");
     assertDatabaseOptInWithoutReruns(arguments);
+  }
+
+  @Test
+  public void everyFreshDatabaseLaneImmediatelyValidatesRequiredReports() throws Exception {
+    List<String> commands = databaseCommands();
+    assertThat(commands)
+        .contains(
+            "python3 -B -m unittest discover -s .github/scripts -p test_verify_queue_reports.py");
+    for (String lane : List.of("application", "consumer", "jpa-consumer")) {
+      String reports =
+          lane.equals("application")
+              ? "webapp/target/surefire-reports"
+              : "dev-docs/queue-library-probe/consumer/target/surefire-reports";
+      String gate = "python3 -B .github/scripts/verify_queue_reports.py " + lane + " " + reports;
+      assertThat(commands).containsOnlyOnce(gate);
+      int gateIndex = commands.indexOf(gate);
+      assertThat(gateIndex).isPositive();
+      List<String> invocation = Arrays.asList(commands.get(gateIndex - 1).strip().split("\\s+"));
+      assertThat(invocation)
+          .contains("mvn", "clean", "test", "-Dmojito.asyncJobQueue.testcontainers=true");
+      if (lane.equals("application")) {
+        assertThat(invocation).contains("-pl", "webapp", "-Pno-local-config");
+      } else {
+        assertThat(invocation).contains("-f", "dev-docs/queue-library-probe/consumer/pom.xml");
+        if (lane.equals("jpa-consumer")) {
+          assertThat(invocation).contains("-Pjpa");
+        } else {
+          assertThat(invocation).doesNotContain("-Pjpa");
+        }
+      }
+    }
   }
 
   private static List<String> databaseCommands() throws Exception {

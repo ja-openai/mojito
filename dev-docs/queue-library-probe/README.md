@@ -80,8 +80,13 @@ the full consumer proof. Test reports are in `consumer/target/surefire-reports`.
 The existing database CI job runs the engine, lean real-DB consumer and opted-in
 HSQL/MySQL/PostgreSQL JPA consumer separately; a workflow regression requires
 the JPA profile, clean build, real-database opt-in and zero automatic reruns together.
-Configuring those steps does not
-claim remote CI has passed. No automatic Surefire retries are configured. For
+Each clean lane now also validates required Surefire reports with
+`.github/scripts/verify_queue_reports.py` from the repository root, using the
+`consumer` or `jpa-consumer` lane and this probe's report directory. Missing suites,
+underfilled database parameter groups, skipped consumer tests and retry artifacts
+fail CI. XML from an earlier run is not fresh proof; retain `clean` when using this
+gate manually. Configuring those steps does not claim remote CI has passed.
+No automatic Surefire retries are configured. For
 dependency inspection and local test formatting:
 
 ```sh

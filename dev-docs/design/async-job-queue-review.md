@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty-nine local commits (four original chunks plus CI,
+- The queue worktree has forty local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -152,6 +152,11 @@ not close its current gates.
   also passes on both native versions: the unacknowledged lease is never dispatched,
   then the same runtime reclaims after natural expiry with a fresh token and one
   handler invocation. Full Docker/Linux and sustained-partition gates remain open.
+- The [required-report gate](#required-database-report-gate-2026-09-13-utc) now
+  rejects missing suites/database groups, underfilled test matrices, unexpected
+  skips and retry artifacts after each clean CI database lane. Only the named
+  opt-in throughput benchmark may skip. Validator fixtures and focused Java tests
+  pass; enforcing reports is not evidence that the full hosted lane has passed.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -411,6 +416,48 @@ cleanly stopped and their datadirs removed. No production source, migration,
 route flag or primary-master file changed. This bounded recovery case is not
 sustained partitions, already-running business-write fencing, durable caller
 admission, exactly-once effects, listener failover or workload capacity proof.
+
+## Required Database Report Gate (2026-09-13 UTC)
+
+The real-database workflow previously opted in and disabled reruns, but Maven
+could still return success for an assumption-skipped suite or a parameter source
+that omitted a database. Its workflow test checked command selection, not actual
+execution reports. The new standard-library Python gate reads the required
+Surefire reports immediately after each application, lean-JAR and JPA-JAR lane.
+
+It requires each suite and its current per-parameter count floor, consistent
+counters, unique attributed cases and no failure/error/flaky/rerun elements.
+Missing PostgreSQL cannot be masked by additional HSQL tests. Zero-test
+`BeforeClass` assumption reports fail. The sole allowed skip is
+`JdbcAsyncJobStoreDatabaseIntegrationTest.runtimePerformanceSmokeRunsAgainstRealDatabases`;
+throughput remains opt-in, not a required correctness or capacity claim.
+The current matrix floors are 189 application cases (188 required plus that
+benchmark), 18 lean-consumer cases and 36 JPA-consumer cases. Floors are explicit
+maintenance contracts, not semantic validation of method bodies or DB identity.
+
+Application verification now starts with `clean test`, like both independent
+consumers, so old reports cannot satisfy the gate. A Java workflow regression
+requires each validator immediately after its matching clean, opted-in Maven
+invocation. The gate cannot independently establish freshness for arbitrary
+manually supplied reports. No queue production code, schema or routing changed.
+
+Verification: all 11 Python fixture tests passed, including all three valid lane
+shapes and missing/empty/underfilled/duplicate/misattributed/failed/retried cases.
+The CLI correctly returned failure for the existing lean-consumer control report
+because its PostgreSQL case had skipped. This is a negative gate check, not a new
+database run. Focused Maven reactor verification passed 112 tests across the
+runtime and workflow-contract suites, with zero failures, errors, skips or reruns.
+Root `mvn -Pno-local-config spotless:apply` passed.
+
+The initial webapp-only Maven attempt failed before tests: locally cached shared
+Mojito artifacts no longer matched this older branch (`JsonValidator` and
+`CheckForDoNotTranslateStep`). Re-running with `-am` used the branch's reactor
+dependencies without installing over the shared cache or changing primary master.
+The initial failure and successful reactor log are retained in
+`/private/tmp/queue-ci-report-gate.cmrbxk/`. The ambient Ruff launcher could not
+write its external tool directory; Python formatting was reviewed manually,
+without installing tools or changing that directory. The full Docker/Linux job,
+historical migrations, durable admission and rollout gates remain unverified.
 
 ## Foundation History Dependency (2026-09-12 UTC)
 
