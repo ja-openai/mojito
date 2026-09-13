@@ -38,7 +38,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     env:
-      MF2_CI_REPORT_DIR: ${{ runner.temp }}/mf2-reports
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@v4
@@ -84,6 +83,8 @@ jobs:
         if: matrix.runtime == 'swift'
         run: swift --version
       - name: Native tests, shared fixtures, direct official corpus and platform registry
+        env:
+          MF2_CI_REPORT_DIR: ${{ runner.temp }}/mf2-reports
         run: sh mf2/packaging/check_runtime.sh '${{ matrix.runtime }}'
       - name: Build artifact, check notices, install clean consumer
         run: python3 mf2/packaging/smoke.py --runtime '${{ matrix.runtime }}' --output '${{ runner.temp }}/mf2-packages'
