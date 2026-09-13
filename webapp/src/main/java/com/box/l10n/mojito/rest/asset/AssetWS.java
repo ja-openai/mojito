@@ -24,6 +24,8 @@ import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pushrun.PushRunRepository;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobEligibility;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobSubmissionService;
 import com.box.l10n.mojito.service.tm.GenerateLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.GenerateMultiLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -32,10 +34,14 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.base.MoreObjects;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,10 +84,22 @@ public class AssetWS {
 
   @Autowired QuartzPollableTaskScheduler quartzPollableTaskScheduler;
 
+  @Autowired(required = false)
+  AssetLocalizeAsyncJobSubmissionService assetLocalizeAsyncJobSubmissionService;
+
   @Autowired MeterRegistry meterRegistry;
 
   @Value("${l10n.assetWS.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
+
+  @Value("${l10n.org.async-job-queue.enabled:false}")
+  boolean asyncJobQueueEnabled;
+
+  @Value("${l10n.org.async-job-queue.asset-localize.enabled:false}")
+  boolean asyncJobQueueAssetLocalizeEnabled;
+
+  @Value("${l10n.org.async-job-queue.asset-localize.producer-enabled:true}")
+  boolean asyncJobQueueAssetLocalizeProducerEnabled = true;
 
   /**
    * Gets the list of {@link Asset} for a given {@link Repository} and other optional filters
@@ -248,16 +266,20 @@ public class AssetWS {
       @PathVariable("assetId") long assetId, @RequestBody LocalizedAssetBody localizedAssetBody)
       throws UnsupportedAssetFilterTypeException {
 
+    validateAssetId(assetId, localizedAssetBody.getAssetId());
     if (localizedAssetBody.getAssetId() == null) {
       localizedAssetBody.setAssetId(assetId);
     }
 
     Asset asset = assetRepository.getReferenceById(assetId);
-    meterRegistry
-        .counter(
-            "assetWS.getLocalizedAssetForContentAsync",
-            Tags.of("repositoryId", asset.getRepository().getId().toString()))
-        .increment();
+    String repositoryId = asset.getRepository().getId().toString();
+    recordLocalizedAssetMetric(
+        () ->
+            meterRegistry
+                .counter(
+                    "assetWS.getLocalizedAssetForContentAsync",
+                    Tags.of("repositoryId", repositoryId))
+                .increment());
 
     QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo =
         QuartzJobInfo.newBuilder(GenerateLocalizedAssetJob.class)
@@ -266,8 +288,93 @@ public class AssetWS {
             .withScheduler(schedulerName)
             .build();
     PollableFuture<LocalizedAssetBody> localizedAssetBodyPollableFuture =
-        quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+        scheduleLocalizedAssetJob(quartzJobInfo);
     return localizedAssetBodyPollableFuture.getPollableTask();
+  }
+
+  PollableFuture<LocalizedAssetBody> scheduleLocalizedAssetJob(
+      QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo) {
+    boolean useAsyncQueue =
+        isAssetLocalizeAsyncQueueEnabled()
+            && AssetLocalizeAsyncJobEligibility.isEligible(quartzJobInfo.getInput());
+    String route = useAsyncQueue ? "assetlocalize" : "quartz";
+    long startNanos = System.nanoTime();
+    PollableFuture<LocalizedAssetBody> pollableFuture;
+    try {
+      if (useAsyncQueue) {
+        if (assetLocalizeAsyncJobSubmissionService == null) {
+          throw new IllegalStateException(
+              "Asset localize async queue is enabled but the submission service is unavailable");
+        }
+        pollableFuture = assetLocalizeAsyncJobSubmissionService.scheduleJob(quartzJobInfo);
+      } else {
+        pollableFuture = quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+      }
+    } catch (RuntimeException e) {
+      recordLocalizedAssetAsyncSchedule(route, "failed", System.nanoTime() - startNanos);
+      throw e;
+    }
+    // Diagnostics cannot turn an acknowledged admission into a failed scheduling attempt.
+    recordLocalizedAssetAsyncSchedule(route, "succeeded", System.nanoTime() - startNanos);
+    return pollableFuture;
+  }
+
+  private boolean isAssetLocalizeAsyncQueueEnabled() {
+    return asyncJobQueueEnabled
+        && asyncJobQueueAssetLocalizeEnabled
+        && asyncJobQueueAssetLocalizeProducerEnabled;
+  }
+
+  private void recordLocalizedAssetAsyncSchedule(String route, String result, long durationNanos) {
+    Tags tags = Tags.of("route", route, "result", result);
+    recordLocalizedAssetMetric(
+        () ->
+            meterRegistry
+                .counter("assetWS.getLocalizedAssetForContentAsync.schedule", tags)
+                .increment());
+    recordLocalizedAssetMetric(
+        () ->
+            meterRegistry
+                .timer("assetWS.getLocalizedAssetForContentAsync.schedule.latency", tags)
+                .record(durationNanos, TimeUnit.NANOSECONDS));
+  }
+
+  private void recordLocalizedAssetMetric(Runnable recording) {
+    try {
+      recording.run();
+    } catch (Throwable failure) {
+      rethrowJvmFatal(failure);
+      try {
+        logger.warn("Failed to record localized asset scheduling metric", failure);
+      } catch (Throwable loggingFailure) {
+        rethrowJvmFatal(loggingFailure);
+        // Do not recurse into diagnostics or reject accepted work when logging also fails.
+      }
+    }
+  }
+
+  private static void rethrowJvmFatal(Throwable failure) {
+    if (failure instanceof VirtualMachineError || failure instanceof ThreadDeath) {
+      throw (Error) failure;
+    }
+    Set<Throwable> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+    ArrayDeque<Throwable> pending = new ArrayDeque<>();
+    pending.add(failure);
+    while (!pending.isEmpty()) {
+      Throwable current = pending.removeFirst();
+      if (!visited.add(current)) {
+        continue;
+      }
+      if (current instanceof VirtualMachineError || current instanceof ThreadDeath) {
+        throw (Error) current;
+      }
+      if (current.getCause() != null) {
+        pending.addLast(current.getCause());
+      }
+      for (Throwable suppressed : current.getSuppressed()) {
+        pending.addLast(suppressed);
+      }
+    }
   }
 
   /**
@@ -282,6 +389,7 @@ public class AssetWS {
       @PathVariable("assetId") long assetId,
       @RequestBody MultiLocalizedAssetBody multiLocalizedAssetBody) {
 
+    validateAssetId(assetId, multiLocalizedAssetBody.getAssetId());
     if (multiLocalizedAssetBody.getAssetId() == null) {
       multiLocalizedAssetBody.setAssetId(assetId);
     }
@@ -308,6 +416,13 @@ public class AssetWS {
     PollableFuture<MultiLocalizedAssetBody> multiLocalizedAssetBodyPollableFuture =
         quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
     return multiLocalizedAssetBodyPollableFuture.getPollableTask();
+  }
+
+  private static void validateAssetId(long pathAssetId, Long bodyAssetId) {
+    if (bodyAssetId != null && bodyAssetId.longValue() != pathAssetId) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Body assetId must match path assetId");
+    }
   }
 
   /**

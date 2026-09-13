@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.service.pollableTask;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -7,6 +9,8 @@ import static org.junit.Assert.fail;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.blobstorage.BlobStorage;
+import com.box.l10n.mojito.service.blobstorage.Retention;
+import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorage;
 import com.box.l10n.mojito.test.TestIdWatcher;
 import java.util.Objects;
@@ -26,11 +30,62 @@ public class PollableTaskBlobStorageTest extends ServiceTestBase {
 
   @Autowired BlobStorage blobStorage;
 
+  @Autowired StructuredBlobStorage structuredBlobStorage;
+
   @Before
   public void before() {
     // to be sure ids in the db and in the storage are in sync (if using s3, data might be there
     // from previous run)
     Assume.assumeTrue(blobStorage instanceof DatabaseBlobStorage);
+  }
+
+  @Test
+  public void rawOutputPreservesBytesWithoutChangingLegacyStringDecoding() {
+    PollableTask task =
+        pollableTaskService.createPollableTask(
+            null, testIdWatcher.getEntityName("rawOutput"), null, 0);
+    byte[] malformed = new byte[] {'"', (byte) 0x80, '"'};
+    structuredBlobStorage.putBytes(
+        StructuredBlobStorage.Prefix.POLLABLE_TASK,
+        pollableTaskBlobStorage.getOutputName(task.getId()),
+        malformed,
+        Retention.MIN_1_DAY);
+
+    assertThat(pollableTaskBlobStorage.getOutputBytes(task.getId())).containsExactly(malformed);
+    assertThat(pollableTaskBlobStorage.getOutputJson(task.getId())).isEqualTo("\"\ufffd\"");
+  }
+
+  @Test
+  public void rawOutputPreservesMissingBlobFailure() {
+    long missing = 999999999999999999L;
+    assertThatThrownBy(() -> pollableTaskBlobStorage.getOutputBytes(missing))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessage("Can't get the output json for: " + missing);
+  }
+
+  @Test
+  public void rawInputPreservesBytesWithoutChangingLegacyStringDecoding() {
+    PollableTask task =
+        pollableTaskService.createPollableTask(
+            null, testIdWatcher.getEntityName("rawInput"), null, 0);
+    byte[] malformed = new byte[] {'"', (byte) 0x80, '"'};
+    structuredBlobStorage.putBytes(
+        StructuredBlobStorage.Prefix.POLLABLE_TASK,
+        pollableTaskBlobStorage.getInputName(task.getId()),
+        malformed,
+        Retention.MIN_1_DAY);
+
+    assertThat(pollableTaskBlobStorage.getInputBytes(task.getId())).containsExactly(malformed);
+    assertThat(pollableTaskBlobStorage.getInputJson(task.getId())).isEqualTo("\"\ufffd\"");
+    assertThat(pollableTaskBlobStorage.getInput(task.getId(), String.class)).isEqualTo("\ufffd");
+  }
+
+  @Test
+  public void rawInputPreservesMissingBlobFailure() {
+    long missing = 999999999999999999L;
+    assertThatThrownBy(() -> pollableTaskBlobStorage.getInputBytes(missing))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessage("Can't get the input json for: " + missing);
   }
 
   @Test

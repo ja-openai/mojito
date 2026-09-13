@@ -56,14 +56,26 @@ class TextUnitDTOsCacheBlobStorage {
         "Get TextUnitDTOs from Blob Storage for assetId: {}, localeId: {}", assetId, localeId);
     Optional<TextUnitDTOsCacheBlobStorageJson> cacheEntry =
         getCacheEntryFromCache(assetId, localeId);
-    meterRegistry
-        .counter(
-            CACHE_LOOKUP_METRIC,
-            "format",
-            getFormat(),
-            "result",
-            cacheEntry.isPresent() ? "hit" : "miss")
-        .increment();
+    try {
+      meterRegistry
+          .counter(
+              CACHE_LOOKUP_METRIC,
+              "format",
+              getFormat(),
+              "result",
+              cacheEntry.isPresent() ? "hit" : "miss")
+          .increment();
+    } catch (VirtualMachineError | ThreadDeath fatal) {
+      throw fatal;
+    } catch (Throwable failure) {
+      try {
+        logger.warn("Failed to record TextUnitDTOs cache lookup metric", failure);
+      } catch (VirtualMachineError | ThreadDeath fatal) {
+        throw fatal;
+      } catch (Throwable loggingFailure) {
+        // Diagnostics must not turn a successful cache read into a failure.
+      }
+    }
     return cacheEntry;
   }
 

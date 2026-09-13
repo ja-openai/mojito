@@ -239,6 +239,8 @@ public class WebSecurityConfig {
                     "/api/admin/translation-corrections",
                     "/api/admin/translation-corrections/**")
                 .hasRole("ADMIN")
+                .requestMatchers("/api/admin/async-job-queue/**")
+                .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/mcp")
                 .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/mcp")

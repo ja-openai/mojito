@@ -3,6 +3,8 @@ package com.box.l10n.mojito.service.pollableTask;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.google.common.base.Throwables;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,8 +16,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Services to manage pollable tasks.
@@ -41,6 +46,30 @@ public class PollableTaskService {
   @Autowired ObjectMapper objectMapper;
 
   @Autowired PollableTaskRepository pollableTaskRepository;
+
+  @Autowired PlatformTransactionManager transactionManager;
+
+  @PersistenceContext EntityManager entityManager;
+
+  /**
+   * Reload a task for a decision that must not use request-cached state. This read does not lock
+   * the task or fence a subsequent write; callers still need their own concurrency protocol.
+   */
+  public PollableTask getFreshPollableTask(long id) {
+    TransactionTemplate read = new TransactionTemplate(transactionManager);
+    read.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    read.setReadOnly(true);
+    return read.execute(
+        status -> {
+          PollableTask task = entityManager.find(PollableTask.class, id);
+          if (task != null) {
+            // REQUIRES_NEW can reuse an OSIV EntityManager when no caller transaction is active.
+            entityManager.refresh(task);
+            fetchSubTasks(task);
+          }
+          return task;
+        });
+  }
 
   @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
   public PollableTask getPollableTask(long id) {
@@ -259,6 +288,9 @@ public class PollableTaskService {
    * @param pollableTask
    */
   public void fetchSubTasks(PollableTask pollableTask) {
+    if (pollableTask == null) {
+      return;
+    }
     Hibernate.initialize(pollableTask.getSubTasks());
     pollableTask.getSubTasks().forEach(this::fetchSubTasks);
   }
