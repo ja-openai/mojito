@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.fileformat;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.ByteBuffer;
@@ -699,7 +700,8 @@ public final class LocalizationFileConverters {
 
   private static LocalizationCatalog parseFormatJs(String source) {
     try {
-      JsonNode root = JSON.readTree(source);
+      JsonNode root =
+          JSON.reader().with(JsonParser.Feature.STRICT_DUPLICATE_DETECTION).readTree(source);
       if (root == null || !root.isObject()) {
         throw new LocalizationParseException("INVALID_FORMATJS", "Expected a JSON message object");
       }

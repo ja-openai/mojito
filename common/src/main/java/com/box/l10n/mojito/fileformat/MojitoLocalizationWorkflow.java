@@ -87,8 +87,7 @@ final class MojitoLocalizationWorkflow {
                 ? new JavaPropertiesParser()
                     .parseForMojito(LocalizationFileConverters.decode(source, null))
                 : format == LocalizationFileFormat.FORMATJS_JSON
-                        && (filterOptions != null && !filterOptions.isEmpty()
-                            || containsJsonComments(source))
+                        && usesConfiguredJson(source, filterOptions)
                     ? parseConfiguredJson(source, options)
                     : LocalizationFileConverters.parse(format, source);
     return applyExtractionPolicy(catalog, source, options);
@@ -454,7 +453,12 @@ final class MojitoLocalizationWorkflow {
       String targetLocale) {
     LocalizationFilterOptions options = LocalizationFilterOptions.parse(format, filterOptions);
     if (format == LocalizationFileFormat.FORMATJS_JSON) {
-      return localizeJson(source, translations, options, removeUntranslated);
+      return localizeJson(
+          source,
+          translations,
+          options,
+          removeUntranslated,
+          usesConfiguredJson(source, filterOptions));
     }
     if (format == LocalizationFileFormat.CSV
         || format == LocalizationFileFormat.CSV_ADOBE_MAGENTO) {
@@ -915,6 +919,10 @@ final class MojitoLocalizationWorkflow {
     }
   }
 
+  private static boolean usesConfiguredJson(byte[] source, List<String> filterOptions) {
+    return filterOptions != null && !filterOptions.isEmpty() || containsJsonComments(source);
+  }
+
   private static boolean containsJsonComments(byte[] source) {
     boolean quoted = false;
     boolean escaped = false;
@@ -1112,8 +1120,12 @@ final class MojitoLocalizationWorkflow {
       byte[] source,
       Map<String, String> translations,
       LocalizationFilterOptions options,
-      boolean removeUntranslated) {
+      boolean removeUntranslated,
+      boolean configuredJson) {
     try {
+      if (!configuredJson) {
+        return localizeFormatJs(source, translations, options, removeUntranslated);
+      }
       JsonNode root = JSON.readTree(source);
       LocalizationCatalog catalog =
           applyExtractionPolicy(parseConfiguredJson(source, options), source, options);
@@ -1145,6 +1157,83 @@ final class MojitoLocalizationWorkflow {
     }
   }
 
+  private static byte[] localizeFormatJs(
+      byte[] source,
+      Map<String, String> translations,
+      LocalizationFilterOptions options,
+      boolean removeUntranslated)
+      throws IOException {
+    LocalizationCatalog catalog =
+        applyExtractionPolicy(
+            LocalizationFileConverters.parse(LocalizationFileFormat.FORMATJS_JSON, source),
+            source,
+            options);
+    for (String key : translations.keySet()) {
+      if (!catalog.messages().containsKey(key)) {
+        throw new LocalizationParseException(
+            "UNKNOWN_SKELETON_SLOT", "Unknown JSON message: " + key);
+      }
+    }
+    JsonNode root = JSON.readTree(source);
+    boolean wrapped = root.has("schemaVersion");
+    List<JsonPatch> patches = new ArrayList<>();
+    try (JsonParser parser = JSON.getFactory().createParser(source)) {
+      parser.nextToken();
+      if (wrapped) {
+        while (parser.nextToken() != JsonToken.END_OBJECT) {
+          String key = parser.currentName();
+          parser.nextToken();
+          if ("messages".equals(key)) {
+            break;
+          }
+          parser.skipChildren();
+        }
+      }
+      while (parser.nextToken() != JsonToken.END_OBJECT) {
+        String translation = translations.get(parser.currentName());
+        JsonToken token = parser.nextToken();
+        if (token == JsonToken.START_OBJECT) {
+          while (parser.nextToken() != JsonToken.END_OBJECT) {
+            String field = parser.currentName();
+            parser.nextToken();
+            if ("defaultMessage".equals(field)) {
+              addFormatJsPatch(parser, translation, patches);
+            }
+            parser.skipChildren();
+          }
+        } else {
+          addFormatJsPatch(parser, translation, patches);
+        }
+      }
+    }
+    byte[] localized = renderJsonPatches(source, patches);
+    Set<String> missing = new LinkedHashSet<>(catalog.messages().keySet());
+    missing.removeAll(translations.keySet());
+    if (!removeUntranslated || missing.isEmpty()) {
+      return localized;
+    }
+    root = JSON.readTree(localized);
+    var messages =
+        (com.fasterxml.jackson.databind.node.ObjectNode) (wrapped ? root.get("messages") : root);
+    messages.remove(missing);
+    String output = JSON.writerWithDefaultPrettyPrinter().writeValueAsString(root);
+    if (source.length > 0 && source[source.length - 1] == '\n') {
+      output += "\n";
+    }
+    return output.getBytes(StandardCharsets.UTF_8);
+  }
+
+  private static void addFormatJsPatch(
+      JsonParser parser, String translation, List<JsonPatch> patches) throws IOException {
+    if (translation != null && !translation.equals(parser.getText())) {
+      patches.add(
+          new JsonPatch(
+              Math.toIntExact(parser.currentTokenLocation().getByteOffset()),
+              Math.toIntExact(parser.currentLocation().getByteOffset()),
+              translation));
+    }
+  }
+
   private static byte[] renderJsonTemplate(
       byte[] source,
       Map<String, String> translations,
@@ -1158,6 +1247,11 @@ final class MojitoLocalizationWorkflow {
       }
       collectJsonPatches(parser, "", translations, catalog, options, patches);
     }
+    return renderJsonPatches(source, patches);
+  }
+
+  private static byte[] renderJsonPatches(byte[] source, List<JsonPatch> patches)
+      throws IOException {
     ByteArrayOutputStream result = new ByteArrayOutputStream(source.length);
     int previous = 0;
     for (JsonPatch patch : patches) {

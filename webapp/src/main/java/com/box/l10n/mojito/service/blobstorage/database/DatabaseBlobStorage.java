@@ -90,6 +90,8 @@ public class DatabaseBlobStorage implements BlobStorage {
 
     if (Retention.MIN_1_DAY.equals(retention)) {
       mBlob.setExpireAfterSeconds(databaseBlobStorageConfigurationProperties.getMin1DayTtl());
+    } else if (Retention.PERMANENT.equals(retention)) {
+      mBlob.clearExpiration();
     }
 
     mBlobRepository.save(mBlob);
@@ -142,7 +144,8 @@ public class DatabaseBlobStorage implements BlobStorage {
       PageRequest pageable = PageRequest.of(0, 500);
 
       long findStartNanos = System.nanoTime();
-      List<Long> expired = mBlobRepository.findExpiredBlobIdsWithNow(ZonedDateTime.now(), pageable);
+      ZonedDateTime cutoff = ZonedDateTime.now();
+      List<Long> expired = mBlobRepository.findExpiredBlobIdsWithNow(cutoff, pageable);
       long findDurationNanos = System.nanoTime() - findStartNanos;
       long findDurationMs = nanosToMillis(findDurationNanos);
       recordCleanupStepDuration("findExpiredIds", findDurationNanos);
@@ -150,7 +153,8 @@ public class DatabaseBlobStorage implements BlobStorage {
       long deleteDurationNanos = 0;
       if (!expired.isEmpty()) {
         long deleteStartNanos = System.nanoTime();
-        deletedCount = mBlobRepository.deleteByIds(expired);
+        // Retention may have changed since these candidates were selected.
+        deletedCount = mBlobRepository.deleteExpiredByIds(expired, cutoff);
         deleteDurationNanos = System.nanoTime() - deleteStartNanos;
         recordCleanupStepDuration("deleteBatch", deleteDurationNanos);
         batches++;
