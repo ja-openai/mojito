@@ -22,7 +22,7 @@ jobs:
       - name: Maven install, test skipped
         run: mvn install -DskipTests
       - name: Maven test
-        run: mvn test
+        run: mvn test -Dsurefire.rerunFailingTestsCount=0
 
   async-job-queue-real-db-contract:
     runs-on: ubuntu-latest
