@@ -78,6 +78,140 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
   }
 
   @Test
+  public void lostHeartbeatReplyKeepsLiveHandlerAndRecoversRenewal() throws Exception {
+    assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
+    try (JdbcDatabaseContainer<?> database = database()) {
+      database.start();
+      initializeSchema(database);
+      JdbcAsyncJobStore peer = store(independentSource(database));
+      String queue = "lost-heartbeat-" + UUID.randomUUID();
+      AsyncJobId id = peer.enqueueNow(queue, "{}");
+      AtomicInteger invocations = new AtomicInteger();
+      AtomicInteger callbacks = new AtomicInteger();
+      AtomicBoolean interrupted = new AtomicBoolean();
+      CountDownLatch release = new CountDownLatch(1);
+      CompletableFuture<AsyncJobRecord> dispatched = new CompletableFuture<>();
+      CompletableFuture<AsyncJobRecord> done = new CompletableFuture<>();
+      CompletableFuture<AsyncJobRecord> beforeRenewal = new CompletableFuture<>();
+      AsyncJobHandler handler =
+          new AsyncJobHandler() {
+            @Override
+            public String queueName() {
+              return queue;
+            }
+
+            @Override
+            public AsyncJobHandlerResult process(AsyncJobRecord job) throws Exception {
+              invocations.incrementAndGet();
+              dispatched.complete(job);
+              try {
+                assertTrue("test releases the live handler", release.await(30, TimeUnit.SECONDS));
+              } catch (InterruptedException failure) {
+                interrupted.set(true);
+                throw failure;
+              }
+              return AsyncJobHandlerResult.done("{\"renewed\":true}");
+            }
+
+            @Override
+            public void onJobDone(AsyncJobRecord job, AsyncJobHandlerResult result) {
+              callbacks.incrementAndGet();
+              done.complete(job);
+            }
+          };
+      SimpleMeterRegistry meters = new SimpleMeterRegistry();
+      try (AutoCloseable meterCleanup = meters::close;
+          ReplyBlackhole relay =
+              new ReplyBlackhole(database.getHost(), database.getFirstMappedPort());
+          HikariDataSource pool = pool(database, relay)) {
+        CommitGate source =
+            new CommitGate(
+                pool, relay, () -> beforeRenewal.complete(peer.getByIds(List.of(id)).getFirst()));
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setAwaitTerminationMillis(5000);
+        scheduler.setThreadNamePrefix("lost-heartbeat-poll-");
+        try (AutoCloseable schedulerCleanup = scheduler::shutdown) {
+          scheduler.initialize();
+          AsyncJobQueueProperties properties = runtimeProperties(queue);
+          // Leave room for the failed socket and a replacement connection's handshake timeout.
+          properties.getQueues().get(queue).setLeaseDurationMs(30_000);
+          AsyncJobQueueCoordinator coordinator =
+              new AsyncJobQueueCoordinator(
+                  store(source), properties, List.of(handler), scheduler, meters);
+          try (AutoCloseable coordinatorCleanup = coordinator::stop) {
+            coordinator.start();
+            try {
+              AsyncJobRecord original = dispatched.get(10, TimeUnit.SECONDS);
+              source.armed.set(true);
+              assertTrue("heartbeat enters commit", source.entered.await(10, TimeUnit.SECONDS));
+              int commitsAtFault = source.commits.get();
+              int sessionsAtCommit = relay.sessions.get();
+              AsyncJobRecord previousRenewal = beforeRenewal.get(1, TimeUnit.SECONDS);
+              awaitCondition(
+                  () ->
+                      peer.getByIds(List.of(id))
+                          .getFirst()
+                          .leaseUntil()
+                          .isAfter(previousRenewal.leaseUntil()));
+              AsyncJobRecord unacknowledged = peer.getByIds(List.of(id)).getFirst();
+              assertThat(unacknowledged.status()).isEqualTo(AsyncJobStatus.RUNNING);
+              assertThat(unacknowledged.leaseToken()).isEqualTo(original.leaseToken());
+              assertThat(unacknowledged.attemptCount()).isEqualTo(1);
+              assertThat(source.commitFailure.isDone())
+                  .as("renewal committed before timeout")
+                  .isFalse();
+              assertThat(callbacks.get()).isZero();
+              assertThat(meters.get("asyncJobQueue.inflight").gauge().value()).isEqualTo(1);
+
+              assertThat(source.commitFailure.get(10, TimeUnit.SECONDS))
+                  .hasRootCauseInstanceOf(SocketTimeoutException.class);
+              assertThat(source.commits.get()).isEqualTo(commitsAtFault);
+              assertThat(relay.droppedBytes.get()).isPositive();
+              assertThat(interrupted.get()).isFalse();
+              assertThat(done.isDone()).isFalse();
+              assertThat(peer.claimNextJobs(queue, 1, "peer", Duration.ofSeconds(30))).isEmpty();
+
+              relay.discardReplies.set(false);
+              awaitCondition(
+                  () ->
+                      peer.getByIds(List.of(id))
+                          .getFirst()
+                          .leaseUntil()
+                          .isAfter(unacknowledged.leaseUntil()),
+                  15);
+              AsyncJobRecord renewed = peer.getByIds(List.of(id)).getFirst();
+              assertThat(renewed.workerId()).isEqualTo(original.workerId());
+              assertThat(renewed.leaseToken()).isEqualTo(original.leaseToken());
+              assertThat(renewed.attemptCount()).isEqualTo(1);
+              assertThat(relay.sessions.get()).isGreaterThan(sessionsAtCommit);
+              assertThat(meters.get("asyncJobQueue.heartbeat.failed").counter().count())
+                  .isGreaterThanOrEqualTo(1);
+
+              release.countDown();
+              assertThat(done.get(10, TimeUnit.SECONDS).status()).isEqualTo(AsyncJobStatus.DONE);
+              awaitDrained(meters);
+              assertThat(invocations.get()).isEqualTo(1);
+              assertThat(callbacks.get()).isEqualTo(1);
+              assertThat(interrupted.get()).isFalse();
+              AsyncJobRecord terminal = peer.getByIds(List.of(id)).getFirst();
+              assertThat(terminal.status()).isEqualTo(AsyncJobStatus.DONE);
+              assertThat(terminal.attemptCount()).isEqualTo(1);
+              assertThat(terminal.jobData()).isEqualTo("{\"renewed\":true}");
+              assertThat(relay.failures).isEmpty();
+            } finally {
+              relay.discardReplies.set(false);
+              release.countDown();
+            }
+          }
+        }
+        assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
+        assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
+      }
+    }
+  }
+
+  @Test
   public void lostClaimReplyIsNotDispatchedAndRuntimeRecoversAfterLeaseExpiry() throws Exception {
     assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
     try (JdbcDatabaseContainer<?> database = database()) {
@@ -159,11 +293,7 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
               assertThat(recovered.leaseToken()).isNotEqualTo(unacknowledged.leaseToken());
               assertThat(recovered.updatedDate()).isAfterOrEqualTo(unacknowledged.leaseUntil());
               assertThat(done.get(10, TimeUnit.SECONDS).status()).isEqualTo(AsyncJobStatus.DONE);
-              awaitCondition(
-                  () ->
-                      meters.get("asyncJobQueue.inflight").gauge().value() == 0
-                          && meters.get("asyncJobQueue.executor.active").gauge().value() == 0
-                          && meters.get("asyncJobQueue.executor.queued").gauge().value() == 0);
+              awaitDrained(meters);
               assertThat(invocations.get()).isEqualTo(1);
               assertThat(callbacks.get()).isEqualTo(1);
               AsyncJobRecord terminal = peer.getByIds(List.of(id)).getFirst();
@@ -201,6 +331,14 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
     settings.setShutdownAwaitTerminationMs(5000);
     properties.getQueues().put(queue, settings);
     return properties;
+  }
+
+  private static void awaitDrained(SimpleMeterRegistry meters) throws InterruptedException {
+    awaitCondition(
+        () ->
+            meters.get("asyncJobQueue.inflight").gauge().value() == 0
+                && meters.get("asyncJobQueue.executor.active").gauge().value() == 0
+                && meters.get("asyncJobQueue.executor.queued").gauge().value() == 0);
   }
 
   private void initializeSchema(JdbcDatabaseContainer<?> database) throws SQLException {
@@ -367,7 +505,12 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
   }
 
   private static void awaitCondition(BooleanSupplier condition) throws InterruptedException {
-    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+    awaitCondition(condition, 3);
+  }
+
+  private static void awaitCondition(BooleanSupplier condition, long timeoutSeconds)
+      throws InterruptedException {
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
     CountDownLatch pause = new CountDownLatch(1);
     while (!condition.getAsBoolean()) {
       assertTrue("independent connection observes the server commit", System.nanoTime() < deadline);
@@ -384,10 +527,16 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
     final CountDownLatch entered = new CountDownLatch(1);
     final CompletableFuture<Throwable> commitFailure = new CompletableFuture<>();
     private final ReplyBlackhole relay;
+    private final Runnable beforeFaultCommit;
 
     CommitGate(DataSource target, ReplyBlackhole relay) {
+      this(target, relay, () -> {});
+    }
+
+    CommitGate(DataSource target, ReplyBlackhole relay, Runnable beforeFaultCommit) {
       super(target);
       this.relay = relay;
+      this.beforeFaultCommit = beforeFaultCommit;
     }
 
     @Override
@@ -404,6 +553,7 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
                 if (method.getName().equals("commit")) {
                   commits.incrementAndGet();
                   if (armed.compareAndSet(true, false)) {
+                    beforeFaultCommit.run();
                     relay.discardReplies.set(true);
                     entered.countDown();
                   }

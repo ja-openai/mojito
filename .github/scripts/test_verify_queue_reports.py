@@ -47,7 +47,7 @@ class QueueReportGateTest(unittest.TestCase):
         case.set("name", name)
         ET.SubElement(case, "skipped")
         self.write(root)
-        self.assertEqual((188, 1), verify_reports(self.path, "application"))
+        self.assertEqual((190, 1), verify_reports(self.path, "application"))
         case.set("name", "requiredContract")
         self.write(root)
         with self.assertRaisesRegex(ValueError, "required test skipped"):

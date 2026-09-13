@@ -10,7 +10,7 @@ prerequisites for that narrower landing. The full branch still includes discover
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has forty local commits (four original chunks plus CI,
+- The queue worktree has forty-one local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -152,6 +152,11 @@ not close its current gates.
   also passes on both native versions: the unacknowledged lease is never dispatched,
   then the same runtime reclaims after natural expiry with a fresh token and one
   handler invocation. Full Docker/Linux and sustained-partition gates remain open.
+  The [lost-heartbeat extension](#runtime-lost-heartbeat-recovery-2026-09-13-utc)
+  also passes on both native versions: a committed renewal with a lost reply does
+  not interrupt the live handler or discard its lease, and the same attempt renews
+  and completes after transport recovery. All four transport methods now pass per
+  native engine, separately from the skipped opt-in Maven control.
 - The [required-report gate](#required-database-report-gate-2026-09-13-utc) now
   rejects missing suites/database groups, underfilled test matrices, unexpected
   skips and retry artifacts after each clean CI database lane. Only the named
@@ -417,6 +422,42 @@ route flag or primary-master file changed. This bounded recovery case is not
 sustained partitions, already-running business-write fencing, durable caller
 admission, exactly-once effects, listener failover or workload capacity proof.
 
+## Runtime Lost Heartbeat Recovery (2026-09-13 UTC)
+
+`JdbcAsyncJobStoreNetworkIntegrationTest.lostHeartbeatReplyKeepsLiveHandlerAndRecoversRenewal`
+extends the maintained loopback relay fixture to a running handler's heartbeat.
+A separate connection reads the committed lease immediately before the faulted
+commit, so a previous successful renewal cannot satisfy the oracle. The server
+then extends that lease while the JDBC caller still waits for its discarded reply;
+the real driver eventually reports `SocketTimeoutException`, not an injected error.
+
+During uncertainty, the handler remains in flight and is not interrupted, no DONE
+callback fires and a peer cannot reclaim the live lease. Restoring replies lets
+the same runtime and pool reconnect and renew again with the original worker,
+lease token and attempt count. Releasing the handler then produces exactly one
+invocation/callback, terminal DONE with its returned payload, and drained executor
+and pool capacity. The test uses a 30-second lease to accommodate the failed socket
+and a possible replacement-handshake timeout; it does not backdate expiry or restart
+the runtime. A bounded pre-expiry recovery is not sustained partition, failover,
+shared-pool sizing, business-write fencing or exactly-once effects.
+
+All four maintained transport methods passed on native MySQL 8.4.11 in 32.439
+seconds and PostgreSQL 16.15 in 32.818 seconds, with zero failures, ignored tests
+or assumptions. Each run includes enqueue, completion, claim and heartbeat, using
+private TLS connections, guarded engine/datadir identity and durability settings.
+Only container orchestration is substituted; the relay, driver, pool, store and
+coordinator are real. MySQL TLS is encrypted but does not verify the self-signed
+server identity; PostgreSQL uses verify-full. Neither is a Docker/Linux CI result.
+
+Focused Maven reactor control passed 112 tests with eight expected opt-in skips
+across three suites and no errors, failures or reruns. All 11 report-gate fixture
+tests also pass after raising the required network matrix to four cases per
+database (191 application cases including the optional throughput benchmark).
+Root `mvn -Pno-local-config spotless:apply` passed. Sources and logs remain in
+`/private/tmp/queue-network-renewal.BBAVen/`; both private servers were cleanly
+stopped and only their datadirs removed. No queue production code, migration,
+route flag, ordinary-JAR artifact or primary-master file changed.
+
 ## Required Database Report Gate (2026-09-13 UTC)
 
 The real-database workflow previously opted in and disabled reruns, but Maven
@@ -431,7 +472,7 @@ Missing PostgreSQL cannot be masked by additional HSQL tests. Zero-test
 `BeforeClass` assumption reports fail. The sole allowed skip is
 `JdbcAsyncJobStoreDatabaseIntegrationTest.runtimePerformanceSmokeRunsAgainstRealDatabases`;
 throughput remains opt-in, not a required correctness or capacity claim.
-The current matrix floors are 189 application cases (188 required plus that
+The current matrix floors are 191 application cases (190 required plus that
 benchmark), 18 lean-consumer cases and 36 JPA-consumer cases. Floors are explicit
 maintenance contracts, not semantic validation of method bodies or DB identity.
 

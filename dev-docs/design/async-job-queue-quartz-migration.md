@@ -829,6 +829,12 @@ checks suite identities, database parameter groups and test-count floors. It
 rejects missing/empty reports, unexpected skips, failures and automatic-rerun
 artifacts. Only the explicitly named runtime performance benchmark may skip.
 See the [gate evidence and limits](async-job-queue-review.md#required-database-report-gate-2026-09-13-utc).
+The [lost-heartbeat transport extension](async-job-queue-review.md#runtime-lost-heartbeat-recovery-2026-09-13-utc)
+now also passes on native MySQL 8.4.11 and PostgreSQL 16.15: an unacknowledged
+committed renewal leaves the handler alive, recovers renewal on the same token
+and attempt, and completes once after replies resume. All four transport methods
+per engine pass; the required report floor now includes both new cases. This is
+bounded pre-expiry recovery, not sustained partitions or business-side fencing.
 Performance smoke remains separately opt-in, and these workflow changes do not
 certify a hosted run or the database identity behind a manually supplied report.
 
