@@ -42,7 +42,7 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest {
         new PostgreSQLContainer<>("postgres:16")
             .withUrlParam("connectTimeout", "1")
             .withUrlParam("socketTimeout", "2")) {
-      postgres.start();
+      int hostPort = DatabaseRestartTestSupport.startWithStablePort(postgres, 5432);
       String applicationName = "async-job-wakeup-database-restart-test";
       HikariConfig config = new HikariConfig();
       config.setJdbcUrl(postgres.getJdbcUrl());
@@ -162,6 +162,7 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest {
               .isEqualTo(1);
 
           postgres.getDockerClient().startContainerCmd(postgres.getContainerId()).exec();
+          DatabaseRestartTestSupport.assertStablePort(postgres, 5432, hostPort);
           awaitListenResult(registry, "connected", 2);
           try (Connection admin = notifierDataSource.getConnection()) {
             assertThat(postmasterStartedAt(admin)).isAfter(previousStart);

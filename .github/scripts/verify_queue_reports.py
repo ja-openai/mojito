@@ -36,7 +36,7 @@ CONSUMER = {
 LANES = {
     "application": {
         **{QUEUE_PACKAGE + name: groups for name, groups in APPLICATION.items()},
-        "com.box.l10n.mojito.AsyncJobQueueApplicationMigrationTest": {"": 2},
+        "com.box.l10n.mojito.AsyncJobQueueApplicationMigrationTest": {"8.0": 2, "8.4": 2},
     },
     "consumer": {CONSUMER_PACKAGE + name: groups for name, groups in CONSUMER.items()},
     "jpa-consumer": {

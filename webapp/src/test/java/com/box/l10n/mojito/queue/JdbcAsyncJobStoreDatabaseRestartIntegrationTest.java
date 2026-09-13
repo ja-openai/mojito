@@ -52,7 +52,8 @@ public class JdbcAsyncJobStoreDatabaseRestartIntegrationTest {
       throws Exception {
     assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
     try (JdbcDatabaseContainer<?> database = database()) {
-      database.start();
+      int containerPort = dialect == AsyncJobQueueJdbcDialect.MYSQL ? 3306 : 5432;
+      int hostPort = DatabaseRestartTestSupport.startWithStablePort(database, containerPort);
       installSchema(database);
       SimpleMeterRegistry meters = new SimpleMeterRegistry();
       try (AutoCloseable metersCleanup = meters::close;
@@ -109,6 +110,7 @@ public class JdbcAsyncJobStoreDatabaseRestartIntegrationTest {
               // timestamps.
               TimeUnit.MILLISECONDS.sleep(LEASE.toMillis());
               database.getDockerClient().startContainerCmd(database.getContainerId()).exec();
+              DatabaseRestartTestSupport.assertStablePort(database, containerPort, hostPort);
               await("the original runtime pool reconnects", () -> recovered(jdbc, previousStart));
               assertThat(database.isRunning()).isTrue();
               assertDurabilitySettings(jdbc);
@@ -180,7 +182,8 @@ public class JdbcAsyncJobStoreDatabaseRestartIntegrationTest {
   public void databaseRestartPreservesCommittedRowsAndFencesExpiredOwners() throws Exception {
     assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
     try (JdbcDatabaseContainer<?> database = database()) {
-      database.start();
+      int containerPort = dialect == AsyncJobQueueJdbcDialect.MYSQL ? 3306 : 5432;
+      int hostPort = DatabaseRestartTestSupport.startWithStablePort(database, containerPort);
       installSchema(database);
       try (HikariDataSource pool = pool(database)) {
         JdbcTemplate jdbc = new JdbcTemplate(pool);
@@ -244,6 +247,7 @@ public class JdbcAsyncJobStoreDatabaseRestartIntegrationTest {
         }
 
         database.getDockerClient().startContainerCmd(database.getContainerId()).exec();
+        DatabaseRestartTestSupport.assertStablePort(database, containerPort, hostPort);
         await(
             "the existing worker pool reconnects after database restart",
             () -> recovered(jdbc, beforeRestart));
