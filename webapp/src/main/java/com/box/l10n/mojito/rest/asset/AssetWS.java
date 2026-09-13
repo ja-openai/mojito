@@ -34,10 +34,14 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.base.MoreObjects;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -294,8 +298,9 @@ public class AssetWS {
         isAssetLocalizeAsyncQueueEnabled()
             && AssetLocalizeAsyncJobEligibility.isEligible(quartzJobInfo.getInput());
     String route = useAsyncQueue ? "assetlocalize" : "quartz";
+    long startNanos = System.nanoTime();
+    PollableFuture<LocalizedAssetBody> pollableFuture;
     try {
-      PollableFuture<LocalizedAssetBody> pollableFuture;
       if (useAsyncQueue) {
         if (assetLocalizeAsyncJobSubmissionService == null) {
           throw new IllegalStateException(
@@ -305,12 +310,13 @@ public class AssetWS {
       } else {
         pollableFuture = quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
       }
-      recordLocalizedAssetAsyncSchedule(route, "succeeded");
-      return pollableFuture;
     } catch (RuntimeException e) {
-      recordLocalizedAssetAsyncSchedule(route, "failed");
+      recordLocalizedAssetAsyncSchedule(route, "failed", System.nanoTime() - startNanos);
       throw e;
     }
+    // Diagnostics cannot turn an acknowledged admission into a failed scheduling attempt.
+    recordLocalizedAssetAsyncSchedule(route, "succeeded", System.nanoTime() - startNanos);
+    return pollableFuture;
   }
 
   private boolean isAssetLocalizeAsyncQueueEnabled() {
@@ -319,25 +325,55 @@ public class AssetWS {
         && asyncJobQueueAssetLocalizeProducerEnabled;
   }
 
-  private void recordLocalizedAssetAsyncSchedule(String route, String result) {
+  private void recordLocalizedAssetAsyncSchedule(String route, String result, long durationNanos) {
+    Tags tags = Tags.of("route", route, "result", result);
     recordLocalizedAssetMetric(
         () ->
             meterRegistry
-                .counter(
-                    "assetWS.getLocalizedAssetForContentAsync.schedule",
-                    Tags.of("route", route, "result", result))
+                .counter("assetWS.getLocalizedAssetForContentAsync.schedule", tags)
                 .increment());
+    recordLocalizedAssetMetric(
+        () ->
+            meterRegistry
+                .timer("assetWS.getLocalizedAssetForContentAsync.schedule.latency", tags)
+                .record(durationNanos, TimeUnit.NANOSECONDS));
   }
 
   private void recordLocalizedAssetMetric(Runnable recording) {
     try {
       recording.run();
     } catch (Throwable failure) {
-      if (failure instanceof VirtualMachineError
-          || "java.lang.ThreadDeath".equals(failure.getClass().getName())) {
-        throw (Error) failure;
+      rethrowJvmFatal(failure);
+      try {
+        logger.warn("Failed to record localized asset scheduling metric", failure);
+      } catch (Throwable loggingFailure) {
+        rethrowJvmFatal(loggingFailure);
+        // Do not recurse into diagnostics or reject accepted work when logging also fails.
       }
-      logger.warn("Failed to record localized asset scheduling metric", failure);
+    }
+  }
+
+  private static void rethrowJvmFatal(Throwable failure) {
+    if (failure instanceof VirtualMachineError || failure instanceof ThreadDeath) {
+      throw (Error) failure;
+    }
+    Set<Throwable> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+    ArrayDeque<Throwable> pending = new ArrayDeque<>();
+    pending.add(failure);
+    while (!pending.isEmpty()) {
+      Throwable current = pending.removeFirst();
+      if (!visited.add(current)) {
+        continue;
+      }
+      if (current instanceof VirtualMachineError || current instanceof ThreadDeath) {
+        throw (Error) current;
+      }
+      if (current.getCause() != null) {
+        pending.addLast(current.getCause());
+      }
+      for (Throwable suppressed : current.getSuppressed()) {
+        pending.addLast(suppressed);
+      }
     }
   }
 

@@ -14,7 +14,9 @@ import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.MockClock;
 import io.micrometer.core.instrument.config.MeterFilter;
+import io.micrometer.core.instrument.simple.SimpleConfig;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
@@ -25,13 +27,91 @@ import org.slf4j.Logger;
 
 public class AsyncJobQueueStatusMetricsReporterTest {
 
-  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+  private final MockClock clock = new MockClock();
+  private final SimpleMeterRegistry meterRegistry =
+      new SimpleMeterRegistry(SimpleConfig.DEFAULT, clock);
   private final Logger originalLogger = AsyncJobQueueStatusMetricsReporter.logger;
 
   @After
   public void tearDown() {
     AsyncJobQueueStatusMetricsReporter.logger = originalLogger;
     meterRegistry.close();
+  }
+
+  @Test
+  public void freshnessRemainsUnknownUntilTheFirstCompleteSample() {
+    clock.add(Duration.ofHours(1));
+    AsyncJobStore store = spy(new InMemoryAsyncJobStore());
+    doThrow(new IllegalStateException("database unavailable")).when(store).countByStatus("broken");
+
+    reporter(store).reportStatusCounts();
+
+    assertLastSuccess("broken", 0);
+    assertLastSuccess("assetlocalize", 3600);
+  }
+
+  @Test
+  public void partialStoreFailureDoesNotRefreshTimestampOrPublishPartialCounts() {
+    clock.add(Duration.ofHours(1));
+    InMemoryAsyncJobStore store = spy(new InMemoryAsyncJobStore());
+    AsyncJobQueueStatusMetricsReporter reporter = reporter(store);
+    reporter.reportStatusCounts();
+    store.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
+    clock.add(Duration.ofSeconds(60));
+    doThrow(new IllegalStateException("last query unavailable"))
+        .when(store)
+        .expiredLeaseStatus("assetlocalize");
+
+    reporter.reportStatusCounts();
+
+    assertLastSuccess("assetlocalize", 3600);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 0);
+    assertReadyCountGaugeValue("assetlocalize", 0);
+    assertLastSuccess("broken", 3660);
+    doReturn(new AsyncJobExpiredLeaseStatus(0, null, Instant.now()))
+        .when(store)
+        .expiredLeaseStatus("assetlocalize");
+    clock.add(Duration.ofSeconds(60));
+
+    reporter.reportStatusCounts();
+
+    assertLastSuccess("assetlocalize", 3720);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 1);
+    assertReadyCountGaugeValue("assetlocalize", 1);
+  }
+
+  @Test
+  public void failedGaugeRegistrationCannotMarkAnIncompleteSampleFresh() {
+    clock.add(Duration.ofHours(1));
+    meterRegistry
+        .config()
+        .meterFilter(
+            new MeterFilter() {
+              @Override
+              public Meter.Id map(Meter.Id id) {
+                if (id.getName().equals("asyncJobQueue.running.expired.count")
+                    && "broken".equals(id.getTag("queueName"))) {
+                  throw new IllegalStateException("gauge registration unavailable");
+                }
+                return id;
+              }
+            });
+
+    reporter(new InMemoryAsyncJobStore()).reportStatusCounts();
+
+    assertLastSuccess("broken", 0);
+    assertLastSuccess("assetlocalize", 3600);
+    assertFailedCounter("broken", 1);
+  }
+
+  private void assertLastSuccess(String queue, double expectedEpochSeconds) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.statusMetrics.lastSuccessEpochSeconds")
+                .tag("queueName", queue)
+                .gauge()
+                .value())
+        .isEqualTo(expectedEpochSeconds);
   }
 
   @Test

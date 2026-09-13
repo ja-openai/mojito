@@ -35,6 +35,7 @@ public class AsyncJobQueueStatusMetricsReporter {
   private final Map<String, AtomicLong> readyOldestAgeGauges = new ConcurrentHashMap<>();
   private final Map<String, AtomicLong> expiredLeaseCountGauges = new ConcurrentHashMap<>();
   private final Map<String, AtomicLong> expiredLeaseOldestAgeGauges = new ConcurrentHashMap<>();
+  private final Map<String, AtomicLong> lastSuccessEpochSecondsGauges = new ConcurrentHashMap<>();
 
   public AsyncJobQueueStatusMetricsReporter(
       AsyncJobStore asyncJobStore,
@@ -75,22 +76,37 @@ public class AsyncJobQueueStatusMetricsReporter {
   }
 
   private void reportStatusCounts(String queueName) {
+    AtomicLong lastSuccess = lastSuccessEpochSecondsGauge(queueName);
     Map<AsyncJobStatus, Long> countsByStatus = zeroCountsByStatus();
     for (AsyncJobStatusCount statusCount : asyncJobStore.countByStatus(queueName)) {
       countsByStatus.put(statusCount.status(), statusCount.count());
     }
 
+    AsyncJobReadyStatus readyStatus = asyncJobStore.readyStatus(queueName);
+    AsyncJobExpiredLeaseStatus expiredLeaseStatus = asyncJobStore.expiredLeaseStatus(queueName);
+    long readyAgeMs = readyOldestAgeMs(readyStatus);
+    long expiredAgeMs = expiredLeaseOldestAgeMs(expiredLeaseStatus);
+
+    // Finish all reads before publishing. These queries are still not a transactional snapshot.
     countsByStatus.forEach(
         (status, count) ->
             statusGauge(queueName, status).set(count == null ? 0L : Math.max(0L, count)));
-
-    AsyncJobReadyStatus readyStatus = asyncJobStore.readyStatus(queueName);
     readyCountGauge(queueName).set(Math.max(0L, readyStatus.count()));
-    readyOldestAgeGauge(queueName).set(readyOldestAgeMs(readyStatus));
-
-    AsyncJobExpiredLeaseStatus expiredLeaseStatus = asyncJobStore.expiredLeaseStatus(queueName);
+    readyOldestAgeGauge(queueName).set(readyAgeMs);
     expiredLeaseCountGauge(queueName).set(Math.max(0L, expiredLeaseStatus.count()));
-    expiredLeaseOldestAgeGauge(queueName).set(expiredLeaseOldestAgeMs(expiredLeaseStatus));
+    expiredLeaseOldestAgeGauge(queueName).set(expiredAgeMs);
+    // Zero means no complete sample yet; failures leave the previous success time untouched.
+    lastSuccess.set(meterRegistry.config().clock().wallTime() / 1000);
+  }
+
+  private AtomicLong lastSuccessEpochSecondsGauge(String queueName) {
+    return lastSuccessEpochSecondsGauges.computeIfAbsent(
+        queueName,
+        ignored ->
+            meterRegistry.gauge(
+                "asyncJobQueue.statusMetrics.lastSuccessEpochSeconds",
+                Tags.of("queueName", queueName),
+                new AtomicLong()));
   }
 
   private Set<String> queueNames() {

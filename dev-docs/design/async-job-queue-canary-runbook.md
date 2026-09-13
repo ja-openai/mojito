@@ -46,6 +46,10 @@ The branch is not currently ready for a blind merge or unrestricted canary.
 4. Approve the exact commit range, merge/push through the usual release path,
    update the deployment source pin and deploy the new image with queue routing off.
    Keep source merge, image build, deployment submission and healthy pods distinct.
+   Inspect the current Quartz JobStore first: if it is in-memory, quiesce producers
+   and drain/account for pending triggers before rolling workers. A disabled queue
+   release does not make an existing RAMJobStore restart durable. This also applies
+   to later config-only restarts.
 5. Verify every API and worker image digest, effective flags, Flyway history,
    readiness and error/DB metrics. Run a small normal localization workflow.
    Observe at least 60 minutes and one completed representative baseline workflow;
@@ -134,6 +138,49 @@ time, retries, lease expiry, DB lock/connection waits, CPU/memory/GC, errors and
 publication/repair debt. Keep task/job correlation out of high-cardinality metric
 labels and redact localized content and credentials from retained evidence.
 
+### Monitoring Acceptance
+
+Metrics in the application are not proof of a working monitoring pipeline. Verify
+the exact deployed image, all expected API/worker targets, central ingestion,
+recording/alert rules and incident routing before approving a canary. Rehearse
+missing-target and stale-sampler alerts; absence is not a healthy zero. Existing
+OOMs, restarts or DB timeouts require an understood baseline and safe headroom,
+not attribution to queue code that has not been deployed.
+
+| Check | Instrument / evidence | Interpretation |
+| --- | --- | --- |
+| Routing and admission latency | `assetWS.getLocalizedAssetForContentAsync.schedule` counter and `.schedule.latency` timer, tags `route=quartz\|assetlocalize`, `result=succeeded\|failed` | Same direct scheduler-call boundary for both routes; excludes HTTP parsing/asset lookup and downstream execution. Failure means the call threw, not proof that nothing was accepted. |
+| Ambiguous admission | `assetLocalizeAsyncJob.schedule{result=outcomeUnknown}` | Requires reconciliation, not blind retry/fallback. Ordinary HTTP failures and scheduler failures are not terminal-job failure rates. |
+| Queue wait / work / saturation | `asyncJobQueue.queueWait.latency`, `.claim.latency`, `.processing.latency`; `.inflight`, `.executor.active`, `.poll.skippedSaturated` | Attempt-level timings and local capacity, not end-to-end or unique-job counts. |
+| Durable backlog | `asyncJobQueue.status{status=queued\|running\|done\|failed}`, `.ready.count`, `.ready.oldestAgeMs`, `.running.expired.count`, `.running.expired.oldestAgeMs` | Sampled global store state; do not sum duplicate observations across pods. Separate calls are not an atomic snapshot; queued includes future retries. |
+| Sampler freshness | `asyncJobQueue.statusMetrics.lastSuccessEpochSeconds{queueName}` and `.statusMetrics.failed` | Zero until the first complete published sample; a failed read does not refresh it. Require a recent timestamp per expected pod/queue (proposed grace: three configured sample intervals plus scrape delay), not just the freshest replica. Missing series/targets also fail the gate. No queue reporter is expected while globally disabled. |
+| Execution errors / recovery | `asyncJobQueue.handler.failed`, `.retried`, `.failed`, `.transition.failed`, `.leaseExpiredReclaimed`, `.heartbeat.failed`, `.handler.completion.failed` | Attempts, terminal transitions and callback errors are distinct. Do not divide retry/attempt errors by successful unique requests. |
+| Publication / business result | `assetLocalizeAsyncJob.pollableTask.finished`, `.pollableTask.finish.failed`, `.repair`, plus cohort task/job/output reconciliation | Queue `.completed` means acknowledged DONE, not delivered output. Counters are hints; they cannot prove no unpublished/missing rows after a crash. |
+| End-to-end / parity | Canary driver: monotonic elapsed time before POST until terminal task AND successful output retrieval; record deadline, timeout, status and output comparison | Use the same method for Quartz and queue, including polling/network cost. Never add wait/processing p95s or infer client completion from DONE. Count unknown, missing and timed-out requests in cohort accounting. |
+| Infrastructure | Actual JDBC pool pending/active/max/timeouts and acquisition latency, DB CPU/locks/waits, JVM heap/GC/CPU, pod restarts/OOMs and HTTP errors | Verify every relevant pool and exporter; queue timers cannot expose all database or process saturation. |
+
+The optional Spring profile `queue-canary-metrics` configures bounded percentile
+histograms for direct admission, queue claim/wait/processing and Quartz wait/work.
+Its [property file](../../webapp/src/main/resources/config/application-queue-canary-metrics.properties)
+enables neither queue routing nor endpoint exposure and is not active by default.
+Append it without replacing existing profiles, or use the equivalent approved
+overrides, on BOTH baseline and canary pods. The Quartz listener separately needs
+`l10n.management.metrics.quartz.enabled=true`. Approve timer bounds and series
+budget; do not turn on histograms for all application meters. Verify the histogram
+buckets in the actual exporter and central backend, not just an actuator timer
+count/sum. The local export test covers Prometheus, not StatsD or live scraping.
+
+Compute p95 from combined histogram buckets scoped to the release and cohort;
+do not average per-pod percentiles. See
+[Micrometer histogram semantics](https://docs.micrometer.io/micrometer/reference/concepts/histogram-quantiles.html).
+If p95 falls in the overflow bucket, the sample count is insufficient, or unrelated
+traffic shares the route labels, the comparison is inconclusive. Use an isolated
+producer/time window and private per-request evidence, not repository/job IDs as
+new metric labels. Counters reset on restart and observations can be lost on crash;
+backend rate queries must handle resets and durable cohort accounting remains
+authoritative. A failed gauge publication can partially update values but cannot
+advance the last-success timestamp; it is not a cross-gauge atomicity guarantee.
+
 ## Stop And Roll Back
 
 Stop expansion immediately for lost admissions, incorrect/stale output, duplicate
@@ -180,7 +227,7 @@ status checks into production approval.
 
 ### Local Runbook Verification
 
-On 2026-09-13, 100 existing tests passed across eight suites with zero skips,
+For the initial runbook commit `c0c35f00d4` on 2026-09-13, 100 existing tests passed across eight suites with zero skips,
 failures, errors or reruns: asset service configuration, direct API routing,
 multi-locale routing, coordinator configuration/behavior, property validation,
 separate producer/consumer drain and multi-queue quiescence. The selection uses
@@ -193,3 +240,9 @@ frontend build reports existing large-chunk and ineffective dynamic-import
 warnings; queue failure warnings in these suites are deliberate injected faults.
 Logs are in `/private/tmp/queue-canary-runbook.KzT6wY/`. No runtime code, SQL,
 deployment configuration or test implementation changed for this runbook.
+
+The subsequent [canary telemetry verification](async-job-queue-review.md#canary-telemetry-2026-09-13)
+passes 211 focused tests, including opt-in Spring profile loading and Prometheus
+histogram export, missing/stale sample semantics and metric/logger failure isolation.
+These are local tests, not live backend ingestion, alert delivery, DB capacity or
+end-to-end canary certification.

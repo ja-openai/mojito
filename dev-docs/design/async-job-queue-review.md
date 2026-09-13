@@ -5626,6 +5626,47 @@ claimed. Verify actual production driver/session settings with the new code.
 Full application PostgreSQL compatibility is separate from the queue's PostgreSQL
 contract tests.
 
+## Canary Telemetry (2026-09-13)
+
+The canary audit found no matched direct-admission timer and no way to distinguish
+stale backlog gauges from a fresh healthy sample. Direct scheduling now records
+`assetWS.getLocalizedAssetForContentAsync.schedule.latency` with bounded route/result
+tags for both Quartz and queue. Timing uses monotonic elapsed time and excludes
+post-scheduling diagnostics. Successful scheduling telemetry is outside the business
+failure catch; independent best-effort counter/timer/logging paths preserve accepted
+tasks and original ordinary exceptions. Cause/suppression-aware, cycle-safe checks
+still propagate JVM-fatal errors rather than silently reporting successful work.
+
+The reporter completes all store reads before updating backlog gauges and publishes
+`asyncJobQueue.statusMetrics.lastSuccessEpochSeconds` only after successful gauge
+updates. Zero means no completed sample. Store errors preserve prior values/time;
+gauge errors can partially publish values but never advance freshness. This adds
+one gauge per configured queue, no extra SQL, and no transactional snapshot promise.
+
+The optional `queue-canary-metrics` Spring profile exports bounded histograms for
+six admission/queue/Quartz timers. It does not enable queue routes, the Quartz
+listener, endpoint exposure or authentication changes. The Boot configuration test
+loads the real profile and verifies finite bucket bounds, both admission routes,
+Prometheus export and default unconfigured behavior. Exported names preserve camel
+case in these meter segments; do not guess lowercase aliases when writing alerts.
+
+Ten added assertions/tests failed against the old metrics behavior in
+`/private/tmp/queue-canary-metrics-red.log`. After implementation and export-fixture
+correction, 211 tests passed in 15 suites with zero failures/errors/skips/reruns
+using `-Pno-local-config`: runtime telemetry/lifecycle, reporter/configuration,
+Prometheus export, API routing/admission, adapter/parent/admin, drain/load and
+Quartz-listener checks. Root formatting and whitespace checks passed. Logs:
+`/private/tmp/queue-canary-metrics-final.log` and
+`/private/tmp/queue-canary-metrics-spotless-final.log`. Existing application weaving,
+ThreadDeath deprecation, npm proxy and frontend bundle warnings remain. The load
+tests are in-memory, not database throughput or production soak evidence.
+
+The [monitoring acceptance checklist](async-job-queue-canary-runbook.md#monitoring-acceptance)
+keeps central ingestion/no-data alert rehearsal, client-observed end-to-end timing,
+cohort publication reconciliation and actual DB/JVM baselines as activation gates.
+It also requires identifying/draining any legacy RAMJobStore before worker restarts.
+No migration, deployment configuration, queue enablement or live workload changed.
+
 ## Next Run
 
 The late stale writer is reproduced and tracked queue work is excluded, not fenced.
