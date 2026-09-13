@@ -2,6 +2,9 @@
 
 from pathlib import Path
 import io
+import json
+import os
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -9,6 +12,47 @@ from unittest.mock import patch
 import zipfile
 
 from smoke import NOTICES, PYTHON_LICENSE_EXPRESSION, Smoke
+
+
+class CommandOutputTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="mf2-command-output-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.smoke = object.__new__(Smoke)
+        self.smoke.runtime = "go"
+        self.smoke.output = self.root
+        self.smoke.source = self.root
+        self.smoke.env = os.environ.copy()
+        self.smoke.commands = []
+
+    def test_returns_json_stdout_and_preserves_stderr_diagnostics(self):
+        output = self.smoke.run(
+            [
+                sys.executable,
+                "-c",
+                'import sys; print(\'{"Module": "example"}\'); '
+                'print("go: downloading example v1.0.0", file=sys.stderr)',
+            ]
+        )
+        self.assertEqual(json.loads(output), {"Module": "example"})
+        log = Path(self.smoke.commands[0]["log"]).read_text()
+        self.assertIn('"Module": "example"', log)
+        self.assertIn("go: downloading example v1.0.0", log)
+
+    def test_nonzero_exit_still_fails_and_preserves_output(self):
+        with self.assertRaisesRegex(RuntimeError, r"failed \(7\)"):
+            self.smoke.run(
+                [
+                    sys.executable,
+                    "-c",
+                    'import sys; print("partial output"); '
+                    'print("command failed", file=sys.stderr); sys.exit(7)',
+                ]
+            )
+        log = Path(self.smoke.commands[0]["log"]).read_text()
+        self.assertIn("partial output", log)
+        self.assertIn("command failed", log)
 
 
 class ArtifactNoticeTest(unittest.TestCase):
