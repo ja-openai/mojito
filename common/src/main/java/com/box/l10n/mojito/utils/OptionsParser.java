@@ -34,23 +34,11 @@ public class OptionsParser {
   }
 
   public Boolean getBoolean(String key, Boolean defaultValue) {
-    Boolean value = defaultValue;
-
-    if (this.options.containsKey(key)) {
-      value = Boolean.valueOf(this.options.get(key));
-    }
-
-    return value;
+    return this.options.containsKey(key) ? Boolean.valueOf(this.options.get(key)) : defaultValue;
   }
 
   public String getString(String key, String defaultValue) {
-    String value = defaultValue;
-
-    if (this.options.containsKey(key)) {
-      value = this.options.get(key);
-    }
-
-    return value;
+    return this.options.getOrDefault(key, defaultValue);
   }
 
   public void getInteger(String key, Consumer<Integer> consumer) {
