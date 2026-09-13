@@ -3,14 +3,14 @@
 ## Current Readiness
 
 **The full branch is not production-ready or merge-ready against local master.**
-This snapshot is source/test evidence as of 2026-09-12 UTC, not deployment approval.
+This snapshot is source/test evidence as of 2026-09-13 UTC, not deployment approval.
 A separately reviewed inactive foundation can land before workload adoption;
 future AI Review support, full Quartz replacement and an OSS release are not
 prerequisites for that narrower landing. The full branch still includes discovered
 Flyway migrations and shared Quartz-path changes. Historical milestones below do
 not close its current gates.
 
-- The queue worktree has thirty-eight local commits (four original chunks plus CI,
+- The queue worktree has thirty-nine local commits (four original chunks plus CI,
   failure-boundary, policy and verification follow-ups) over `7fcc341457`. Local master at this
   checkpoint is `730b0a3cb0`, which
   has 36 commits not in the queue branch and owns migrations through V112, including
@@ -148,6 +148,10 @@ not close its current gates.
   and the original pool replaces the failed connection without duplicating the row
   or reclaiming terminal DONE. These are bounded one-way transport failures, not
   durable request-identity recovery, runtime/listener partition soak or failover.
+  The [lost-claim runtime extension](#runtime-lost-claim-recovery-2026-09-13-utc)
+  also passes on both native versions: the unacknowledged lease is never dispatched,
+  then the same runtime reclaims after natural expiry with a fresh token and one
+  handler invocation. Full Docker/Linux and sustained-partition gates remain open.
 - Default-off limits routing, not all effects of merging: Flyway still discovers
   the application migration, and shared task/blob/generation changes also affect
   Quartz callers. The intended first adapter is untracked, single-locale asset
@@ -326,8 +330,8 @@ guard. No admission, schema-adoption, business-fencing or rollout gate is closed
 
 ## Lost TCP Commit Replies (2026-09-12 UTC)
 
-`JdbcAsyncJobStoreNetworkIntegrationTest` adds two opt-in contracts per database
-to the required zero-rerun CI selector, protected by the workflow contract test.
+The initial `JdbcAsyncJobStoreNetworkIntegrationTest` added two opt-in contracts
+per database to the required zero-rerun CI selector, protected by the workflow contract test.
 A loopback byte relay passes the existing driver protocol, including TLS, without
 terminating or inspecting it. A connection wrapper arms reply discard immediately
 before invoking the real JDBC `commit()`; it does not throw an injected exception.
@@ -372,6 +376,41 @@ still throws without returning the committed ID, and the test oracle is not an
 application recovery API. Persisted admission identity, unknown-commit reconciliation,
 callback delivery, lease-loss/runtime behavior during sustained partitions, shared
 pool headroom, multi-host soak and replica failover remain separate gates.
+
+### Runtime Lost-Claim Recovery (2026-09-13 UTC)
+
+The network fixture now has a third contract per dialect,
+`lostClaimReplyIsNotDispatchedAndRuntimeRecoversAfterLeaseExpiry`. A real coordinator
+constructs its executor, poll loop and heartbeat scheduler. The same byte relay
+discards the first claim's commit reply; the direct observer sees RUNNING with
+attempt count one before JDBC times out. There must be no handler invocation,
+callback or in-flight dispatch, and another worker cannot claim the live lease.
+
+After replies resume, recovery uses the same coordinator and pool without a restart
+or explicit wakeup. It waits for the ten-second lease to expire naturally: no row
+timestamp is backdated and no lease is force-released. The dispatched record must
+have attempt count two, the same worker ID, a different lease token, the reclaim
+flag, and a database update time at or after the old expiry. Exactly one handler
+and one acknowledged DONE callback execute, the terminal payload is preserved,
+claim failure is metered and executor/pool capacity drains. A committed but
+unacknowledged claim consumes an attempt even though its handler never ran.
+
+All three maintained methods passed in separate native TLS runs: MySQL 8.4.11
+reported three tests in 21.304 seconds; PostgreSQL 16.15 reported three in 21.638
+seconds. Neither run had failures, ignored tests or assumptions. Native container
+substitution, isolated schemas and TLS/durability settings match the preceding
+transport proof; the complete Docker job has not run. Focused Maven control passed
+111 tests with six expected opt-in skips across three suites, no failures/errors
+or Surefire reruns. Root `mvn -Pno-local-config spotless:apply` passed.
+
+An initial compile failure used the pinned Micrometer registry as AutoCloseable;
+the fixture now follows the existing `meters::close` cleanup pattern. That build
+failure, corrected control output, both native logs and guarded wrapper sources
+remain in `/private/tmp/queue-network-claim.Hgqe5o/`. Both private servers were
+cleanly stopped and their datadirs removed. No production source, migration,
+route flag or primary-master file changed. This bounded recovery case is not
+sustained partitions, already-running business-write fencing, durable caller
+admission, exactly-once effects, listener failover or workload capacity proof.
 
 ## Foundation History Dependency (2026-09-12 UTC)
 

@@ -906,6 +906,11 @@ Its enqueue and completion lost-reply cases now pass on native MySQL 8.4.11 and
 PostgreSQL 16.15: a real TCP reply blackhole produces a driver timeout after an
 independently observed commit, then the same pool reconnects without duplicate work
 or replaying DONE. See the [bounded transport proof](async-job-queue-review.md#lost-tcp-commit-replies-2026-09-12-utc).
+Its third case per dialect now also passes on both native versions: the real runtime
+does not dispatch an unacknowledged claim, waits for natural lease expiry and then
+executes exactly once with attempt count two and a fresh token. Preserve this
+[lost-claim recovery check](async-job-queue-review.md#runtime-lost-claim-recovery-2026-09-13-utc)
+in the required six-case Docker selection; it does not imply exactly-once effects.
 It does not implement caller identity/reconciliation or certify sustained runtime
 and listener partitions, multi-host failover, capacity or the full Docker/Linux job.
 

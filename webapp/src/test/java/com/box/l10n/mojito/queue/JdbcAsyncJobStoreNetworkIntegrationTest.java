@@ -6,6 +6,7 @@ import static org.junit.Assume.assumeTrue;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
@@ -20,6 +21,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -44,6 +46,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DelegatingDataSource;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -74,21 +77,154 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
     assertLostCommitReply(true);
   }
 
+  @Test
+  public void lostClaimReplyIsNotDispatchedAndRuntimeRecoversAfterLeaseExpiry() throws Exception {
+    assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
+    try (JdbcDatabaseContainer<?> database = database()) {
+      database.start();
+      initializeSchema(database);
+      JdbcAsyncJobStore peer = store(independentSource(database));
+      String queue = "lost-claim-" + UUID.randomUUID();
+      AsyncJobId id = peer.enqueueNow(queue, "{}");
+      AtomicInteger invocations = new AtomicInteger();
+      AtomicInteger callbacks = new AtomicInteger();
+      CompletableFuture<AsyncJobRecord> dispatched = new CompletableFuture<>();
+      CompletableFuture<AsyncJobRecord> done = new CompletableFuture<>();
+      AsyncJobHandler handler =
+          new AsyncJobHandler() {
+            @Override
+            public String queueName() {
+              return queue;
+            }
+
+            @Override
+            public AsyncJobHandlerResult process(AsyncJobRecord job) {
+              invocations.incrementAndGet();
+              dispatched.complete(job);
+              return AsyncJobHandlerResult.done("{\"recovered\":true}");
+            }
+
+            @Override
+            public void onJobDone(AsyncJobRecord job, AsyncJobHandlerResult result) {
+              callbacks.incrementAndGet();
+              done.complete(job);
+            }
+          };
+      SimpleMeterRegistry meters = new SimpleMeterRegistry();
+      try (AutoCloseable meterCleanup = meters::close;
+          ReplyBlackhole relay =
+              new ReplyBlackhole(database.getHost(), database.getFirstMappedPort());
+          HikariDataSource pool = pool(database, relay)) {
+        CommitGate source = new CommitGate(pool, relay);
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setAwaitTerminationMillis(5000);
+        scheduler.setThreadNamePrefix("lost-claim-poll-");
+        try (AutoCloseable schedulerCleanup = scheduler::shutdown) {
+          scheduler.initialize();
+          AsyncJobQueueCoordinator coordinator =
+              new AsyncJobQueueCoordinator(
+                  store(source), runtimeProperties(queue), List.of(handler), scheduler, meters);
+          try (AutoCloseable coordinatorCleanup = coordinator::stop) {
+            source.armed.set(true);
+            coordinator.start();
+            try {
+              assertTrue("claim enters commit", source.entered.await(10, TimeUnit.SECONDS));
+              int sessionsAtCommit = relay.sessions.get();
+              awaitCondition(
+                  () -> peer.getByIds(List.of(id)).getFirst().status() == AsyncJobStatus.RUNNING);
+              AsyncJobRecord unacknowledged = peer.getByIds(List.of(id)).getFirst();
+              assertThat(unacknowledged.attemptCount()).isEqualTo(1);
+              assertThat(source.commitFailure.isDone())
+                  .as("commit is visible before timeout")
+                  .isFalse();
+              assertThat(invocations.get()).isZero();
+              assertThat(callbacks.get()).isZero();
+              assertThat(meters.get("asyncJobQueue.inflight").gauge().value()).isZero();
+
+              assertThat(source.commitFailure.get(10, TimeUnit.SECONDS))
+                  .hasRootCauseInstanceOf(SocketTimeoutException.class);
+              assertThat(source.commits.get()).as("one uncertain claim commit").isEqualTo(1);
+              assertThat(relay.droppedBytes.get()).isPositive();
+              relay.discardReplies.set(false);
+              // This is a real, unexpired committed lease, not an injected or backdated row.
+              assertThat(peer.claimNextJobs(queue, 1, "peer", Duration.ofSeconds(10))).isEmpty();
+              assertThat(invocations.get()).isZero();
+
+              AsyncJobRecord recovered = dispatched.get(20, TimeUnit.SECONDS);
+              assertThat(recovered.id()).isEqualTo(id);
+              assertThat(recovered.attemptCount()).isEqualTo(2);
+              assertThat(recovered.leaseReclaimed()).isTrue();
+              assertThat(recovered.workerId()).isEqualTo(unacknowledged.workerId());
+              assertThat(recovered.leaseToken()).isNotEqualTo(unacknowledged.leaseToken());
+              assertThat(recovered.updatedDate()).isAfterOrEqualTo(unacknowledged.leaseUntil());
+              assertThat(done.get(10, TimeUnit.SECONDS).status()).isEqualTo(AsyncJobStatus.DONE);
+              awaitCondition(
+                  () ->
+                      meters.get("asyncJobQueue.inflight").gauge().value() == 0
+                          && meters.get("asyncJobQueue.executor.active").gauge().value() == 0
+                          && meters.get("asyncJobQueue.executor.queued").gauge().value() == 0);
+              assertThat(invocations.get()).isEqualTo(1);
+              assertThat(callbacks.get()).isEqualTo(1);
+              AsyncJobRecord terminal = peer.getByIds(List.of(id)).getFirst();
+              assertThat(terminal.status()).isEqualTo(AsyncJobStatus.DONE);
+              assertThat(terminal.attemptCount()).isEqualTo(2);
+              assertThat(terminal.jobData()).isEqualTo("{\"recovered\":true}");
+              assertThat(relay.sessions.get()).isGreaterThan(sessionsAtCommit);
+              assertThat(
+                      meters.find("asyncJobQueue.claim.failed").counters().stream()
+                          .mapToDouble(counter -> counter.count())
+                          .sum())
+                  .isGreaterThanOrEqualTo(1);
+            } finally {
+              relay.discardReplies.set(false);
+            }
+          }
+        }
+        assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
+        assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
+      }
+    }
+  }
+
+  private static AsyncJobQueueProperties runtimeProperties(String queue) {
+    AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
+    properties.setStore("jdbc");
+    AsyncJobQueueProperties.QueueSettings settings = new AsyncJobQueueProperties.QueueSettings();
+    settings.setMaxConcurrency(1);
+    settings.setClaimBatchSize(1);
+    settings.setPollIntervalMs(25);
+    settings.setMaxPollIntervalMs(100);
+    settings.setPollJitterPercent(0);
+    settings.setLeaseDurationMs(10_000);
+    settings.setHeartbeatIntervalMs(1000);
+    settings.setShutdownAwaitTerminationMs(5000);
+    properties.getQueues().put(queue, settings);
+    return properties;
+  }
+
+  private void initializeSchema(JdbcDatabaseContainer<?> database) throws SQLException {
+    try (Connection connection = database.createConnection("")) {
+      ScriptUtils.executeSqlScript(
+          connection,
+          new ClassPathResource(
+              dialect == AsyncJobQueueJdbcDialect.MYSQL
+                  ? "db/migration/V109__Async_Job_Queue.sql"
+                  : "db/postgresql/migration/V109__Async_Job_Queue.sql"));
+    }
+  }
+
+  private static DataSource independentSource(JdbcDatabaseContainer<?> database) {
+    return new DriverManagerDataSource(
+        database.getJdbcUrl(), database.getUsername(), database.getPassword());
+  }
+
   private void assertLostCommitReply(boolean completion) throws Exception {
     assumeTrue(Boolean.getBoolean("mojito.asyncJobQueue.testcontainers"));
     try (JdbcDatabaseContainer<?> database = database()) {
       database.start();
-      try (Connection connection = database.createConnection("")) {
-        ScriptUtils.executeSqlScript(
-            connection,
-            new ClassPathResource(
-                dialect == AsyncJobQueueJdbcDialect.MYSQL
-                    ? "db/migration/V109__Async_Job_Queue.sql"
-                    : "db/postgresql/migration/V109__Async_Job_Queue.sql"));
-      }
-      DataSource direct =
-          new DriverManagerDataSource(
-              database.getJdbcUrl(), database.getUsername(), database.getPassword());
+      initializeSchema(database);
+      DataSource direct = independentSource(database);
       JdbcTemplate oracle = new JdbcTemplate(direct);
       oracle.setQueryTimeout(5);
       JdbcAsyncJobStore peer = store(direct);
@@ -246,6 +382,7 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
     final AtomicBoolean armed = new AtomicBoolean();
     final AtomicInteger commits = new AtomicInteger();
     final CountDownLatch entered = new CountDownLatch(1);
+    final CompletableFuture<Throwable> commitFailure = new CompletableFuture<>();
     private final ReplyBlackhole relay;
 
     CommitGate(DataSource target, ReplyBlackhole relay) {
@@ -274,6 +411,9 @@ public class JdbcAsyncJobStoreNetworkIntegrationTest {
                 try {
                   return method.invoke(target, arguments);
                 } catch (InvocationTargetException failure) {
+                  if (method.getName().equals("commit")) {
+                    commitFailure.complete(failure.getCause());
+                  }
                   throw failure.getCause();
                 }
               });
