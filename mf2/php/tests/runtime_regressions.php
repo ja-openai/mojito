@@ -12,6 +12,7 @@ function runtime_regressions(): void
 {
     numeric_source_regressions();
     numeric_conversion_regressions();
+    numeric_option_source_regressions();
     $registry = Mojito\MessageFormat2\FunctionRegistry::portable();
     $probe = $registry->withFunction('probe', static fn(array $call): string => $call['optionValue']('u:dir', 'removed'));
     $probeResult = format_message(parse_to_model('{:probe u:dir=$direction}')['model'], ['direction' => 'rtl'], ['functions' => $probe]);
@@ -39,6 +40,27 @@ function runtime_regressions(): void
     $parts = format_message_to_parts($model);
     $parts['parts'][0]['attributes']['role']['value'] = 'new';
     if (format_message_to_parts($model)['parts'][0]['attributes']['role']['value'] !== 'old') throw new RuntimeException('Parts mutation changed catalog.');
+}
+
+function numeric_option_source_regressions(): void
+{
+    $portable = Mojito\MessageFormat2\FunctionRegistry::portable();
+    $custom = $portable->withFunction('replace', static fn(array $call): string => '9.8');
+    $source = '.local $raw = {1 :replace}' . "\n"
+        . '.local $digits = {$raw :integer}' . "\n"
+        . '.local $next = {$digits :offset add=1}' . "\n"
+        . '{{digits={$digits}; total={10 :offset add=$digits}; next={10 :offset add=$next}}}';
+    $result = format_message(parse_to_model($source)['model'], [], ['functions' => $custom]);
+    if ($result['hasErrors'] || $result['value'] !== 'digits=9; total=19; next=20') throw new RuntimeException('Numeric option crossed a custom source boundary: ' . json_encode($result));
+
+    foreach (['withFunction', 'withNumericFunction'] as $registration) {
+        $custom = $portable->$registration('integer', static fn(array $call): string => '9');
+        $source = '.local $digits = {1 :integer}' . "\n"
+            . '.local $again = {$digits :number}' . "\n"
+            . '{{digits={$digits}; total={10 :offset add=$digits}; again={10 :offset add=$again}}}';
+        $result = format_message(parse_to_model($source)['model'], [], ['functions' => $custom]);
+        if ($result['hasErrors'] || $result['value'] !== 'digits=9; total=19; again=19') throw new RuntimeException('Custom numeric formatter reused its input operand: ' . json_encode($result));
+    }
 }
 
 function numeric_source_regressions(): void

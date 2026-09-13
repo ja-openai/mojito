@@ -15,10 +15,10 @@ final class IntlFunctions
     public static function registry(): FunctionRegistry
     {
         return Internal\enable_source_memoization(FunctionRegistry::portable()
-            ->withNumericFunction('number', self::formatNumber(...))
-            ->withNumericFunction('percent', self::formatPercent(...))
-            ->withNumericFunction('integer', self::formatInteger(...))
-            ->withNumericFunction('currency', self::formatCurrency(...))
+            ->withBuiltinNumericFunction('number', self::formatNumber(...))
+            ->withBuiltinNumericFunction('percent', self::formatPercent(...))
+            ->withBuiltinNumericFunction('integer', self::formatInteger(...))
+            ->withBuiltinNumericFunction('currency', self::formatCurrency(...))
             ->withFunction('date', self::formatDate(...))
             ->withFunction('time', self::formatTime(...))
             ->withFunction('datetime', self::formatDateTime(...)));

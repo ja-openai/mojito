@@ -92,6 +92,11 @@ Built-in portable and Intl registries memoize literal-only numeric histories wit
 including exact decimal offsets and at most 64 inherited option lookups per source. Variable-option
 histories and customized registries remain uncached, preserving callback and copied-source behavior.
 Numeric LTR direction survives reannotation without adding inferred direction to public parts.
+Built-in numeric options use retained numeric operands, including integer truncation and
+offsets, so localized display digits do not change offset or fraction-digit option parsing.
+Custom formatter and selector callbacks keep display values for their options. Both `withFunction`
+and `withNumericFunction` overrides clear built-in operand semantics; numeric reannotation starts
+from the custom result. `withBuiltinNumericFunction` is an internal adapter registration method.
 
 Portable `:integer` truncates bounded decimal text directly, including magnitudes above the native
 signed integer range. Exact matching keeps that value; plural categories outside the supported

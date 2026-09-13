@@ -157,7 +157,7 @@ function check_runtime_test(array $defaults, array $test): bool
 function official_function_registry(): FunctionRegistry
 {
     return FunctionRegistry::defaults()
-        ->withFunction('currency', 'official_currency_function')
+        ->withBuiltinNumericFunction('currency', 'official_currency_function')
         ->withFunction('datetime', 'official_datetime_function')
         ->withFunction('date', 'official_date_function')
         ->withFunction('time', 'official_time_function')

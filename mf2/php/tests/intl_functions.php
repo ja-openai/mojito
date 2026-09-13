@@ -141,6 +141,69 @@ foreach ($fixturePatterns as $fixturePattern) {
 }
 assert_same('adapter differential case count', 47, $checkedSelectionCases);
 
+// Explicit numbering systems keep this regression independent of ICU's locale defaults.
+$offsetSource = json_decode((string) file_get_contents("{$selectionFixtureRoot}/adapters/offset-variable.json"), true, flags: JSON_THROW_ON_ERROR)['source'];
+foreach (['ar-u-nu-arab', 'ar-u-nu-latn'] as $locale) {
+    $actual = format_message(parse_to_model($offsetSource)['model'], ['value' => 10, 'step' => 10.9], [
+        'locale' => $locale,
+        'functions' => IntlFunctions::registry(),
+    ]);
+    assert_same("{$locale} numeric variable option output", 'zero', $actual['value']);
+    assert_error_codes("{$locale} numeric variable option errors", $actual['errors'], []);
+}
+
+$fractionOption = parse_to_model('.input {$digits :integer}' . "\n" . '{{{1.25 :number maximumFractionDigits=$digits}}}')['model'];
+$fractionOutput = format_message($fractionOption, ['digits' => 1], [
+    'locale' => 'ar-u-nu-arab',
+    'functions' => IntlFunctions::registry(),
+]);
+assert_same('localized fraction option output', expected_number('ar-u-nu-arab', 1.25, maxFractionDigits: 1), $fractionOutput['value']);
+assert_error_codes('localized fraction option errors', $fractionOutput['errors'], []);
+
+$minimumOption = parse_to_model('.input {$digits :integer}' . "\n" . '{{{1.2 :number minimumFractionDigits=$digits}}}')['model'];
+$actual = format_message($minimumOption, ['digits' => 2], ['locale' => 'ar-u-nu-arab', 'functions' => IntlFunctions::registry()]);
+assert_same('localized minimum fraction option output', expected_number('ar-u-nu-arab', 1.2, minFractionDigits: 2), $actual['value']);
+assert_error_codes('localized minimum fraction option errors', $actual['errors'], []);
+
+$currencyOption = parse_to_model('.input {$digits :integer}' . "\n" . '{{{1.25 :currency currency=USD fractionDigits=$digits}}}')['model'];
+$actual = format_message($currencyOption, ['digits' => 1], ['locale' => 'ar-u-nu-arab', 'functions' => IntlFunctions::registry()]);
+$currencyFormatter = new NumberFormatter('ar-u-nu-arab', NumberFormatter::CURRENCY);
+$currencyFormatter->setAttribute(NumberFormatter::MIN_FRACTION_DIGITS, 1);
+$currencyFormatter->setAttribute(NumberFormatter::MAX_FRACTION_DIGITS, 1);
+assert_same('localized currency fraction option output', $currencyFormatter->formatCurrency(1.25, 'USD'), $actual['value']);
+assert_error_codes('localized currency fraction option errors', $actual['errors'], []);
+
+$localizedDigits = expected_number('ar-u-nu-arab', 1);
+foreach (['withFunction', 'withNumericFunction'] as $registration) {
+    $custom = IntlFunctions::registry()->$registration('number', static fn(array $call): string => $call['optionValue']('maximumFractionDigits', 'missing'));
+    foreach ([
+        '.local $digits = {1 :integer}' . "\n" . '{{{2 :number maximumFractionDigits=$digits}}}',
+        '.local $digits = {1 :integer}' . "\n" . '.local $n = {1.25 :percent maximumFractionDigits=$digits}' . "\n" . '{{{$n :number}}}',
+    ] as $source) {
+        $actual = format_message(parse_to_model($source)['model'], [], ['locale' => 'ar-u-nu-arab', 'functions' => $custom]);
+        assert_same('custom numeric option keeps display', $localizedDigits, $actual['value']);
+        assert_error_codes('custom numeric option errors', $actual['errors'], []);
+    }
+}
+
+$customSource = IntlFunctions::registry()->withFunction('replace', static fn(array $call): string => '9.8');
+$source = '.local $raw = {1 :replace}' . "\n" . '.local $digits = {$raw :integer}' . "\n" . '{{{10 :offset add=$digits}}}';
+$actual = format_message(parse_to_model($source)['model'], [], ['locale' => 'ar-u-nu-arab', 'functions' => $customSource]);
+assert_same('localized reannotation respects custom boundary', '19', $actual['value']);
+assert_error_codes('localized reannotation errors', $actual['errors'], []);
+
+$customOption = IntlFunctions::registry()->withFunction('probe', static fn(array $call): string => $call['optionValue']('label', 'missing'));
+$source = '.local $digits = {1 :integer}' . "\n" . '{{{:probe label=$digits}}}';
+$actual = format_message(parse_to_model($source)['model'], [], ['locale' => 'ar-u-nu-arab', 'functions' => $customOption]);
+assert_same('custom nonnumeric option keeps display', $localizedDigits, $actual['value']);
+assert_error_codes('custom nonnumeric option errors', $actual['errors'], []);
+
+$customSelector = IntlFunctions::registry()->withSelector('number', static fn(array $match): ?int => $match['key'] === 'one' && $match['optionValue']('maximumFractionDigits', null) === $localizedDigits ? 1 : null);
+$source = '.input {$digits :integer}' . "\n" . '.input {$n :number maximumFractionDigits=$digits}' . "\n" . '.match $n' . "\n" . 'one {{custom}}' . "\n" . '* {{other}}';
+$actual = format_message(parse_to_model($source)['model'], ['digits' => 1, 'n' => 1.25], ['locale' => 'ar-u-nu-arab', 'functions' => $customSelector]);
+assert_same('custom selector option keeps display', 'custom', $actual['value']);
+assert_error_codes('custom selector option errors', $actual['errors'], []);
+
 echo "PHP Intl function registry tests passed.\n";
 
 function expected_output(string $locale, array $arguments): string
