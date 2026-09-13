@@ -22,6 +22,7 @@ import com.box.l10n.mojito.service.team.TeamRepository;
 import com.box.l10n.mojito.service.team.TeamService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
+import com.box.l10n.mojito.test.ThreadBoundTransactionAdvice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
@@ -36,8 +37,6 @@ import org.junit.Test;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionManager;
-import org.springframework.transaction.aspectj.AnnotationTransactionAspect;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -62,7 +61,7 @@ public class AgentReviewServiceTest {
   private final Map<Long, AgentReviewFeedback> storedFeedback = new HashMap<>();
   private final AtomicLong proposalIds = new AtomicLong(100);
   private final AtomicLong feedbackIds = new AtomicLong(200);
-  private TransactionManager previousAspectTransactionManager;
+  private ThreadBoundTransactionAdvice transactionAdvice;
   private AgentReviewService service;
   private RunView run;
   private Claim claim;
@@ -70,13 +69,11 @@ public class AgentReviewServiceTest {
 
   @Before
   public void setup() {
-    AnnotationTransactionAspect aspect = AnnotationTransactionAspect.aspectOf();
-    previousAspectTransactionManager = aspect.getTransactionManager();
     // This mock-only fixture must not inherit a database manager from an earlier Spring test.
     // Keep annotation advice separate from the item transactions asserted below.
     PlatformTransactionManager adviceTransactions = mock(PlatformTransactionManager.class);
     when(adviceTransactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
-    aspect.setTransactionManager(adviceTransactions);
+    transactionAdvice = new ThreadBoundTransactionAdvice(adviceTransactions);
 
     when(userService.isCurrentUserAdminOrPm()).thenReturn(true);
     when(userService.isCurrentUserTranslationRole()).thenReturn(true);
@@ -233,7 +230,9 @@ public class AgentReviewServiceTest {
 
   @After
   public void restoreTransactionAspect() {
-    AnnotationTransactionAspect.aspectOf().setTransactionManager(previousAspectTransactionManager);
+    if (transactionAdvice != null) {
+      transactionAdvice.close();
+    }
   }
 
   @Test

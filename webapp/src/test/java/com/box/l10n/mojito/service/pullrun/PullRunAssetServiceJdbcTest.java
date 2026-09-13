@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.box.l10n.mojito.entity.PullRunAsset;
+import com.box.l10n.mojito.test.ThreadBoundTransactionAdvice;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -34,8 +35,6 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.transaction.TransactionExecution;
 import org.springframework.transaction.TransactionExecutionListener;
-import org.springframework.transaction.TransactionManager;
-import org.springframework.transaction.aspectj.AnnotationTransactionAspect;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.MySQLContainer;
@@ -154,8 +153,7 @@ public class PullRunAssetServiceJdbcTest {
   private final PullRunAssetService service = new PullRunAssetService();
   private JdbcTemplate jdbc;
   private DataSource dataSource;
-  private TransactionManager previousManager;
-  private boolean adviceChanged;
+  private ThreadBoundTransactionAdvice transactionAdvice;
   private int begins;
   private int commits;
   private int rollbacks;
@@ -229,10 +227,7 @@ public class PullRunAssetServiceJdbcTest {
               }
             }));
     // Exercise the production AspectJ join point, never a test-created ambient transaction.
-    AnnotationTransactionAspect aspect = AnnotationTransactionAspect.aspectOf();
-    previousManager = aspect.getTransactionManager();
-    aspect.setTransactionManager(manager);
-    adviceChanged = true;
+    transactionAdvice = new ThreadBoundTransactionAdvice(manager);
   }
 
   @After
@@ -243,8 +238,8 @@ public class PullRunAssetServiceJdbcTest {
         assertThat(TransactionSynchronizationManager.hasResource(dataSource)).isFalse();
       }
     } finally {
-      if (adviceChanged) {
-        AnnotationTransactionAspect.aspectOf().setTransactionManager(previousManager);
+      if (transactionAdvice != null) {
+        transactionAdvice.close();
       }
     }
   }
