@@ -829,6 +829,13 @@ checks suite identities, database parameter groups and test-count floors. It
 rejects missing/empty reports, unexpected skips, failures and automatic-rerun
 artifacts. Only the explicitly named runtime performance benchmark may skip.
 See the [gate evidence and limits](async-job-queue-review.md#required-database-report-gate-2026-09-13-utc).
+The required store suite also includes both
+[fresh Flyway artifact contracts](async-job-queue-review.md#fresh-flyway-artifact-contract-2026-09-13-utc):
+native MySQL 8.4.11 and PostgreSQL 16.15 pass install, no-op rerun and checksum
+rejection with unchanged history/data. They isolate V109, not the application's
+fresh-install/upgrade chain; current-master collision and applied-history gates
+remain open. Flyway 11.7.2 reports a MySQL tested-version warning that also needs
+resolution before database-adoption approval.
 The [lost-heartbeat transport extension](async-job-queue-review.md#runtime-lost-heartbeat-recovery-2026-09-13-utc)
 now also passes on native MySQL 8.4.11 and PostgreSQL 16.15: an unacknowledged
 committed renewal leaves the handler alive, recovers renewal on the same token

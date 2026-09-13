@@ -479,8 +479,11 @@ release gates below.
    Keep Mojito JPA/domain integration tests and default-off routing green.
 3. Test real Flyway fresh installation and upgrade/adoption for both databases,
    with no duplicate migration scanning or implicit schema writes. Current
-   ScriptUtils-based queue DDL tests do not establish this lifecycle. Preserve
-   historical V109 checks until actual applied-history decisions are resolved.
+   [native isolated-artifact contracts](async-job-queue-review.md#fresh-flyway-artifact-contract-2026-09-13-utc)
+   now verify Flyway install, no-op rerun and checksum rejection on MySQL 8.4.11
+   and PostgreSQL 16.15. They do not establish application-wide scanning or
+   historical adoption. Resolve Flyway 11.7.2's MySQL tested-version warning and
+   preserve historical V109 checks until actual applied-history decisions are resolved.
 4. Before an OSS release, define API/schema compatibility, payload encoding/limits,
    supported JDK/driver/DB versions, licensing/provenance, shutdown/lease-loss and
    enqueue-ambiguity contracts; establish repeatable DB CI and sustained outage/load evidence.

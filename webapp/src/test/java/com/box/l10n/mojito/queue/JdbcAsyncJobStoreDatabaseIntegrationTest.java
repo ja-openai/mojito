@@ -42,7 +42,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.sql.DataSource;
 import org.assertj.core.api.SoftAssertions;
+import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationState;
+import org.flywaydb.core.api.MigrationVersion;
+import org.flywaydb.core.api.exception.FlywayValidateException;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runners.model.MultipleFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +71,8 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 public class JdbcAsyncJobStoreDatabaseIntegrationTest {
+
+  @Rule public TemporaryFolder migrationDirectory = new TemporaryFolder();
 
   private static final String ENABLE_PROPERTY = "mojito.asyncJobQueue.testcontainers";
   private static final String PERF_ENABLE_PROPERTY = "mojito.asyncJobQueue.perf";
@@ -151,6 +159,34 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("CHECK (id > 0)")
         .contains("CHECK (queue_name ~ '^[A-Za-z0-9._-]+$')")
         .doesNotContain("ON UPDATE");
+  }
+
+  @Test
+  public void mysqlFreshFlywayInstallationPreservesHistoryAndRejectsChecksumDrift()
+      throws Exception {
+    assumeContainerTestsEnabled();
+    try (MySQLContainer<?> container = mysqlContainer()) {
+      container.start();
+      assertFreshFlywayInstallation(
+          dataSource(container),
+          AsyncJobQueueJdbcDialect.MYSQL,
+          "db/migration/V109__Async_Job_Queue.sql",
+          migrationDirectory.newFolder().toPath());
+    }
+  }
+
+  @Test
+  public void postgresqlFreshFlywayInstallationPreservesHistoryAndRejectsChecksumDrift()
+      throws Exception {
+    assumeContainerTestsEnabled();
+    try (PostgreSQLContainer<?> container = postgresContainer()) {
+      container.start();
+      assertFreshFlywayInstallation(
+          dataSource(container),
+          AsyncJobQueueJdbcDialect.POSTGRESQL,
+          "db/postgresql/migration/V109__Async_Job_Queue.sql",
+          migrationDirectory.newFolder().toPath());
+    }
   }
 
   @Test
@@ -2421,6 +2457,80 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
 
     assertThat(claimed).as("claim should succeed before timeout").isNotEmpty();
     return claimed.get(0);
+  }
+
+  private void assertFreshFlywayInstallation(
+      DataSource dataSource, AsyncJobQueueJdbcDialect dialect, String migrationPath, Path directory)
+      throws Exception {
+    // Exercise the exact queue artifact in isolation, not the application's historical upgrades.
+    Path script = directory.resolve("V109__Async_Job_Queue.sql");
+    try (InputStream input = new ClassPathResource(migrationPath).getInputStream()) {
+      Files.copy(input, script);
+    }
+    byte[] original = Files.readAllBytes(script);
+    Flyway flyway = queueFlyway(dataSource, directory);
+    assertThat(flyway.info().applied()).isEmpty();
+    var installed = flyway.migrate();
+    assertThat(installed.success).isTrue();
+    assertThat(installed.migrationsExecuted).isEqualTo(1);
+    assertThat(flyway.info().all())
+        .singleElement()
+        .satisfies(
+            migration -> {
+              assertThat(migration.getVersion()).isEqualTo(MigrationVersion.fromVersion("109"));
+              assertThat(migration.getScript()).isEqualTo(script.getFileName().toString());
+              assertThat(migration.getState()).isEqualTo(MigrationState.SUCCESS);
+              assertThat(migration.getChecksum()).isNotNull();
+            });
+    flyway.validate();
+
+    AsyncJobStore store = jdbcStore(dataSource, dialect);
+    AsyncJobId id = store.enqueueNow("flyway-contract", "{\"installed\":true}");
+    AsyncJobRecord claimed =
+        store.claimNextJobs("flyway-contract", 1, "worker", Duration.ofSeconds(30)).get(0);
+    assertThat(claimed.id()).isEqualTo(id);
+    assertThat(
+            store.markDone(
+                "flyway-contract", id, "worker", claimed.leaseToken(), "{\"done\":true}"))
+        .isTrue();
+    var jobs = store.getByIds(List.of(id));
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    var history = jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank");
+    assertThat(history).hasSize(1);
+
+    // A new Flyway instance must resolve the artifact again and leave data/history untouched.
+    var repeated = queueFlyway(dataSource, directory).migrate();
+    assertThat(repeated.success).isTrue();
+    assertThat(repeated.migrationsExecuted).isZero();
+    assertThat(store.getByIds(List.of(id))).isEqualTo(jobs);
+    assertThat(jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank"))
+        .isEqualTo(history);
+
+    // Mutate only the disposable copy; never repair or rewrite an applied source migration.
+    Files.writeString(
+        script, new String(original, StandardCharsets.UTF_8) + "\nDELETE FROM async_job_queue;\n");
+    Flyway drifted = queueFlyway(dataSource, directory);
+    var invalid = drifted.validateWithResult();
+    assertThat(invalid.validationSuccessful).isFalse();
+    assertThat(invalid.invalidMigrations).hasSize(1);
+    assertThat(invalid.getAllErrorMessages()).containsIgnoringCase("checksum mismatch");
+    assertThrows(FlywayValidateException.class, drifted::migrate);
+    assertThat(store.getByIds(List.of(id))).isEqualTo(jobs);
+    assertThat(jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank"))
+        .isEqualTo(history);
+
+    Files.write(script, original);
+    queueFlyway(dataSource, directory).validate();
+  }
+
+  private Flyway queueFlyway(DataSource dataSource, Path directory) {
+    return Flyway.configure()
+        .dataSource(dataSource)
+        .locations("filesystem:" + directory.toAbsolutePath())
+        .cleanDisabled(true)
+        .baselineOnMigrate(false)
+        .validateMigrationNaming(true)
+        .load();
   }
 
   private void runMigration(JdbcDatabaseContainer<?> container, String migrationPath)
