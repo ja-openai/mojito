@@ -2,10 +2,17 @@ package com.box.l10n.mojito.service.tm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
@@ -21,12 +28,15 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.slf4j.LoggerFactory;
 
 @RunWith(MockitoJUnitRunner.class)
 public class LocalizedAssetGenerationServiceTest {
@@ -117,6 +127,129 @@ public class LocalizedAssetGenerationServiceTest {
 
     assertThatThrownBy(() -> localizedAssetGenerationService.generate(input)).isSameAs(failure);
     assertThat(input.getContent()).isEqualTo("source");
+  }
+
+  @Test
+  public void timerAndLoggerFailuresPreserveSuccessfulGeneration() throws Throwable {
+    conflictWithGenerationTimer();
+
+    assertThat(
+            withFailedDiagnosticLogging(
+                new IllegalStateException("logger failed"),
+                this::assertSharedTmPathAndRepositoryLocaleTag))
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void timerAndLoggerFailuresPreserveOriginalGenerationFailure() throws Throwable {
+    RuntimeException original = new IllegalStateException("generation failed");
+    LocalizedAssetBody input = stubSharedTmPath(original);
+    conflictWithGenerationTimer();
+
+    assertThat(
+            withFailedDiagnosticLogging(
+                new AssertionError("logger failed"),
+                () ->
+                    assertThatThrownBy(() -> localizedAssetGenerationService.generate(input))
+                        .isSameAs(original)))
+        .isEqualTo(1);
+    assertThat(input.getContent()).isEqualTo("source");
+    assertThat(input.getBcp47Tag()).isNull();
+  }
+
+  @Test(timeout = 5_000)
+  public void cyclicNonFatalLoggerFailureDoesNotDiscardSuccessfulGeneration() throws Throwable {
+    conflictWithGenerationTimer();
+    IllegalStateException failure = new IllegalStateException("logger failed");
+    IllegalStateException cycle = new IllegalStateException("wrapper", failure);
+    failure.initCause(cycle);
+
+    assertThat(withFailedDiagnosticLogging(failure, this::assertSharedTmPathAndRepositoryLocaleTag))
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void nestedFatalGenerationTimerErrorStillPropagates() {
+    OutOfMemoryError fatal = new OutOfMemoryError("synthetic timer failure");
+    meterRegistry
+        .config()
+        .onMeterAdded(
+            meter -> {
+              throw new IllegalStateException("metric wrapper", fatal);
+            });
+
+    assertThatThrownBy(this::assertSharedTmPathAndRepositoryLocaleTag).isSameAs(fatal);
+  }
+
+  @Test
+  public void suppressedFatalGenerationLoggerErrorStillPropagates() throws Throwable {
+    conflictWithGenerationTimer();
+    OutOfMemoryError fatal = new OutOfMemoryError("synthetic logger failure");
+    IllegalStateException failure = new IllegalStateException("logger wrapper");
+    failure.addSuppressed(fatal);
+
+    assertThat(
+            withFailedDiagnosticLogging(
+                failure,
+                () ->
+                    assertThatThrownBy(this::assertSharedTmPathAndRepositoryLocaleTag)
+                        .isSameAs(fatal)))
+        .isEqualTo(1);
+  }
+
+  @Test
+  @SuppressWarnings("removal")
+  public void threadDeathSubclassInGenerationTimerStillPropagates() {
+    ThreadDeath fatal = new ThreadDeath() {};
+    meterRegistry
+        .config()
+        .onMeterAdded(
+            meter -> {
+              throw fatal;
+            });
+
+    assertThatThrownBy(this::assertSharedTmPathAndRepositoryLocaleTag).isSameAs(fatal);
+  }
+
+  private void conflictWithGenerationTimer() {
+    meterRegistry.gauge(
+        "GenerateLocalizedAssetJob.call",
+        Tags.of("repositoryName", "repo", "bcp47Tag", "fr-FR"),
+        1);
+  }
+
+  private int withFailedDiagnosticLogging(Throwable failure, ThrowingCallable action)
+      throws Throwable {
+    Logger logger = (Logger) LoggerFactory.getLogger(LocalizedAssetGenerationService.class);
+    Level previousLevel = logger.getLevel();
+    Thread caller = Thread.currentThread();
+    AtomicInteger warnings = new AtomicInteger();
+    @SuppressWarnings("unchecked")
+    Appender<ILoggingEvent> appender = mock(Appender.class);
+    doAnswer(
+            invocation -> {
+              ILoggingEvent event = invocation.getArgument(0);
+              if (Thread.currentThread() == caller
+                  && event.getLevel() == Level.WARN
+                  && event
+                      .getMessage()
+                      .equals("Failed to record localized asset generation metric")) {
+                warnings.incrementAndGet();
+                throw failure;
+              }
+              return null;
+            })
+        .when(appender)
+        .doAppend(any(ILoggingEvent.class));
+    try {
+      logger.setLevel(Level.WARN);
+      logger.addAppender(appender);
+      action.call();
+      return warnings.get();
+    } finally {
+      logger.detachAppender(appender);
+      logger.setLevel(previousLevel);
+    }
   }
 
   private LocalizedAssetBody stubSharedTmPath(RuntimeException failure) throws Exception {

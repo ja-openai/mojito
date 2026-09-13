@@ -985,6 +985,34 @@ SQL, migrations, payloads, retry policy, flag defaults and the generic engine/JA
 are unchanged. Admission, business fencing, blob lifetime and outage gates remain
 open; callback outcome preservation is not durable callback delivery.
 
+## Shared Generation Diagnostic Containment (2026-09-13 UTC)
+
+The shared `LocalizedAssetGenerationService` still allowed its timer's fallback
+logger to discard successful output or replace the original generation exception.
+Six new regressions failed against the original implementation (15 selected,
+four assertion failures and two errors, no skips/reruns). They also reproduced
+swallowed nested fatal timer errors and ThreadDeath subclasses, and a fatal
+suppressed logging error escaping as its wrapper rather than the original Error.
+
+The timer fallback now contains ordinary logging failures and iteratively checks
+causes/suppressed errors with identity-based cycle detection before suppressing
+diagnostics. Fatal errors still propagate by identity; no business effects are
+rolled back. Tests use a warning-specific, caller-thread-scoped Logback appender
+and restore logger state in `finally`. The guard stays private to the shared
+service, with no dependency on the queue handler or generic engine.
+
+The focused generation/handler/Quartz/routing/runtime selection passes **137 tests
+across seven suites**, without failures, errors, skips or automatic reruns.
+The same selection passes after root Spotless; bounded independent code review
+finds no material issue. Existing AspectJ, deprecated ThreadDeath and npm
+configuration warnings remain. Logs:
+`/private/tmp/queue-generation-diagnostics.OqTBAX/{red,focused,final,spotless}.log`.
+These are compound-diagnostic unit regressions plus existing HSQL integration and
+routing compatibility controls, not new native database or deployed recovery proof.
+The fix affects both Quartz and queue callers even with queue routing disabled;
+SQL, flags, retry budgets and the independent engine JAR are unchanged. Durable
+admission, publication fencing, lifetime and rollout gates remain open.
+
 ## Poll Logging Recovery (2026-09-12 UTC)
 
 A broken logger could permanently strand the adaptive poll loop while reporting

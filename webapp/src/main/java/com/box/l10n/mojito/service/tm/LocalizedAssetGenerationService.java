@@ -9,6 +9,10 @@ import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import net.sf.okapi.common.exceptions.OkapiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,11 +107,43 @@ public class LocalizedAssetGenerationService {
     try {
       recording.run();
     } catch (Throwable failure) {
-      if (failure instanceof VirtualMachineError
-          || "java.lang.ThreadDeath".equals(failure.getClass().getName())) {
-        throw (Error) failure;
+      rethrowJvmFatal(failure);
+      try {
+        logger.warn("Failed to record localized asset generation metric", failure);
+      } catch (Throwable loggingFailure) {
+        rethrowJvmFatal(loggingFailure);
+        // Diagnostics must not discard generated output or replace a generation failure.
       }
-      logger.warn("Failed to record localized asset generation metric", failure);
     }
+  }
+
+  private static void rethrowJvmFatal(Throwable failure) {
+    if (isJvmFatal(failure)) {
+      throw (Error) failure;
+    }
+    Set<Throwable> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+    ArrayDeque<Throwable> pending = new ArrayDeque<>();
+    pending.add(failure);
+    while (!pending.isEmpty()) {
+      Throwable current = pending.removeFirst();
+      if (!visited.add(current)) {
+        continue;
+      }
+      if (isJvmFatal(current)) {
+        throw (Error) current;
+      }
+      Throwable cause = current.getCause();
+      if (cause != null) {
+        pending.addLast(cause);
+      }
+      for (Throwable suppressed : current.getSuppressed()) {
+        pending.addLast(suppressed);
+      }
+    }
+  }
+
+  @SuppressWarnings("removal")
+  private static boolean isJvmFatal(Throwable throwable) {
+    return throwable instanceof VirtualMachineError || throwable instanceof ThreadDeath;
   }
 }

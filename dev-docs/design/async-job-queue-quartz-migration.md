@@ -504,6 +504,13 @@ reads the task and leaves an already-finished row unchanged. This does not add
 automatic reconciliation or extend retained output lifetime. See the
 [repair diagnostic regressions](async-job-queue-review.md#repair-diagnostic-isolation-2026-09-12-utc).
 
+The shared generation service also contains ordinary timer/fallback-log failures:
+they neither discard successful output nor replace the original generation error.
+Nested JVM-fatal diagnostic errors still propagate, without undoing prior effects.
+This [shared-path correction](async-job-queue-review.md#shared-generation-diagnostic-containment-2026-09-13-utc)
+affects Quartz as well as queue callers, including when queue routing is disabled;
+it does not change retry policy or establish business-side fencing.
+
 Queue submission preparation failures also store only a cause-free unexpected
 task error with its task ID. Raw storage/serialization exceptions remain available
 to the submitting caller and in best-effort correlated operator logs, not the task
