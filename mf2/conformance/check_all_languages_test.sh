@@ -35,7 +35,7 @@ assert_incomplete_suite_fails \
 
 assert_incomplete_suite_fails \
     "Go runner" \
-    sh -c 'cd "$1/go" && env MF2_CONFORMANCE_FIXTURES="$2" GOPATH="${GOPATH:-/private/tmp/mojito-mf2-go-gopath-conformance-test}" GOMODCACHE="${GOMODCACHE:-/private/tmp/mojito-mf2-go-modcache-conformance-test}" GOCACHE="${GOCACHE:-/private/tmp/mojito-mf2-go-cache-conformance-test}" GOTOOLCHAIN="${GOTOOLCHAIN:-local}" go test -run "^TestSourceToModelFixtures$" -count=1 .' sh "$ROOT" "$EMPTY_FIXTURES"
+    sh -c 'cd "$1/go" && env MF2_CONFORMANCE_FIXTURES="$2" GOPATH="${GOPATH:-${TMPDIR:-/tmp}/mojito-mf2-go-gopath-conformance-test}" GOMODCACHE="${GOMODCACHE:-${TMPDIR:-/tmp}/mojito-mf2-go-modcache-conformance-test}" GOCACHE="${GOCACHE:-${TMPDIR:-/tmp}/mojito-mf2-go-cache-conformance-test}" GOTOOLCHAIN="${GOTOOLCHAIN:-local}" go test -run "^TestSourceToModelFixtures$" -count=1 .' sh "$ROOT" "$EMPTY_FIXTURES"
 
 assert_incomplete_suite_fails \
     "PHP runner" \

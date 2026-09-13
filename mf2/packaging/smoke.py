@@ -108,12 +108,14 @@ class Smoke:
                 cwd=cwd or self.source,
                 env=env or self.env,
                 text=True,
-                stdout=stream,
-                stderr=subprocess.STDOUT,
+                stdout=subprocess.PIPE,
+                stderr=stream,
             )
+            # Preserve diagnostics without mixing stderr into machine-readable stdout.
+            stream.write(result.stdout)
         if result.returncode:
             raise RuntimeError(f"{command[0]} failed ({result.returncode}); see {log}")
-        return log.read_text()
+        return result.stdout
 
     def artifact(self, path, *, python_license_expression=None):
         path = Path(path)

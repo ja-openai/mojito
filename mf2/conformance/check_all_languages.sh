@@ -32,5 +32,5 @@ if not paths or not format_cases:
 (cd "$ROOT/java" && sh run.sh conformance "$FIXTURES")
 (cd "$ROOT/kotlin" && sh run.sh conformance "$FIXTURES")
 (cd "$ROOT/javascript" && node tools/conformance.js "$FIXTURES")
-(cd "$ROOT/go" && env MF2_CONFORMANCE_FIXTURES="$FIXTURES" GOPATH="${GOPATH:-/private/tmp/mojito-mf2-go-gopath-conformance}" GOMODCACHE="${GOMODCACHE:-/private/tmp/mojito-mf2-go-modcache-conformance}" GOCACHE="${GOCACHE:-/private/tmp/mojito-mf2-go-cache-conformance}" GOTOOLCHAIN="${GOTOOLCHAIN:-local}" go test ./...)
+(cd "$ROOT/go" && env MF2_CONFORMANCE_FIXTURES="$FIXTURES" GOPATH="${GOPATH:-${TMPDIR:-/tmp}/mojito-mf2-go-gopath-conformance}" GOMODCACHE="${GOMODCACHE:-${TMPDIR:-/tmp}/mojito-mf2-go-modcache-conformance}" GOCACHE="${GOCACHE:-${TMPDIR:-/tmp}/mojito-mf2-go-cache-conformance}" GOTOOLCHAIN="${GOTOOLCHAIN:-local}" go test ./...)
 (cd "$ROOT/php" && php tests/conformance.php "$FIXTURES")
