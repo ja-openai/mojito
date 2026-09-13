@@ -255,7 +255,7 @@ public class FormLoginAuthenticationCsrfTokenInterceptor implements ClientHttpRe
 
     logger.debug(
         "Injecting CSRF token into request {} header: {}", request.getURI(), csrfToken.getToken());
-    request.getHeaders().add(csrfToken.getHeaderName(), csrfToken.getToken());
+    request.getHeaders().set(csrfToken.getHeaderName(), csrfToken.getToken());
   }
 
   /**
