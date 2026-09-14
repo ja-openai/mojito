@@ -26,8 +26,8 @@ import {
 } from './reviewAutomationBatchParsing';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
-const EXAMPLE_INPUT = `Payments daily | enabled | 0 0 0 * * ? | America/Los_Angeles | Core Localization | assign-translator | 1 | 2000 | Payments
-Vendor catch-up | disabled | 0 30 6 * * ? | UTC | Vendor Team | no-translator | 2 | 1500 | Billing; Checkout`;
+const EXAMPLE_INPUT = `Payments daily | enabled | 0 0 0 * * ? | America/Los_Angeles | Core Localization | assign-translator | 1 | 2000 | Payments | he
+Vendor catch-up | disabled | 0 30 6 * * ? | UTC | Vendor Team | no-translator | 2 | 1500 | Billing; Checkout |`;
 
 type PrefillSource = 'existing-automations' | 'review-feature-roster';
 type BatchApplyMode = 'MERGE' | 'REPLACE_DISABLE_OMITTED';
@@ -218,6 +218,7 @@ export function AdminReviewAutomationBatchPage() {
         maxWordCountPerProject: row.maxWordCountPerProject,
         assignTranslator: row.assignTranslator,
         featureIds: row.featureIds,
+        excludedLocaleTags: row.excludedLocaleTags,
       })),
     });
   };
@@ -232,6 +233,7 @@ export function AdminReviewAutomationBatchPage() {
       dueDateOffsetDays: number;
       maxWordCountPerProject: number;
       featureNames: string[];
+      excludedLocaleTags?: string[];
     }>,
     options?: { emptyMessage: string; sourceLabel: string },
   ) => {
@@ -382,7 +384,8 @@ export function AdminReviewAutomationBatchPage() {
             <ul className="user-batch-page__intro-list review-automation-batch-page__docs-list">
               <li>
                 `name | enabled|disabled | cron | timezone | team | assign-translator|no-translator
-                | due-date-offset-days | max-word-count | feature-a; feature-b`
+                | due-date-offset-days | max-word-count | feature-a; feature-b |
+                excluded-locale-tags`
               </li>
               <li>Blank status defaults to enabled.</li>
               <li>Blank timezone defaults to UTC.</li>
@@ -395,6 +398,11 @@ export function AdminReviewAutomationBatchPage() {
               <li>
                 Use semicolons between review feature names. Comma-separated lists still work for
                 feature names without commas.
+              </li>
+              <li>
+                Excluded locales are optional, separated by semicolons or commas (for example, he;
+                fr-CA). Omit the final column to keep existing exclusions; leave it empty after the
+                final pipe to clear them. New automations default to no exclusions.
               </li>
               <li>Prefill merges into the editor by default; the modal can replace editor text.</li>
               <li>
@@ -433,6 +441,7 @@ export function AdminReviewAutomationBatchPage() {
               <div>Due in</div>
               <div>Max size</div>
               <div>Features</div>
+              <div>Excluded locales</div>
               <div>Errors</div>
             </div>
             {parsedRows.length > 0 ? (
@@ -452,6 +461,13 @@ export function AdminReviewAutomationBatchPage() {
                   <div className="user-batch-page__cell--muted">{row.maxWordCountPerProject}</div>
                   <div className="user-batch-page__cell--muted">
                     {row.featureNames.length ? row.featureNames.join(', ') : 'No review features'}
+                  </div>
+                  <div className="user-batch-page__cell--muted">
+                    {row.excludedLocaleTags == null
+                      ? row.action === 'update'
+                        ? 'Keep existing'
+                        : 'None'
+                      : row.excludedLocaleTags.join(', ') || 'None'}
                   </div>
                   <div>
                     {row.errors.length > 0 ? (

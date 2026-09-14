@@ -9,7 +9,7 @@ Context
 Goals
 
 - Introduce `ReviewAutomation` as the admin-managed schedule/config entity for automated review-project creation.
-- Support multiple automations, each with enable/disable state, cron expression, time zone, assigned team, optional translator auto-assignment, due-date offset, max word count per generated project, and review-feature membership.
+- Support multiple automations, each with enable/disable state, cron expression, time zone, assigned team, optional translator auto-assignment, due-date offset, max word count per generated project, review-feature membership, and excluded locales.
 - Make common schedules easier to author with a button-driven cron generator while still preserving raw cron editing for advanced cases.
 - Reuse the existing admin CRUD + batch patterns already used for users, team pools, and review features.
 - Execute cron/manual runs and persist lightweight run history for operational visibility.
@@ -43,6 +43,7 @@ Data Model
   - `dueDateOffsetDays`
   - `maxWordCountPerProject`
   - `assignTranslator`
+  - `excludedLocaleTags` (canonical locale tags; empty by default)
   - `features` (`many-to-many` to `ReviewFeature`)
 - `ReviewAutomationRun`
   - `reviewAutomation`
@@ -65,6 +66,10 @@ Backend Notes
 - Scheduler synchronization happens after automation CRUD commits, so Quartz stays aligned with saved config.
 - Cron execution runs as the system user and reuses the same feature-based review-project creation path as manual creation.
 - Automated creation always excludes text units already covered by any open review project for the same `tmTextUnit + locale`.
+- Each automation can exclude specific locales from all of its review features. Both cron runs and **Run now** skip those locales before searching for candidates; excluded locales count as skipped in run history. Matching uses exact canonical locale tags, not language families.
+- Exclusions use the global Mojito locale catalog, so an admin can exclude a locale such as Hebrew (`he`) before enabling it on a repository. An empty list includes every feature locale. This setting does not change manual review-project creation, existing projects, translation generation, or another automation's configuration.
+- Detail, create/update, and batch export/upsert expose `excludedLocaleTags`. Omitted or null values default to an empty list on create and preserve the saved list on update; an explicit empty list clears it. Locale tags are trimmed, validated against the catalog, canonicalized, and deduplicated.
+- Migration `V114__Review_Automation_Excluded_Locales.sql` adds a nullable JSON-text column to `review_automation`. Existing rows read as an empty exclusion list; apply the migration with the backend release before using the new form.
 - Manual and automated creation can skip default translator assignment while still keeping team and PM assignment.
 - Manual creation accepts an optional `maxWordCountPerProject` and reuses automation's source-word splitter for selected text units, repositories, and review features. Omitted or null means no splitting; a supplied limit must be a positive integer. Strings stay whole, so one string can exceed the limit. Locale results count all generated projects.
 
@@ -108,6 +113,7 @@ Frontend Notes
 - Create/detail pages keep raw `cronExpression` and `timeZone` side by side, with a button-driven generator for `Every day`, `Weekdays`, or `Custom cron`.
 - Batch page can prefill from existing automations or the review-feature roster. Apply mode lives on the CTA: `Apply updates` upserts listed rows only, while `Replace enabled set` upserts listed rows and disables enabled automations omitted from the batch.
 - Detail page adds `Run now` plus a recent-runs table for the selected automation.
+- Create/detail forms offer an **Excluded locales** selector. The batch editor has an optional final excluded-locales column: omitting it preserves an existing policy, while an explicitly empty column clears it. Prefilled rows retain saved exclusions.
 - Manual review-project creation can also use a direct repository scope. Deep links use `/review-projects/new?scope=repositories&repositoryIds=<id>` with repeated `repositoryIds` for multi-repository setup.
 - The manual creation form offers **Max word count per project (optional)** for every scope, initially blank to preserve existing behavior.
 

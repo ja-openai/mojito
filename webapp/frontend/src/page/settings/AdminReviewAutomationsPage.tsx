@@ -28,6 +28,7 @@ import {
   getDefaultReviewAutomationTimeZone,
   getReviewAutomationTimeZoneOptions,
 } from '../../utils/reviewAutomationSchedule';
+import { ReviewAutomationExcludedLocalesField } from './ReviewAutomationExcludedLocalesField';
 import { ReviewAutomationSharedFeatureWarning } from './ReviewAutomationSharedFeatureWarning';
 import {
   getSharedFeatureScheduleWarnings,
@@ -96,6 +97,7 @@ export function AdminReviewAutomationsPage() {
   );
   const [newMaxWordCountDraft, setNewMaxWordCountDraft] = useState(String(DEFAULT_MAX_WORD_COUNT));
   const [newFeatureIdsDraft, setNewFeatureIdsDraft] = useState<number[]>([]);
+  const [newExcludedLocaleTagsDraft, setNewExcludedLocaleTagsDraft] = useState<string[]>([]);
   const [createModalError, setCreateModalError] = useState<string | null>(null);
   const [statusNotice, setStatusNotice] = useState<StatusNotice | null>(null);
   const [automationPendingDelete, setAutomationPendingDelete] =
@@ -215,6 +217,7 @@ export function AdminReviewAutomationsPage() {
     setNewDueDateOffsetDaysDraft(String(DEFAULT_DUE_DATE_OFFSET_DAYS));
     setNewMaxWordCountDraft(String(DEFAULT_MAX_WORD_COUNT));
     setNewFeatureIdsDraft([]);
+    setNewExcludedLocaleTagsDraft([]);
     setCreateModalError(null);
   };
 
@@ -254,6 +257,7 @@ export function AdminReviewAutomationsPage() {
       maxWordCountPerProject: maxWordCountDraft.value as number,
       assignTranslator: newAssignTranslatorDraft,
       featureIds: [...newFeatureIdsDraft].sort((a, b) => a - b),
+      excludedLocaleTags: newExcludedLocaleTagsDraft,
     });
   };
 
@@ -542,6 +546,14 @@ export function AdminReviewAutomationsPage() {
                 />
               </div>
             </div>
+            <ReviewAutomationExcludedLocalesField
+              selectedTags={newExcludedLocaleTagsDraft}
+              onChange={(next) => {
+                setNewExcludedLocaleTagsDraft(next);
+                setCreateModalError(null);
+              }}
+              disabled={createAutomationMutation.isPending}
+            />
             <div className="settings-field">
               <div className="settings-field__header">
                 <div className="settings-field__label">Review features</div>

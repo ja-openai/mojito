@@ -75,7 +75,8 @@ public class ReviewAutomationWS {
       int maxWordCountPerProject,
       boolean assignTranslator,
       TriggerStatusRef trigger,
-      List<FeatureRef> features) {}
+      List<FeatureRef> features,
+      List<String> excludedLocaleTags) {}
 
   public record FeatureRef(Long id, String name) {}
 
@@ -99,7 +100,8 @@ public class ReviewAutomationWS {
       Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
       Boolean assignTranslator,
-      List<Long> featureIds) {}
+      List<Long> featureIds,
+      List<String> excludedLocaleTags) {}
 
   public record BatchUpsertReviewAutomationsRequest(
       ReviewAutomationService.BatchUpsertMode mode, List<BatchRow> rows) {
@@ -113,7 +115,8 @@ public class ReviewAutomationWS {
         Integer dueDateOffsetDays,
         Integer maxWordCountPerProject,
         Boolean assignTranslator,
-        List<Long> featureIds) {}
+        List<Long> featureIds,
+        List<String> excludedLocaleTags) {}
   }
 
   public record ReviewAutomationOptionResponse(Long id, String name, boolean enabled) {}
@@ -128,7 +131,8 @@ public class ReviewAutomationWS {
       int dueDateOffsetDays,
       int maxWordCountPerProject,
       boolean assignTranslator,
-      List<String> featureNames) {}
+      List<String> featureNames,
+      List<String> excludedLocaleTags) {}
 
   public record RunAutomationResponse(
       Long runId,
@@ -217,7 +221,8 @@ public class ReviewAutomationWS {
                     row.dueDateOffsetDays(),
                     row.maxWordCountPerProject(),
                     row.assignTranslator(),
-                    row.featureNames()))
+                    row.featureNames(),
+                    row.excludedLocaleTags()))
         .toList();
   }
 
@@ -335,7 +340,8 @@ public class ReviewAutomationWS {
               request != null ? request.dueDateOffsetDays() : null,
               request != null ? request.maxWordCountPerProject() : null,
               request != null ? request.assignTranslator() : null,
-              request != null ? request.featureIds() : List.of()));
+              request != null ? request.featureIds() : List.of(),
+              request != null ? request.excludedLocaleTags() : null));
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
@@ -356,7 +362,8 @@ public class ReviewAutomationWS {
               request != null ? request.dueDateOffsetDays() : null,
               request != null ? request.maxWordCountPerProject() : null,
               request != null ? request.assignTranslator() : null,
-              request != null ? request.featureIds() : List.of()));
+              request != null ? request.featureIds() : List.of(),
+              request != null ? request.excludedLocaleTags() : null));
     } catch (IllegalArgumentException ex) {
       HttpStatus status =
           ex.getMessage() != null && ex.getMessage().startsWith("Review automation not found:")
@@ -397,7 +404,8 @@ public class ReviewAutomationWS {
                                   row.dueDateOffsetDays(),
                                   row.maxWordCountPerProject(),
                                   row.assignTranslator(),
-                                  row.featureIds()))
+                                  row.featureIds(),
+                                  row.excludedLocaleTags()))
                       .toList(),
               request == null ? null : request.mode());
       return new BatchUpsertReviewAutomationsResponse(
@@ -445,7 +453,8 @@ public class ReviewAutomationWS {
         toTriggerStatusRef(detail.trigger()),
         detail.features().stream()
             .map(feature -> new FeatureRef(feature.id(), feature.name()))
-            .toList());
+            .toList(),
+        detail.excludedLocaleTags());
   }
 
   private TriggerStatusRef toTriggerStatusRef(ReviewAutomationTriggerStatusView trigger) {

@@ -42,6 +42,7 @@ export type ApiReviewAutomation = {
   dueDateOffsetDays: number;
   maxWordCountPerProject: number;
   assignTranslator: boolean;
+  excludedLocaleTags: string[];
   trigger: ApiReviewAutomationTrigger | null;
   features: ApiReviewAutomationFeature[];
 };
@@ -63,6 +64,7 @@ export type ApiReviewAutomationBatchExportRow = {
   maxWordCountPerProject: number;
   assignTranslator: boolean;
   featureNames: string[];
+  excludedLocaleTags: string[];
 };
 
 export type ApiReviewAutomationRunResult = {
@@ -122,6 +124,7 @@ type UpsertReviewAutomationPayload = {
   maxWordCountPerProject: number;
   assignTranslator: boolean;
   featureIds: number[];
+  excludedLocaleTags?: string[];
 };
 
 type BatchUpsertPayload = {
@@ -137,6 +140,7 @@ type BatchUpsertPayload = {
     maxWordCountPerProject: number;
     assignTranslator?: boolean | null;
     featureIds: number[];
+    excludedLocaleTags?: string[];
   }>;
 };
 

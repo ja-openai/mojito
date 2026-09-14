@@ -16,6 +16,7 @@ export type ParsedReviewAutomationBatchRow = {
   assignTranslator: boolean;
   featureIds: number[];
   featureNames: string[];
+  excludedLocaleTags?: string[];
   errors: string[];
 };
 
@@ -31,8 +32,9 @@ export const formatReviewAutomationBatchRow = (row: {
   maxWordCountPerProject: number;
   assignTranslator?: boolean | null;
   featureNames: string[];
+  excludedLocaleTags?: string[];
 }) =>
-  `${row.name} | ${row.enabled ? 'enabled' : 'disabled'} | ${row.cronExpression} | ${row.timeZone} | ${row.teamName ?? ''} | ${row.assignTranslator === false ? 'no-translator' : 'assign-translator'} | ${row.dueDateOffsetDays} | ${row.maxWordCountPerProject} | ${row.featureNames.join('; ')}`;
+  `${row.name} | ${row.enabled ? 'enabled' : 'disabled'} | ${row.cronExpression} | ${row.timeZone} | ${row.teamName ?? ''} | ${row.assignTranslator === false ? 'no-translator' : 'assign-translator'} | ${row.dueDateOffsetDays} | ${row.maxWordCountPerProject} | ${row.featureNames.join('; ')}${row.excludedLocaleTags == null ? '' : ` | ${row.excludedLocaleTags.join('; ')}`}`;
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
 
@@ -150,7 +152,22 @@ export function parseReviewAutomationBatchInput(
         featureIdsByName,
       );
 
+      const excludedLocaleTags =
+        parts.length >= 10
+          ? [
+              ...new Set(
+                parts[9]
+                  .split(/[;,]/)
+                  .map((tag) => tag.trim())
+                  .filter(Boolean),
+              ),
+            ]
+          : undefined;
+
       const errors: string[] = [];
+      if (parts.length > 10) {
+        errors.push('Too many columns');
+      }
       if (!normalizedName) {
         errors.push('Missing automation name');
       }
@@ -215,6 +232,7 @@ export function parseReviewAutomationBatchInput(
         assignTranslator: assignTranslator ?? true,
         featureIds: resolvedFeatureIds.sort((left, right) => left - right),
         featureNames: resolvedFeatureNames,
+        excludedLocaleTags,
         errors,
       };
     });

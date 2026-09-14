@@ -113,7 +113,8 @@ public class ReviewAutomationSchedulerService {
                     automation.getTeam().getId(),
                     automation.getMaxWordCountPerProject(),
                     automation.getAssignTranslator(),
-                    requestedByUserId));
+                    requestedByUserId,
+                    automation.getExcludedLocaleTags()));
 
         if (result.requestId() != null) {
           createdProjectRequestCount++;

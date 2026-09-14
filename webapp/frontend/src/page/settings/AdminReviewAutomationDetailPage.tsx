@@ -21,7 +21,9 @@ import { ReviewAutomationScheduleBuilderModal } from '../../components/ReviewAut
 import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSelect';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { useUser } from '../../hooks/useUser';
+import { hasSameSet } from '../../utils/arraySelection';
 import { getReviewAutomationTimeZoneOptions } from '../../utils/reviewAutomationSchedule';
+import { ReviewAutomationExcludedLocalesField } from './ReviewAutomationExcludedLocalesField';
 import { formatDateTime } from './reviewAutomationRunFormatting';
 import { ReviewAutomationSharedFeatureWarning } from './ReviewAutomationSharedFeatureWarning';
 import {
@@ -73,6 +75,7 @@ export function AdminReviewAutomationDetailPage() {
   const [dueDateOffsetDaysDraft, setDueDateOffsetDaysDraft] = useState('');
   const [maxWordCountDraft, setMaxWordCountDraft] = useState('');
   const [featureIdsDraft, setFeatureIdsDraft] = useState<number[]>([]);
+  const [excludedLocaleTagsDraft, setExcludedLocaleTagsDraft] = useState<string[]>([]);
   const [runHistoryLimit, setRunHistoryLimit] = useState(20);
   const [statusNotice, setStatusNotice] = useState<{
     kind: 'success' | 'error';
@@ -139,6 +142,7 @@ export function AdminReviewAutomationDetailPage() {
       maxWordCountPerProject: number;
       assignTranslator: boolean;
       featureIds: number[];
+      excludedLocaleTags: string[];
     }) => updateReviewAutomation(parsedAutomationId as number, payload),
     onSuccess: async (updated) => {
       queryClient.setQueryData(['review-automation', parsedAutomationId], updated);
@@ -211,6 +215,7 @@ export function AdminReviewAutomationDetailPage() {
     setCronExpressionDraft(automation.cronExpression);
     setTeamIdDraft(automation.team?.id ?? null);
     setAssignTranslatorDraft(automation.assignTranslator);
+    setExcludedLocaleTagsDraft(automation.excludedLocaleTags ?? []);
     setDueDateOffsetDaysDraft(String(automation.dueDateOffsetDays));
     setMaxWordCountDraft(String(automation.maxWordCountPerProject));
     setFeatureIdsDraft(automation.features.map((feature) => feature.id).sort((a, b) => a - b));
@@ -268,6 +273,9 @@ export function AdminReviewAutomationDetailPage() {
     if (maxWordCount.valid && maxWordCount.value !== automation.maxWordCountPerProject) {
       return true;
     }
+    if (!hasSameSet(excludedLocaleTagsDraft, automation.excludedLocaleTags ?? [])) {
+      return true;
+    }
     const existingIds = automation.features.map((feature) => feature.id).sort((a, b) => a - b);
     if (existingIds.length !== featureIdsDraft.length) {
       return true;
@@ -277,6 +285,7 @@ export function AdminReviewAutomationDetailPage() {
     automationQuery.data,
     cronExpressionDraft,
     enabledDraft,
+    excludedLocaleTagsDraft,
     featureIdsDraft,
     assignTranslatorDraft,
     dueDateOffsetDays.valid,
@@ -335,6 +344,7 @@ export function AdminReviewAutomationDetailPage() {
       maxWordCountPerProject: maxWordCount.value as number,
       assignTranslator: assignTranslatorDraft,
       featureIds: [...featureIdsDraft].sort((a, b) => a - b),
+      excludedLocaleTags: excludedLocaleTagsDraft,
     });
   };
 
@@ -547,6 +557,14 @@ export function AdminReviewAutomationDetailPage() {
                   <span>Assign translator from locale pool</span>
                 </label>
               </div>
+              <ReviewAutomationExcludedLocalesField
+                selectedTags={excludedLocaleTagsDraft}
+                onChange={(next) => {
+                  setExcludedLocaleTagsDraft(next);
+                  setStatusNotice(null);
+                }}
+                disabled={updateMutation.isPending}
+              />
               <div className="settings-field">
                 <div className="settings-field__header">
                   <div className="settings-field__label">Review features</div>

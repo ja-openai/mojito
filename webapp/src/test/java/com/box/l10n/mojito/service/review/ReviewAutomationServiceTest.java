@@ -1,14 +1,21 @@
 package com.box.l10n.mojito.service.review;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.review.ReviewAutomation;
 import com.box.l10n.mojito.entity.review.ReviewFeature;
+import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.rest.review.ReviewAutomationWS;
+import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.team.TeamRepository;
+import com.box.l10n.mojito.service.team.TeamService;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -29,6 +36,7 @@ public class ReviewAutomationServiceTest {
       Mockito.mock(ReviewAutomationRunRepository.class);
   private final TeamRepository teamRepository = Mockito.mock(TeamRepository.class);
   private final UserService userService = Mockito.mock(UserService.class);
+  private final LocaleService localeService = Mockito.mock(LocaleService.class);
 
   @SuppressWarnings("unchecked")
   private final ObjectProvider<ReviewAutomationCronSchedulerService>
@@ -45,6 +53,7 @@ public class ReviewAutomationServiceTest {
             reviewAutomationRunRepository,
             teamRepository,
             userService,
+            localeService,
             reviewAutomationCronSchedulerServiceProvider);
     when(userService.isCurrentUserAdmin()).thenReturn(true);
   }
@@ -93,7 +102,7 @@ public class ReviewAutomationServiceTest {
         .thenAnswer(invocation -> Optional.of(savedAutomationReference.get()));
 
     reviewAutomationService.createReviewAutomation(
-        "Daily review", true, "0 0 9 ? * MON-FRI", "UTC", 2L, 1, 2000, true, List.of(5L));
+        "Daily review", true, "0 0 9 ? * MON-FRI", "UTC", 2L, 1, 2000, true, List.of(5L), null);
 
     ArgumentCaptor<ReviewAutomation> automationCaptor =
         ArgumentCaptor.forClass(ReviewAutomation.class);
@@ -101,6 +110,7 @@ public class ReviewAutomationServiceTest {
     ReviewAutomation savedAutomation = automationCaptor.getValue();
     org.junit.Assert.assertEquals("Daily review", savedAutomation.getName());
     org.junit.Assert.assertEquals(1, savedAutomation.getFeatures().size());
+    assertEquals(List.of(), savedAutomation.getExcludedLocaleTags());
   }
 
   @Test
@@ -131,7 +141,17 @@ public class ReviewAutomationServiceTest {
         reviewAutomationService.batchUpsert(
             List.of(
                 new ReviewAutomationService.BatchUpsertRow(
-                    7L, "Kept", true, "0 0 9 ? * MON-FRI", "UTC", 2L, 1, 2000, true, List.of())),
+                    7L,
+                    "Kept",
+                    true,
+                    "0 0 9 ? * MON-FRI",
+                    "UTC",
+                    2L,
+                    1,
+                    2000,
+                    true,
+                    List.of(),
+                    null)),
             ReviewAutomationService.BatchUpsertMode.REPLACE_DISABLE_OMITTED);
 
     org.junit.Assert.assertEquals(0, result.createdCount());
@@ -140,5 +160,160 @@ public class ReviewAutomationServiceTest {
     org.junit.Assert.assertTrue(keptAutomation.getEnabled());
     org.junit.Assert.assertFalse(omittedAutomation.getEnabled());
     verify(reviewAutomationRepository).save(omittedAutomation);
+  }
+
+  @Test
+  public void createNormalizesExcludedLocalesFromGlobalCatalogBeforeRepositoryOnboarding() {
+    Team team = new Team();
+    team.setId(2L);
+    when(teamRepository.findById(2L)).thenReturn(Optional.of(team));
+    Locale hebrew = locale("he");
+    Locale french = locale("fr-FR");
+    when(localeService.findByBcp47Tag("HE")).thenReturn(hebrew);
+    when(localeService.findByBcp47Tag("he")).thenReturn(hebrew);
+    when(localeService.findByBcp47Tag("fr-fr")).thenReturn(french);
+    AtomicReference<ReviewAutomation> saved = new AtomicReference<>();
+    when(reviewAutomationRepository.save(Mockito.any(ReviewAutomation.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewAutomation automation = invocation.getArgument(0);
+              automation.setId(9L);
+              saved.set(automation);
+              return automation;
+            });
+    when(reviewAutomationRepository.findByIdWithFeatures(9L))
+        .thenAnswer(invocation -> Optional.of(saved.get()));
+
+    ReviewAutomationService.ReviewAutomationDetail result =
+        reviewAutomationService.createReviewAutomation(
+            "Daily",
+            true,
+            "0 0 9 ? * MON-FRI",
+            "UTC",
+            2L,
+            1,
+            2000,
+            true,
+            List.of(),
+            List.of(" HE ", "fr-fr", "he"));
+
+    assertEquals(List.of("he", "fr-FR"), saved.get().getExcludedLocaleTags());
+    assertEquals(List.of("he", "fr-FR"), result.excludedLocaleTags());
+  }
+
+  @Test
+  public void oldUpdatePayloadPreservesExclusionsAndExplicitEmptyListClearsThem() {
+    ReviewAutomation automation = existingAutomation();
+    ReviewAutomationWS webService = webService();
+    ObjectMapper mapper = new ObjectMapper();
+    String oldPayload =
+        """
+        {"name":"Daily","cronExpression":"0 0 9 ? * MON-FRI","teamId":2}
+        """;
+
+    ReviewAutomationWS.ReviewAutomationResponse preserved =
+        webService.updateReviewAutomation(
+            7L,
+            mapper.readValueUnchecked(
+                oldPayload, ReviewAutomationWS.UpsertReviewAutomationRequest.class));
+    assertEquals(List.of("he"), preserved.excludedLocaleTags());
+    assertEquals(List.of("he"), automation.getExcludedLocaleTags());
+
+    ReviewAutomationWS.ReviewAutomationResponse cleared =
+        webService.updateReviewAutomation(
+            7L,
+            mapper.readValueUnchecked(
+                oldPayload.replace("}", ",\"excludedLocaleTags\":[]}"),
+                ReviewAutomationWS.UpsertReviewAutomationRequest.class));
+    assertEquals(List.of(), cleared.excludedLocaleTags());
+    assertEquals(List.of(), automation.getExcludedLocaleTags());
+  }
+
+  @Test
+  public void oldBatchPayloadPreservesExclusionsAndExplicitEmptyListClearsThem() {
+    ReviewAutomation automation = existingAutomation();
+    ReviewAutomationWS webService = webService();
+    ObjectMapper mapper = new ObjectMapper();
+    String oldRow =
+        """
+        {"id":7,"name":"Daily","cronExpression":"0 0 9 ? * MON-FRI","teamId":2}
+        """;
+
+    webService.batchUpsertReviewAutomations(
+        mapper.readValueUnchecked(
+            "{\"rows\":[" + oldRow + "]}",
+            ReviewAutomationWS.BatchUpsertReviewAutomationsRequest.class));
+    assertEquals(List.of("he"), automation.getExcludedLocaleTags());
+
+    webService.batchUpsertReviewAutomations(
+        mapper.readValueUnchecked(
+            "{\"rows\":[" + oldRow.replace("}", ",\"excludedLocaleTags\":[]}") + "]}",
+            ReviewAutomationWS.BatchUpsertReviewAutomationsRequest.class));
+    assertEquals(List.of(), automation.getExcludedLocaleTags());
+  }
+
+  @Test
+  public void unknownOrBlankExcludedLocaleIsRejectedWithoutSaving() {
+    existingAutomation();
+    for (List<String> localeTags : List.of(List.of("not-a-locale"), List.of(" "))) {
+      assertThrows(
+          IllegalArgumentException.class,
+          () ->
+              reviewAutomationService.updateReviewAutomation(
+                  7L,
+                  "Daily",
+                  true,
+                  "0 0 9 ? * MON-FRI",
+                  "UTC",
+                  2L,
+                  1,
+                  2000,
+                  true,
+                  List.of(),
+                  localeTags));
+    }
+    Mockito.verify(reviewAutomationRepository, Mockito.never()).save(Mockito.any());
+  }
+
+  @Test
+  public void batchExportIncludesSavedExclusions() {
+    ReviewAutomation automation = existingAutomation();
+    when(reviewAutomationRepository.findAllOptionRows())
+        .thenReturn(List.of(new ReviewAutomationOptionRow(7L, "Daily", true)));
+    when(reviewAutomationRepository.findAllById(List.of(7L))).thenReturn(List.of(automation));
+
+    assertEquals(
+        List.of("he"),
+        webService().getReviewAutomationBatchExport().getFirst().excludedLocaleTags());
+  }
+
+  private ReviewAutomation existingAutomation() {
+    ReviewAutomation automation = new ReviewAutomation();
+    automation.setId(7L);
+    automation.setName("Daily");
+    automation.setExcludedLocaleTags(List.of("he"));
+    Team team = new Team();
+    team.setId(2L);
+    when(teamRepository.findById(2L)).thenReturn(Optional.of(team));
+    when(reviewAutomationRepository.findByIdWithFeatures(7L)).thenReturn(Optional.of(automation));
+    when(reviewAutomationRepository.findByNameIgnoreCase("Daily"))
+        .thenReturn(Optional.of(automation));
+    when(reviewAutomationRepository.save(Mockito.any(ReviewAutomation.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    return automation;
+  }
+
+  private ReviewAutomationWS webService() {
+    return new ReviewAutomationWS(
+        reviewAutomationService,
+        Mockito.mock(ReviewAutomationSchedulerService.class),
+        Mockito.mock(ReviewAutomationRunService.class),
+        Mockito.mock(TeamService.class));
+  }
+
+  private Locale locale(String tag) {
+    Locale locale = new Locale();
+    locale.setBcp47Tag(tag);
+    return locale;
   }
 }

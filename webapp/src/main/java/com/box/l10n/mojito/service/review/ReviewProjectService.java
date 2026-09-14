@@ -733,6 +733,10 @@ public class ReviewProjectService {
 
     List<LocalePlan> localePlans = new ArrayList<>();
     for (ReviewFeatureLocaleRow locale : reviewFeatureLocales) {
+      if (request.excludedLocaleTags().contains(locale.bcp47Tag())) {
+        localePlans.add(skippedLocalePlan(locale.bcp47Tag()));
+        continue;
+      }
       try {
         List<TextUnitDTO> candidates =
             searchReviewFeatureCandidates(reviewFeature, locale.id(), StatusFilter.REVIEW_NEEDED);

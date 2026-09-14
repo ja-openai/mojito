@@ -999,12 +999,102 @@ public class ReviewProjectServiceTest {
                 7L,
                 null,
                 true,
-                99L));
+                99L,
+                null));
 
     assertEquals(1, result.requestedLocaleCount());
     assertEquals("fr-FR", result.localeResults().get(0).localeTag());
     verify(reviewFeatureRepository).findByIdWithRepositories(53L);
     verify(reviewFeatureRepository).findNonRootLocaleRowsByFeatureId(53L);
+  }
+
+  @Test
+  public void automatedReviewSkipsExcludedLocaleBeforeSearchAndCreatesAllowedLocaleProject() {
+    Locale french = locale(42L, "fr-FR");
+    when(reviewFeatureRepository.findByIdWithRepositories(53L))
+        .thenReturn(Optional.of(reviewFeature(53L, "Feature", repository(71L), repository(72L))));
+    when(reviewFeatureRepository.findNonRootLocaleRowsByFeatureId(53L))
+        .thenReturn(
+            List.of(
+                new ReviewFeatureLocaleRow(43L, "he"), new ReviewFeatureLocaleRow(42L, "fr-FR")));
+    when(entityManager.getReference(Locale.class, 42L)).thenReturn(french);
+    when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team(7L)));
+    TextUnitDTO candidate = wordCountCandidate(1001L, "Welcome", 1);
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
+        .thenReturn(List.of(candidate));
+    when(reviewProjectRequestRepository.save(any(ReviewProjectRequest.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewProjectRequest request = invocation.getArgument(0);
+              request.setId(44L);
+              return request;
+            });
+    when(reviewProjectRepository.save(any(ReviewProject.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewProject project = invocation.getArgument(0);
+              project.setId(12L);
+              return project;
+            });
+
+    CreateReviewProjectRequestResult result =
+        reviewProjectService.createAutomatedReviewProjectRequest(
+            new CreateAutomatedReviewProjectRequestCommand(
+                53L,
+                "Automated feature",
+                null,
+                ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+                7L,
+                null,
+                false,
+                99L,
+                List.of("he")));
+
+    assertEquals(Long.valueOf(44L), result.requestId());
+    assertEquals(List.of(12L), result.projectIds());
+    assertEquals(2, result.requestedLocaleCount());
+    assertEquals(1, result.createdLocaleCount());
+    assertEquals(1, result.skippedLocaleCount());
+    assertEquals(0, result.erroredLocaleCount());
+    ArgumentCaptor<TextUnitSearcherParameters> search =
+        ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
+    verify(textUnitSearcher).search(search.capture());
+    assertEquals(Long.valueOf(42L), search.getValue().getLocaleId());
+    assertEquals(Set.of(71L, 72L), Set.copyOf(search.getValue().getRepositoryIds()));
+    ArgumentCaptor<ReviewProject> project = ArgumentCaptor.forClass(ReviewProject.class);
+    verify(reviewProjectRepository).save(project.capture());
+    assertEquals("fr-FR", project.getValue().getLocale().getBcp47Tag());
+  }
+
+  @Test
+  public void automatedReviewWithAllLocalesExcludedCreatesNoRequestOrProjects() {
+    when(reviewFeatureRepository.findByIdWithRepositories(53L))
+        .thenReturn(Optional.of(reviewFeature(53L, "Feature", repository(71L))));
+    when(reviewFeatureRepository.findNonRootLocaleRowsByFeatureId(53L))
+        .thenReturn(List.of(new ReviewFeatureLocaleRow(43L, "he")));
+
+    CreateReviewProjectRequestResult result =
+        reviewProjectService.createAutomatedReviewProjectRequest(
+            new CreateAutomatedReviewProjectRequestCommand(
+                53L,
+                "Automated feature",
+                null,
+                ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+                7L,
+                null,
+                false,
+                99L,
+                List.of("he")));
+
+    assertNull(result.requestId());
+    assertEquals(List.of(), result.projectIds());
+    assertEquals(1, result.requestedLocaleCount());
+    assertEquals(0, result.createdLocaleCount());
+    assertEquals(1, result.skippedLocaleCount());
+    verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
+    verify(reviewProjectRequestRepository, never()).save(any());
+    verify(reviewProjectRepository, never()).save(any());
+    verify(reviewProjectTextUnitRepository, never()).save(any());
   }
 
   @Test

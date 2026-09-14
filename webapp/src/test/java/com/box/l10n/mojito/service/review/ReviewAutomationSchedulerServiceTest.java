@@ -12,6 +12,7 @@ import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.review.ReviewAutomation;
 import com.box.l10n.mojito.entity.review.ReviewAutomationRun;
 import com.box.l10n.mojito.entity.review.ReviewFeature;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.security.user.UserService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.LinkedHashSet;
@@ -75,6 +76,7 @@ public class ReviewAutomationSchedulerServiceTest {
     assertEquals(-1, command.name().indexOf("PST"));
     assertEquals(-1, command.name().indexOf("PDT"));
     assertEquals(Boolean.TRUE, command.assignTranslator());
+    assertEquals(List.of(), command.excludedLocaleTags());
   }
 
   @Test
@@ -102,6 +104,47 @@ public class ReviewAutomationSchedulerServiceTest {
     verify(reviewProjectService).createAutomatedReviewProjectRequest(commandCaptor.capture());
 
     assertEquals(Boolean.FALSE, commandCaptor.getValue().assignTranslator());
+  }
+
+  @Test
+  public void cronAndRunNowPassSavedExclusionsToEveryFeature() {
+    ReviewAutomation automation = automation(18L, "Daily", "UTC");
+    automation.setExcludedLocaleTags(List.of("he"));
+    automation.setFeatures(
+        new LinkedHashSet<>(List.of(feature(24L, "Billing"), feature(25L, "Checkout"))));
+    ReviewAutomationRun run = new ReviewAutomationRun();
+    run.setId(32L);
+    User systemUser = new User();
+    systemUser.setId(100L);
+    when(userService.findSystemUser()).thenReturn(systemUser);
+    when(reviewAutomationRepository.findByIdWithFeatures(18L)).thenReturn(Optional.of(automation));
+    when(reviewAutomationRunService.createRunningRun(any(), any(), anyLong(), anyInt(), any()))
+        .thenReturn(run);
+    when(reviewProjectService.createAutomatedReviewProjectRequest(any()))
+        .thenReturn(
+            new CreateReviewProjectRequestResult(
+                null, "ignored", List.of(), null, List.of(), 1, 0, 1, 0, List.of()));
+
+    reviewAutomationSchedulerService.runAutomationFromCron(18L);
+    reviewAutomationSchedulerService.runAutomationNow(18L, 99L);
+
+    ArgumentCaptor<CreateAutomatedReviewProjectRequestCommand> commands =
+        ArgumentCaptor.forClass(CreateAutomatedReviewProjectRequestCommand.class);
+    verify(reviewProjectService, Mockito.times(4))
+        .createAutomatedReviewProjectRequest(commands.capture());
+    assertEquals(
+        List.of(24L, 25L, 24L, 25L),
+        commands.getAllValues().stream()
+            .map(CreateAutomatedReviewProjectRequestCommand::reviewFeatureId)
+            .toList());
+    assertEquals(
+        List.of(100L, 100L, 99L, 99L),
+        commands.getAllValues().stream()
+            .map(CreateAutomatedReviewProjectRequestCommand::requestedByUserId)
+            .toList());
+    for (CreateAutomatedReviewProjectRequestCommand command : commands.getAllValues()) {
+      assertEquals(List.of("he"), command.excludedLocaleTags());
+    }
   }
 
   private ReviewAutomation automation(Long id, String name, String timeZone) {

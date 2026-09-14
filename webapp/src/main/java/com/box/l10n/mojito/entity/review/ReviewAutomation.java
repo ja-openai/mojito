@@ -3,6 +3,7 @@ package com.box.l10n.mojito.entity.review;
 import com.box.l10n.mojito.entity.AuditableEntity;
 import com.box.l10n.mojito.entity.Team;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
@@ -13,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -46,6 +48,10 @@ public class ReviewAutomation extends AuditableEntity {
   @Column(name = "assign_translator", nullable = false)
   private Boolean assignTranslator = true;
 
+  @Convert(converter = ReviewAutomationExcludedLocaleTagsConverter.class)
+  @Column(name = "excluded_locale_tags_json", length = Integer.MAX_VALUE)
+  private List<String> excludedLocaleTags = List.of();
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(
       name = "team_id",
@@ -75,6 +81,15 @@ public class ReviewAutomation extends AuditableEntity {
 
   public String getName() {
     return name;
+  }
+
+  public List<String> getExcludedLocaleTags() {
+    return excludedLocaleTags;
+  }
+
+  public void setExcludedLocaleTags(List<String> excludedLocaleTags) {
+    this.excludedLocaleTags =
+        excludedLocaleTags == null ? List.of() : List.copyOf(excludedLocaleTags);
   }
 
   public void setName(String name) {
