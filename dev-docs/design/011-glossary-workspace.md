@@ -168,6 +168,13 @@ section, where users explain why a source term was added or changed. Users can
 add, edit, and remove notes with the same permissions and save action as other
 term metadata. HTTP(S) document and Slack links pasted into notes appear as
 clickable supporting links. Read-only users can read notes and open their links.
+Every editor Save, Submit candidate, and Replace action opens a
+confirmation with an optional decision note and supporting links. A nonblank note
+is appended to the term's existing notes in the same request. Cancelling leaves
+the editor unchanged; a failed save keeps the note available for retry. Source
+replacement keeps its translation-copy options in that same confirmation.
+Quick candidate acceptance, bulk actions, and imports keep their existing flow.
+
 These editable term-level notes reuse `NOTE` reference storage and the existing
 1,024-character caption limit; they are not a per-change audit history.
 

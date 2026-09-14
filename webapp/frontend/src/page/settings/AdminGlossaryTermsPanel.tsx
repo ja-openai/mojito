@@ -848,7 +848,9 @@ export function AdminGlossaryTermsPanel({
   const [editorDraft, setEditorDraft] = useState<TermDraft>(() => createBlankDraft([]));
   const [originalEditorDraft, setOriginalEditorDraft] = useState<TermDraft | null>(null);
   const [termPendingDelete, setTermPendingDelete] = useState<TermDraft | null>(null);
-  const [termPendingReplace, setTermPendingReplace] = useState<TermDraft | null>(null);
+  const [termPendingSave, setTermPendingSave] = useState<TermDraft | null>(null);
+  const [saveDecisionNote, setSaveDecisionNote] = useState('');
+  const saveDecisionNoteRef = useRef<HTMLTextAreaElement>(null);
   const [replaceCopyTranslations, setReplaceCopyTranslations] = useState(true);
   const [replaceCopyTranslationStatus, setReplaceCopyTranslationStatus] =
     useState<CopyTranslationStatus>('KEEP_CURRENT');
@@ -1117,7 +1119,7 @@ export function AdminGlossaryTermsPanel({
       setEditorOpen(false);
       setUploadQueue([]);
       setOriginalEditorDraft(null);
-      setTermPendingReplace(null);
+      setTermPendingSave(null);
       if (returnToExtractAfterEditor) {
         setExtractOpen(true);
       }
@@ -1139,6 +1141,45 @@ export function AdminGlossaryTermsPanel({
     },
   });
 
+  useEffect(() => {
+    if (!termPendingSave) {
+      return;
+    }
+    const previousFocus = document.activeElement;
+    const note = saveDecisionNoteRef.current;
+    const dialog = note?.closest('[role="alertdialog"]');
+    note?.focus();
+    const containKeyboardFocus = (event: Event) => {
+      const keyboardEvent = event as KeyboardEvent;
+      if (keyboardEvent.key !== 'Tab' || !dialog) {
+        return;
+      }
+      const controls = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'input:enabled, select:enabled, textarea:enabled, button:enabled',
+        ),
+      );
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first) {
+        keyboardEvent.preventDefault();
+      } else if (keyboardEvent.shiftKey && document.activeElement === first) {
+        keyboardEvent.preventDefault();
+        last.focus();
+      } else if (!keyboardEvent.shiftKey && document.activeElement === last) {
+        keyboardEvent.preventDefault();
+        first.focus();
+      }
+    };
+    dialog?.addEventListener('keydown', containKeyboardFocus);
+    return () => {
+      dialog?.removeEventListener('keydown', containKeyboardFocus);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus();
+      }
+    };
+  }, [termPendingSave]);
+
   const deleteTermMutation = useMutation({
     mutationFn: async (draft: TermDraft) => {
       if (draft.tmTextUnitId == null) {
@@ -1153,7 +1194,7 @@ export function AdminGlossaryTermsPanel({
       setEditorOpen(false);
       setUploadQueue([]);
       setOriginalEditorDraft(null);
-      setTermPendingReplace(null);
+      setTermPendingSave(null);
       setSelectedTermIds((current) =>
         deletedTerm.tmTextUnitId == null
           ? current
@@ -1736,14 +1777,21 @@ export function AdminGlossaryTermsPanel({
     editorDraft,
   );
   const isReplacingBackingTextUnit = replacementBackingFieldLabels.length > 0;
+  const pendingSaveReplacesTerm =
+    canManageTerms &&
+    termPendingSave != null &&
+    getReplacementBackingFieldLabels(originalEditorDraft, termPendingSave).length > 0;
+  const saveDialogTitle = pendingSaveReplacesTerm
+    ? 'Replace glossary term'
+    : canManageTerms
+      ? 'Save glossary term'
+      : 'Submit glossary candidate';
   const handleSaveTerm = () => {
-    if (canManageTerms && isReplacingBackingTextUnit) {
-      setReplaceCopyTranslations(true);
-      setReplaceCopyTranslationStatus('KEEP_CURRENT');
-      setTermPendingReplace(editorDraft);
-      return;
-    }
-    saveTermMutation.mutate({ draft: editorDraft });
+    setReplaceCopyTranslations(true);
+    setReplaceCopyTranslationStatus('KEEP_CURRENT');
+    setSaveDecisionNote('');
+    saveTermMutation.reset();
+    setTermPendingSave(editorDraft);
   };
   const editorTitle = suggestionInEditor
     ? `Candidate: ${suggestionInEditor.term}`
@@ -1870,7 +1918,7 @@ export function AdminGlossaryTermsPanel({
     setEditorOpen(false);
     setUploadQueue([]);
     setOriginalEditorDraft(null);
-    setTermPendingReplace(null);
+    setTermPendingSave(null);
     if (returnToExtractAfterEditor) {
       setExtractOpen(true);
     }
@@ -3379,56 +3427,78 @@ export function AdminGlossaryTermsPanel({
       </Modal>
 
       <Modal
-        open={termPendingReplace != null}
+        open={termPendingSave != null}
         size="sm"
         role="alertdialog"
-        ariaLabel="Replace glossary term"
+        ariaLabel={saveDialogTitle}
       >
-        <div className="modal__title">Replace glossary term</div>
-        <div className="modal__body">
-          {termPendingReplace
-            ? `Replacing ${termPendingReplace.source} will create a new backing text unit for the changed ${getReplacementBackingFieldLabels(
+        <div className="modal__title">{saveDialogTitle}</div>
+        {pendingSaveReplacesTerm && termPendingSave ? (
+          <>
+            <div className="modal__body">
+              {`Replacing ${termPendingSave.source} creates a new source version for the changed ${getReplacementBackingFieldLabels(
                 originalEditorDraft,
-                termPendingReplace,
-              ).join(
-                ', ',
-              )}. The old text unit will be left unused so existing history remains intact.`
-            : ''}
-        </div>
-        <div className="settings-grid">
-          <label className="settings-field__row glossary-term-admin__replace-option">
-            <span>Copy existing translations to the replacement term</span>
-            <input
-              type="checkbox"
-              checked={replaceCopyTranslations}
-              onChange={(event) => setReplaceCopyTranslations(event.target.checked)}
-            />
+                termPendingSave,
+              ).join(', ')}. Translation history for the previous version is preserved.`}
+            </div>
+            <div className="settings-grid">
+              <label className="settings-field__row glossary-term-admin__replace-option">
+                <span>Copy existing translations to the replacement term</span>
+                <input
+                  type="checkbox"
+                  checked={replaceCopyTranslations}
+                  onChange={(event) => setReplaceCopyTranslations(event.target.checked)}
+                  disabled={saveTermMutation.isPending}
+                />
+              </label>
+              <label className="settings-field">
+                <span className="settings-field__label">Copied translation status</span>
+                <select
+                  className="settings-input"
+                  value={replaceCopyTranslationStatus}
+                  onChange={(event) =>
+                    setReplaceCopyTranslationStatus(event.target.value as CopyTranslationStatus)
+                  }
+                  disabled={!replaceCopyTranslations || saveTermMutation.isPending}
+                >
+                  <option value="KEEP_CURRENT">Keep current status</option>
+                  <option value="REVIEW_NEEDED">Send to review</option>
+                  <option value="APPROVED">Mark approved</option>
+                </select>
+              </label>
+            </div>
+          </>
+        ) : null}
+        <div className="settings-field">
+          <label className="settings-field__label" htmlFor="glossary-save-decision-note">
+            Decision note (optional)
           </label>
-          <label className="settings-field">
-            <span className="settings-field__label">Copied translation status</span>
-            <select
-              className="settings-input"
-              value={replaceCopyTranslationStatus}
-              onChange={(event) =>
-                setReplaceCopyTranslationStatus(event.target.value as CopyTranslationStatus)
-              }
-              disabled={!replaceCopyTranslations}
-            >
-              <option value="KEEP_CURRENT">Keep current status</option>
-              <option value="REVIEW_NEEDED">Send to review</option>
-              <option value="APPROVED">Mark approved</option>
-            </select>
-          </label>
+          <p className="settings-hint">
+            Explain why this term was added or changed. Include links to supporting documents or
+            conversations.
+          </p>
+          <AutoTextarea
+            ref={saveDecisionNoteRef}
+            id="glossary-save-decision-note"
+            className="settings-input"
+            value={saveDecisionNote}
+            onChange={(event) => setSaveDecisionNote(event.target.value)}
+            maxLength={1024}
+            minRows={3}
+            disabled={saveTermMutation.isPending}
+          />
         </div>
+        {saveTermMutation.isError ? (
+          <div role="alert" className="settings-error">
+            {saveTermMutation.error.message || 'Failed to save glossary term.'}
+          </div>
+        ) : null}
         <div className="modal__actions glossary-term-admin__replace-actions">
           <button
             type="button"
             className="modal__button"
-            onClick={() => {
-              if (!saveTermMutation.isPending) {
-                setTermPendingReplace(null);
-              }
-            }}
+            onClick={() => setTermPendingSave(null)}
+            disabled={saveTermMutation.isPending}
           >
             Cancel
           </button>
@@ -3436,18 +3506,38 @@ export function AdminGlossaryTermsPanel({
             type="button"
             className="modal__button modal__button--primary"
             onClick={() => {
-              if (termPendingReplace) {
+              if (termPendingSave) {
+                const caption = saveDecisionNote.trim();
+                const draft = caption
+                  ? {
+                      ...termPendingSave,
+                      references: [
+                        ...termPendingSave.references,
+                        { ...createBlankReference('NOTE'), caption },
+                      ],
+                    }
+                  : termPendingSave;
                 saveTermMutation.mutate({
-                  draft: termPendingReplace,
-                  replaceTerm: true,
-                  copyTranslationsOnReplace: replaceCopyTranslations,
-                  copyTranslationStatus: replaceCopyTranslationStatus,
+                  draft,
+                  replaceTerm: pendingSaveReplacesTerm,
+                  copyTranslationsOnReplace: pendingSaveReplacesTerm
+                    ? replaceCopyTranslations
+                    : null,
+                  copyTranslationStatus: pendingSaveReplacesTerm
+                    ? replaceCopyTranslationStatus
+                    : null,
                 });
               }
             }}
             disabled={saveTermMutation.isPending}
           >
-            {saveTermMutation.isPending ? 'Replacing…' : 'Replace term'}
+            {saveTermMutation.isPending
+              ? 'Saving…'
+              : pendingSaveReplacesTerm
+                ? 'Replace term'
+                : canManageTerms
+                  ? 'Save term'
+                  : 'Submit candidate'}
           </button>
         </div>
       </Modal>

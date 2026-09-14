@@ -144,6 +144,9 @@ describe('AdminGlossaryTermsPanel', () => {
       within(screen.getByRole('region', { name: 'References' })).getAllByRole('combobox'),
     ).toHaveLength(3);
     fireEvent.click(screen.getByRole('button', { name: 'Save term' }));
+    const confirmation = screen.getByRole('alertdialog', { name: 'Save glossary term' });
+    expect(mocks.updateGlossaryTerm).not.toHaveBeenCalled();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Save term' }));
     await waitFor(() => expect(mocks.updateGlossaryTerm).toHaveBeenCalledTimes(1));
 
     const request = mocks.updateGlossaryTerm.mock.calls[0][2];
@@ -178,12 +181,89 @@ describe('AdminGlossaryTermsPanel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Remove decision note 1' }));
     expect(screen.getByText('No decision notes yet.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Save term' }));
+    const confirmation = screen.getByRole('alertdialog', { name: 'Save glossary term' });
+    expect(mocks.updateGlossaryTerm).not.toHaveBeenCalled();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Save term' }));
     await waitFor(() => expect(mocks.updateGlossaryTerm).toHaveBeenCalledTimes(1));
     expect(savedTerm.evidence.map((evidence) => evidence.evidenceType)).toEqual([
       'SCREENSHOT',
       'STRING_USAGE',
       'CODE_REF',
     ]);
+  });
+
+  it('cancels a save without losing the editor changes and prompts again on retry', async () => {
+    renderPanel();
+    fireEvent.change(await screen.findByLabelText('Part of speech'), {
+      target: { value: 'noun' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save term' }));
+    const confirmation = screen.getByRole('alertdialog', { name: 'Save glossary term' });
+    const focusedNote = within(confirmation).getByLabelText('Decision note (optional)');
+    expect(focusedNote).toHaveFocus();
+    fireEvent.keyDown(focusedNote, { key: 'Tab', shiftKey: true });
+    const confirmButton = within(confirmation).getByRole('button', { name: 'Save term' });
+    expect(confirmButton).toHaveFocus();
+    fireEvent.keyDown(confirmButton, { key: 'Tab' });
+    expect(focusedNote).toHaveFocus();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Cancel' }));
+    expect(mocks.updateGlossaryTerm).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Part of speech')).toHaveValue('noun');
+    fireEvent.click(screen.getByRole('button', { name: 'Save term' }));
+    const reopened = screen.getByRole('alertdialog', { name: 'Save glossary term' });
+    fireEvent.change(within(reopened).getByLabelText('Decision note (optional)'), {
+      target: { value: 'Confirmed the grammatical role. https://docs.example.com/terms' },
+    });
+    fireEvent.click(within(reopened).getByRole('button', { name: 'Save term' }));
+    await waitFor(() => expect(mocks.updateGlossaryTerm).toHaveBeenCalledTimes(1));
+    expect(mocks.updateGlossaryTerm.mock.calls[0][2]).toMatchObject({
+      partOfSpeech: 'noun',
+      replaceTerm: false,
+      evidence: [
+        ...savedTerm.evidence.slice(0, 4),
+        {
+          evidenceType: 'NOTE',
+          caption: 'Confirmed the grammatical role. https://docs.example.com/terms',
+        },
+      ],
+    });
+  });
+
+  it('keeps the replacement note on failure and saves it once with the copy options on retry', async () => {
+    mocks.updateGlossaryTerm.mockRejectedValueOnce(new Error('Temporary save failure'));
+    renderPanel();
+    fireEvent.change(await screen.findByLabelText('Definition'), {
+      target: { value: 'A shared place for a team.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Replace term' }));
+    const confirmation = screen.getByRole('alertdialog', { name: 'Replace glossary term' });
+    expect(mocks.updateGlossaryTerm).not.toHaveBeenCalled();
+    const note = within(confirmation).getByLabelText('Decision note (optional)');
+    fireEvent.change(note, { target: { value: 'Clarified team scope.' } });
+    fireEvent.change(within(confirmation).getByLabelText('Copied translation status'), {
+      target: { value: 'REVIEW_NEEDED' },
+    });
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Replace term' }));
+    expect(await within(confirmation).findByRole('alert')).toHaveTextContent(
+      'Temporary save failure',
+    );
+    expect(note).toHaveValue('Clarified team scope.');
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Replace term' }));
+    await screen.findByText('Saved glossary term Workspace.');
+    expect(mocks.updateGlossaryTerm).toHaveBeenCalledTimes(2);
+    const firstRequest = mocks.updateGlossaryTerm.mock.calls[0][2];
+    const retriedRequest = mocks.updateGlossaryTerm.mock.calls[1][2];
+    expect(retriedRequest).toEqual(firstRequest);
+    expect(retriedRequest).toMatchObject({
+      sourceComment: 'A shared place for a team.',
+      replaceTerm: true,
+      copyTranslationsOnReplace: true,
+      copyTranslationStatus: 'REVIEW_NEEDED',
+    });
+    expect(
+      retriedRequest.evidence?.filter((item) => item.caption === 'Clarified team scope.'),
+    ).toHaveLength(1);
+    expect(retriedRequest.evidence).toHaveLength(5);
   });
 
   it('lets translators read existing decision notes and links without source-term editing controls', async () => {
