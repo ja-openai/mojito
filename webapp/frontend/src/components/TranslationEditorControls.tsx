@@ -1,6 +1,7 @@
 import './visible-text-editor.css';
 
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { VisibleTextMarksMode } from './visibleTextFormatting';
 
@@ -281,9 +282,15 @@ export function SpecialTextTools({
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuId = useId();
   const helpId = useId();
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+
+  const getPanelControls = () =>
+    Array.from(
+      panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]') ?? [],
+    ).filter((control) => !control.closest('[hidden]'));
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -298,17 +305,13 @@ export function SpecialTextTools({
       const spaceAbove = anchor.top - padding - gap;
       const spaceBelow = window.innerHeight - anchor.bottom - padding - gap;
       panel.style.maxHeight = `${Math.max(0, Math.min(480, Math.max(spaceAbove, spaceBelow)))}px`;
-      panel.style.transform = '';
       const rect = panel.getBoundingClientRect();
-      const offsetX = Math.max(
-        padding - rect.left,
-        Math.min(0, window.innerWidth - padding - rect.right),
-      );
-      const offsetY =
+      panel.style.left = `${Math.max(padding, Math.min(anchor.left, window.innerWidth - padding - rect.width))}px`;
+      panel.style.top = `${
         rect.height > spaceBelow && spaceAbove > spaceBelow
-          ? -rect.height - anchor.height - gap * 2
-          : 0;
-      panel.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+          ? Math.max(padding, anchor.top - rect.height - gap)
+          : Math.min(anchor.bottom + gap, window.innerHeight - padding)
+      }px`;
     };
     positionPanel();
     window.addEventListener('resize', positionPanel);
@@ -322,7 +325,10 @@ export function SpecialTextTools({
   useEffect(() => {
     if (!open) return;
     const handlePointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) onOpenChange(false);
+      const target = event.target as Node;
+      if (!menuRef.current?.contains(target) && !panelRef.current?.contains(target)) {
+        onOpenChange(false);
+      }
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -355,63 +361,92 @@ export function SpecialTextTools({
           setShowKeyboardHelp(false);
           onOpenChange(!open);
         }}
+        onKeyDown={(event) => {
+          if (!open || event.altKey || event.ctrlKey || event.metaKey) return;
+          if (event.key !== 'ArrowDown' && (event.key !== 'Tab' || event.shiftKey)) return;
+          const firstControl = getPanelControls()[0];
+          if (!firstControl) return;
+          event.preventDefault();
+          event.stopPropagation();
+          firstControl.focus();
+        }}
         onMouseDown={(event) => event.preventDefault()}
+        ref={buttonRef}
         title="Insert a character or view system keyboard help"
         type="button"
       >
         Characters
         <span className="visible-text-editor__marks-chevron" aria-hidden="true" />
       </button>
-      <div className="visible-text-editor__special-menu" hidden={!open} id={menuId} ref={panelRef}>
-        <div hidden={showKeyboardHelp}>
-          {TEXT_TOOL_GROUPS.map((group) => (
-            <div
-              className="visible-text-editor__special-group"
-              key={group.label}
-              role="group"
-              aria-label={group.label}
-            >
-              <div className="visible-text-editor__special-group-label" aria-hidden="true">
-                {group.label}
-              </div>
-              {group.tools.map((tool) => (
-                <button
-                  className="visible-text-editor__special-option"
-                  data-translation-editor-control
-                  disabled={disabled}
-                  key={tool.code}
-                  onClick={() => {
-                    onApplyTextTool(tool);
-                    onOpenChange(false);
-                  }}
-                  onMouseDown={(event) => event.preventDefault()}
-                  title={tool.title}
-                  type="button"
-                >
-                  <span>{tool.label}</span>
-                  <small aria-hidden="true">{tool.code}</small>
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-        <button
-          aria-controls={helpId}
-          aria-expanded={showKeyboardHelp}
-          className="visible-text-editor__keyboard-help-toggle"
-          data-translation-editor-control
-          disabled={disabled}
-          onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
-          onMouseDown={(event) => event.preventDefault()}
-          type="button"
+      {createPortal(
+        <div
+          className="visible-text-editor__special-menu"
+          hidden={!open}
+          id={menuId}
+          onKeyDown={(event) => {
+            if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey) return;
+            const controls = getPanelControls();
+            const isLeavingStart = event.shiftKey && event.target === controls[0];
+            const isLeavingEnd = !event.shiftKey && event.target === controls[controls.length - 1];
+            if (!isLeavingStart && !isLeavingEnd) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (isLeavingEnd) onOpenChange(false);
+            buttonRef.current?.focus();
+          }}
+          ref={panelRef}
         >
-          <span>{showKeyboardHelp ? 'Back to characters' : 'System keyboard help'}</span>
-          <span aria-hidden="true">{showKeyboardHelp ? '←' : '→'}</span>
-        </button>
-        <div id={helpId} hidden={!showKeyboardHelp}>
-          <SystemKeyboardHelp />
-        </div>
-      </div>
+          <div hidden={showKeyboardHelp}>
+            {TEXT_TOOL_GROUPS.map((group) => (
+              <div
+                className="visible-text-editor__special-group"
+                key={group.label}
+                role="group"
+                aria-label={group.label}
+              >
+                <div className="visible-text-editor__special-group-label" aria-hidden="true">
+                  {group.label}
+                </div>
+                {group.tools.map((tool) => (
+                  <button
+                    className="visible-text-editor__special-option"
+                    data-translation-editor-control
+                    disabled={disabled}
+                    key={tool.code}
+                    onClick={() => {
+                      onApplyTextTool(tool);
+                      onOpenChange(false);
+                    }}
+                    onMouseDown={(event) => event.preventDefault()}
+                    title={tool.title}
+                    type="button"
+                  >
+                    <span>{tool.label}</span>
+                    <small aria-hidden="true">{tool.code}</small>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+          <button
+            aria-controls={helpId}
+            aria-expanded={showKeyboardHelp}
+            className="visible-text-editor__keyboard-help-toggle"
+            data-translation-editor-control
+            disabled={disabled}
+            onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
+            onMouseDown={(event) => event.preventDefault()}
+            type="button"
+          >
+            <span>{showKeyboardHelp ? 'Back to characters' : 'System keyboard help'}</span>
+            <span aria-hidden="true">{showKeyboardHelp ? '←' : '→'}</span>
+          </button>
+          <div id={helpId} hidden={!showKeyboardHelp}>
+            <SystemKeyboardHelp />
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

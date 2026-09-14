@@ -278,6 +278,9 @@ actionable.
 
 **Characters** is shared by MF2, assisted, and plain-text translation editors
 in Workbench, Review Project, Find/Replace working targets, and text-unit details.
+Its panel renders in a body portal with fixed viewport positioning so autosizing
+editor wrappers and scrolling, transformed Workbench rows cannot clip it. It stays
+anchored on scroll/resize and opens above the control when space below is limited.
 It inserts at the caret or replaces selected text; phrase-direction actions wrap
 the selection. The menu groups spaces and punctuation, direction marks, and phrase
 direction with aligned character hints. **System keyboard help** opens a separate

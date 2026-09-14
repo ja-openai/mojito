@@ -163,6 +163,130 @@ function GuardedTranslationTextEditor({
 }
 
 describe('TranslationTextEditor', () => {
+  it.each([true, false])(
+    'keeps keyboard navigation connected to the portaled Characters menu (assisted: %s)',
+    async (assisted) => {
+      const user = userEvent.setup();
+      const ref = createRef<VisibleTextEditorHandle>();
+      const handleChange = vi.fn();
+      render(
+        <>
+          <ControlledTranslationTextEditor
+            assisted={assisted}
+            editorRef={ref}
+            initialValue="Bonjour"
+            onValueChange={handleChange}
+          />
+          <button type="button">After editor</button>
+        </>,
+      );
+      await screen.findByRole('textbox', { name: 'Text editor' });
+      const characters = screen.getByRole('button', { name: 'Characters' });
+      act(() => ref.current?.setSelection({ start: 3, end: 3 }));
+      characters.focus();
+
+      await user.keyboard('{Enter}');
+      await user.tab();
+      expect(screen.getByRole('button', { name: 'No-break space' })).toHaveFocus();
+      await user.tab({ shift: true });
+      expect(characters).toHaveFocus();
+      await user.keyboard('{ArrowDown}');
+      expect(screen.getByRole('button', { name: 'No-break space' })).toHaveFocus();
+
+      const panel = document.getElementById(characters.getAttribute('aria-controls')!)!;
+      const controls = within(panel).getAllByRole('button');
+      for (const control of controls.slice(1)) {
+        await user.tab();
+        expect(control).toHaveFocus();
+      }
+      await user.tab();
+      expect(characters).toHaveFocus();
+      expect(characters).toHaveAttribute('aria-expanded', 'false');
+      await user.tab();
+      expect(screen.getByRole('button', { name: 'After editor' })).toHaveFocus();
+
+      await user.tab({ shift: true });
+      await user.keyboard('{Enter}{ArrowDown}');
+      for (const control of controls.slice(1)) {
+        await user.tab();
+        expect(control).toHaveFocus();
+      }
+      await user.keyboard('{Enter}');
+      await user.tab({ shift: true });
+      expect(characters).toHaveFocus();
+      await user.tab();
+      expect(screen.getByRole('button', { name: 'Back to characters' })).toHaveFocus();
+      for (const link of within(panel).getAllByRole('link')) {
+        await user.tab();
+        expect(link).toHaveFocus();
+      }
+      await user.tab();
+      expect(characters).toHaveFocus();
+      expect(characters).toHaveAttribute('aria-expanded', 'false');
+      expect(handleChange).not.toHaveBeenCalled();
+      expect(ref.current?.getSelection()).toEqual({ start: 3, end: 3 });
+    },
+  );
+
+  it.each([true, false])(
+    'keeps Characters usable outside a clipped translation panel (assisted: %s)',
+    async (assisted) => {
+      const user = userEvent.setup();
+      const ref = createRef<VisibleTextEditorHandle>();
+      const handleChange = vi.fn();
+      const restoreDom = installProseMirrorHistoryDomMock();
+
+      try {
+        render(
+          <>
+            <div
+              aria-label="Clipped translation panel"
+              role="region"
+              style={{ height: 100, overflow: 'hidden' }}
+            >
+              <div style={{ transform: 'translateY(20px)' }}>
+                <ControlledTranslationTextEditor
+                  assisted={assisted}
+                  editorRef={ref}
+                  initialValue="保存完了"
+                  onValueChange={handleChange}
+                />
+              </div>
+            </div>
+            <button type="button">Outside editor</button>
+          </>,
+        );
+        const editor = await screen.findByRole('textbox', { name: 'Text editor' });
+        const panel = screen.getByRole('region', { name: 'Clipped translation panel' });
+        const characters = screen.getByRole('button', { name: 'Characters' });
+        act(() => ref.current?.setSelection({ start: 2, end: 2 }));
+
+        await user.click(characters);
+        const option = screen.getByRole('button', { name: 'No-break space' });
+        expect(characters).toHaveAttribute('aria-expanded', 'true');
+        expect(option).toBeVisible();
+        expect(panel).not.toContainElement(option);
+
+        await user.click(option);
+
+        expect(handleChange).toHaveBeenLastCalledWith('保存\u00a0完了');
+        await waitFor(() => expect(ref.current?.getSelection()).toEqual({ start: 3, end: 3 }));
+        expect(editor).toHaveFocus();
+        expect(characters).toHaveAttribute('aria-expanded', 'false');
+
+        await user.click(characters);
+        expect(screen.getByRole('button', { name: 'No-break space' })).toBeVisible();
+        await user.click(screen.getByRole('button', { name: 'Outside editor' }));
+
+        expect(characters).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.getByText('No-break space')).not.toBeVisible();
+        expect(handleChange).toHaveBeenCalledTimes(1);
+      } finally {
+        restoreDom();
+      }
+    },
+  );
+
   it.each(
     [
       { mode: 'assisted', assisted: true, rawMode: false },

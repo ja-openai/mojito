@@ -952,18 +952,15 @@
   max-inline-size: calc(100vw - 32px);
   max-block-size: min(480px, 70vh);
   overflow-y: auto;
-  inset-inline-start: 0;
   min-width: 0;
-  position: absolute;
-  top: 100%;
-  z-index: 110;
+  position: fixed;
+  z-index: 1200;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   box-shadow:
     0 4px 8px color-mix(in srgb, var(--color-text) 4%, transparent),
     0 16px 40px color-mix(in srgb, var(--color-text) 12%, transparent);
-  margin-top: 6px;
   padding: 6px;
   text-align: start;
 }
