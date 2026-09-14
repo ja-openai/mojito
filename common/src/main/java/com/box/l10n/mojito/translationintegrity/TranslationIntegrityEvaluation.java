@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.translationintegrity;
 
-import java.util.ArrayList;
+import static com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic.sortedDiagnostics;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -46,12 +47,5 @@ public record TranslationIntegrityEvaluation(
 
   public static TranslationIntegrityEvaluation pass() {
     return new TranslationIntegrityEvaluation(List.of(), TranslationIntegrityDisposition.PASS);
-  }
-
-  private static List<TranslationIntegrityDiagnostic> sortedDiagnostics(
-      List<TranslationIntegrityDiagnostic> diagnostics) {
-    List<TranslationIntegrityDiagnostic> sorted = new ArrayList<>(diagnostics);
-    sorted.sort(TranslationIntegrityDiagnostic.CANONICAL_ORDER);
-    return List.copyOf(sorted);
   }
 }

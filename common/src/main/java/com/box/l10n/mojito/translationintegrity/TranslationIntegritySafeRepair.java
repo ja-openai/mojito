@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.translationintegrity;
 
+import static com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic.sortedDiagnostics;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -38,12 +40,5 @@ public record TranslationIntegritySafeRepair(
       String expectedTarget,
       List<TranslationIntegrityDiagnostic> expectedDiagnostics) {
     this(operations, expectedTarget, expectedDiagnostics, List.of());
-  }
-
-  private static List<TranslationIntegrityDiagnostic> sortedDiagnostics(
-      List<TranslationIntegrityDiagnostic> diagnostics) {
-    List<TranslationIntegrityDiagnostic> sorted = new ArrayList<>(diagnostics);
-    sorted.sort(TranslationIntegrityDiagnostic.CANONICAL_ORDER);
-    return List.copyOf(sorted);
   }
 }

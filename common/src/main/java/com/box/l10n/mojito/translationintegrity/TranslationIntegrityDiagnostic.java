@@ -56,6 +56,13 @@ public record TranslationIntegrityDiagnostic(
     return new TranslationIntegrityDiagnostic(code, Severity.ERROR, Subject.TARGET, details, range);
   }
 
+  static List<TranslationIntegrityDiagnostic> sortedDiagnostics(
+      List<TranslationIntegrityDiagnostic> diagnostics) {
+    List<TranslationIntegrityDiagnostic> sorted = new ArrayList<>(diagnostics);
+    sorted.sort(TranslationIntegrityDiagnostic.CANONICAL_ORDER);
+    return List.copyOf(sorted);
+  }
+
   public enum Severity {
     ERROR("error"),
     WARNING("warning"),
