@@ -16,28 +16,13 @@ final class AppleStringsdictWriter {
   private static final List<String> PLURAL_CATEGORIES =
       List.of("zero", "one", "two", "few", "many", "other");
   private static final Pattern ARGUMENT = Pattern.compile("\\{([\\p{L}\\p{N}\\p{M}\\p{So}_]+)\\}");
-  private static final Comparator<String> UNICODE_SCALAR_ORDER =
-      (left, right) -> {
-        int leftIndex = 0;
-        int rightIndex = 0;
-        while (leftIndex < left.length() && rightIndex < right.length()) {
-          int first = left.codePointAt(leftIndex);
-          int second = right.codePointAt(rightIndex);
-          if (first != second) {
-            return Integer.compare(first, second);
-          }
-          leftIndex += Character.charCount(first);
-          rightIndex += Character.charCount(second);
-        }
-        return Integer.compare(left.length() - leftIndex, right.length() - rightIndex);
-      };
 
   String write(LocalizationCatalog catalog) {
     if (!LocalizationFileFormat.APPLE_STRINGSDICT.id().equals(catalog.sourceFormat())) {
       throw invalid(
           "INVALID_SOURCE_FORMAT", "Apple stringsdict writer requires a stringsdict catalog");
     }
-    TreeMap<String, LocalizationMessage> messages = new TreeMap<>(UNICODE_SCALAR_ORDER);
+    TreeMap<String, LocalizationMessage> messages = new TreeMap<>(UnicodeScalarOrder.COMPARATOR);
     messages.putAll(catalog.messages());
     StringBuilder output =
         new StringBuilder(
@@ -151,7 +136,7 @@ final class AppleStringsdictWriter {
       throw invalid(
           "INVALID_APPLE_STRINGSDICT_METADATA", "Apple plist extras must be dictionaries");
     }
-    TreeMap<String, Object> sorted = new TreeMap<>(UNICODE_SCALAR_ORDER);
+    TreeMap<String, Object> sorted = new TreeMap<>(UnicodeScalarOrder.COMPARATOR);
     for (Map.Entry<?, ?> field : fields.entrySet()) {
       if (!(field.getKey() instanceof String key)) {
         throw invalid("INVALID_APPLE_STRINGSDICT_METADATA", "Apple plist keys must be strings");
@@ -503,8 +488,9 @@ final class AppleStringsdictWriter {
     }
     Comparator<String> ordering =
         widths
-            ? Comparator.<String>comparingInt(Integer::parseInt).thenComparing(UNICODE_SCALAR_ORDER)
-            : UNICODE_SCALAR_ORDER;
+            ? Comparator.<String>comparingInt(Integer::parseInt)
+                .thenComparing(UnicodeScalarOrder.COMPARATOR)
+            : UnicodeScalarOrder.COMPARATOR;
     TreeMap<String, String> entries = new TreeMap<>(ordering);
     for (Map.Entry<?, ?> entry : values.entrySet()) {
       if (!(entry.getKey() instanceof String name) || !(entry.getValue() instanceof String value)) {

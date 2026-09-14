@@ -100,7 +100,7 @@ final class AppleXcstringsParser {
     String message;
     if (effectiveSource.path("variations").path("plural").isObject()) {
       variants = new LinkedHashMap<>();
-      Map<String, JsonNode> categories = new TreeMap<>(AppleXcstringsParser::compareUnicodeScalars);
+      Map<String, JsonNode> categories = new TreeMap<>(UnicodeScalarOrder.COMPARATOR);
       effectiveSource
           .get("variations")
           .get("plural")
@@ -668,7 +668,7 @@ final class AppleXcstringsParser {
     if (!categories.isObject() || categories.isEmpty()) {
       throw invalid("Xcode substitution must contain plural variations");
     }
-    Map<String, String> variants = new TreeMap<>(AppleXcstringsParser::compareUnicodeScalars);
+    Map<String, String> variants = new TreeMap<>(UnicodeScalarOrder.COMPARATOR);
     boolean numeric = false;
     Iterator<Map.Entry<String, JsonNode>> entries = categories.fields();
     while (entries.hasNext()) {
@@ -827,7 +827,7 @@ final class AppleXcstringsParser {
     String selected = null;
     while (entries.hasNext()) {
       String candidate = entries.next();
-      if (selected == null || compareUnicodeScalars(candidate, selected) < 0) {
+      if (selected == null || UnicodeScalarOrder.COMPARATOR.compare(candidate, selected) < 0) {
         selected = candidate;
       }
     }
@@ -835,21 +835,6 @@ final class AppleXcstringsParser {
       throw invalid("Xcode device variation must contain at least one device");
     }
     return selected;
-  }
-
-  private static int compareUnicodeScalars(String left, String right) {
-    int leftIndex = 0;
-    int rightIndex = 0;
-    while (leftIndex < left.length() && rightIndex < right.length()) {
-      int first = left.codePointAt(leftIndex);
-      int second = right.codePointAt(rightIndex);
-      if (first != second) {
-        return Integer.compare(first, second);
-      }
-      leftIndex += Character.charCount(first);
-      rightIndex += Character.charCount(second);
-    }
-    return Integer.compare(left.length() - leftIndex, right.length() - rightIndex);
   }
 
   private static LocalizationParseException invalid(String message) {

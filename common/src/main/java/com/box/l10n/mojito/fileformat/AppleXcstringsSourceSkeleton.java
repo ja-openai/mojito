@@ -31,21 +31,6 @@ final class AppleXcstringsSourceSkeleton {
   private static final Pattern SUBSTITUTION = Pattern.compile("%(?:\\d+\\$)?#@([^@]+)@");
   private static final Pattern ARGUMENT = Pattern.compile("\\{([\\p{L}\\p{N}\\p{M}\\p{So}_]+)\\}");
   private static final Pattern LOCALE = Pattern.compile("[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*");
-  private static final Comparator<String> UNICODE_SCALAR_ORDER =
-      (left, right) -> {
-        int leftIndex = 0;
-        int rightIndex = 0;
-        while (leftIndex < left.length() && rightIndex < right.length()) {
-          int first = left.codePointAt(leftIndex);
-          int second = right.codePointAt(rightIndex);
-          if (first != second) {
-            return Integer.compare(first, second);
-          }
-          leftIndex += Character.charCount(first);
-          rightIndex += Character.charCount(second);
-        }
-        return Integer.compare(left.length() - leftIndex, right.length() - rightIndex);
-      };
 
   private final String source;
   private final SourceSkeletonEncoding encoding;
@@ -1562,7 +1547,7 @@ final class AppleXcstringsSourceSkeleton {
     }
     ObjectNode target = JSON.createObjectNode();
     ObjectNode variations = target.putObject("variations").putObject("device");
-    TreeMap<String, String> orderedBranches = new TreeMap<>(UNICODE_SCALAR_ORDER);
+    TreeMap<String, String> orderedBranches = new TreeMap<>(UnicodeScalarOrder.COMPARATOR);
     orderedBranches.putAll(branches);
     for (String device : orderedBranches.keySet()) {
       if ("other".equals(device) && !explicitFallback) {

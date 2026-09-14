@@ -3,7 +3,6 @@ package com.box.l10n.mojito.fileformat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,21 +18,6 @@ final class AppleXcstringsWriter {
   private static final Pattern ARGUMENT =
       Pattern.compile("\\{([\\p{L}\\p{N}\\p{M}\\p{So}_.-]+)\\}");
   private static final Pattern SUBSTITUTION_MARKER = Pattern.compile("%(?:[1-9][0-9]*\\$)?#@");
-  private static final Comparator<String> UNICODE_SCALAR_ORDER =
-      (left, right) -> {
-        int leftIndex = 0;
-        int rightIndex = 0;
-        while (leftIndex < left.length() && rightIndex < right.length()) {
-          int first = left.codePointAt(leftIndex);
-          int second = right.codePointAt(rightIndex);
-          if (first != second) {
-            return Integer.compare(first, second);
-          }
-          leftIndex += Character.charCount(first);
-          rightIndex += Character.charCount(second);
-        }
-        return Integer.compare(left.length() - leftIndex, right.length() - rightIndex);
-      };
 
   String write(LocalizationCatalog catalog) {
     if (!LocalizationFileFormat.APPLE_XCSTRINGS.id().equals(catalog.sourceFormat())) {
@@ -43,7 +27,7 @@ final class AppleXcstringsWriter {
       throw invalid("INVALID_XCSTRINGS_METADATA", "Xcode String Catalog requires a source locale");
     }
     Map<String, Object> root = new LinkedHashMap<>();
-    TreeMap<String, Object> strings = new TreeMap<>(UNICODE_SCALAR_ORDER);
+    TreeMap<String, Object> strings = new TreeMap<>(UnicodeScalarOrder.COMPARATOR);
     String sourceLanguage = catalog.locale();
     Object version = "1.0";
     Object declaredVersion = null;
@@ -427,7 +411,7 @@ final class AppleXcstringsWriter {
       if (map.isEmpty()) {
         return "{}";
       }
-      TreeMap<String, Object> sorted = new TreeMap<>(UNICODE_SCALAR_ORDER);
+      TreeMap<String, Object> sorted = new TreeMap<>(UnicodeScalarOrder.COMPARATOR);
       for (Map.Entry<?, ?> entry : map.entrySet()) {
         if (!(entry.getKey() instanceof String key)) {
           throw invalid("INVALID_XCSTRINGS_METADATA", "Xcode JSON keys must be strings");

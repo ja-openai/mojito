@@ -1,7 +1,6 @@
 package com.box.l10n.mojito.fileformat;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -15,28 +14,13 @@ import java.util.regex.Pattern;
 final class JavaPropertiesWriter {
 
   private static final Pattern ARGUMENT = Pattern.compile("\\{([A-Za-z_][A-Za-z0-9_.-]*)\\}");
-  private static final Comparator<String> UNICODE_SCALAR_ORDER =
-      (left, right) -> {
-        int leftIndex = 0;
-        int rightIndex = 0;
-        while (leftIndex < left.length() && rightIndex < right.length()) {
-          int first = left.codePointAt(leftIndex);
-          int second = right.codePointAt(rightIndex);
-          if (first != second) {
-            return Integer.compare(first, second);
-          }
-          leftIndex += Character.charCount(first);
-          rightIndex += Character.charCount(second);
-        }
-        return Integer.compare(left.length() - leftIndex, right.length() - rightIndex);
-      };
 
   String write(LocalizationCatalog catalog) {
     if (!LocalizationFileFormat.JAVA_PROPERTIES.id().equals(catalog.sourceFormat())) {
       throw new LocalizationParseException(
           "INVALID_SOURCE_FORMAT", "Java properties writer requires a Java properties catalog");
     }
-    TreeMap<String, LocalizationMessage> messages = new TreeMap<>(UNICODE_SCALAR_ORDER);
+    TreeMap<String, LocalizationMessage> messages = new TreeMap<>(UnicodeScalarOrder.COMPARATOR);
     messages.putAll(catalog.messages());
     StringBuilder output = new StringBuilder();
     for (Map.Entry<String, LocalizationMessage> entry : messages.entrySet()) {
