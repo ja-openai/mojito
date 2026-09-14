@@ -491,17 +491,15 @@ public class AssetExtractionService {
                     context.getRetryCount());
               }
 
-              boolean updateCache = context.getRetryCount() > 0 || migrateLegacyJsonComments;
-              logger.debug(
-                  "Read text unit dto from cache with update: {} (first attempt update if missing)",
-                  updateCache);
+              // Source writes need current identities and usage when selecting leveraging
+              // candidates, even when a snapshot already exists in the cache.
               ImmutableMap<String, TextUnitDTO> textUnitDTOsForAssetAndLocaleByMD5 =
                   textUnitDTOsCacheService.getTextUnitDTOsForAssetAndLocaleByMD5(
                       assetContent.getAsset().getId(),
                       localeService.getDefaultLocale().getId(),
                       StatusFilter.ALL,
                       true,
-                      updateCache ? UpdateType.ALWAYS : UpdateType.IF_MISSING);
+                      UpdateType.ALWAYS);
 
               logger.debug("Update the state with tm text unit id from the database");
               MultiBranchState stateForNewContentWithIds =
