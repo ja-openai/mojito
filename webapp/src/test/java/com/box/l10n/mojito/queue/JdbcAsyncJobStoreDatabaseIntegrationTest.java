@@ -172,18 +172,18 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
       Flyway flyway = applicationMysqlFlyway(dataSource);
       assertThat(flyway.info().applied()).isEmpty();
       // This branch has version gaps and two Java migrations; scan the full application classpath.
-      assertThat(flyway.info().pending()).hasSize(112);
+      assertThat(flyway.info().pending()).hasSize(113);
       var installed = flyway.migrate();
       assertThat(installed.success).isTrue();
-      assertThat(installed.migrationsExecuted).isEqualTo(112);
+      assertThat(installed.migrationsExecuted).isEqualTo(113);
       var migrations = flyway.info().all();
       assertThat(migrations)
-          .hasSize(112)
+          .hasSize(113)
           .allSatisfy(
               migration -> assertThat(migration.getState()).isEqualTo(MigrationState.SUCCESS));
       assertThat(migrations)
           .filteredOn(migration -> migration.getType() == CoreMigrationType.SQL)
-          .hasSize(110)
+          .hasSize(111)
           .allSatisfy(migration -> assertThat(migration.getChecksum()).isNotNull());
       assertThat(migrations)
           .filteredOn(migration -> migration.getType() == CoreMigrationType.JDBC)
@@ -191,8 +191,9 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
           .extracting(MigrationInfo::getVersion)
           .containsExactly(MigrationVersion.fromVersion("9"), MigrationVersion.fromVersion("56"));
       assertThat(flyway.info().current().getVersion())
-          .isEqualTo(MigrationVersion.fromVersion("113"));
-      assertThat(flyway.info().current().getScript()).isEqualTo("V113__Async_Job_Queue.sql");
+          .isEqualTo(MigrationVersion.fromVersion("114"));
+      assertThat(flyway.info().current().getScript())
+          .isEqualTo("V114__Review_Automation_Excluded_Locales.sql");
       flyway.validate();
 
       JdbcTemplate jdbc = new JdbcTemplate(dataSource);
