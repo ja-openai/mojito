@@ -1,6 +1,65 @@
 import type { AiReviewMessage } from '../api/ai-review';
 import type { ApiMatchedGlossaryTerm, ApiMatchedGlossaryTermRange } from '../api/glossaries';
 
+// Keep tag and separator handling aligned with the backend GlossaryMatchText projection.
+const GLOSSARY_TAG_PATTERN =
+  /<\/([A-Za-z][A-Za-z0-9:._-]*)\s*>|<([A-Za-z][A-Za-z0-9:._-]*)(?:\s+[A-Za-z_:][A-Za-z0-9:._-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>/gu;
+const GLOSSARY_SEPARATOR_TAGS = new Set([
+  'address',
+  'article',
+  'aside',
+  'blockquote',
+  'br',
+  'dd',
+  'details',
+  'dialog',
+  'div',
+  'dl',
+  'dt',
+  'fieldset',
+  'figcaption',
+  'figure',
+  'footer',
+  'form',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'header',
+  'hgroup',
+  'hr',
+  'img',
+  'input',
+  'li',
+  'main',
+  'nav',
+  'ol',
+  'p',
+  'pre',
+  'section',
+  'table',
+  'tbody',
+  'td',
+  'tfoot',
+  'th',
+  'thead',
+  'tr',
+  'ul',
+]);
+
+export function getGlossaryVisibleText(value: string): string {
+  return value.replace(
+    GLOSSARY_TAG_PATTERN,
+    (raw: string, closingName: string | undefined, openingName: string | undefined) => {
+      const name = (closingName ?? openingName ?? '').toLowerCase();
+      // A separator prevents phrase matches from crossing structural breaks or placeholders.
+      return raw.endsWith('/>') || GLOSSARY_SEPARATOR_TAGS.has(name) ? '\0' : '';
+    },
+  );
+}
+
 export function filterSelfGlossaryMatches(
   matches: ApiMatchedGlossaryTerm[] | null | undefined,
   tmTextUnitId: number | null | undefined,

@@ -38,13 +38,16 @@ const match: ApiMatchedGlossaryTerm = {
   ],
 };
 
-function renderPanel(overrides: Partial<ApiMatchedGlossaryTerm> = {}) {
+function renderPanel(
+  overrides: Partial<ApiMatchedGlossaryTerm> = {},
+  currentTarget = 'View translation',
+) {
   return render(
     <MemoryRouter>
       <GlossaryMatchesPanel
         matches={[{ ...match, ...overrides }]}
         isLoading={false}
-        currentTarget="View translation"
+        currentTarget={currentTarget}
         showHeader={false}
       />
     </MemoryRouter>,
@@ -209,23 +212,82 @@ describe('GlossaryMatchesPanel', () => {
 
   it('labels do-not-translate detail requirements without directional copy', () => {
     renderPanel({
-      source: 'ChatGPT',
+      source: 'ExampleApp',
       target: null,
       doNotTranslate: true,
-      matchedText: 'ChatGPT',
+      matchedText: 'ExampleApp',
     });
 
-    const card = screen.getByText('ChatGPT').closest('article');
+    const card = screen.getByText('ExampleApp').closest('article');
     expect(card).not.toBeNull();
-    fireEvent.click(within(card!).getByRole('button', { name: 'Details for ChatGPT' }));
+    fireEvent.click(within(card!).getByRole('button', { name: 'Details for ExampleApp' }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Glossary term details for ChatGPT' });
+    const dialog = screen.getByRole('dialog', { name: 'Glossary term details for ExampleApp' });
     const summary = within(dialog).getByLabelText('Selected glossary term');
     expect(within(summary).getByText('Source term')).toBeInTheDocument();
-    expect(within(summary).getByText('ChatGPT')).toBeInTheDocument();
+    expect(within(summary).getByText('ExampleApp')).toBeInTheDocument();
     expect(within(summary).getByText('Glossary translation')).toBeInTheDocument();
     expect(within(summary).getByText('Do not translate')).toBeInTheDocument();
-    expect(within(dialog).queryByText('ChatGPT to Do not translate')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('ExampleApp to Do not translate')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    'Iniciar <link>prueba</link>',
+    '<strong>Iniciar</strong> <link title="x > y">prueba</link>',
+  ])('accepts the required translation across inline tags: %s', (currentTarget) => {
+    renderPanel({ source: 'Start trial', target: 'Iniciar prueba' }, currentTarget);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Start trial' }));
+
+    expect(
+      screen.queryByText('Current target does not contain the required glossary translation.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('accepts a do-not-translate phrase across inline tags', () => {
+    renderPanel(
+      { source: 'Sample name', target: null, doNotTranslate: true },
+      'Sample <strong>name</strong>',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Sample name' }));
+
+    expect(
+      screen.queryByText('Current target does not preserve this do-not-translate term.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    '<link title="Iniciar prueba">Leer más</link>',
+    '<link title="Iniciar prueba"></link>',
+    '<strong></strong>',
+    '<Iniciar prueba>Leer más</Iniciar>',
+    'Iniciar <br>prueba',
+    'Iniciar <placeholder/>prueba',
+    '<p>Iniciar </p><p>prueba</p>',
+    'Iniciar <link>demostración</link>',
+    'iniciar <link>prueba</link>',
+  ])('keeps the warning when the visible phrase is absent: %s', (currentTarget) => {
+    renderPanel({ source: 'Start trial', target: 'Iniciar prueba' }, currentTarget);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Start trial' }));
+
+    expect(
+      screen.getByText('Current target does not contain the required glossary translation.'),
+    ).toBeInTheDocument();
+  });
+
+  it('preserves case-insensitive checks across inline tags', () => {
+    renderPanel(
+      { source: 'Start trial', target: 'Iniciar prueba', caseSensitive: false },
+      'iniciar <link>PRUEBA</link>',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Start trial' }));
+
+    expect(
+      screen.queryByText('Current target does not contain the required glossary translation.'),
+    ).not.toBeInTheDocument();
   });
 
   it('closes open details when the selected match disappears', async () => {

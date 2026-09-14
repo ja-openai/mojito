@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ApiMatchedGlossaryTerm } from '../api/glossaries';
-import { getGlossaryMatchRanges, prepareGlossaryMatches } from '../utils/glossary-matches';
+import {
+  getGlossaryMatchRanges,
+  getGlossaryVisibleText,
+  prepareGlossaryMatches,
+} from '../utils/glossary-matches';
 import { getGlossaryTermScreenshotEvidence } from '../utils/glossaryTermEvidence';
 import { resolveAttachmentUrl } from '../utils/request-attachments';
 import { Modal } from './Modal';
@@ -81,10 +85,11 @@ export function GlossaryMatchesPanel({
     match.doNotTranslate ? 'Do not translate' : match.target || 'No target translation yet';
 
   const getComplianceMessage = (match: ApiMatchedGlossaryTerm) => {
-    const targetText = currentTarget?.trim();
-    if (!targetText) {
+    const rawTargetText = currentTarget?.trim();
+    if (!rawTargetText) {
       return null;
     }
+    const targetText = getGlossaryVisibleText(rawTargetText);
 
     if (match.doNotTranslate) {
       const expectedSource = match.source.trim();

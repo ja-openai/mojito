@@ -540,30 +540,37 @@ public class GlossaryService {
     }
 
     public List<MatchedGlossaryTerm> findMatches(String text) {
+      GlossaryMatchText matchText = GlossaryMatchText.from(text);
       Map<MatchKey, MatchedGlossaryTerm> matchesByKey = new LinkedHashMap<>();
 
-      for (CharTrie.Match<GlossaryTerm> match : glossaryTrieSensitive.findMatches(text)) {
-        MatchKey key = new MatchKey(match.term(), match.startIndex(), match.endIndex());
+      for (CharTrie.Match<GlossaryTerm> match :
+          glossaryTrieSensitive.findMatches(matchText.text())) {
+        int startIndex = matchText.sourceStartIndex(match.startIndex());
+        int endIndex = matchText.sourceEndIndex(match.endIndex());
+        MatchKey key = new MatchKey(match.term(), startIndex, endIndex);
         matchesByKey.put(
             key,
             new MatchedGlossaryTerm(
                 match.term(),
                 MatchType.EXACT,
-                match.startIndex(),
-                match.endIndex(),
-                match.matchedText()));
+                startIndex,
+                endIndex,
+                text.substring(startIndex, endIndex)));
       }
 
-      for (CharTrie.Match<GlossaryTerm> match : glossaryTrieInsensitive.findMatches(text)) {
-        MatchKey key = new MatchKey(match.term(), match.startIndex(), match.endIndex());
+      for (CharTrie.Match<GlossaryTerm> match :
+          glossaryTrieInsensitive.findMatches(matchText.text())) {
+        int startIndex = matchText.sourceStartIndex(match.startIndex());
+        int endIndex = matchText.sourceEndIndex(match.endIndex());
+        MatchKey key = new MatchKey(match.term(), startIndex, endIndex);
         matchesByKey.putIfAbsent(
             key,
             new MatchedGlossaryTerm(
                 match.term(),
                 MatchType.CASE_INSENSITIVE,
-                match.startIndex(),
-                match.endIndex(),
-                match.matchedText()));
+                startIndex,
+                endIndex,
+                text.substring(startIndex, endIndex)));
       }
 
       List<MatchedGlossaryTerm> matches = new ArrayList<>(matchesByKey.values());

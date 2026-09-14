@@ -228,6 +228,23 @@ Current matching is lexical:
 - exact / case-sensitive behavior when requested
 - case-insensitive matching
 - matched spans and matched text are carried in the result
+- inline tag syntax is ignored when matching visible source text, so a term such
+  as `Start trial` also matches `Start <link>trial</link>`; tag names and attribute
+  values do not produce glossary matches
+- returned spans remain offsets into the original source, and matched text keeps
+  any markup inside that span
+
+Block and self-closing tags separate matching segments so terms cannot be joined
+across structural breaks or inline placeholders. This normalization is limited
+to tag syntax; it does not decode entities or interpret ICU, MF2, or Markdown.
+Matching remains lexical and can return overlapping terms. A short product name
+can still match an ordinary word; phrase detection does not resolve that semantic
+ambiguity.
+
+The glossary details panel applies the same tag normalization to the current
+translation before checking for a required translation or do-not-translate term.
+Markup inside the translated phrase therefore does not trigger a missing-term
+warning, and words that occur only in tag syntax do not satisfy the check.
 
 The review/workbench match endpoint resolves the enabled glossaries for each
 repository, then reuses a process-local compiled matcher keyed by the ordered

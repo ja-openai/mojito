@@ -32,23 +32,30 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
     Object result =
         tool.execute(
             new SuggestGlossaryTermTranslationsFromTmMcpTool.Input(
-                6L, null, List.of("fr"), List.of("chatgpt-web"), List.of(), List.of(), null, null));
+                6L,
+                null,
+                List.of("fr"),
+                List.of("sample-repository"),
+                List.of(),
+                List.of(),
+                null,
+                null));
 
-    assertThat(textUnitSearcher.lastRepositoryNames).containsExactly("chatgpt-web");
+    assertThat(textUnitSearcher.lastRepositoryNames).containsExactly("sample-repository");
     assertThat(textUnitSearcher.lastLocaleTags).containsExactly("fr");
     assertThat(textUnitSearcher.lastLimit).isEqualTo(100);
     assertThat(result)
         .isEqualTo(
             new SuggestGlossaryTermTranslationsFromTmMcpTool.SuggestTranslationsResult(
-                new SuggestGlossaryTermTranslationsFromTmMcpTool.GlossaryRef(6L, "ghanna"),
-                List.of("chatgpt-web"),
+                new SuggestGlossaryTermTranslationsFromTmMcpTool.GlossaryRef(6L, "sample-glossary"),
+                List.of("sample-repository"),
                 List.of("fr"),
                 1,
                 List.of(
                     new SuggestGlossaryTermTranslationsFromTmMcpTool.TermSuggestion(
                         20L,
-                        "sora_478958c8",
-                        "Sora",
+                        "sample_product",
+                        "SampleApp",
                         true,
                         List.of(
                             new SuggestGlossaryTermTranslationsFromTmMcpTool.LocaleSuggestion(
@@ -56,7 +63,7 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
                                 List.of(
                                     new SuggestGlossaryTermTranslationsFromTmMcpTool
                                         .TargetSuggestion(
-                                        "Sora",
+                                        "SampleApp",
                                         2,
                                         List.of("APPROVED", "REVIEW_NEEDED"),
                                         List.of(100L, 101L)))))))));
@@ -91,10 +98,10 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
                   null,
                   null,
                   20L,
-                  "sora_478958c8",
-                  "Sora",
-                  "Named OpenAI product",
-                  "Named OpenAI product",
+                  "sample_product",
+                  "SampleApp",
+                  "Named sample product",
+                  "Named sample product",
                   "proper noun",
                   "PRODUCT",
                   "SOFT",
@@ -128,8 +135,8 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
       lastLocaleTags = searchParameters.getLocaleTags();
       lastLimit = searchParameters.getLimit();
       return List.of(
-          textUnit(100L, "Sora", TMTextUnitVariant.Status.APPROVED),
-          textUnit(101L, "Sora", TMTextUnitVariant.Status.REVIEW_NEEDED));
+          textUnit(100L, "SampleApp", TMTextUnitVariant.Status.APPROVED),
+          textUnit(101L, "SampleApp", TMTextUnitVariant.Status.REVIEW_NEEDED));
     }
   }
 
@@ -147,15 +154,15 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
         6L,
         null,
         null,
-        "ghanna",
-        "ChatGPT web glossary",
+        "sample-glossary",
+        "Sample product glossary",
         true,
         10,
         "SELECTED_REPOSITORIES",
-        new GlossaryManagementService.RepositoryRef(14L, "glossary-ghanna"),
+        new GlossaryManagementService.RepositoryRef(14L, "glossary-sample"),
         "glossary",
         List.of("fr"),
-        List.of(new GlossaryManagementService.RepositoryRef(2L, "chatgpt-web")),
+        List.of(new GlossaryManagementService.RepositoryRef(2L, "sample-repository")),
         List.of());
   }
 }

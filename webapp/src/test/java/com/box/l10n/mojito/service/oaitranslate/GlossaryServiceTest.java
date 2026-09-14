@@ -142,6 +142,121 @@ public class GlossaryServiceTest {
   }
 
   @Test
+  public void findMatches_matchesPhraseAcrossInlineTagsWithOriginalOffsets() {
+    GlossaryTrie trie = new GlossaryTrie();
+    trie.addTerm(term(1, "Start trial", false));
+    String source = "Try Start <link>trial</link> now";
+
+    List<MatchedGlossaryTerm> matches = trie.findMatches(source);
+
+    assertEquals(1, matches.size());
+    MatchedGlossaryTerm match = matches.get(0);
+    assertEquals(MatchType.EXACT, match.matchType());
+    assertEquals(source.indexOf("Start"), match.startIndex());
+    assertEquals(source.indexOf("</link>"), match.endIndex());
+    assertEquals("Start <link>trial", match.matchedText());
+    assertEquals(source.substring(match.startIndex(), match.endIndex()), match.matchedText());
+    assertEquals(Set.of(term(1, "Start trial", false)), trie.findTerms(source));
+  }
+
+  @Test
+  public void findMatches_doesNotMatchTagNamesOrAttributes() {
+    GlossaryTrie trie = new GlossaryTrie();
+    trie.addTerm(term(1, "link", false));
+    trie.addTerm(term(2, "Start trial", false));
+    trie.addTerm(term(3, "Settings", false));
+
+    assertNoMatch(trie, "<link title=\"Start trial > Settings\">Continue</link>");
+    assertNoMatch(trie, "<link title='Start trial > Settings'>Continue</link>");
+    assertNoMatch(trie, "<link title=Settings>Continue</link>");
+  }
+
+  @Test
+  public void findMatches_handlesManyTagAttributes() {
+    GlossaryTrie trie = new GlossaryTrie();
+    trie.addTerm(term(1, "Start trial", false));
+    String source = "Start <link" + " key=value".repeat(2_000) + ">trial</link>";
+
+    List<MatchedGlossaryTerm> matches = trie.findMatches(source);
+
+    assertEquals(1, matches.size());
+    assertEquals(0, matches.get(0).startIndex());
+    assertEquals(source.indexOf("</link>"), matches.get(0).endIndex());
+  }
+
+  @Test
+  public void findMatches_preservesOffsetsAcrossClosingAndOpeningTags() {
+    GlossaryTrie trie = new GlossaryTrie();
+    trie.addTerm(term(1, "Start trial", false));
+    String source = "<link>Start</link> <strong>trial</strong>";
+
+    List<MatchedGlossaryTerm> matches = trie.findMatches(source);
+
+    assertEquals(1, matches.size());
+    assertEquals(source.indexOf("Start"), matches.get(0).startIndex());
+    assertEquals(source.indexOf("</strong>"), matches.get(0).endIndex());
+    assertEquals("Start</link> <strong>trial", matches.get(0).matchedText());
+  }
+
+  @Test
+  public void findMatches_preservesCaseAndUtf16OffsetsAcrossNestedTags() {
+    GlossaryTrie trie = new GlossaryTrie();
+    trie.addTerm(term(1, "Start trial", false));
+    String source = "\uD83D\uDE80 <strong>START <link>TRIAL</link></strong> and Start trial";
+
+    List<MatchedGlossaryTerm> matches = trie.findMatches(source);
+
+    assertEquals(2, matches.size());
+    assertEquals(MatchType.CASE_INSENSITIVE, matches.get(0).matchType());
+    assertEquals(source.indexOf("START"), matches.get(0).startIndex());
+    assertEquals(source.indexOf("</link>"), matches.get(0).endIndex());
+    assertEquals("START <link>TRIAL", matches.get(0).matchedText());
+    assertEquals(MatchType.EXACT, matches.get(1).matchType());
+    assertEquals(source.lastIndexOf("Start trial"), matches.get(1).startIndex());
+    assertEquals(source.length(), matches.get(1).endIndex());
+
+    GlossaryTrie caseSensitiveTrie = new GlossaryTrie();
+    caseSensitiveTrie.addTerm(term(1, "Start trial", true));
+    assertNoMatch(caseSensitiveTrie, "Start <link>TRIAL</link>");
+  }
+
+  @Test
+  public void findMatches_usesVisibleTextWordBoundaries() {
+    GlossaryTrie trie = new GlossaryTrie();
+    trie.addTerm(term(1, "Start trial", false));
+
+    assertNoMatch(trie, "re<link>Start</link> trial");
+    assertNoMatch(trie, "<link>Start trial</link>s");
+    assertMatches(trie, "<link>Start trial</link>.");
+    assertMatches(trie, "Sta<strong>rt</strong> trial");
+  }
+
+  @Test
+  public void findMatches_doesNotCrossBlockTagsOrStandalonePlaceholders() {
+    GlossaryTrie trie = new GlossaryTrie();
+    trie.addTerm(term(1, "Start trial", false));
+
+    assertNoMatch(trie, "Start <icon/>trial");
+    assertNoMatch(trie, "Start <icon name=\"sample\" />trial");
+    assertNoMatch(trie, "Start <br>trial");
+    assertNoMatch(trie, "<p>Start </p><p>trial</p>");
+    assertNoMatch(trie, "<div>Start </div><div>trial</div>");
+    assertNoMatch(trie, "Start {count} trial");
+    assertMatches(trie, "<p>Start trial</p>");
+  }
+
+  @Test
+  public void findMatches_preservesLiteralAnglesAndMalformedTags() {
+    GlossaryTrie trie = new GlossaryTrie();
+    trie.addTerm(term(1, "Start trial", false));
+
+    assertMatches(trie, "1 < 2: Start trial > 0");
+    assertNoMatch(trie, "Start < trial");
+    assertNoMatch(trie, "Start <link trial");
+    assertNoMatch(trie, "Start <link title=\"unfinished>trial");
+  }
+
+  @Test
   public void sameSourceDifferentTermIdsAllMatch() {
     GlossaryTrie trie = new GlossaryTrie();
 
