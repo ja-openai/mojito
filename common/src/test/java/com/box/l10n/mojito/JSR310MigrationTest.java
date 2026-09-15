@@ -450,10 +450,6 @@ public class JSR310MigrationTest {
     return DateTimeZone.forID(id);
   }
 
-  public static void junitAssertEqualsOld(DateTime dateTime1, DateTime dateTime2) {
-    Assert.assertEquals(dateTime1, dateTime2);
-  }
-
   public static long dateTimeWith0MillisAsMillisOld(DateTime dateTime) {
     return dateTime.withMillisOfSecond(0).getMillis();
   }
@@ -464,9 +460,5 @@ public class JSR310MigrationTest {
 
   public static DateTime dateTimeOfEpochSecondOld(int epochSecond) {
     return Instant.ofEpochSecond(epochSecond).toDateTime();
-  }
-
-  public static Date dateTimePlusAsDateOld(DateTime dateTime, long millis) {
-    return dateTime.plus(millis).toDate();
   }
 }
