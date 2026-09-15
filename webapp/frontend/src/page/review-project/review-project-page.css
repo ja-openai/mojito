@@ -1693,6 +1693,19 @@
   outline-offset: 2px;
 }
 
+.review-project-detail__warning-inline--info .review-project-detail__warning-inline-pill,
+.review-project-detail__warning-inline--info:hover .review-project-detail__warning-inline-pill,
+.review-project-detail__warning-inline--info:focus-visible
+  .review-project-detail__warning-inline-pill {
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+}
+
+.review-project-detail__warning-inline--info:focus-visible {
+  outline-color: var(--color-text-muted);
+}
+
 .review-project-detail__saving-indicator {
   display: inline-flex;
   align-items: center;

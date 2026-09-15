@@ -1716,6 +1716,8 @@ one {{Você tem {$count} arquivo.}}
 
   it.each([
     { target: 'Pay\u00a0{price} now', locale: 'en-US', assisted: false, code: 'U+00A0' },
+    { target: 'Pay\u00a0{price} now', locale: 'en-US', assisted: true, code: 'U+00A0' },
+    { target: 'Payer\u202f{price}', locale: 'fr-FR', assisted: false, code: 'U+202F' },
     { target: 'Payer\u202f{price}', locale: 'fr-FR', assisted: true, code: 'U+202F' },
   ])(
     'sends neutral $code context for $locale with assisted=$assisted',
@@ -1753,11 +1755,22 @@ one {{Você tem {$count} arquivo.}}
       expect(onRequestSaveDecision).not.toHaveBeenCalled();
       if (!assisted) {
         expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(target);
-        // Preserve the existing inspection signal for plain-editor users.
-        expect(screen.getByRole('button', { name: '1 translation warnings' })).toBeInTheDocument();
       } else {
-        expect(document.querySelector('[data-marker="⏤"]')).toBeInTheDocument();
+        expect(
+          document.querySelector(`[data-marker="${code === 'U+00A0' ? '⍽' : '⏤'}"]`),
+        ).toBeInTheDocument();
       }
+      expect(
+        screen.queryByRole('button', { name: /translation warnings/ }),
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Non-breaking spaces' }));
+      const dialog = screen.getByRole('dialog', { name: 'Non-breaking spaces' });
+      expect(within(dialog).getByText(new RegExp(code.replace('+', '\\+')))).toBeInTheDocument();
+      expect(within(dialog).queryByText(/issues? detected/)).not.toBeInTheDocument();
+      expect(
+        dialog.querySelector('.review-project-detail__warning-modal-preview-issue'),
+      ).toBeNull();
+      expect(onRequestSaveDecision).not.toHaveBeenCalled();
     },
   );
 
@@ -1783,6 +1796,15 @@ one {{Você tem {$count} arquivo.}}
     expect(observations).toContain('NBSP (U+00A0)');
     expect(observations).toContain('NNBSP (U+202F)');
     expect(payload.target).toBe(target);
+    fireEvent.click(screen.getByRole('button', { name: '1 translation warnings' }));
+    const dialog = screen.getByRole('dialog', { name: 'Translation warnings' });
+    expect(within(dialog).getByText('1 issue detected.')).toBeInTheDocument();
+    expect(within(dialog).getByText('Unexpected leading whitespace at start.')).toBeInTheDocument();
+    expect(
+      Array.from(
+        dialog.querySelectorAll('.review-project-detail__warning-modal-preview-issue'),
+      ).map((element) => element.textContent),
+    ).toEqual(['⍽']);
   });
 
   it('rebuilds neutral space observations from the correct target on follow-up and retry', async () => {

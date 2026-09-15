@@ -222,9 +222,13 @@ The same context builder runs for initial review, chat follow-up, and retry usin
 target. Review Project and text-unit details now use live review for every request, including
 targets without page context. Legacy precomputed rows lack model/settings provenance and cannot
 be safely attributed to the selected preset.
-This frontend change does not alter saved text, save-time integrity checks, the existing UI
-inspection signal, or Hidden chars Auto/All/Off. Neutral UI presentation and deterministic
-locale-specific typography checks remain separate design work; no per-locale rule table is added.
+The Review Project UI also treats NBSP/NNBSP presence as neutral information. A non-warning
+inspection button keeps both character types visible to plain-editor users, with labeled markers
+in the whitespace preview. When actual warnings coexist, the same dialog shows the character
+information separately and counts only warnings. Boundary-whitespace mismatches still warn and
+highlight the affected spaces. Saved text, save-time integrity checks, and Hidden chars Auto/All/Off
+are unchanged. Deterministic locale-specific typography checks remain separate design work; no
+per-locale rule table is added.
 
 Do-not-translate terms retain an approved locale-specific target when one exists; the source is
 only the fallback. Responses output must be complete and contain message text before it can become

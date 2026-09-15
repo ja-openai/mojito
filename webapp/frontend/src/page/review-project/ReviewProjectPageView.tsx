@@ -702,16 +702,16 @@ function buildTranslationIssuePreview(source: string, target: string): PreviewSe
     const isRepeatedSpace = char === ' ' && index > 0 && chars[index - 1] === ' ';
     const isTab = char === '\t';
     const isNbsp = char === '\u00A0';
+    const isNnbsp = char === '\u202F';
     const isInvisible = code != null && isInvisibleDirectionalOrZeroWidthCode(code);
     const isControl = code != null && isControlCode(code);
 
     const issue =
-      isLeadingOrTrailingWhitespace ||
-      isRepeatedSpace ||
-      isTab ||
-      isNbsp ||
-      isInvisible ||
-      isControl;
+      isLeadingOrTrailingWhitespace || isRepeatedSpace || isTab || isInvisible || isControl;
+
+    if (isNbsp || isNnbsp) {
+      return { text: isNbsp ? '⍽' : '⏤', issue };
+    }
 
     if (!issue) {
       return { text: char, issue: false };
@@ -728,9 +728,6 @@ function buildTranslationIssuePreview(source: string, target: string): PreviewSe
     }
     if (char === '\r') {
       return { text: '␍', issue: true };
-    }
-    if (isNbsp) {
-      return { text: '⍽', issue: true };
     }
     if (isInvisible) {
       return { text: '¤', issue: true };
@@ -789,9 +786,6 @@ function buildTranslationWarnings(source: string, target: string): TranslationWa
   }
   if (/\t/.test(target)) {
     warnings.push({ code: 'tab', message: 'Contains tab characters.' });
-  }
-  if (target.includes('\u00A0')) {
-    warnings.push({ code: 'nbsp', message: 'Contains non-breaking spaces.' });
   }
   if (hasInvisibleDirectionalOrZeroWidthChars(target)) {
     warnings.push({
@@ -2842,16 +2836,19 @@ function DetailPane({
     () => buildTranslationWarnings(source ?? '', draftTarget),
     [draftTarget, source],
   );
+  const hasNonBreakingSpaces = /[\u00a0\u202f]/u.test(draftTarget);
+  const inspectionTitle =
+    translationWarnings.length > 0 ? 'Translation warnings' : 'Non-breaking spaces';
   const visibleWhitespacePreviewSegments = useMemo(
     () => buildTranslationIssuePreview(source ?? '', draftTarget),
     [draftTarget, source],
   );
 
   useEffect(() => {
-    if (translationWarnings.length === 0) {
+    if (translationWarnings.length === 0 && !hasNonBreakingSpaces) {
       setIsWarningModalOpen(false);
     }
-  }, [translationWarnings.length]);
+  }, [hasNonBreakingSpaces, translationWarnings.length]);
 
   useLayoutEffect(() => {
     const guard = {
@@ -4607,20 +4604,25 @@ function DetailPane({
                 />
               ) : null}
 
-              {translationWarnings.length > 0 ? (
+              {translationWarnings.length > 0 || hasNonBreakingSpaces ? (
                 <button
                   type="button"
-                  className="review-project-detail__warning-inline"
+                  className={`review-project-detail__warning-inline${translationWarnings.length === 0 ? ' review-project-detail__warning-inline--info' : ''}`}
                   onClick={() => setIsWarningModalOpen(true)}
                   aria-haspopup="dialog"
-                  aria-label={`${translationWarnings.length} translation warnings`}
+                  aria-label={
+                    translationWarnings.length > 0
+                      ? `${translationWarnings.length} translation warnings`
+                      : 'Non-breaking spaces'
+                  }
                 >
                   <span className="review-project-detail__warning-inline-pill">
-                    {translationWarnings.length} warning
-                    {translationWarnings.length === 1 ? '' : 's'}
+                    {translationWarnings.length > 0
+                      ? `${translationWarnings.length} warning${translationWarnings.length === 1 ? '' : 's'}`
+                      : 'Non-breaking spaces'}
                   </span>
                   <span className="review-project-detail__warning-inline-summary">
-                    <span>{translationWarnings[0]?.message}</span>
+                    <span>{translationWarnings[0]?.message ?? 'View characters'}</span>
                     {translationWarnings.length > 1 ? (
                       <span> +{translationWarnings.length - 1} more</span>
                     ) : null}
@@ -4944,9 +4946,9 @@ function DetailPane({
         size="md"
         closeOnBackdrop
         onClose={() => setIsWarningModalOpen(false)}
-        ariaLabel="Translation warnings"
+        ariaLabel={inspectionTitle}
       >
-        <div className="modal__title">Translation warnings</div>
+        <div className="modal__title">{inspectionTitle}</div>
         <div className="modal__body">
           {translationWarnings.length > 0 ? (
             <>
@@ -4959,6 +4961,24 @@ function DetailPane({
                   <li key={warning.code}>{warning.message}</li>
                 ))}
               </ul>
+            </>
+          ) : null}
+          {hasNonBreakingSpaces ? (
+            <>
+              <p>
+                Non-breaking spaces can be intentional or required. Their presence alone is not a
+                warning.
+              </p>
+              <ul className="review-project-detail__warning-modal-list">
+                {draftTarget.includes('\u00a0') ? <li>⍽ Non-breaking space (U+00A0)</li> : null}
+                {draftTarget.includes('\u202f') ? (
+                  <li>⏤ Narrow non-breaking space (U+202F)</li>
+                ) : null}
+              </ul>
+            </>
+          ) : null}
+          {translationWarnings.length > 0 || hasNonBreakingSpaces ? (
+            <>
               <div className="review-project-detail__warning-modal-preview-label">
                 Visible whitespace preview
               </div>
