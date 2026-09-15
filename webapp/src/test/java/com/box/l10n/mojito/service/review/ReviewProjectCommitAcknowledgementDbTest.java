@@ -13,7 +13,9 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.box.l10n.mojito.entity.Asset;
+import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
@@ -33,6 +35,8 @@ import java.sql.Connection;
 import java.time.ZonedDateTime;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.junit.Rule;
 import org.junit.Test;
@@ -200,7 +204,6 @@ public class ReviewProjectCommitAcknowledgementDbTest extends ServiceTestBase {
   @Test
   public void postCommitLookupReusesTheCommittingJdbcConnection() throws Exception {
     Fixture fixture = fixture(true);
-    var request = decisionRequest(fixture);
     var committingConnection = new AtomicReference<Connection>();
     var observedLookups = new AtomicInteger();
     doAnswer(
@@ -221,7 +224,8 @@ public class ReviewProjectCommitAcknowledgementDbTest extends ServiceTestBase {
             org.mockito.ArgumentMatchers.<ResultSetExtractor<Long>>any(),
             anyLong());
 
-    var response =
+    clearInvocations(statisticsReactor);
+    Long variantId =
         new TransactionTemplate(transactionManager)
             .execute(
                 status -> {
@@ -229,15 +233,26 @@ public class ReviewProjectCommitAcknowledgementDbTest extends ServiceTestBase {
                       entityManager
                           .unwrap(Session.class)
                           .doReturningWork(DataSourceUtils::getTargetConnection));
-                  try {
-                    return reviewProjectWS.saveDecision(fixture.rowId(), request);
-                  } catch (Exception failure) {
-                    throw new RuntimeException(failure);
-                  }
+                  // Arrange the lazy fallback explicitly. Review evidence now loads the asset
+                  // graph, so a review save legitimately takes the listener's initialized path.
+                  entityManager.clear();
+                  TMTextUnit textUnit =
+                      entityManager.getReference(TMTextUnit.class, fixture.tmTextUnitId());
+                  var variant = new TMTextUnitVariant();
+                  variant.setTmTextUnit(textUnit);
+                  variant.setLocale(entityManager.getReference(Locale.class, fixture.localeId()));
+                  variant.setContent("Committed lazy-graph translation");
+                  variant.setContentMD5(DigestUtils.md5Hex(variant.getContent()));
+                  entityManager.persist(variant);
+                  entityManager.flush();
+                  assertThat(Hibernate.isInitialized(textUnit)).isFalse();
+                  entityManager.clear();
+                  return variant.getId();
                 });
 
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(variantId).isPositive();
     assertThat(observedLookups.get()).isPositive();
+    verify(statisticsReactor, atLeastOnce()).generateEvent(fixture.repositoryId());
   }
 
   private void assertCommitAcknowledged(Fixture fixture) throws Exception {
