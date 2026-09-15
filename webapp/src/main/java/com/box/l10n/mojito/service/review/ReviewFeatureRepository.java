@@ -36,7 +36,7 @@ public interface ReviewFeatureRepository extends JpaRepository<ReviewFeature, Lo
 
   @Query(
       """
-      select new com.box.l10n.mojito.service.review.ReviewFeatureLocaleRow(
+      select distinct new com.box.l10n.mojito.service.review.ReviewFeatureLocaleRow(
         l.id,
         l.bcp47Tag
       )
@@ -44,11 +44,16 @@ public interface ReviewFeatureRepository extends JpaRepository<ReviewFeature, Lo
       join rf.repositories r
       join r.repositoryLocales rl
       join rl.locale l
-      where rf.id = :id
+      where rf.id in :featureIds
         and r.deleted = false
         and rl.parentLocale is not null
       """)
-  List<ReviewFeatureLocaleRow> findNonRootLocaleRowsByFeatureId(@Param("id") Long id);
+  List<ReviewFeatureLocaleRow> findNonRootLocaleRowsByFeatureIds(
+      @Param("featureIds") List<Long> featureIds);
+
+  default List<ReviewFeatureLocaleRow> findNonRootLocaleRowsByFeatureId(Long id) {
+    return findNonRootLocaleRowsByFeatureIds(List.of(id));
+  }
 
   @Query(
       value =

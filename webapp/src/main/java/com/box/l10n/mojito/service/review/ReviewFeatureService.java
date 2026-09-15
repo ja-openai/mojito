@@ -65,6 +65,22 @@ public class ReviewFeatureService {
   }
 
   @Transactional(readOnly = true)
+  public List<String> getReviewFeatureLocaleTags(List<Long> featureIds) {
+    requireAdmin();
+    List<Long> normalizedIds =
+        (featureIds == null ? List.<Long>of() : featureIds)
+            .stream().filter(id -> id != null && id > 0).distinct().sorted().toList();
+    if (normalizedIds.isEmpty()) {
+      return List.of();
+    }
+    return reviewFeatureRepository.findNonRootLocaleRowsByFeatureIds(normalizedIds).stream()
+        .map(ReviewFeatureLocaleRow::bcp47Tag)
+        .distinct()
+        .sorted(String.CASE_INSENSITIVE_ORDER)
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
   public List<ReviewFeatureBatchExportRow> getReviewFeatureBatchExportRows() {
     requireAdmin();
     List<ReviewFeatureOptionRow> optionRows = reviewFeatureRepository.findAllOptionRows();

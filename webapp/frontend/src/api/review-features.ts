@@ -138,6 +138,22 @@ export async function fetchReviewFeatureOptions(): Promise<ApiReviewFeatureOptio
   return (await response.json()) as ApiReviewFeatureOption[];
 }
 
+export async function fetchReviewFeatureLocales(featureIds: number[]): Promise<string[]> {
+  const params = new URLSearchParams();
+  featureIds.forEach((id) => params.append('featureIds', String(id)));
+  const response = await fetch(`/api/review-features/locales?${params}`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load review feature locales');
+  }
+
+  return (await response.json()) as string[];
+}
+
 export async function fetchReviewFeatureBatchExport(): Promise<ApiReviewFeatureBatchExportRow[]> {
   const response = await fetch('/api/review-features/batch-export', {
     credentials: 'same-origin',

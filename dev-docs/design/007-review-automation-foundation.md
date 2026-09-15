@@ -113,7 +113,8 @@ Frontend Notes
 - Create/detail pages keep raw `cronExpression` and `timeZone` side by side, with a button-driven generator for `Every day`, `Weekdays`, or `Custom cron`.
 - Batch page can prefill from existing automations or the review-feature roster. Apply mode lives on the CTA: `Apply updates` upserts listed rows only, while `Replace enabled set` upserts listed rows and disables enabled automations omitted from the batch.
 - Detail page adds `Run now` plus a recent-runs table for the selected automation.
-- Create/detail forms offer an **Excluded locales** selector. The batch editor has an optional final excluded-locales column: omitting it preserves an existing policy, while an explicitly empty column clears it. Prefilled rows retain saved exclusions.
+- Create/detail forms offer an **Excluded locales** selector after the review features. It defaults to the union of non-root locales across the selected features' non-deleted repositories, matching the automation runner. **Show all locales** opens the global catalog for excluding languages before they are enabled. Current exclusions remain visible when feature selection changes; switching the list never changes the saved policy. With no selected features, the scoped list stays empty apart from current exclusions.
+- The batch editor has an optional final excluded-locales column: omitting it preserves an existing policy, while an explicitly empty column clears it. Prefilled rows retain saved exclusions.
 - Manual review-project creation can also use a direct repository scope. Deep links use `/review-projects/new?scope=repositories&repositoryIds=<id>` with repeated `repositoryIds` for multi-repository setup.
 - The manual creation form offers **Max word count per project (optional)** for every scope, initially blank to preserve existing behavior.
 

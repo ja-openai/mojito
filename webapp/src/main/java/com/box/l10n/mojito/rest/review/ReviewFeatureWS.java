@@ -94,6 +94,12 @@ public class ReviewFeatureWS {
         .toList();
   }
 
+  @GetMapping("/locales")
+  public List<String> getReviewFeatureLocales(
+      @RequestParam(name = "featureIds", required = false) List<Long> featureIds) {
+    return reviewFeatureService.getReviewFeatureLocaleTags(featureIds);
+  }
+
   @GetMapping("/{featureId}")
   public ReviewFeatureResponse getReviewFeature(@PathVariable Long featureId) {
     try {

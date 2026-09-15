@@ -557,14 +557,6 @@ export function AdminReviewAutomationDetailPage() {
                   <span>Assign translator from locale pool</span>
                 </label>
               </div>
-              <ReviewAutomationExcludedLocalesField
-                selectedTags={excludedLocaleTagsDraft}
-                onChange={(next) => {
-                  setExcludedLocaleTagsDraft(next);
-                  setStatusNotice(null);
-                }}
-                disabled={updateMutation.isPending}
-              />
               <div className="settings-field">
                 <div className="settings-field__header">
                   <div className="settings-field__label">Review features</div>
@@ -594,6 +586,15 @@ export function AdminReviewAutomationDetailPage() {
                   totalAutomationCount={enabledAutomationsQuery.data?.totalCount ?? 0}
                 />
               </div>
+              <ReviewAutomationExcludedLocalesField
+                featureIds={featureIdsDraft}
+                selectedTags={excludedLocaleTagsDraft}
+                onChange={(next) => {
+                  setExcludedLocaleTagsDraft(next);
+                  setStatusNotice(null);
+                }}
+                disabled={updateMutation.isPending}
+              />
               {statusNotice ? (
                 <p className={`settings-hint${statusNotice.kind === 'error' ? ' is-error' : ''}`}>
                   {statusNotice.message}

@@ -546,14 +546,6 @@ export function AdminReviewAutomationsPage() {
                 />
               </div>
             </div>
-            <ReviewAutomationExcludedLocalesField
-              selectedTags={newExcludedLocaleTagsDraft}
-              onChange={(next) => {
-                setNewExcludedLocaleTagsDraft(next);
-                setCreateModalError(null);
-              }}
-              disabled={createAutomationMutation.isPending}
-            />
             <div className="settings-field">
               <div className="settings-field__header">
                 <div className="settings-field__label">Review features</div>
@@ -577,10 +569,17 @@ export function AdminReviewAutomationsPage() {
                 checkedAutomationCount={enabledAutomationsQuery.data?.reviewAutomations.length ?? 0}
                 totalAutomationCount={enabledAutomationsQuery.data?.totalCount ?? 0}
               />
-              {createModalError ? (
-                <p className="settings-hint is-error">{createModalError}</p>
-              ) : null}
             </div>
+            <ReviewAutomationExcludedLocalesField
+              featureIds={newFeatureIdsDraft}
+              selectedTags={newExcludedLocaleTagsDraft}
+              onChange={(next) => {
+                setNewExcludedLocaleTagsDraft(next);
+                setCreateModalError(null);
+              }}
+              disabled={createAutomationMutation.isPending}
+            />
+            {createModalError ? <p className="settings-hint is-error">{createModalError}</p> : null}
           </div>
           <div className="modal__actions">
             <button

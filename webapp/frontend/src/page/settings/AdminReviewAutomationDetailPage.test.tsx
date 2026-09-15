@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   fetchReviewAutomation: vi.fn(),
   fetchReviewAutomationRuns: vi.fn(),
   fetchReviewAutomations: vi.fn(),
+  fetchReviewFeatureLocales: vi.fn(),
   fetchReviewFeatureOptions: vi.fn(),
   fetchTeams: vi.fn(),
   updateReviewAutomation: vi.fn(),
@@ -72,6 +73,7 @@ describe('AdminReviewAutomationDetailPage excluded locales', () => {
     mocks.fetchReviewAutomation.mockImplementation(() => Promise.resolve(savedAutomation));
     mocks.fetchReviewAutomationRuns.mockResolvedValue([]);
     mocks.fetchReviewAutomations.mockResolvedValue({ reviewAutomations: [], totalCount: 0 });
+    mocks.fetchReviewFeatureLocales.mockResolvedValue(['fr', 'he']);
     mocks.fetchReviewFeatureOptions.mockResolvedValue([{ id: 3, name: 'Checkout', enabled: true }]);
     mocks.fetchTeams.mockResolvedValue([{ id: 2, name: 'Localization' }]);
     mocks.updateReviewAutomation.mockImplementation(

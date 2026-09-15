@@ -21,6 +21,7 @@ type Props = {
   myLocalesAriaLabel?: string;
   customActions?: MultiSelectCustomAction[];
   showSelectionPresets?: boolean;
+  showAllSelectedSummary?: boolean;
 };
 
 export function LocaleMultiSelect({
@@ -37,6 +38,7 @@ export function LocaleMultiSelect({
   myLocalesAriaLabel = 'Select your locales',
   customActions,
   showSelectionPresets = false,
+  showAllSelectedSummary = true,
 }: Props) {
   const multiOptions: Array<MultiSelectOption<string>> = options.map((option) => ({
     value: option.tag,
@@ -124,7 +126,7 @@ export function LocaleMultiSelect({
         if (isMyLocaleSelectionActive) {
           return myLocalesLabel;
         }
-        if (selectedValues.length === opts.length) {
+        if (showAllSelectedSummary && selectedValues.length === opts.length) {
           return 'All locales';
         }
         if (selectedValues.length <= 2) {
