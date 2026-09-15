@@ -1642,14 +1642,27 @@
   display: none;
 }
 
-.review-project-detail__warning-inline {
-  width: 100%;
+.review-project-detail__editor-notice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  flex: 1;
+  min-width: 7.5rem;
+  height: 1.75rem;
+  align-items: center;
+}
+
+.review-project-detail__editor-notice > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.review-project-detail__warning-button {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
-  min-height: 1.75rem;
-  margin-top: calc(var(--space-1) * -1);
-  margin-bottom: calc(var(--space-1) * -1);
+  max-width: 100%;
+  height: 1.5rem;
   border: 0;
   padding: 0;
   background: transparent;
@@ -1657,7 +1670,7 @@
   text-align: left;
 }
 
-.review-project-detail__warning-inline-pill {
+.review-project-detail__warning-count {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -1673,36 +1686,35 @@
   white-space: nowrap;
 }
 
-.review-project-detail__warning-inline-summary {
+.review-project-detail__warning-summary {
   min-width: 0;
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.review-project-detail__warning-inline:hover .review-project-detail__warning-inline-pill,
-.review-project-detail__warning-inline:focus-visible .review-project-detail__warning-inline-pill {
+.review-project-detail__warning-button:hover .review-project-detail__warning-count,
+.review-project-detail__warning-button:focus-visible .review-project-detail__warning-count {
   background: color-mix(in srgb, var(--color-warning-soft) 72%, var(--color-warning) 8%);
   border-color: color-mix(in srgb, var(--color-warning-border) 78%, transparent);
 }
 
-.review-project-detail__warning-inline:focus-visible {
+.review-project-detail__warning-button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--color-warning) 45%, transparent);
   outline-offset: 2px;
 }
 
-.review-project-detail__warning-inline--info .review-project-detail__warning-inline-pill,
-.review-project-detail__warning-inline--info:hover .review-project-detail__warning-inline-pill,
-.review-project-detail__warning-inline--info:focus-visible
-  .review-project-detail__warning-inline-pill {
+.review-project-detail__warning-button--info .review-project-detail__warning-count,
+.review-project-detail__warning-button--info:hover .review-project-detail__warning-count,
+.review-project-detail__warning-button--info:focus-visible .review-project-detail__warning-count {
   color: var(--color-text-muted);
   background: var(--color-surface-muted);
   border-color: var(--color-border);
 }
 
-.review-project-detail__warning-inline--info:focus-visible {
+.review-project-detail__warning-button--info:focus-visible {
   outline-color: var(--color-text-muted);
 }
 

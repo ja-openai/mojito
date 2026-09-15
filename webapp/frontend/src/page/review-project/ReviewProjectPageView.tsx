@@ -5073,16 +5073,46 @@ function DetailPane({
                     </button>
                   </div>
                 </div>
-                <div
-                  className={`review-project-detail__saving-indicator${
-                    showSavingIndicator ? ' is-active' : ''
-                  }`}
-                  role="status"
-                  aria-live="polite"
-                  aria-hidden={!showSavingIndicator}
-                >
-                  <span className="spinner" aria-hidden="true" />
-                  <span>Saving…</span>
+                <div className="review-project-detail__editor-notice">
+                  <div
+                    className={`review-project-detail__saving-indicator${
+                      showSavingIndicator ? ' is-active' : ''
+                    }`}
+                    role="status"
+                    aria-live="polite"
+                    aria-hidden={!showSavingIndicator}
+                  >
+                    <span className="spinner" aria-hidden="true" />
+                    <span>Saving…</span>
+                  </div>
+                  {!showSavingIndicator &&
+                  (translationWarnings.length > 0 || hasNonBreakingSpaces) ? (
+                    <button
+                      type="button"
+                      className={`review-project-detail__warning-button${translationWarnings.length === 0 ? ' review-project-detail__warning-button--info' : ''}`}
+                      onClick={() => setIsWarningModalOpen(true)}
+                      aria-haspopup="dialog"
+                      aria-describedby={`review-warning-summary-${textUnit.id}`}
+                      aria-label={
+                        translationWarnings.length > 0
+                          ? `${translationWarnings.length} translation warnings`
+                          : 'Non-breaking spaces'
+                      }
+                      title={translationWarnings[0]?.message ?? 'View non-breaking spaces'}
+                    >
+                      <span className="review-project-detail__warning-count">
+                        {translationWarnings.length > 0
+                          ? `${translationWarnings.length} warning${translationWarnings.length === 1 ? '' : 's'}`
+                          : 'Characters'}
+                      </span>
+                      <span
+                        className="review-project-detail__warning-summary"
+                        id={`review-warning-summary-${textUnit.id}`}
+                      >
+                        {translationWarnings[0]?.message ?? 'Non-breaking spaces'}
+                      </span>
+                    </button>
+                  ) : null}
                 </div>
                 <div className="review-project-detail__editor-actions">
                   <button
@@ -5118,32 +5148,6 @@ function DetailPane({
                 <div role="alert" className="agent-review-context__error">
                   {reopenError}
                 </div>
-              ) : null}
-
-              {translationWarnings.length > 0 || hasNonBreakingSpaces ? (
-                <button
-                  type="button"
-                  className={`review-project-detail__warning-inline${translationWarnings.length === 0 ? ' review-project-detail__warning-inline--info' : ''}`}
-                  onClick={() => setIsWarningModalOpen(true)}
-                  aria-haspopup="dialog"
-                  aria-label={
-                    translationWarnings.length > 0
-                      ? `${translationWarnings.length} translation warnings`
-                      : 'Non-breaking spaces'
-                  }
-                >
-                  <span className="review-project-detail__warning-inline-pill">
-                    {translationWarnings.length > 0
-                      ? `${translationWarnings.length} warning${translationWarnings.length === 1 ? '' : 's'}`
-                      : 'Non-breaking spaces'}
-                  </span>
-                  <span className="review-project-detail__warning-inline-summary">
-                    <span>{translationWarnings[0]?.message ?? 'View characters'}</span>
-                    {translationWarnings.length > 1 ? (
-                      <span> +{translationWarnings.length - 1} more</span>
-                    ) : null}
-                  </span>
-                </button>
               ) : null}
 
               {showUnifiedFeedback ? (

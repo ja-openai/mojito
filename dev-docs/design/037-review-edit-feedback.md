@@ -18,6 +18,10 @@ Once shown, the section stays visible for the selected string, including after r
 edit, clearing feedback, or accepting. Selecting another string starts fresh. Its first
 appearance has a brief fade when reduced motion is not requested; subsequent edits do not
 remove and reinsert it above the chat. Visibility alone does not mark the draft as changed.
+Translation warnings show a compact count and the first message in the existing editor
+controls, sharing a reserved slot with saving progress. The message stays on one line and
+truncates when space is limited; hover shows the full text and clicking opens the existing
+details dialog. Adding or clearing warnings does not add a row above feedback/chat.
 
 Ordinary reviews of known AI translations show this area after a material edit or a
 problematic assessment; quote, casing, punctuation, and whitespace edits are recorded

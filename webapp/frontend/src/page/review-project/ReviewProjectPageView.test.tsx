@@ -1772,6 +1772,49 @@ one {{Você tem {$count} arquivo.}}
     expect(await screen.findByText('Live review with warning context.')).toBeInTheDocument();
   });
 
+  it('keeps the notice slot, feedback, and chat mounted while a warning appears and clears', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    fetchReviewFeedbackBaselineMock.mockResolvedValue({
+      target: 'Pay {price} now',
+      ai: true,
+      kind: 'AI_TRANSLATE',
+    });
+    const { container } = renderReviewProjectPageView();
+    const editor = screen.getByRole('textbox', { name: 'Translation' });
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    const feedback = await screen.findByRole('region', { name: 'AI translation feedback' });
+    const note = within(feedback).getByRole('textbox', { name: 'AI feedback note' });
+    const chatPlaceholder = 'Chat with AI: rephrase, adjust the tone, or ask a question…';
+    const chat = screen.getByPlaceholderText(chatPlaceholder);
+    fireEvent.change(note, { target: { value: 'Use the approved product term.' } });
+    fireEvent.change(chat, { target: { value: 'Could this be more concise?' } });
+    const notice = container.querySelector('.review-project-detail__editor-notice');
+    expect(notice).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /translation warnings/ })).not.toBeInTheDocument();
+
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora ' } });
+    const warning = screen.getByRole('button', { name: '1 translation warnings' });
+    expect(warning).toHaveTextContent('1 warning');
+    expect(warning).toHaveAttribute('title', 'Unexpected trailing whitespace at end.');
+    expect(warning).toHaveAccessibleDescription('Unexpected trailing whitespace at end.');
+    expect(notice).toContainElement(warning);
+    expect(within(warning).getByText('Unexpected trailing whitespace at end.')).toBeVisible();
+    expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedback);
+    expect(screen.getByPlaceholderText(chatPlaceholder)).toBe(chat);
+    fireEvent.click(warning);
+    const dialog = screen.getByRole('dialog', { name: 'Translation warnings' });
+    expect(within(dialog).getByText('Unexpected trailing whitespace at end.')).toBeVisible();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    expect(screen.queryByRole('button', { name: /translation warnings/ })).not.toBeInTheDocument();
+    expect(container.querySelector('.review-project-detail__editor-notice')).toBe(notice);
+    expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedback);
+    expect(screen.getByPlaceholderText(chatPlaceholder)).toBe(chat);
+    expect(note).toHaveValue('Use the approved product term.');
+    expect(chat).toHaveValue('Could this be more concise?');
+  });
+
   it.each([
     { target: 'Pay\u00a0{price} now', locale: 'en-US', assisted: false, code: 'U+00A0' },
     { target: 'Pay\u00a0{price} now', locale: 'en-US', assisted: true, code: 'U+00A0' },
@@ -1821,7 +1864,9 @@ one {{Você tem {$count} arquivo.}}
       expect(
         screen.queryByRole('button', { name: /translation warnings/ }),
       ).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Non-breaking spaces' }));
+      const characterNotice = screen.getByRole('button', { name: 'Non-breaking spaces' });
+      expect(characterNotice).toHaveTextContent('Characters');
+      fireEvent.click(characterNotice);
       const dialog = screen.getByRole('dialog', { name: 'Non-breaking spaces' });
       expect(within(dialog).getByText(new RegExp(code.replace('+', '\\+')))).toBeInTheDocument();
       expect(within(dialog).queryByText(/issues? detected/)).not.toBeInTheDocument();
