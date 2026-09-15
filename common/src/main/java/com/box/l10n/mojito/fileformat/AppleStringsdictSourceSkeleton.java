@@ -758,7 +758,8 @@ final class AppleStringsdictSourceSkeleton {
         XmlElement current = stack.pop();
         XmlElement parent = stack.peek();
         if ("key".equals(current.name) && parent != null && "dict".equals(parent.name)) {
-          parent.pendingKey = xmlKey(source.substring(current.bodyStart, position));
+          parent.pendingKey =
+              AppleSourceSkeleton.xmlKey(source.substring(current.bodyStart, position));
           parent.pendingKeyStart = current.openingStart;
         } else if ("string".equals(current.name)) {
           addSlot(current.path, current.bodyStart, position);
@@ -818,12 +819,6 @@ final class AppleStringsdictSourceSkeleton {
               encoding.offset(source, start),
               encoding.offset(source, end)));
     }
-  }
-
-  private String xmlKey(String body) {
-    LocalizationCatalog parsed =
-        new AppleStringsParser("<dict><key>" + body + "</key><string/></dict>").parse();
-    return parsed.messages().keySet().iterator().next();
   }
 
   private int tagEnd(int start) {

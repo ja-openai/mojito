@@ -239,7 +239,7 @@ final class AppleSourceSkeleton {
             key, null, encoding.offset(source, start), encoding.offset(source, end)));
   }
 
-  private String xmlKey(String body) {
+  static String xmlKey(String body) {
     LocalizationCatalog parsed =
         new AppleStringsParser("<dict><key>" + body + "</key><string/></dict>").parse();
     return parsed.messages().keySet().iterator().next();
