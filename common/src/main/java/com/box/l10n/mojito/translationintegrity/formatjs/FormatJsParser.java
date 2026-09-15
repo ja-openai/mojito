@@ -446,7 +446,7 @@ public final class FormatJsParser {
     FormatJsSourceLocation argumentLocation = location(openingBrace, position());
     FormatJsStyle parsedStyle = style == null ? null : new NamedStyle(style.style());
     if (style != null && style.style().startsWith("::")) {
-      String skeleton = trimEcmaScriptStart(style.style().substring(2));
+      String skeleton = FormatJsSkeletonParser.trimEcmaScriptStart(style.style().substring(2));
       if (argumentType.equals("number")) {
         parsedStyle = parseNumberSkeleton(skeleton, style.location());
       } else {
@@ -857,42 +857,16 @@ public final class FormatJsParser {
     throw new ParseFailure(new FormatJsParseError(kind, message, location, context));
   }
 
-  private static String trimEcmaScriptStart(String value) {
-    int index = 0;
-    while (index < value.length()) {
-      int current = value.codePointAt(index);
-      if (!isEcmaScriptTrimWhitespace(current)) {
-        break;
-      }
-      index += Character.charCount(current);
-    }
-    return value.substring(index);
-  }
-
   private static String trimEcmaScriptEnd(String value) {
     int index = value.length();
     while (index > 0) {
       int current = value.codePointBefore(index);
-      if (!isEcmaScriptTrimWhitespace(current)) {
+      if (!FormatJsSkeletonParser.isEcmaScriptTrimWhitespace(current)) {
         break;
       }
       index -= Character.charCount(current);
     }
     return value.substring(0, index);
-  }
-
-  private static boolean isEcmaScriptTrimWhitespace(int value) {
-    return (value >= 0x09 && value <= 0x0D)
-        || value == 0x20
-        || value == 0xA0
-        || value == 0x1680
-        || (value >= 0x2000 && value <= 0x200A)
-        || value == 0x2028
-        || value == 0x2029
-        || value == 0x202F
-        || value == 0x205F
-        || value == 0x3000
-        || value == 0xFEFF;
   }
 
   /** Mirrors the explicit 3.5.10 parser helper, including LRM and RLM. */

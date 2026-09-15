@@ -371,7 +371,7 @@ final class FormatJsSkeletonParser {
     return matcher.find() ? Double.parseDouble(matcher.group()) : Double.NaN;
   }
 
-  private static String trimEcmaScriptStart(String value) {
+  static String trimEcmaScriptStart(String value) {
     int index = 0;
     while (index < value.length()) {
       int current = value.codePointAt(index);
@@ -383,7 +383,7 @@ final class FormatJsSkeletonParser {
     return value.substring(index);
   }
 
-  private static boolean isEcmaScriptTrimWhitespace(int value) {
+  static boolean isEcmaScriptTrimWhitespace(int value) {
     return (value >= 0x09 && value <= 0x0D)
         || value == 0x20
         || value == 0xA0
