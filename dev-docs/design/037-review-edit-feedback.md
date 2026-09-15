@@ -10,14 +10,25 @@ mutable review decision and normal editor remain the working review surface.
 
 Reported-issue reviews show an optional feedback area whenever the draft differs from
 Original at review, including immediately after Use suggestion and for small edits. A flat
-Feedback section uses the same muted heading style as Translation, with no surrounding card
-or introductory message. Reason chips and a 500-character note are saved by the existing Accept
+Reason for change section uses the same muted heading style as Translation, with no surrounding
+card or introductory message. The note explains the before/after comparison: what was wrong,
+why the correction helps, or both. Its placeholder is "Explain the issue or your correction
+(optional)". Reason chips and a 500-character note are saved by the existing Accept
 action. Switching between the original, suggestion, and manual edits preserves unsaved
-feedback. This display comparison is separate from the stored AI-baseline-to-final diff.
+feedback. The translator is responsible for updating or removing the explanation before
+Accept; changing the target never clears it automatically. This display comparison is separate from the stored AI-baseline-to-final diff.
 Once shown, the section stays visible for the selected string, including after reverting an
 edit, clearing feedback, or accepting. Selecting another string starts fresh. Its first
 appearance has a brief fade when reduced motion is not requested; subsequent edits do not
 remove and reinsert it above the chat. Visibility alone does not mark the draft as changed.
+Returning to the original disables correction feedback while retaining its draft. Accepting
+that original omits the paused reason/note and does not erase them on acknowledgement; they
+become editable again when editing resumes. Paused feedback protects against accidental
+navigation loss but cannot enable another save by itself. Explicit problematic assessments
+still allow feedback on unchanged text, and explanations entered in the Report tab can
+justify keeping the original. Submitted assessments acknowledge independently of a paused
+correction note. Drafts update as the reviewer types; there is one draft per review, not
+per-edit history or a save-on-blur mechanism.
 Translation warnings show a compact count and the first message in the existing editor
 controls, sharing a reserved slot with saving progress. The message stays on one line and
 truncates when space is limited; hover shows the full text and clicking opens the existing
@@ -40,7 +51,9 @@ as such; they are not trusted model provenance.
 Workbench's inline editor and text-unit Details view reuse the same feedback widget. For a
 known AI baseline, it appears after a material edit or, in Details, a rejected assessment.
 Reason and note remain optional and save through the existing Accept/Save action. Returning
-to the original text preserves entered feedback; Cancel/Reset clears it. Once shown, the
+to the original text disables correction feedback and preserves the draft; Cancel/Reset
+clears it. Paused feedback is excluded from the save payload and save eligibility, but
+continues to protect against accidental discard. Once shown, the
 section remains visible for that string while the editor stays open, including after Reset.
 Feedback participates
 in the existing dirty-draft behavior, and validation and save use a frozen payload. Independent

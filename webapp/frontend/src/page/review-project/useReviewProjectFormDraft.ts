@@ -10,7 +10,7 @@ type FormSession<T> = {
   remote: T;
   observed: T;
   values: T;
-  operation: { id: number; values: T } | null;
+  operation: { id: number; values: T; preserveFields: Array<keyof T> } | null;
 };
 
 function sameValues<T extends object>(left: T, right: T) {
@@ -113,11 +113,11 @@ export function useReviewProjectFormDraft<T extends object>(
     [update],
   );
   const startOperation = useCallback(
-    (id: number) => {
+    (id: number, preserveFields: Array<keyof T> = []) => {
       update((current) => ({
         ...current,
         revision: current.revision + 1,
-        operation: { id, values: current.values },
+        operation: { id, values: current.values, preserveFields },
       }));
     },
     [update],
@@ -126,12 +126,17 @@ export function useReviewProjectFormDraft<T extends object>(
     (id: number, saved: T) => {
       update((current) => {
         if (current.operation?.id !== id) return current;
+        const values = sameValues(current.values, current.operation.values)
+          ? { ...saved }
+          : { ...current.values };
+        // A paused draft was not submitted, so the acknowledgement must not clear it.
+        for (const key of current.operation.preserveFields) values[key] = current.values[key];
         return {
           ...current,
           revision: current.revision + 1,
           base: saved,
           remote: saved,
-          values: sameValues(current.values, current.operation.values) ? saved : current.values,
+          values,
           operation: null,
         };
       });

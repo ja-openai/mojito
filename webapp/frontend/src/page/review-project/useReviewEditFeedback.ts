@@ -4,7 +4,12 @@ import type { ReviewFeedbackReason } from '../../api/review-feedback';
 import type { ReviewProjectActionState } from './review-project-mutations';
 import { useReviewProjectFormDraft } from './useReviewProjectFormDraft';
 
-const EMPTY = { reason: '' as ReviewFeedbackReason | '', aiSuggestionUsed: false };
+const EMPTY = {
+  reason: '' as ReviewFeedbackReason | '',
+  aiSuggestionUsed: false,
+  // A Report explanation can justify keeping the original; an edit note cannot.
+  noteFromEdit: false,
+};
 export function useReviewEditFeedback(
   username: string,
   projectId: number,

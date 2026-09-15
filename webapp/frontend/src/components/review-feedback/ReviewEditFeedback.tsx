@@ -21,7 +21,7 @@ export function ReviewEditFeedback({
       aria-label="AI translation feedback"
       data-agent-review-feedback
     >
-      <div className="review-edit-feedback__heading">Feedback</div>
+      <div className="review-edit-feedback__heading">Reason for change</div>
       <div className="review-edit-feedback__reasons" role="group" aria-label="Reason (optional)">
         {Object.entries(REVIEW_FEEDBACK_REASONS).map(([key, label]) => (
           <button
@@ -38,7 +38,7 @@ export function ReviewEditFeedback({
       <div className="review-edit-feedback__note">
         <textarea
           aria-label="AI feedback note"
-          placeholder="Add detail for future AI translations (optional)"
+          placeholder="Explain the issue or your correction (optional)"
           value={note}
           maxLength={500}
           disabled={disabled}

@@ -526,8 +526,10 @@ export function useWorkbenchEdits({
     if (!row || !row.canEdit) {
       return false;
     }
-    return editingValue !== editingInitialValue || row.status !== 'Accepted' || feedback.dirty;
-  }, [apiRows, editingInitialValue, editingRowId, editingValue, feedback.dirty]);
+    return (
+      editingValue !== editingInitialValue || row.status !== 'Accepted' || feedback.activeDirty
+    );
+  }, [apiRows, editingInitialValue, editingRowId, editingValue, feedback.activeDirty]);
 
   const handleRequestStartEditing = useCallback(
     (rowId: string, translation: string | null) => {
@@ -699,7 +701,11 @@ export function useWorkbenchEdits({
       return;
     }
 
-    if (editingValue === editingInitialValue && row.status === 'Accepted' && !feedback.dirty) {
+    if (
+      editingValue === editingInitialValue &&
+      row.status === 'Accepted' &&
+      !feedback.activeDirty
+    ) {
       return;
     }
     if (rowHasMf2Errors(row, editingValue)) {
@@ -732,7 +738,7 @@ export function useWorkbenchEdits({
     ensureBaselineEdit,
     runIntegrityCheckAndSave,
     decorateRequest,
-    feedback.dirty,
+    feedback.activeDirty,
     hasPendingWrites,
     isValidating,
   ]);

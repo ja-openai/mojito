@@ -44,6 +44,7 @@ type DraftSession = {
     id: number;
     values: ReviewProjectDraftValues;
     discardValues?: ReviewProjectDraftValues;
+    preserveDecisionNotes?: boolean;
   } | null;
 };
 
@@ -239,11 +240,11 @@ export function useReviewProjectDraft(
     [update],
   );
   const startOperation = useCallback(
-    (operationId: number) => {
+    (operationId: number, preserveDecisionNotes = false) => {
       update((current) => ({
         ...current,
         revision: current.revision + 1,
-        operation: { id: operationId, values: current.values },
+        operation: { id: operationId, values: current.values, preserveDecisionNotes },
       }));
     },
     [update],
@@ -313,7 +314,10 @@ export function useReviewProjectDraft(
           // The acknowledgement is immediately available to Reset. Keep the last
           // observed props separately so an older render cannot roll it back.
           remote: saved,
-          values,
+          values:
+            !discard && current.operation.preserveDecisionNotes
+              ? { ...values, decisionNotes: current.values.decisionNotes }
+              : values,
           operation: null,
         };
       });

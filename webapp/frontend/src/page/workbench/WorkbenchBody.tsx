@@ -851,7 +851,7 @@ export function WorkbenchBody({
                       {isEditing && feedbackWidget ? (
                         <ReviewEditFeedback
                           {...feedbackWidget}
-                          disabled={isSaving || !row.canEdit}
+                          disabled={feedbackWidget.disabled || isSaving || !row.canEdit}
                         />
                       ) : null}
                       <div className="workbench-page__translation-footer">

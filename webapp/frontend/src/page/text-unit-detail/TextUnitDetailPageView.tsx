@@ -82,6 +82,7 @@ type TextUnitDetailPageViewProps = {
     canEdit: boolean;
     canDelete: boolean;
     isDirty: boolean;
+    hasSaveableChanges: boolean;
     isSaving: boolean;
     isDeleting: boolean;
     mf2ErrorCount: number;
@@ -108,7 +109,7 @@ type TextUnitDetailPageViewProps = {
   onChangeTarget: (value: string) => void;
   onChangeStatus: (value: string) => void;
   onSaveEditor: () => void;
-  editFeedback?: Omit<ComponentProps<typeof ReviewEditFeedback>, 'disabled'> | null;
+  editFeedback?: ComponentProps<typeof ReviewEditFeedback> | null;
   onResetEditor: () => void;
   onRequestDeleteEditor: () => void;
   previewLocale: string;
@@ -253,7 +254,7 @@ export function TextUnitDetailPageView({
   const isMf2 = !editorInfo.isSourceOnly && isMf2Message(keyInfo);
   const canSaveEditor =
     editorInfo.canEdit &&
-    editorInfo.isDirty &&
+    editorInfo.hasSaveableChanges &&
     !editorInfo.isSaving &&
     !editorInfo.isDeleting &&
     editorInfo.mf2ErrorCount === 0;
@@ -499,7 +500,12 @@ export function TextUnitDetailPageView({
             {editFeedback && !editorInfo.isSourceOnly ? (
               <ReviewEditFeedback
                 {...editFeedback}
-                disabled={!editorInfo.canEdit || editorInfo.isSaving || editorInfo.isDeleting}
+                disabled={
+                  editFeedback.disabled ||
+                  !editorInfo.canEdit ||
+                  editorInfo.isSaving ||
+                  editorInfo.isDeleting
+                }
               />
             ) : null}
 

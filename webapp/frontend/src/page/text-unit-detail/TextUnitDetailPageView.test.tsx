@@ -34,6 +34,7 @@ function buildProps(
       canEdit: true,
       canDelete: true,
       isDirty: false,
+      hasSaveableChanges: false,
       isSaving: false,
       isDeleting: false,
       mf2ErrorCount: 0,

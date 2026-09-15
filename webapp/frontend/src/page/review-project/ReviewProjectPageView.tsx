@@ -2983,26 +2983,62 @@ function DetailPane({
       isProblematic ||
       hasFeedbackReason,
   );
-  const readReviewFeedback = useCallback(() => {
-    const current = readEditFeedback();
-    const note = agentReview
-      ? readAgentFeedback()?.values.explanation
-      : readDraft()?.values.decisionNotes;
-    return {
-      reason: current?.values.reason || undefined,
-      note: note && note.length <= 500 ? note : undefined,
-      chatUsed: aiMessages.some((message) => message.sender === 'user'),
-      aiSuggestionUsed: current?.values.aiSuggestionUsed ?? false,
-    };
-  }, [agentReview, readAgentFeedback, readDraft, readEditFeedback, aiMessages]);
+  const canSubmitEditFeedback = useCallback(
+    (target: string, statusChoice: StatusChoice) => {
+      const baseline = agentReview ? (agentReview.reviewedTarget ?? '') : aiFeedbackBaseline;
+      return (
+        statusChoice === 'REJECTED' ||
+        readAgentFeedback()?.values.originalAssessment === 'BAD' ||
+        (baseline !== null && target.normalize('NFC') !== baseline.normalize('NFC'))
+      );
+    },
+    [agentReview, aiFeedbackBaseline, readAgentFeedback],
+  );
+  const editFeedbackActive = canSubmitEditFeedback(draftTarget, draftStatusChoice);
+  const feedbackNoteActive = !editFeedback.values.noteFromEdit || editFeedbackActive;
+  const readReviewFeedback = useCallback(
+    (target: string, statusChoice: StatusChoice) => {
+      const current = readEditFeedback();
+      const active = canSubmitEditFeedback(target, statusChoice);
+      const note = agentReview
+        ? readAgentFeedback()?.values.explanation
+        : readDraft()?.values.decisionNotes;
+      return {
+        reason: active ? current?.values.reason || undefined : undefined,
+        note:
+          (!current?.values.noteFromEdit || active) && note && note.length <= 500
+            ? note
+            : undefined,
+        chatUsed: aiMessages.some((message) => message.sender === 'user'),
+        aiSuggestionUsed: current?.values.aiSuggestionUsed ?? false,
+      };
+    },
+    [
+      agentReview,
+      readAgentFeedback,
+      readDraft,
+      readEditFeedback,
+      aiMessages,
+      canSubmitEditFeedback,
+    ],
+  );
 
-  const isTranslationReviewDirty =
+  const isDecisionNotesDirty = draftDecisionNotesNormalized !== draftBase.decisionNotes;
+  const isTranslationContentDirty =
     sourceChanged ||
     isTranslationDirty ||
     draftStatusApi.status !== snapshotStatusApi.status ||
     draftStatusApi.includedInLocalizedFile !== snapshotStatusApi.includedInLocalizedFile ||
-    draftCommentNormalized !== draftBase.comment ||
-    draftDecisionNotesNormalized !== draftBase.decisionNotes;
+    draftCommentNormalized !== draftBase.comment;
+  const isTranslationReviewDirty = isTranslationContentDirty || isDecisionNotesDirty;
+  // Inactive notes remain dirty for draft-loss protection, but cannot trigger a save.
+  const isTranslationSaveDirty =
+    isTranslationContentDirty || (feedbackNoteActive && isDecisionNotesDirty);
+  const isAgentFeedbackSaveDirty =
+    agentFeedback.values.originalAssessment !== agentFeedback.base.originalAssessment ||
+    agentFeedback.values.suggestionAssessment !== agentFeedback.base.suggestionAssessment ||
+    (feedbackNoteActive && agentFeedback.values.explanation !== agentFeedback.base.explanation);
+  const isFeedbackSaveDirty = isAgentFeedbackSaveDirty || (editFeedbackActive && hasFeedbackReason);
   const isDirty = isTerminologyProject
     ? isTerminologyDirty || isTerminologyResolutionDirty || metadataDraft.dirty
     : isTranslationReviewDirty || agentFeedback.dirty || hasFeedbackReason;
@@ -3013,7 +3049,7 @@ function DetailPane({
   const isTerminologyNotesDirty = draftTerminologyNotesNormalized !== feedbackDraft.base.notes;
   const canKeepAgentCurrent =
     agentReview != null &&
-    !isTranslationReviewDirty &&
+    !isTranslationSaveDirty &&
     !reconsidering &&
     agentFeedback.values.originalAssessment !== 'BAD';
   const keepsReportedBadTranslation =
@@ -3031,10 +3067,10 @@ function DetailPane({
       (agentReview
         ? (canKeepAgentCurrent && !agentReviewCompleted) ||
           ((canEditCompletedReview || !agentProposalStale) &&
-            (isTranslationReviewDirty ||
-              (canEditCompletedReview && (agentFeedback.dirty || hasFeedbackReason))) &&
+            (isTranslationSaveDirty || (canEditCompletedReview && isFeedbackSaveDirty)) &&
             !mf2HasErrors)
-        : !mf2HasErrors && (!isAcceptedAndDecided || isDirty));
+        : !mf2HasErrors &&
+          (!isAcceptedAndDecided || isTranslationSaveDirty || isFeedbackSaveDirty));
   const canApplyTerminologyResolution =
     isTerminologyProject &&
     !isSpecialistTerminologyProject &&
@@ -3043,7 +3079,6 @@ function DetailPane({
     (isTerminologyResolutionDirty || decision?.decisionState !== 'DECIDED');
   const canRunPrimaryShortcut = isPmTerminologyProject ? canApplyTerminologyResolution : canAccept;
   const isCommentDirty = draftCommentNormalized !== draftBase.comment;
-  const isDecisionNotesDirty = draftDecisionNotesNormalized !== draftBase.decisionNotes;
   const isStatusDropdownDisabled =
     agentReview != null ||
     isSavingGlobal ||
@@ -3145,6 +3180,8 @@ function DetailPane({
         return;
       }
       const nextStatusApi = mapChoiceToApi(nextStatusChoice);
+      const submitEditFeedback = canSubmitEditFeedback(nextTarget, nextStatusChoice);
+      const submitNote = !readEditFeedback()?.values.noteFromEdit || submitEditFeedback;
       const operationId = mutations.onRequestSaveDecision({
         textUnitId: currentDraft.textUnitId,
         clientContext: createReviewProjectClientContext(
@@ -3174,7 +3211,7 @@ function DetailPane({
         status: nextStatusApi.status,
         includedInLocalizedFile: nextStatusApi.includedInLocalizedFile,
         decisionState: 'DECIDED',
-        reviewFeedback: readReviewFeedback(),
+        reviewFeedback: readReviewFeedback(nextTarget, nextStatusChoice),
         ...(agentReview
           ? {
               agentReview: {
@@ -3185,7 +3222,9 @@ function DetailPane({
                 action: 'ACCEPT' as const,
                 originalAssessment: readAgentFeedback()?.values.originalAssessment || undefined,
                 suggestionAssessment: readAgentFeedback()?.values.suggestionAssessment || undefined,
-                explanation: readAgentFeedback()?.values.explanation || undefined,
+                explanation: submitNote
+                  ? readAgentFeedback()?.values.explanation || undefined
+                  : undefined,
               },
             }
           : {}),
@@ -3209,18 +3248,26 @@ function DetailPane({
         decisionNotes:
           decisionNotesOverride !== undefined
             ? decisionNotesOverride
-            : normalizeOptional(currentDraft.values.decisionNotes),
+            : submitNote
+              ? normalizeOptional(currentDraft.values.decisionNotes)
+              : currentDraft.base.decisionNotes,
       });
       if (typeof operationId === 'number') {
-        startOperation(operationId);
-        if (agentReview) startAgentFeedbackOperation(operationId);
-        startEditFeedbackOperation(operationId);
+        startOperation(operationId, !submitNote);
+        if (agentReview)
+          startAgentFeedbackOperation(operationId, submitNote ? [] : ['explanation']);
+        startEditFeedbackOperation(
+          operationId,
+          submitEditFeedback ? [] : ['reason', 'noteFromEdit'],
+        );
       }
       return operationId;
     },
     [
       readDraft,
       readReviewFeedback,
+      canSubmitEditFeedback,
+      readEditFeedback,
       startEditFeedbackOperation,
       snapshot.targetOrigin,
       startOperation,
@@ -3250,10 +3297,15 @@ function DetailPane({
       !currentFeedback ||
       compositionRef.current ||
       mutations.isSaving ||
-      isTranslationReviewDirty ||
+      isTranslationSaveDirty ||
       currentFeedback.values.originalAssessment === 'BAD'
     )
       return;
+    const submitEditFeedback = canSubmitEditFeedback(
+      currentDraft.values.target,
+      currentDraft.values.statusChoice,
+    );
+    const submitNote = !readEditFeedback()?.values.noteFromEdit || submitEditFeedback;
     const operationId = mutations.onRequestDecisionState({
       textUnitId: textUnit.id,
       clientContext: createReviewProjectClientContext('agent_outcome', {
@@ -3263,7 +3315,10 @@ function DetailPane({
         reviewStateRevision: currentDraft.base.reviewStateRevision,
       }),
       decisionState: 'DECIDED',
-      reviewFeedback: readReviewFeedback(),
+      reviewFeedback: readReviewFeedback(
+        currentDraft.values.target,
+        currentDraft.values.statusChoice,
+      ),
       expectedCurrentTmTextUnitVariantId: currentDraft.base.expectedCurrentVariantId,
       expectedReviewStateRevision: currentDraft.base.reviewStateRevision,
       agentReview: {
@@ -3274,19 +3329,21 @@ function DetailPane({
         action: 'KEEP_CURRENT',
         originalAssessment: currentFeedback.values.originalAssessment || undefined,
         suggestionAssessment: currentFeedback.values.suggestionAssessment || undefined,
-        explanation: currentFeedback.values.explanation || undefined,
+        explanation: submitNote ? currentFeedback.values.explanation || undefined : undefined,
       },
     });
     if (typeof operationId === 'number') {
-      startOperation(operationId);
-      startAgentFeedbackOperation(operationId);
-      startEditFeedbackOperation(operationId);
+      startOperation(operationId, !submitNote);
+      startAgentFeedbackOperation(operationId, submitNote ? [] : ['explanation']);
+      startEditFeedbackOperation(operationId, submitEditFeedback ? [] : ['reason', 'noteFromEdit']);
     }
     return operationId;
   }, [
     agentReview,
     agentReviewCompleted,
-    isTranslationReviewDirty,
+    isTranslationSaveDirty,
+    canSubmitEditFeedback,
+    readEditFeedback,
     mutations,
     projectId,
     readAgentFeedback,
@@ -5155,12 +5212,15 @@ function DetailPane({
                   reason={editFeedback.values.reason}
                   note={feedbackNote}
                   onReason={(reason) => updateEditFeedback((values) => ({ ...values, reason }))}
-                  onNote={(note) =>
-                    agentReview
-                      ? agentFeedback.updateValues((values) => ({ ...values, explanation: note }))
-                      : setDraftDecisionNotes(note)
+                  onNote={(note) => {
+                    updateEditFeedback((values) => ({ ...values, noteFromEdit: note.length > 0 }));
+                    if (agentReview)
+                      agentFeedback.updateValues((values) => ({ ...values, explanation: note }));
+                    else setDraftDecisionNotes(note);
+                  }}
+                  disabled={
+                    !editFeedbackActive || isSavingGlobal || isComposing || agentReviewReadOnly
                   }
-                  disabled={isSavingGlobal || isComposing || agentReviewReadOnly}
                 />
               ) : null}
               {aiReviewPanel}
@@ -5349,7 +5409,12 @@ function DetailPane({
                   {!agentReviewCompleted ? (
                     <AgentReviewFeedbackDetails
                       values={agentFeedback.values}
-                      onChange={(values) => agentFeedback.updateValues(() => values)}
+                      onChange={(values) => {
+                        if (values.explanation !== agentFeedback.values.explanation) {
+                          updateEditFeedback((current) => ({ ...current, noteFromEdit: false }));
+                        }
+                        agentFeedback.updateValues(() => values);
+                      }}
                       disabled={isSavingGlobal || isComposing}
                       showSuggestion={agentReview.proposedTarget !== null}
                     />

@@ -75,7 +75,7 @@ describe('useTextUnitReviewFeedback', () => {
     rerender(initialProps);
     expect(result.current.widget).not.toBeNull();
     rerender({ ...initialProps, target: original });
-    expect(result.current.widget).not.toBeNull();
+    expect(result.current.widget?.disabled).toBe(true);
     rerender({ ...initialProps, target: '' });
     expect(result.current.widget).not.toBeNull();
     expect(result.current.dirty).toBe(false);
@@ -83,7 +83,16 @@ describe('useTextUnitReviewFeedback', () => {
 
   it('shows feedback for an unchanged AI translation marked problematic', async () => {
     const { result } = setup({ target: original, problematic: true });
-    await waitFor(() => expect(result.current.widget).not.toBeNull());
+    await waitFor(() => expect(result.current.widget?.disabled).toBe(false));
+    act(() => result.current.widget!.onNote('The existing translation reverses the action.'));
+    expect(result.current.activeDirty).toBe(true);
+    expect(
+      result.current.decorateRequest({
+        ...request,
+        target: original,
+        includedInLocalizedFile: false,
+      }).reviewFeedback?.note,
+    ).toBe('The existing translation reverses the action.');
   });
 
   it('does not infer AI provenance when baseline attribution is absent', async () => {
@@ -118,7 +127,7 @@ describe('useTextUnitReviewFeedback', () => {
     expect(fetchTextUnitFeedbackBaseline).toHaveBeenCalledTimes(1);
   });
 
-  it('retains optional feedback when returning to the original translation', async () => {
+  it('disables and retains optional feedback on rollback, then re-enables it when editing resumes', async () => {
     const { result, rerender } = setup();
     await waitFor(() => expect(result.current.widget).not.toBeNull());
     act(() => {
@@ -130,10 +139,59 @@ describe('useTextUnitReviewFeedback', () => {
     expect(result.current.widget).toMatchObject({
       reason: 'WRONG_MEANING',
       note: 'The action needs to match the source.',
+      disabled: true,
     });
+    expect(result.current.activeDirty).toBe(false);
+    rerender(initialProps);
+    expect(result.current.widget).toMatchObject({
+      reason: 'WRONG_MEANING',
+      note: 'The action needs to match the source.',
+      disabled: false,
+    });
+    expect(result.current.activeDirty).toBe(true);
     act(() => result.current.reset());
     expect(result.current.dirty).toBe(false);
     expect(result.current.widget).toMatchObject({ reason: '', note: '' });
+  });
+
+  it('omits suspended reason and note based on the submitted target while retaining the draft and metadata', async () => {
+    const { result } = setup();
+    await waitFor(() => expect(result.current.widget).not.toBeNull());
+    act(() => {
+      result.current.widget!.onReason('WRONG_MEANING');
+      result.current.widget!.onNote('Match the intended action.');
+      result.current.recordChatUsed();
+      result.current.recordSuggestionUsed();
+    });
+
+    const unchanged = result.current.decorateRequest({ ...request, target: original });
+    expect(unchanged.reviewFeedback).toEqual({
+      reason: undefined,
+      note: undefined,
+      chatUsed: true,
+      aiSuggestionUsed: true,
+    });
+    expect(result.current.decorateRequest({ ...request, target: original })).toBe(unchanged);
+    act(() => result.current.saved(unchanged));
+    expect(result.current.widget).toMatchObject({
+      reason: 'WRONG_MEANING',
+      note: 'Match the intended action.',
+    });
+    expect(result.current.decorateRequest(request).reviewFeedback?.note).toBe(
+      'Match the intended action.',
+    );
+  });
+
+  it('treats canonically equivalent text as the original when disabling and submitting feedback', async () => {
+    const { result, rerender } = setup({ baselineTarget: 'Café' });
+    await waitFor(() => expect(result.current.widget).not.toBeNull());
+    act(() => result.current.widget!.onNote('A retained draft.'));
+    rerender({ ...initialProps, baselineTarget: 'Café', target: 'Cafe\u0301' });
+    expect(result.current.widget?.disabled).toBe(true);
+    expect(result.current.activeDirty).toBe(false);
+    expect(
+      result.current.decorateRequest({ ...request, target: 'Cafe\u0301' }).reviewFeedback?.note,
+    ).toBeUndefined();
   });
 
   it('stays visible after accepting a new variant of the same translation', async () => {
@@ -210,6 +268,27 @@ describe('useTextUnitReviewFeedback', () => {
     const next = result.current.decorateRequest(request);
     expect(next.feedbackOperationId).not.toBe(captured.feedbackOperationId);
     expect(next.reviewFeedback?.note).toBeUndefined();
+  });
+
+  it('does not erase retained feedback when the translation changes before an earlier save completes', async () => {
+    const { result, rerender } = setup();
+    await waitFor(() => expect(result.current.widget).not.toBeNull());
+    act(() => result.current.widget!.onNote('Keep the source meaning.'));
+    const captured = result.current.decorateRequest(request);
+    rerender({ ...initialProps, target: original });
+
+    act(() => result.current.saved(captured));
+    expect(result.current.widget).toMatchObject({
+      note: 'Keep the source meaning.',
+      disabled: true,
+    });
+    expect(result.current.dirty).toBe(true);
+    expect(result.current.activeDirty).toBe(false);
+    rerender(initialProps);
+    expect(result.current.widget).toMatchObject({
+      note: 'Keep the source meaning.',
+      disabled: false,
+    });
   });
 
   it('preserves newer feedback when an earlier save finishes', async () => {

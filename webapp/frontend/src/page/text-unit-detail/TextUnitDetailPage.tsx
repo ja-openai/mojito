@@ -1030,7 +1030,9 @@ export function TextUnitDetailPage() {
 
       const nextTarget = targetOverride ?? draftTarget;
       const hasChanges =
-        nextTarget !== baselineTarget || draftStatus !== baselineStatus || feedback.dirty;
+        nextTarget !== baselineTarget ||
+        draftStatus !== baselineStatus ||
+        (feedback.activeDirty && draftStatus === 'Rejected');
       if (!hasChanges) {
         return;
       }
@@ -1049,7 +1051,7 @@ export function TextUnitDetailPage() {
       canEdit,
       draftStatus,
       draftTarget,
-      feedback.dirty,
+      feedback.activeDirty,
       decorateFeedbackRequest,
       saveRequestWithIntegrityCheck,
     ],
@@ -1442,6 +1444,8 @@ export function TextUnitDetailPage() {
         canEdit,
         canDelete: canDeleteCurrentTranslation,
         isDirty: isEditorDirty,
+        hasSaveableChanges:
+          draftTarget !== baselineTarget || draftStatus !== baselineStatus || feedback.activeDirty,
         isSaving: isEditorSaving,
         isDeleting: deleteMutation.isPending,
         mf2ErrorCount,

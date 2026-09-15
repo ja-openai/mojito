@@ -2770,6 +2770,113 @@ describe('Agent proposal review in Review Projects', () => {
     expect(screen.queryByText('Unsent notes')).not.toBeInTheDocument();
   });
 
+  it.each(['PENDING', 'DECIDED'] as const)(
+    'retains inactive edit feedback without applying it to the original in ordinary %s review',
+    async (decisionState) => {
+      visibleTextEditorEnabledMock.mockReturnValue(false);
+      fetchReviewFeedbackBaselineMock.mockResolvedValue({
+        target: 'Pay {price} now',
+        ai: true,
+        kind: 'AI_TRANSLATE',
+      });
+      const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>(
+        () => 42,
+      );
+      const original = { ...textUnit.baselineTmTextUnitVariant!, status: 'APPROVED' };
+      const row: ApiReviewProjectTextUnit = {
+        ...textUnit,
+        baselineTmTextUnitVariant: original,
+        reviewProjectTextUnitDecision: { decisionState, decisionTmTextUnitVariant: original },
+      };
+      const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+      const props: ReviewProjectPageViewProps = {
+        projectId: project.id,
+        project: { ...project, reviewProjectTextUnits: [row] },
+        mutations: buildMutations({ onRequestSaveDecision }),
+        selectedTextUnitQueryId: null,
+        onSelectedTextUnitIdChange: noop,
+        openRequestDetailsQuery: false,
+        requestDetailsSource: null,
+        onRequestDetailsQueryHandled: noop,
+        onRequestDetailsFlowFinished: noop,
+      };
+      const view = render(renderReviewProjectPageViewNode(props, queryClient));
+      await waitFor(() => expect(fetchReviewFeedbackBaselineMock).toHaveBeenCalledOnce());
+      const editor = screen.getByRole('textbox', { name: 'Translation' });
+      fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+      const feedback = await screen.findByRole('region', { name: 'AI translation feedback' });
+      const note = within(feedback).getByRole('textbox', { name: 'AI feedback note' });
+      const reason = within(feedback).getByRole('button', { name: 'Terminology' });
+      fireEvent.click(reason);
+      fireEvent.change(note, { target: { value: 'Use the approved product term.' } });
+
+      fireEvent.change(editor, { target: { value: 'Pay {price} now' } });
+      expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedback);
+      expect(note).toBeDisabled();
+      expect(reason).toBeDisabled();
+      expect(note).toHaveValue('Use the approved product term.');
+      fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+      expect(note).toBeEnabled();
+      expect(reason).toBeEnabled();
+      expect(note).toHaveValue('Use the approved product term.');
+      fireEvent.change(editor, { target: { value: 'Pay {price} now' } });
+
+      const accept = screen.getByRole('button', { name: /^Accept$/ });
+      if (decisionState === 'DECIDED') {
+        expect(accept).toBeDisabled();
+        fireEvent.click(accept);
+        expect(onRequestSaveDecision).not.toHaveBeenCalled();
+      } else {
+        expect(accept).toBeEnabled();
+        fireEvent.click(accept);
+        expect(onRequestSaveDecision).toHaveBeenCalledOnce();
+        const saved = onRequestSaveDecision.mock.calls[0][0];
+        expect(saved.target).toBe('Pay {price} now');
+        expect(saved.reviewFeedback?.reason).toBeUndefined();
+        expect(saved.reviewFeedback?.note).toBeUndefined();
+        expect(saved.decisionNotes).toBeNull();
+        const acceptedVariant = { ...original, id: 31 };
+        const savedRow: ApiReviewProjectTextUnit = {
+          ...row,
+          currentTmTextUnitVariant: acceptedVariant,
+          reviewProjectTextUnitDecision: {
+            decisionState: 'DECIDED',
+            decisionTmTextUnitVariant: acceptedVariant,
+            notes: null,
+          },
+        };
+        const action = { kind: 'save-decision' as const, request: saved };
+        view.rerender(
+          renderReviewProjectPageViewNode(
+            {
+              ...props,
+              project: { ...project, reviewProjectTextUnits: [savedRow] },
+              mutations: buildMutations({
+                actionState: {
+                  phase: 'succeeded',
+                  operationId: 42,
+                  attemptId: 42,
+                  action,
+                  originalAction: action,
+                  textUnit: savedRow,
+                  resolution: 'saved',
+                },
+              }),
+            },
+            queryClient,
+          ),
+        );
+        expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedback);
+        expect(note).toBeDisabled();
+        expect(note).toHaveValue('Use the approved product term.');
+        expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
+        fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+        expect(note).toBeEnabled();
+        expect(note).toHaveValue('Use the approved product term.');
+      }
+    },
+  );
+
   it.each(['ROUTED', 'RESOLVED'])(
     'replaces empty legacy fields with unified feedback in %s incident review',
     (disposition) => {
@@ -2796,12 +2903,14 @@ describe('Agent proposal review in Review Projects', () => {
     const feedback = within(feedbackRegion);
     fireEvent.click(screen.getByRole('button', { name: 'Use original translation' }));
     expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedbackRegion);
+    expect(feedback.getByRole('textbox', { name: 'AI feedback note' })).toBeDisabled();
     fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
       target: { value: '' },
     });
     fireEvent.click(screen.getByRole('button', { name: /^Reset$/ }));
     expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pay {price} now');
     expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedbackRegion);
+    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
     fireEvent.change(feedback.getByRole('textbox', { name: 'AI feedback note' }), {
       target: { value: 'Temporary explanation' },
     });
@@ -2809,7 +2918,6 @@ describe('Agent proposal review in Review Projects', () => {
       target: { value: '' },
     });
     expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedbackRegion);
-    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
     fireEvent.click(feedback.getByRole('button', { name: 'Terminology' }));
     fireEvent.change(feedback.getByRole('textbox', { name: 'AI feedback note' }), {
       target: { value: 'Use the approved product term.' },
@@ -2823,7 +2931,11 @@ describe('Agent proposal review in Review Projects', () => {
     expect(feedback.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
       'Use the approved product term.',
     );
+    expect(feedback.getByRole('textbox', { name: 'AI feedback note' })).toBeDisabled();
+    expect(feedback.getByRole('button', { name: 'Terminology' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+    expect(feedback.getByRole('textbox', { name: 'AI feedback note' })).toBeEnabled();
+    expect(feedback.getByRole('button', { name: 'Terminology' })).toBeEnabled();
     expect(feedback.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
       'Use the approved product term.',
     );
@@ -2852,11 +2964,13 @@ describe('Agent proposal review in Review Projects', () => {
       expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
         'The exclamation mark is intentional.',
       );
+      expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toBeDisabled();
       fireEvent.change(editor, { target: { value: 'Pay {price} now!' } });
       expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
       expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
         'The exclamation mark is intentional.',
       );
+      expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toBeEnabled();
     },
   );
 
@@ -2875,6 +2989,34 @@ describe('Agent proposal review in Review Projects', () => {
     expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pague {price} agora');
     expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
     expect(screen.getByRole('status', { name: 'Selected proposed correction' })).toBeVisible();
+  });
+
+  it('does not reopen a decided original only because feedback from an abandoned edit is retained', () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
+    const row = buildAgentTextUnit({ disposition: 'RESOLVED', canReviewAgain: true });
+    row.reviewProjectTextUnitDecision = {
+      decisionState: 'DECIDED',
+      decisionTmTextUnitVariant: row.currentTmTextUnitVariant,
+    };
+    renderReviewProjectPageView({
+      project: { ...project, reviewProjectTextUnits: [row] },
+      mutations: buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+    const feedback = screen.getByRole('region', { name: 'AI translation feedback' });
+    const note = within(feedback).getByRole('textbox', { name: 'AI feedback note' });
+    fireEvent.click(within(feedback).getByRole('button', { name: 'Terminology' }));
+    fireEvent.change(note, { target: { value: 'A reason for the proposed edit.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Use original translation' }));
+    expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedback);
+    expect(note).toBeDisabled();
+    expect(note).toHaveValue('A reason for the proposed edit.');
+    expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    expect(onRequestDecisionState).not.toHaveBeenCalled();
   });
 
   it.each(['note', 'reason'])(
@@ -3975,6 +4117,12 @@ describe('Agent proposal review in Review Projects', () => {
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
     renderAgentReview({}, buildMutations({ onRequestSaveDecision, onRequestDecisionState }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'AI feedback note' }), {
+      target: { value: 'A reason for the proposed edit.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Use original translation' }));
+    expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toBeDisabled();
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
     fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'GOOD' } });
@@ -4357,8 +4505,23 @@ it('adopts unchanged current text after keep-current feedback without leaving a 
     onRequestDetailsFlowFinished: noop,
   };
   const view = render(renderReviewProjectPageViewNode(initialProps, queryClient));
+  fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+  const feedback = screen.getByRole('region', { name: 'AI translation feedback' });
+  fireEvent.click(within(feedback).getByRole('button', { name: 'Terminology' }));
+  fireEvent.change(within(feedback).getByRole('textbox', { name: 'AI feedback note' }), {
+    target: { value: 'A reason for the proposed edit.' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Use original translation' }));
+  fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
+  fireEvent.click(screen.getByText('Review feedback'));
+  fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'GOOD' } });
   fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
   const request = onRequestDecisionState.mock.calls[0][0];
+  expect(request.agentReview?.action).toBe('KEEP_CURRENT');
+  expect(request.agentReview?.originalAssessment).toBe('GOOD');
+  expect(request.agentReview?.explanation).toBeUndefined();
+  expect(request.reviewFeedback?.reason).toBeUndefined();
+  expect(request.reviewFeedback?.note).toBeUndefined();
   const savedRow: ApiReviewProjectTextUnit = {
     ...initialRow,
     reviewStateRevision: 'agent-row-v2',
@@ -4395,6 +4558,17 @@ it('adopts unchanged current text after keep-current feedback without leaving a 
     ),
   );
   expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pay {price} now');
+  expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedback);
+  expect(within(feedback).getByRole('textbox', { name: 'AI feedback note' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
+  expect(within(feedback).getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
+    'A reason for the proposed edit.',
+  );
+  expect(screen.getByRole('button', { name: /^Reset$/ })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: /^Reset$/ }));
+  expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedback);
+  expect(within(feedback).getByRole('textbox', { name: 'AI feedback note' })).toHaveValue('');
+  expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
   expect(screen.getByRole('button', { name: /^Reset$/ })).toBeDisabled();
   expect(screen.queryByRole('dialog', { name: 'Discard changes?' })).not.toBeInTheDocument();
 });

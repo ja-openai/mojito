@@ -131,7 +131,7 @@ describe('useWorkbenchEdits navigation guard', () => {
     return { promise, resolve };
   }
 
-  function renderEdits(username = 'reviewer') {
+  function renderEdits(username = 'reviewer', status = row.status) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const wrapper = ({ children }: PropsWithChildren) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -140,7 +140,7 @@ describe('useWorkbenchEdits navigation guard', () => {
       ({ username }) =>
         useWorkbenchEdits({
           username,
-          apiRows: [row, otherRow],
+          apiRows: [{ ...row, status }, otherRow],
           canSearch: true,
           activeSearchRequest: null,
           canBypassIntegrityCheck: false,
@@ -385,13 +385,17 @@ describe('useWorkbenchEdits navigation guard', () => {
     },
   );
 
-  it('includes retained feedback in the discard guard after the target is restored', async () => {
-    const { result } = renderEdits();
+  it('protects retained feedback after rollback without enabling another acceptance of unchanged text', async () => {
+    const { result } = renderEdits('reviewer', 'Accepted');
     act(() => result.current.onStartEditing(row.id, row.translation));
     act(() => result.current.onChangeEditingValue('Salut'));
     await waitFor(() => expect(result.current.feedbackWidget).not.toBeNull());
     act(() => result.current.feedbackWidget!.onNote('Keep the existing wording.'));
     act(() => result.current.onChangeEditingValue(row.translation!));
+    expect(result.current.feedbackWidget?.disabled).toBe(true);
+    expect(result.current.canSaveEditing).toBe(false);
+    act(() => result.current.onSaveEditing());
+    expect(saveTextUnitMock).not.toHaveBeenCalled();
     const navigate = vi.fn();
     act(() => result.current.requestNavigate(navigate));
     expect(result.current.showDiscardDialog).toBe(true);

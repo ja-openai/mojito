@@ -323,11 +323,16 @@ describe('TextUnitDetailPage', () => {
     fireEvent.change(note, { target: { value: 'The original is appropriate here.' } });
     fireEvent.change(editor, { target: { value: 'Pagar {price} agora' } });
     expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    expect(note).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Back to workbench' }));
     expect(await screen.findByRole('alertdialog')).toHaveTextContent('Discard unsaved changes?');
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
     expect(note).toHaveValue('The original is appropriate here.');
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    expect(note).toBeEnabled();
+    expect(note).toHaveValue('The original is appropriate here.');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
     expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toBe(note);
     expect(note).toHaveValue('');

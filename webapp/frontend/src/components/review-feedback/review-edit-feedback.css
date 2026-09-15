@@ -65,3 +65,9 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }
+
+.review-edit-feedback__reasons button:disabled,
+.review-edit-feedback__note textarea:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

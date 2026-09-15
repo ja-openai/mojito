@@ -11,7 +11,7 @@ import { isMaterialReviewEdit } from '../components/review-feedback/review-edit-
 import type { ReviewEditFeedback } from '../components/review-feedback/ReviewEditFeedback';
 import { useReviewFeedbackVisibility } from '../components/review-feedback/useReviewFeedbackVisibility';
 
-export type TextUnitFeedbackWidget = Omit<ComponentProps<typeof ReviewEditFeedback>, 'disabled'>;
+export type TextUnitFeedbackWidget = ComponentProps<typeof ReviewEditFeedback>;
 
 const emptyFeedback = () => ({
   reason: '' as ReviewFeedbackReason | '',
@@ -44,8 +44,8 @@ export function useTextUnitReviewFeedback({
   const [draft, setDraft] = useState(() => ({ owner, values: emptyFeedback() }));
   if (draft.owner !== owner) setDraft({ owner, values: emptyFeedback() });
   const values = draft.owner === owner ? draft.values : emptyFeedback();
-  const valuesRef = useRef({ owner, values });
-  valuesRef.current = { owner, values };
+  const valuesRef = useRef({ owner, values, target });
+  valuesRef.current = { owner, values, target };
   const lastRequest = useRef<{
     owner: string;
     fingerprint: string;
@@ -78,9 +78,12 @@ export function useTextUnitReviewFeedback({
       if (!enabled || variantId === null) return request;
       const current = valuesRef.current;
       if (current.owner !== owner) return request;
+      const acceptsFeedback =
+        !request.includedInLocalizedFile ||
+        request.target.normalize('NFC') !== baselineTarget.normalize('NFC');
       const reviewFeedback: ReviewerFeedback = {
-        reason: current.values.reason || undefined,
-        note: current.values.note || undefined,
+        reason: acceptsFeedback ? current.values.reason || undefined : undefined,
+        note: acceptsFeedback ? current.values.note || undefined : undefined,
         chatUsed: current.values.chatUsed,
         aiSuggestionUsed: current.values.aiSuggestionUsed,
       };
@@ -91,7 +94,7 @@ export function useTextUnitReviewFeedback({
       lastRequest.current = { owner, fingerprint, request: captured };
       return captured;
     },
-    [enabled, owner, variantId],
+    [baselineTarget, enabled, owner, variantId],
   );
 
   const saved = useCallback((request: SaveTextUnitRequest) => {
@@ -103,6 +106,7 @@ export function useTextUnitReviewFeedback({
       const feedback = request.reviewFeedback;
       if (
         current.owner !== requestOwner ||
+        valuesRef.current.target !== request.target ||
         current.values.reason !== (feedback?.reason ?? '') ||
         current.values.note !== (feedback?.note ?? '') ||
         current.values.chatUsed !== (feedback?.chatUsed ?? false) ||
@@ -116,6 +120,8 @@ export function useTextUnitReviewFeedback({
   }, []);
 
   const dirty = Boolean(values.reason || values.note);
+  const active = problematic || target.normalize('NFC') !== baselineTarget.normalize('NFC');
+  const activeDirty = dirty && active;
   const show = useReviewFeedbackVisibility(
     enabled && tmTextUnitId !== null && localeId !== null && variantId !== null
       ? JSON.stringify([username, tmTextUnitId, localeId])
@@ -127,6 +133,7 @@ export function useTextUnitReviewFeedback({
     ? {
         reason: values.reason,
         note: values.note,
+        disabled: !active,
         onReason: (reason) => update({ reason }),
         onNote: (note) => update({ note }),
       }
@@ -137,6 +144,7 @@ export function useTextUnitReviewFeedback({
   return {
     widget,
     dirty,
+    activeDirty,
     decorateRequest,
     saved,
     reset,
