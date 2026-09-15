@@ -38,6 +38,7 @@ import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useAiReviewPreferences } from '../../hooks/useAiReviewPreferences';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { useReviewProjectSearchEnabled } from '../../hooks/useReviewProjectSearchEnabled';
+import { useTextUnitReviewFeedback } from '../../hooks/useTextUnitReviewFeedback';
 import { useUser } from '../../hooks/useUser';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
@@ -115,6 +116,8 @@ export function TextUnitDetailPage() {
 
   const [draftTarget, setDraftTarget] = useState('');
   const [baselineTarget, setBaselineTarget] = useState('');
+  const [baselineVariantId, setBaselineVariantId] = useState<number | null>(null);
+  const seededEditorRef = useRef<{ owner: string; version: string } | null>(null);
   const [draftStatus, setDraftStatus] = useState<
     'Accepted' | 'To review' | 'To translate' | 'Rejected'
   >('To translate');
@@ -135,6 +138,9 @@ export function TextUnitDetailPage() {
     canRetry?: boolean;
   } | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [isValidatingSave, setIsValidatingSave] = useState(false);
+  const saveAttemptRef = useRef(0);
 
   const aiRequestAttemptRef = useRef(0);
   const aiRequestAbortControllerRef = useRef<AbortController | null>(null);
@@ -307,15 +313,51 @@ export function TextUnitDetailPage() {
     },
   });
 
+  const canEdit = localeForEditing ? canEditLocaleForUser(currentUser, localeForEditing) : false;
+  const feedback = useTextUnitReviewFeedback({
+    username: currentUser.username,
+    tmTextUnitId: activeTextUnit?.tmTextUnitId ?? null,
+    localeId: activeTextUnit?.localeId ?? null,
+    variantId: baselineVariantId,
+    baselineTarget,
+    target: draftTarget,
+    enabled: canEdit && !isSourceOnly,
+    problematic: draftStatus === 'Rejected',
+  });
+  const {
+    decorateRequest: decorateFeedbackRequest,
+    reset: resetFeedback,
+    saved: feedbackSaved,
+    recordChatUsed,
+    recordSuggestionUsed,
+  } = feedback;
+  const editorOwner = `${currentUser.username}:${tmTextUnitId}:${localeTag}`;
+  const editorOwnerRef = useRef(editorOwner);
+  editorOwnerRef.current = editorOwner;
+  useEffect(() => {
+    saveAttemptRef.current += 1;
+    setIsValidatingSave(false);
+    setShowDiscardDialog(false);
+    return () => {
+      saveAttemptRef.current += 1;
+    };
+  }, [editorOwner]);
+
   const saveMutation = useMutation({
     mutationFn: (request: SaveTextUnitRequest) => saveTextUnit(request),
-    onSuccess: (saved, request) => {
+    onMutate: () => ({ owner: editorOwner }),
+    onSuccess: (saved, request, context) => {
+      feedbackSaved(request);
+      if (editorOwnerRef.current !== context.owner) {
+        return;
+      }
       const nextTarget = saved.target ?? request.target;
       const nextStatus = normalizeEditorStatus(
         formatStatus(saved.status ?? request.status, saved.includedInLocalizedFile),
       );
 
       setBaselineTarget(nextTarget);
+      setBaselineVariantId(saved.tmTextUnitVariantId ?? request.reviewedVariantId ?? null);
       setDraftTarget(nextTarget);
       setBaselineStatus(nextStatus);
       setDraftStatus(nextStatus);
@@ -337,7 +379,10 @@ export function TextUnitDetailPage() {
       });
       void queryClient.invalidateQueries({ queryKey: ['workbench-search'] });
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, _request, context) => {
+      if (context && editorOwnerRef.current !== context.owner) {
+        return;
+      }
       const status = (error as { status?: number })?.status;
       if (status === 403) {
         setSaveErrorMessage('You cannot edit this locale.');
@@ -351,7 +396,9 @@ export function TextUnitDetailPage() {
     mutationFn: (textUnitCurrentVariantId: number) =>
       deleteTextUnitCurrentVariant(textUnitCurrentVariantId),
     onSuccess: () => {
+      resetFeedback();
       setBaselineTarget('');
+      setBaselineVariantId(null);
       setDraftTarget('');
       setBaselineStatus('To translate');
       setDraftStatus('To translate');
@@ -379,7 +426,6 @@ export function TextUnitDetailPage() {
     },
   });
 
-  const canEdit = localeForEditing ? canEditLocaleForUser(currentUser, localeForEditing) : false;
   const isMf2Translation =
     !isSourceOnly &&
     isMf2Message({
@@ -429,6 +475,17 @@ export function TextUnitDetailPage() {
     if (!activeTextUnit || editorSeedKey === null) {
       return;
     }
+    const sameOwner = seededEditorRef.current?.owner === editorOwner;
+    if (
+      sameOwner &&
+      (seededEditorRef.current?.version === editorSeedKey ||
+        draftTarget !== baselineTarget ||
+        draftStatus !== baselineStatus ||
+        feedback.dirty)
+    ) {
+      return;
+    }
+    seededEditorRef.current = { owner: editorOwner, version: editorSeedKey };
 
     const nextTarget = isSourceOnly ? (activeTextUnit.source ?? '') : (activeTextUnit.target ?? '');
     const nextStatus = normalizeEditorStatus(
@@ -436,6 +493,7 @@ export function TextUnitDetailPage() {
     );
 
     setBaselineTarget(nextTarget);
+    setBaselineVariantId(activeTextUnit.tmTextUnitVariantId ?? null);
     setDraftTarget(nextTarget);
     setBaselineStatus(nextStatus);
     setDraftStatus(nextStatus);
@@ -448,6 +506,12 @@ export function TextUnitDetailPage() {
     activeTextUnit?.status,
     activeTextUnit?.target,
     editorSeedKey,
+    editorOwner,
+    baselineStatus,
+    baselineTarget,
+    draftStatus,
+    draftTarget,
+    feedback.dirty,
     isSourceOnly,
   ]);
 
@@ -785,7 +849,7 @@ export function TextUnitDetailPage() {
       .map((entry) => entry.row);
   }, [activeTextUnit?.targetLocale, aiTranslateTimelineData, localeTag, sortedHistoryItems]);
 
-  const handleBack = () => {
+  const navigateBack = () => {
     if (workbenchDetailContext) {
       void navigate('/workbench', {
         state: {
@@ -824,7 +888,32 @@ export function TextUnitDetailPage() {
     void navigate(locationState?.from ?? '/workbench');
   };
 
-  const isEditorDirty = draftTarget !== baselineTarget || draftStatus !== baselineStatus;
+  const isEditorDirty =
+    draftTarget !== baselineTarget || draftStatus !== baselineStatus || feedback.dirty;
+  const isEditorSaving = saveMutation.isPending || isValidatingSave;
+  const hasUnsavedComment =
+    isTargetCommentEditing && targetCommentDraft !== (activeTextUnit?.targetComment ?? '');
+  const handleBack = () => {
+    if (isEditorSaving || deleteMutation.isPending) {
+      setSaveErrorMessage('Wait for the current save to finish before leaving.');
+      return;
+    }
+    if (isEditorDirty || hasUnsavedComment) {
+      setShowDiscardDialog(true);
+      return;
+    }
+    navigateBack();
+  };
+  useEffect(() => {
+    if (!isEditorDirty && !hasUnsavedComment && !isEditorSaving) {
+      return;
+    }
+    const preventDiscard = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', preventDiscard);
+    return () => window.removeEventListener('beforeunload', preventDiscard);
+  }, [hasUnsavedComment, isEditorDirty, isEditorSaving]);
   const hasCurrentTranslation = typeof activeTextUnit?.tmTextUnitVariantId === 'number';
   const showDeletedHistoryEntry = !hasCurrentTranslation && sortedHistoryItems.length > 1;
   const canDeleteCurrentTranslation =
@@ -863,6 +952,10 @@ export function TextUnitDetailPage() {
 
   const saveRequestWithIntegrityCheck = useCallback(
     async (request: SaveTextUnitRequest) => {
+      const attemptId = (saveAttemptRef.current += 1);
+      const owner = editorOwnerRef.current;
+      const isCurrentAttempt = () =>
+        saveAttemptRef.current === attemptId && editorOwnerRef.current === owner;
       setSaveErrorMessage(null);
 
       if (
@@ -877,12 +970,16 @@ export function TextUnitDetailPage() {
         return;
       }
 
+      setIsValidatingSave(true);
       try {
         const integrityResult = await checkTextUnitIntegrityWithRetry({
           tmTextUnitId: request.tmTextUnitId,
           localeId: request.localeId,
           content: request.target,
         });
+        if (!isCurrentAttempt()) {
+          return;
+        }
 
         if (integrityResult?.checkResult === false) {
           const failureDetail = integrityResult.failureDetail?.trim() || null;
@@ -903,6 +1000,9 @@ export function TextUnitDetailPage() {
           return;
         }
       } catch {
+        if (!isCurrentAttempt()) {
+          return;
+        }
         setPendingValidationSave({
           request,
           title: INTEGRITY_CHECK_UNAVAILABLE_TITLE,
@@ -910,9 +1010,13 @@ export function TextUnitDetailPage() {
           canRetry: true,
         });
         return;
+      } finally {
+        if (isCurrentAttempt()) {
+          setIsValidatingSave(false);
+        }
       }
 
-      await saveMutation.mutateAsync(request);
+      await saveMutation.mutateAsync(request).catch(() => undefined);
     },
     [activeTextUnit?.source, currentUser.role, isMf2Translation, localeForEditing, saveMutation],
   );
@@ -925,7 +1029,8 @@ export function TextUnitDetailPage() {
       }
 
       const nextTarget = targetOverride ?? draftTarget;
-      const hasChanges = nextTarget !== baselineTarget || draftStatus !== baselineStatus;
+      const hasChanges =
+        nextTarget !== baselineTarget || draftStatus !== baselineStatus || feedback.dirty;
       if (!hasChanges) {
         return;
       }
@@ -935,7 +1040,7 @@ export function TextUnitDetailPage() {
         return;
       }
 
-      await saveRequestWithIntegrityCheck(request);
+      await saveRequestWithIntegrityCheck(decorateFeedbackRequest(request));
     },
     [
       baselineStatus,
@@ -944,6 +1049,8 @@ export function TextUnitDetailPage() {
       canEdit,
       draftStatus,
       draftTarget,
+      feedback.dirty,
+      decorateFeedbackRequest,
       saveRequestWithIntegrityCheck,
     ],
   );
@@ -953,11 +1060,13 @@ export function TextUnitDetailPage() {
   }, [saveDraft]);
 
   const handleResetEditor = useCallback(() => {
+    saveAttemptRef.current += 1;
+    resetFeedback();
     setDraftTarget(baselineTarget);
     setDraftStatus(baselineStatus);
     setSaveErrorMessage(null);
     setPendingValidationSave(null);
-  }, [baselineStatus, baselineTarget]);
+  }, [baselineStatus, baselineTarget, resetFeedback]);
 
   const handleStartTargetCommentEditing = useCallback(() => {
     setTargetCommentDraft(activeTextUnit?.targetComment ?? '');
@@ -1056,7 +1165,7 @@ export function TextUnitDetailPage() {
     const request = pendingValidationSave.request;
     setPendingValidationSave(null);
     setSaveErrorMessage(null);
-    void saveMutation.mutateAsync(request);
+    void saveMutation.mutateAsync(request).catch(() => undefined);
   }, [pendingValidationSave, saveMutation]);
 
   const handleRetryValidationSave = useCallback(() => {
@@ -1083,6 +1192,7 @@ export function TextUnitDetailPage() {
     if (!trimmed) {
       return;
     }
+    recordChatUsed();
 
     const userMessage: TextUnitDetailAiMessage = {
       id: `user-${Date.now()}`,
@@ -1173,6 +1283,7 @@ export function TextUnitDetailPage() {
     glossaryMatchesQuery.data,
     isAiResponding,
     localeForEditing,
+    recordChatUsed,
   ]);
 
   const handleRetryAi = useCallback(
@@ -1180,6 +1291,7 @@ export function TextUnitDetailPage() {
       if (!aiPreferencesReady || isAiResponding || !activeTextUnit || !localeForEditing) {
         return;
       }
+      recordChatUsed();
 
       const baseMessages = aiMessages.filter((message) => !message.isError);
       const requestAttempt = (aiRequestAttemptRef.current += 1);
@@ -1266,6 +1378,7 @@ export function TextUnitDetailPage() {
       glossaryMatchesQuery.data,
       isAiResponding,
       localeForEditing,
+      recordChatUsed,
     ],
   );
 
@@ -1283,15 +1396,19 @@ export function TextUnitDetailPage() {
 
   const handleUseAiSuggestion = useCallback(
     (suggestion: AiReviewSuggestion) => {
+      if (isEditorSaving || deleteMutation.isPending) {
+        return;
+      }
       const error = getAiSuggestionError(suggestion);
       if (error) {
         setSaveErrorMessage(error);
         return;
       }
       setDraftTarget(suggestion.content);
+      recordSuggestionUsed();
       setSaveErrorMessage(null);
     },
-    [getAiSuggestionError],
+    [deleteMutation.isPending, getAiSuggestionError, isEditorSaving, recordSuggestionUsed],
   );
 
   const editorWarningMessage = isSourceOnly
@@ -1325,7 +1442,7 @@ export function TextUnitDetailPage() {
         canEdit,
         canDelete: canDeleteCurrentTranslation,
         isDirty: isEditorDirty,
-        isSaving: saveMutation.isPending,
+        isSaving: isEditorSaving,
         isDeleting: deleteMutation.isPending,
         mf2ErrorCount,
         errorMessage: saveErrorMessage,
@@ -1351,6 +1468,7 @@ export function TextUnitDetailPage() {
       onChangeTarget={setDraftTarget}
       onChangeStatus={(value) => setDraftStatus(normalizeEditorStatus(value))}
       onSaveEditor={handleSaveEditor}
+      editFeedback={feedback.widget}
       onResetEditor={handleResetEditor}
       onRequestDeleteEditor={handleRequestDeleteEditor}
       previewLocale={displayLocale ?? 'en'}
@@ -1405,8 +1523,8 @@ export function TextUnitDetailPage() {
         draft: targetCommentDraft,
         isEditing: isTargetCommentEditing,
         canEdit: canEdit && !isSourceOnly,
-        isSaving: saveMutation.isPending,
-        isDisabled: isEditorDirty || saveMutation.isPending,
+        isSaving: isEditorSaving,
+        isDisabled: isEditorDirty || isEditorSaving,
         disabledReason: isEditorDirty
           ? 'Save or reset the translation before editing the target comment.'
           : null,
@@ -1454,6 +1572,16 @@ export function TextUnitDetailPage() {
       }
       onConfirmDeleteEditor={handleConfirmDeleteEditor}
       onDismissDeleteDialog={handleDismissDeleteDialog}
+      showDiscardDialog={showDiscardDialog}
+      onDismissDiscardDialog={() => setShowDiscardDialog(false)}
+      onConfirmDiscard={() => {
+        if (isEditorSaving || deleteMutation.isPending) {
+          return;
+        }
+        resetFeedback();
+        setShowDiscardDialog(false);
+        navigateBack();
+      }}
     />
   );
 }

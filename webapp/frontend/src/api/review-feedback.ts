@@ -33,7 +33,8 @@ export async function fetchReviewFeedbackBaseline(
 
 export type ReviewFeedbackPattern = {
   locale: string;
-  projectId: number;
+  projectId: number | null;
+  repositoryId?: number | null;
   model: string;
   promptVersion: string;
   category: string;
@@ -58,4 +59,22 @@ export async function fetchReviewFeedbackPatterns(): Promise<{
     windowSize: number;
     patterns: ReviewFeedbackPattern[];
   };
+}
+
+export async function fetchTextUnitFeedbackBaseline(
+  tmTextUnitId: number,
+  localeId: number,
+  tmTextUnitVariantId: number,
+  signal?: AbortSignal,
+): Promise<ReviewFeedbackBaseline> {
+  const query = new URLSearchParams({
+    localeId: String(localeId),
+    tmTextUnitVariantId: String(tmTextUnitVariantId),
+  });
+  const response = await fetch(`/api/textunits/${tmTextUnitId}/feedback-baseline?${query}`, {
+    credentials: 'include',
+    signal,
+  });
+  if (!response.ok) throw new Error('Could not load translation feedback context.');
+  return (await response.json()) as ReviewFeedbackBaseline;
 }

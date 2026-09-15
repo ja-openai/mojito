@@ -22,7 +22,7 @@ export function ReviewFeedbackPatternsPanel() {
         {report.data?.patterns.length === 0 ? <p>No repeated edit evidence yet.</p> : null}
         {report.data?.patterns.slice(0, 25).map((pattern) => (
           <details
-            key={`${pattern.projectId}:${pattern.locale}:${pattern.model}:${pattern.promptVersion}:${pattern.transformHash}`}
+            key={`${pattern.projectId}:${pattern.repositoryId ?? 'unknown'}:${pattern.locale}:${pattern.model}:${pattern.promptVersion}:${pattern.transformHash}`}
           >
             <summary>
               {pattern.locale} · {pattern.category.replace(/_/g, ' ').toLowerCase()} ·{' '}
@@ -32,7 +32,10 @@ export function ReviewFeedbackPatternsPanel() {
                 : ''}
             </summary>
             <p className="settings-hint">
-              Project {pattern.projectId} · Model {pattern.model} · Prompt {pattern.promptVersion}
+              {pattern.projectId == null
+                ? `Workbench · Repository ${pattern.repositoryId ?? 'unknown'}`
+                : `Project ${pattern.projectId}`}{' '}
+              · Model {pattern.model} · Prompt {pattern.promptVersion}
               {' · '}
               {Math.round(pattern.correctionRate * 100)}% of {pattern.opportunities} reviewed
               strings · {pattern.disputedStrings} disputed strings

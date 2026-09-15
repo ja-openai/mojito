@@ -350,6 +350,7 @@ export function WorkbenchPage() {
   ]);
 
   const edits = useWorkbenchEdits({
+    username: currentUser.username,
     apiRows: search.rows,
     canSearch: search.canSearch,
     activeSearchRequest: search.activeSearchRequest,
@@ -687,6 +688,7 @@ export function WorkbenchPage() {
         hasMoreResults={search.hasMoreResults}
         editingRowId={edits.editingRowId}
         editingValue={edits.editingValue}
+        feedbackWidget={edits.feedbackWidget}
         canSaveEditing={edits.canSaveEditing}
         onStartEditing={edits.onStartEditing}
         onCancelEditing={edits.onCancelEditing}

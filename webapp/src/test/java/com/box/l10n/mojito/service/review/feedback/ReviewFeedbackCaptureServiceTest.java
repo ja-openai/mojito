@@ -100,4 +100,108 @@ public class ReviewFeedbackCaptureServiceTest {
     service.capture(row, decision, ai, null, "different", 99L, feedback, null);
     verifyNoInteractions(events);
   }
+
+  @Test
+  public void workbenchEvidenceReusesExactVariantProvenanceWithoutAProject() throws Exception {
+    var events = mock(ReviewFeedbackEventRepository.class);
+    var attempts = mock(AiTranslateTextUnitAttemptRepository.class);
+    var service =
+        new ReviewFeedbackCaptureService(
+            events,
+            attempts,
+            mock(AgentReviewProposalRepository.class),
+            mock(AgentReviewRunRepository.class),
+            new ObjectMapper());
+    var unit = mock(TMTextUnit.class, RETURNS_DEEP_STUBS);
+    when(unit.getId()).thenReturn(20L);
+    when(unit.getContent()).thenReturn("Enable");
+    when(unit.getAsset().getRepository().getId()).thenReturn(70L);
+    var locale = new Locale();
+    locale.setId(30L);
+    locale.setBcp47Tag("fr");
+    var original = new TMTextUnitVariant();
+    original.setId(40L);
+    original.setTmTextUnit(unit);
+    original.setLocale(locale);
+    original.setContent("Activer");
+    var accepted = new TMTextUnitVariant();
+    accepted.setId(41L);
+    accepted.setContent("Activé");
+    accepted.setStatus(TMTextUnitVariant.Status.APPROVED);
+    accepted.setIncludedInLocalizedFile(true);
+    var attempt = new AiTranslateTextUnitAttempt();
+    attempt.setId(60L);
+    attempt.setModel("exact-model");
+    when(attempts.findFirstByTmTextUnit_IdAndLocale_IdAndTmTextUnitVariant_IdAndStatusOrderByIdDesc(
+            20L, 30L, 40L, "IMPORTED"))
+        .thenReturn(Optional.of(attempt));
+    var feedback =
+        new ReviewerFeedback(ReviewerFeedback.Reason.GRAMMAR, "Use completed form", false, false);
+    service.captureWorkbench(
+        original,
+        accepted,
+        50L,
+        "Active\u0301",
+        99L,
+        feedback,
+        "operation",
+        "fingerprint",
+        "event-key");
+    var event = ArgumentCaptor.forClass(ReviewFeedbackEvent.class);
+    verify(events).save(event.capture());
+    assertNull(event.getValue().getProjectId());
+    assertTrue(event.getValue().getAiBaseline());
+    var payload = new ObjectMapper().readTree(event.getValue().getPayload());
+    assertEquals("WORKBENCH", payload.path("surface").asText());
+    assertTrue(payload.path("reviewComplete").asBoolean());
+    assertEquals(70L, payload.path("repositoryId").asLong());
+    assertEquals(40L, payload.path("reviewedVariantId").asLong());
+    assertEquals(41L, payload.path("acceptedVariantId").asLong());
+    assertEquals("Active\u0301", payload.path("finalAcceptedRaw").asText());
+    assertEquals("Activé", payload.path("finalStored").asText());
+    assertEquals(60L, payload.at("/baseline/provenance/attemptId").asLong());
+    assertEquals("fingerprint", payload.path("requestFingerprint").asText());
+    assertEquals("Use completed form", payload.at("/feedback/note").asText());
+    assertEquals("GRAMMAR", event.getValue().getCategory());
+    for (var status :
+        java.util.List.of(
+            TMTextUnitVariant.Status.REVIEW_NEEDED, TMTextUnitVariant.Status.TRANSLATION_NEEDED)) {
+      reset(events);
+      accepted.setStatus(status);
+      accepted.setIncludedInLocalizedFile(true);
+      service.captureWorkbench(
+          original,
+          accepted,
+          50L,
+          "Activé",
+          99L,
+          feedback,
+          "pending",
+          "fingerprint",
+          "pending-key");
+      verify(events).save(event.capture());
+      var pending = new ObjectMapper().readTree(event.getValue().getPayload());
+      assertFalse(pending.path("reviewComplete").asBoolean());
+      assertEquals("Use completed form", pending.at("/feedback/note").asText());
+    }
+    reset(events);
+    accepted.setIncludedInLocalizedFile(false);
+    service.captureWorkbench(
+        original,
+        accepted,
+        50L,
+        "Activé",
+        99L,
+        feedback,
+        "rejected",
+        "fingerprint",
+        "rejected-key");
+    verify(events).save(event.capture());
+    assertTrue(
+        new ObjectMapper()
+            .readTree(event.getValue().getPayload())
+            .path("reviewComplete")
+            .asBoolean());
+    assertEquals("MARKED_PROBLEMATIC", event.getValue().getCategory());
+  }
 }

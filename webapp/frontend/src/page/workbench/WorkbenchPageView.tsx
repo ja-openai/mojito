@@ -10,6 +10,7 @@ import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertMo
 import { Modal } from '../../components/Modal';
 import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
+import type { TextUnitFeedbackWidget } from '../../hooks/useTextUnitReviewFeedback';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
@@ -52,6 +53,7 @@ type Props = {
   hasMoreResults: boolean;
   editingRowId: string | null;
   editingValue: string;
+  feedbackWidget?: TextUnitFeedbackWidget | null;
   canSaveEditing: boolean;
   onStartEditing: (rowId: string, translation: string | null) => void;
   onCancelEditing: () => void;
@@ -221,6 +223,7 @@ export function WorkbenchPageView({
   hasMoreResults,
   editingRowId,
   editingValue,
+  feedbackWidget,
   canSaveEditing,
   onStartEditing,
   onCancelEditing,
@@ -464,6 +467,7 @@ export function WorkbenchPageView({
         rows={rows}
         editingRowId={editingRowId}
         editingValue={editingValue}
+        feedbackWidget={feedbackWidget}
         editedRowIds={editedRowIds}
         statusSavingRowIds={statusSavingRowIds}
         onShowDiff={onShowDiff}

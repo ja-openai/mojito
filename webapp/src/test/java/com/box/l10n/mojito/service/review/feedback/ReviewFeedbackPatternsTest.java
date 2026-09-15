@@ -50,4 +50,96 @@ public class ReviewFeedbackPatternsTest {
     assertEquals(1, pattern.reviewerCount());
     assertEquals("OBSERVE", pattern.candidateStatus());
   }
+
+  @Test
+  public void workbenchPatternsKeepRepositoryCohortsSeparate() {
+    var first =
+        new ReviewFeedbackEvent(
+            "one",
+            null,
+            1L,
+            1L,
+            "fr",
+            "model",
+            "prompt",
+            "QUOTE_STYLE",
+            "quotes",
+            "source",
+            "baseline",
+            "final",
+            true,
+            "{\"repositoryId\":7}");
+    var other =
+        new ReviewFeedbackEvent(
+            "two",
+            null,
+            2L,
+            2L,
+            "fr",
+            "model",
+            "prompt",
+            "QUOTE_STYLE",
+            "quotes",
+            "source",
+            "baseline",
+            "final",
+            true,
+            "{\"repositoryId\":8}");
+    var patterns = ReviewFeedbackPatterns.aggregate(List.of(first, other)).patterns();
+    assertEquals(2, patterns.size());
+    assertNull(patterns.get(0).projectId());
+    assertEquals(
+        Set.of(7L, 8L),
+        patterns.stream()
+            .map(ReviewFeedbackPatterns.PatternEvidence::repositoryId)
+            .collect(java.util.stream.Collectors.toSet()));
+    assertEquals(1, patterns.get(0).opportunities());
+  }
+
+  @Test
+  public void pendingWorkbenchSavesDoNotAddOpportunitiesOrReplaceReviewedJudgments() {
+    var pending =
+        new ReviewFeedbackEvent(
+            "pending",
+            null,
+            1L,
+            1L,
+            "fr",
+            "model",
+            "prompt",
+            "QUOTE_STYLE",
+            "quotes",
+            "source",
+            "baseline",
+            "pending",
+            true,
+            "{\"surface\":\"WORKBENCH\",\"reviewComplete\":false,\"repositoryId\":7}");
+    var reviewed =
+        new ReviewFeedbackEvent(
+            "reviewed",
+            null,
+            1L,
+            1L,
+            "fr",
+            "model",
+            "prompt",
+            "QUOTE_STYLE",
+            "quotes",
+            "source",
+            "baseline",
+            "reviewed",
+            true,
+            "{\"surface\":\"WORKBENCH\",\"reviewComplete\":true,\"repositoryId\":7}");
+    assertTrue(ReviewFeedbackPatterns.aggregate(List.of(pending)).patterns().isEmpty());
+    var pattern = ReviewFeedbackPatterns.aggregate(List.of(pending, reviewed)).patterns().get(0);
+    assertEquals(1, pattern.opportunities());
+    assertEquals(1, pattern.observations());
+    assertEquals(0, pattern.disputedStrings());
+    // Existing Review Project events have no Workbench marker and remain valid judgments.
+    assertEquals(
+        1,
+        ReviewFeedbackPatterns.aggregate(List.of(event(2, 2, "QUOTE_STYLE", "final")))
+            .patterns()
+            .size());
+  }
 }

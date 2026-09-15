@@ -79,15 +79,25 @@ public class ReviewFeedbackCaptureService {
               : "configuration:" + run.getConfigurationVersion(),
           provenance);
     }
+    return baseline(
+        row.getTmTextUnit().getId(), row.getReviewProject().getLocale().getId(), reviewed);
+  }
+
+  @Transactional(readOnly = true)
+  public Baseline baseline(TMTextUnitVariant reviewed) {
+    return baseline(reviewed.getTmTextUnit().getId(), reviewed.getLocale().getId(), reviewed);
+  }
+
+  private Baseline baseline(Long unitId, Long localeId, TMTextUnitVariant reviewed) {
+    Map<String, Object> provenance = new LinkedHashMap<>();
+    provenance.put("glossaryVersion", null);
+    provenance.put("styleGuideVersion", null);
     var attempt =
         reviewed == null || reviewed.getId() == null
             ? null
             : attempts
                 .findFirstByTmTextUnit_IdAndLocale_IdAndTmTextUnitVariant_IdAndStatusOrderByIdDesc(
-                    row.getTmTextUnit().getId(),
-                    row.getReviewProject().getLocale().getId(),
-                    reviewed.getId(),
-                    AiTranslateTextUnitAttempt.STATUS_IMPORTED)
+                    unitId, localeId, reviewed.getId(), AiTranslateTextUnitAttempt.STATUS_IMPORTED)
                 .orElse(null);
     if (attempt != null) {
       provenance.put("attemptId", attempt.getId());
@@ -126,25 +136,6 @@ public class ReviewFeedbackCaptureService {
       ReviewProjectClientContext client) {
     if (decision.getDecisionState() != ReviewProjectTextUnitDecision.DecisionState.DECIDED) return;
     Baseline baseline = baseline(row, reviewed, proposal);
-    var diff = ReviewEditDiff.compare(baseline.target(), rawFinal);
-    boolean problematic =
-        decision.getVariant() != null && !decision.getVariant().isIncludedInLocalizedFile();
-    String reviewerCategory =
-        feedback == null || feedback.reason() == null
-            ? null
-            : switch (feedback.reason()) {
-              case TERMINOLOGY -> "TERMINOLOGY";
-              case WRONG_MEANING -> "MEANING";
-              case TONE_STYLE -> "TONE_STYLE";
-              case GRAMMAR -> "GRAMMAR";
-              case TOO_LONG -> "LENGTH_UI_FIT";
-              case CONTEXT -> "CONTEXT";
-              case OTHER -> "UNKNOWN_MATERIAL_EDIT";
-            };
-    String category =
-        problematic
-            ? "MARKED_PROBLEMATIC"
-            : diff.material() && reviewerCategory != null ? reviewerCategory : diff.category();
     var project = row.getReviewProject();
     var unit = row.getTmTextUnit();
     Map<String, Object> payload = new LinkedHashMap<>();
@@ -162,36 +153,7 @@ public class ReviewFeedbackCaptureService {
     payload.put("reviewedVariantId", reviewed == null ? null : reviewed.getId());
     payload.put(
         "acceptedVariantId", decision.getVariant() == null ? null : decision.getVariant().getId());
-    payload.put("baseline", baseline);
-    payload.put("finalAcceptedRaw", rawFinal);
-    payload.put(
-        "finalStored", decision.getVariant() == null ? null : decision.getVariant().getContent());
-    payload.put("diff", diff);
-    payload.put("transform", ReviewEditDiff.transform(diff, baseline.target(), rawFinal));
-    payload.put("reviewerCategory", reviewerCategory);
-    payload.put(
-        "classificationSource", category.equals(reviewerCategory) ? "REVIEWER" : "DETERMINISTIC");
-    payload.put(
-        "terminologySignal",
-        feedback != null && feedback.reason() == ReviewerFeedback.Reason.TERMINOLOGY
-            ? "REVIEWER_REPORTED"
-            : "UNASSESSED");
-    payload.put(
-        "acceptedStatus", decision.getVariant() == null ? null : decision.getVariant().getStatus());
-    payload.put(
-        "includedInLocalizedFile",
-        decision.getVariant() == null ? null : decision.getVariant().isIncludedInLocalizedFile());
-    payload.put("feedback", feedback);
     payload.put("legacyDecisionNotes", decision.getNotes());
-    // UI activity is an explicitly labeled client observation, never server-authenticated
-    // provenance.
-    payload.put(
-        "action",
-        feedback != null && feedback.aiSuggestionUsed()
-            ? "AI_ASSISTED"
-            : diff.rawChanged() ? "EDITED" : "ACCEPTED_UNCHANGED");
-    payload.put("activitySource", feedback == null ? "UNAVAILABLE" : "CLIENT_REPORTED");
-    payload.put("markedProblematic", problematic);
     payload.put("operationId", client == null ? null : client.operationId());
     String key =
         hash(
@@ -204,6 +166,120 @@ public class ReviewFeedbackCaptureService {
                     rawFinal,
                     feedback,
                     proposal == null ? null : proposal.getId())));
+    saveEvent(
+        key,
+        project.getId(),
+        unit,
+        project.getLocale().getBcp47Tag(),
+        baseline,
+        decision.getVariant(),
+        rawFinal,
+        reviewerId,
+        feedback,
+        payload);
+  }
+
+  /** The Workbench save and evidence share the caller's transaction and current-variant lock. */
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void captureWorkbench(
+      TMTextUnitVariant reviewed,
+      TMTextUnitVariant accepted,
+      Long currentVariantId,
+      String rawFinal,
+      Long reviewerId,
+      ReviewerFeedback feedback,
+      String operationId,
+      String requestFingerprint,
+      String eventKey) {
+    var unit = reviewed.getTmTextUnit();
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("schemaVersion", 1);
+    payload.put("surface", "WORKBENCH");
+    payload.put("source", unit.getContent());
+    payload.put("sourceComment", unit.getComment());
+    payload.put("stringId", unit.getName());
+    payload.put("repositoryId", unit.getAsset().getRepository().getId());
+    payload.put("reviewedVariantId", reviewed.getId());
+    payload.put("acceptedVariantId", accepted.getId());
+    payload.put("currentVariantId", currentVariantId);
+    payload.put(
+        "reviewComplete",
+        accepted.getStatus() == TMTextUnitVariant.Status.APPROVED
+            || !accepted.isIncludedInLocalizedFile());
+    payload.put("targetComment", accepted.getComment());
+    payload.put(
+        "savedBy",
+        accepted.getCreatedByUser() == null ? null : accepted.getCreatedByUser().getUsername());
+    payload.put("operationId", operationId);
+    payload.put("requestFingerprint", requestFingerprint);
+    saveEvent(
+        eventKey,
+        null,
+        unit,
+        reviewed.getLocale().getBcp47Tag(),
+        baseline(reviewed),
+        accepted,
+        rawFinal,
+        reviewerId,
+        feedback,
+        payload);
+  }
+
+  private void saveEvent(
+      String key,
+      Long projectId,
+      TMTextUnit unit,
+      String locale,
+      Baseline baseline,
+      TMTextUnitVariant accepted,
+      String rawFinal,
+      Long reviewerId,
+      ReviewerFeedback feedback,
+      Map<String, Object> payload) {
+    var diff = ReviewEditDiff.compare(baseline.target(), rawFinal);
+    boolean problematic = accepted != null && !accepted.isIncludedInLocalizedFile();
+    String reviewerCategory =
+        feedback == null || feedback.reason() == null
+            ? null
+            : switch (feedback.reason()) {
+              case TERMINOLOGY -> "TERMINOLOGY";
+              case WRONG_MEANING -> "MEANING";
+              case TONE_STYLE -> "TONE_STYLE";
+              case GRAMMAR -> "GRAMMAR";
+              case TOO_LONG -> "LENGTH_UI_FIT";
+              case CONTEXT -> "CONTEXT";
+              case OTHER -> "UNKNOWN_MATERIAL_EDIT";
+            };
+    String category =
+        problematic
+            ? "MARKED_PROBLEMATIC"
+            : diff.material() && reviewerCategory != null ? reviewerCategory : diff.category();
+    payload.put("baseline", baseline);
+    payload.put("finalAcceptedRaw", rawFinal);
+    payload.put("finalStored", accepted == null ? null : accepted.getContent());
+    payload.put("diff", diff);
+    payload.put("transform", ReviewEditDiff.transform(diff, baseline.target(), rawFinal));
+    payload.put("reviewerCategory", reviewerCategory);
+    payload.put(
+        "classificationSource", category.equals(reviewerCategory) ? "REVIEWER" : "DETERMINISTIC");
+    payload.put(
+        "terminologySignal",
+        feedback != null && feedback.reason() == ReviewerFeedback.Reason.TERMINOLOGY
+            ? "REVIEWER_REPORTED"
+            : "UNASSESSED");
+    payload.put("acceptedStatus", accepted == null ? null : accepted.getStatus());
+    payload.put(
+        "includedInLocalizedFile", accepted == null ? null : accepted.isIncludedInLocalizedFile());
+    payload.put("feedback", feedback);
+    // UI activity is an explicitly labeled client observation, never server-authenticated
+    // provenance.
+    payload.put(
+        "action",
+        feedback != null && feedback.aiSuggestionUsed()
+            ? "AI_ASSISTED"
+            : diff.rawChanged() ? "EDITED" : "ACCEPTED_UNCHANGED");
+    payload.put("activitySource", feedback == null ? "UNAVAILABLE" : "CLIENT_REPORTED");
+    payload.put("markedProblematic", problematic);
     if (events.existsByEventKey(key)) return;
     String pattern =
         hash(
@@ -213,10 +289,10 @@ public class ReviewFeedbackCaptureService {
     events.save(
         new ReviewFeedbackEvent(
             key,
-            project.getId(),
+            projectId,
             unit.getId(),
             reviewerId,
-            project.getLocale().getBcp47Tag(),
+            locale,
             baseline.model(),
             baseline.promptVersion(),
             category,

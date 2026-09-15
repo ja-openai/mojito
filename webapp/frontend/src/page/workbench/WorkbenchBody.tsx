@@ -14,6 +14,7 @@ import {
 } from '../../components/mf2/Mf2TranslationEditor';
 import { Modal } from '../../components/Modal';
 import { PillDropdown } from '../../components/PillDropdown';
+import { ReviewEditFeedback } from '../../components/review-feedback/ReviewEditFeedback';
 import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
 import {
   TranslationTextEditor,
@@ -26,6 +27,7 @@ import { VirtualList } from '../../components/virtual/VirtualList';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { VisibleTextRenderer } from '../../components/VisibleTextRenderer';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
+import type { TextUnitFeedbackWidget } from '../../hooks/useTextUnitReviewFeedback';
 import { formatLocalDateTime, getLocalAndUtcDateTimeTooltip } from '../../utils/dateTime';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import { isPrimaryActionShortcut } from '../../utils/keyboardShortcuts';
@@ -39,6 +41,7 @@ type WorkbenchBodyProps = {
   rows: WorkbenchRow[];
   editingRowId: string | null;
   editingValue: string;
+  feedbackWidget?: TextUnitFeedbackWidget | null;
   editedRowIds: Set<string>;
   statusSavingRowIds: Set<string>;
   onShowDiff: (rowId: string) => void;
@@ -95,6 +98,7 @@ export function WorkbenchBody({
   rows,
   editingRowId,
   editingValue,
+  feedbackWidget,
   editedRowIds,
   statusSavingRowIds,
   onShowDiff,
@@ -844,6 +848,12 @@ export function WorkbenchBody({
                           validateNextValue={validateTranslationValue}
                         />
                       )}
+                      {isEditing && feedbackWidget ? (
+                        <ReviewEditFeedback
+                          {...feedbackWidget}
+                          disabled={isSaving || !row.canEdit}
+                        />
+                      ) : null}
                       <div className="workbench-page__translation-footer">
                         {isEdited ? (
                           <button

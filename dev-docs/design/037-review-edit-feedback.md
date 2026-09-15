@@ -14,6 +14,10 @@ Feedback section uses the same muted heading style as Translation, with no surro
 or introductory message. Reason chips and a 500-character note are saved by the existing Accept
 action. Switching between the original, suggestion, and manual edits preserves unsaved
 feedback. This display comparison is separate from the stored AI-baseline-to-final diff.
+Once shown, the section stays visible for the selected string, including after reverting an
+edit, clearing feedback, or accepting. Selecting another string starts fresh. Its first
+appearance has a brief fade when reduced motion is not requested; subsequent edits do not
+remove and reinsert it above the chat. Visibility alone does not mark the draft as changed.
 
 Ordinary reviews of known AI translations show this area after a material edit or a
 problematic assessment; quote, casing, punctuation, and whitespace edits are recorded
@@ -26,6 +30,29 @@ Editing only the widget feedback on a completed editable review uses the existin
 reopen-and-save operation, retaining the current translation and the earlier review history.
 Chat usage and use of a chat suggestion are optional client observations, explicitly labeled
 as such; they are not trusted model provenance.
+
+## Workbench
+
+Workbench's inline editor and text-unit Details view reuse the same feedback widget. For a
+known AI baseline, it appears after a material edit or, in Details, a rejected assessment.
+Reason and note remain optional and save through the existing Accept/Save action. Returning
+to the original text preserves entered feedback; Cancel/Reset clears it. Once shown, the
+section remains visible for that string while the editor stays open, including after Reset.
+Feedback participates
+in the existing dirty-draft behavior, and validation and save use a frozen payload. Independent
+target-comment saves and bulk status actions do not submit widget feedback.
+
+The editor captures the exact immutable text-unit variant when editing starts. A permission-
+checked baseline endpoint resolves its AI provenance. Saves with feedback metadata lock the
+text unit before its current translation, matching Review Projects and incident intake,
+reject a changed baseline, and record evidence in the existing event
+table in the same transaction. A reviewer-scoped operation ID and full request fingerprint
+make an identical retry return its saved receipt without reapplying an older translation.
+The ordinary save contract remains available to callers without feedback metadata.
+
+Workbench events have `surface: WORKBENCH`, a repository identity, and no review-project ID.
+They retain raw edits and optional feedback for pending statuses, but only approved or
+explicitly excluded/problematic translations count as completed reviews in Learning.
 
 ## Evidence and identity
 
@@ -62,7 +89,9 @@ snapshot and is not inferred from today's glossary. Semantic classification rema
 ## Asynchronous patterns
 
 The scheduled observation window reads at most 2,000 indexed AI-baseline events once per
-minute, outside Accept. It groups by locale/project/model/prompt and directional transform.
+minute, outside Accept. It groups by locale/project/model/prompt and directional transform;
+Workbench cohorts use repository identity in place of a review project. Incomplete Workbench
+saves are excluded from both judgments and reviewed-string opportunities.
 Straight-to-curly quotes and the reverse are separate; different wording with the same quote
 conversion can share a pattern. A reviewer's latest judgment for the same string/baseline
 is used once. Different baseline versions do not count as reviewer disagreement.
@@ -81,10 +110,12 @@ run asynchronously against these events and retain human promotion of prompt cha
 
 ## Validation and rollout
 
-Migration V120 adds the event table and bounded-read indexes. Local checks use mocks and HSQL;
+Migration V120 adds the event table and bounded-read indexes, with a nullable project ID
+for Workbench events. Local checks use mocks and HSQL;
 no external database services are needed. Tests cover raw/normalized evidence, directional
 quote trends, token bounds, retry payload retention, review integration, and transaction
-rollback plus schema/unique-key behavior. Apply the migration with the matching backend before
+rollback plus schema/unique-key behavior, exact-variant ownership, and Workbench retry/draft
+retention. Apply the migration with the matching backend before
 testing durable event capture. Frontend preview against an older backend establishes layout
 only. Production query plans, retention policy, source glossary snapshots, and representative
 multilingual calibration remain rollout work.

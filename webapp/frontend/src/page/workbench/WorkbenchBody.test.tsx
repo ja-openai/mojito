@@ -1082,3 +1082,17 @@ paused {{En pause}}
     expect(onStartEditing).not.toHaveBeenCalled();
   });
 });
+
+describe('Workbench inline feedback', () => {
+  it('uses the shared widget only for the active editor and disables feedback while saving', () => {
+    const onNote = vi.fn();
+    renderWorkbenchBody({
+      isSaving: true,
+      feedbackWidget: { reason: '', note: '', onReason: vi.fn(), onNote },
+    });
+    expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Terminology' })).toBeDisabled();
+    expect(screen.queryByText('Diff saved on Accept')).not.toBeInTheDocument();
+  });
+});

@@ -1,7 +1,7 @@
 import '../review-project/review-project-page.css';
 import './text-unit-detail-page.css';
 
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ComponentProps, type ReactNode, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { AiReviewSuggestion } from '../../api/ai-review';
@@ -19,6 +19,7 @@ import { Mf2DocumentPreview } from '../../components/mf2/Mf2DocumentPreview';
 import { Mf2TranslationEditor } from '../../components/mf2/Mf2TranslationEditor';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
+import { ReviewEditFeedback } from '../../components/review-feedback/ReviewEditFeedback';
 import {
   TextUnitHistoryTimeline,
   type TextUnitHistoryTimelineComment as TextUnitDetailHistoryComment,
@@ -107,6 +108,7 @@ type TextUnitDetailPageViewProps = {
   onChangeTarget: (value: string) => void;
   onChangeStatus: (value: string) => void;
   onSaveEditor: () => void;
+  editFeedback?: Omit<ComponentProps<typeof ReviewEditFeedback>, 'disabled'> | null;
   onResetEditor: () => void;
   onRequestDeleteEditor: () => void;
   previewLocale: string;
@@ -170,6 +172,9 @@ type TextUnitDetailPageViewProps = {
   deleteDialogBody: string;
   onConfirmDeleteEditor: () => void;
   onDismissDeleteDialog: () => void;
+  showDiscardDialog: boolean;
+  onConfirmDiscard: () => void;
+  onDismissDiscardDialog: () => void;
 };
 
 export function TextUnitDetailPageView({
@@ -183,6 +188,7 @@ export function TextUnitDetailPageView({
   onChangeTarget,
   onChangeStatus,
   onSaveEditor,
+  editFeedback,
   onResetEditor,
   onRequestDeleteEditor,
   previewLocale,
@@ -240,6 +246,9 @@ export function TextUnitDetailPageView({
   deleteDialogBody,
   onConfirmDeleteEditor,
   onDismissDeleteDialog,
+  showDiscardDialog,
+  onConfirmDiscard,
+  onDismissDiscardDialog,
 }: TextUnitDetailPageViewProps) {
   const isMf2 = !editorInfo.isSourceOnly && isMf2Message(keyInfo);
   const canSaveEditor =
@@ -487,6 +496,13 @@ export function TextUnitDetailPageView({
               </section>
             ) : null}
 
+            {editFeedback && !editorInfo.isSourceOnly ? (
+              <ReviewEditFeedback
+                {...editFeedback}
+                disabled={!editorInfo.canEdit || editorInfo.isSaving || editorInfo.isDeleting}
+              />
+            ) : null}
+
             {editorInfo.warningMessage ? (
               <div className="text-unit-detail-page__state text-unit-detail-page__state--warning">
                 {editorInfo.warningMessage}
@@ -724,6 +740,15 @@ export function TextUnitDetailPageView({
         cancelLabel="Cancel"
         onConfirm={onConfirmDeleteEditor}
         onCancel={onDismissDeleteDialog}
+      />
+      <ConfirmModal
+        open={showDiscardDialog}
+        title="Discard unsaved changes?"
+        body="Your translation edits and feedback have not been saved."
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        onConfirm={onConfirmDiscard}
+        onCancel={onDismissDiscardDialog}
       />
     </div>
   );

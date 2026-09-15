@@ -6,6 +6,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as AiReviewApi from '../../api/ai-review';
 import type * as GlossariesApi from '../../api/glossaries';
+import type * as ReviewFeedbackApi from '../../api/review-feedback';
 import type * as TextUnitsApi from '../../api/text-units';
 import type { ApiUserPreferences } from '../../api/userPreferences';
 import { userPreferencesQueryKey } from '../../hooks/useUserPreferences';
@@ -29,6 +30,11 @@ const fetchRepositoriesMock = vi.hoisted(() => vi.fn());
 const fetchUserPreferencesMock = vi.hoisted(() => vi.fn());
 const saveUserPreferencesMock = vi.hoisted(() => vi.fn());
 const currentUserRole = vi.hoisted(() => ({ role: 'ROLE_TRANSLATOR' }));
+const fetchTextUnitFeedbackBaselineMock = vi.hoisted(() => vi.fn());
+vi.mock('../../api/review-feedback', async (importActual) => ({
+  ...(await importActual<typeof ReviewFeedbackApi>()),
+  fetchTextUnitFeedbackBaseline: fetchTextUnitFeedbackBaselineMock,
+}));
 vi.mock('../../api/userPreferences', () => ({
   fetchUserPreferences: fetchUserPreferencesMock,
   saveUserPreferences: saveUserPreferencesMock,
@@ -195,6 +201,11 @@ describe('TextUnitDetailPage', () => {
       { id: 2, name: 'web' },
     ]);
     checkTextUnitIntegrityMock.mockResolvedValue({ checkResult: true });
+    fetchTextUnitFeedbackBaselineMock.mockReset().mockResolvedValue({
+      target: 'Pagar {price} agora',
+      ai: false,
+      kind: 'CURRENT_TRANSLATION',
+    });
     saveTextUnitMock.mockImplementation((request: TextUnitsApi.SaveTextUnitRequest) =>
       Promise.resolve(request),
     );
@@ -228,6 +239,191 @@ describe('TextUnitDetailPage', () => {
       suggestions: [],
       review: null,
     });
+  });
+
+  it('captures optional feedback on the translation save without requesting another AI review', async () => {
+    editorPreference.enabled = false;
+    fetchTextUnitFeedbackBaselineMock.mockResolvedValue({
+      target: 'Pagar {price} agora',
+      ai: true,
+      kind: 'AI_TRANSLATE',
+    });
+    renderTextUnitDetailPage();
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledOnce());
+    expect(
+      screen.queryByRole('region', { name: 'AI translation feedback' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    const widget = await screen.findByRole('region', { name: 'AI translation feedback' });
+    fireEvent.click(within(widget).getByRole('button', { name: 'Tone/style' }));
+    fireEvent.change(within(widget).getByRole('textbox', { name: 'AI feedback note' }), {
+      target: { value: 'Use the imperative for this action.' },
+    });
+    expect(requestAiReviewMock).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(saveTextUnitMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tmTextUnitId: 3,
+          localeId: 17,
+          target: 'Pague {price} agora',
+          reviewedVariantId: 30,
+          feedbackOperationId: expect.any(String) as unknown,
+          reviewFeedback: {
+            reason: 'TONE_STYLE',
+            note: 'Use the imperative for this action.',
+            chatUsed: false,
+            aiSuggestionUsed: false,
+          },
+        }),
+      ),
+    );
+  });
+
+  it('retains feedback after a failed save and reuses its exact operation when retried', async () => {
+    editorPreference.enabled = false;
+    fetchTextUnitFeedbackBaselineMock.mockResolvedValue({
+      target: 'Pagar {price} agora',
+      ai: true,
+      kind: 'AI_TRANSLATE',
+    });
+    saveTextUnitMock.mockRejectedValueOnce(new Error('Save failed'));
+    renderTextUnitDetailPage();
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    const note = await screen.findByRole('textbox', { name: 'AI feedback note' });
+    fireEvent.change(note, { target: { value: 'Keep the action direct.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('Save failed')).toBeVisible();
+    expect(note).toHaveValue('Keep the action direct.');
+    expect(editor).toHaveValue('Pague {price} agora');
+    const firstRequest = saveTextUnitMock.mock.calls[0][0] as TextUnitsApi.SaveTextUnitRequest;
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(saveTextUnitMock).toHaveBeenCalledTimes(2));
+    expect(saveTextUnitMock.mock.calls[1][0]).toEqual(firstRequest);
+  });
+
+  it('protects feedback-only drafts on Back and clears them with Reset', async () => {
+    editorPreference.enabled = false;
+    fetchTextUnitFeedbackBaselineMock.mockResolvedValue({
+      target: 'Pagar {price} agora',
+      ai: true,
+      kind: 'AI_TRANSLATE',
+    });
+    renderTextUnitDetailPage();
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    const note = await screen.findByRole('textbox', { name: 'AI feedback note' });
+    fireEvent.change(note, { target: { value: 'The original is appropriate here.' } });
+    fireEvent.change(editor, { target: { value: 'Pagar {price} agora' } });
+    expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to workbench' }));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Discard unsaved changes?');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(note).toHaveValue('The original is appropriate here.');
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toBe(note);
+    expect(note).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to workbench' }));
+    expect(await screen.findByTestId('workbench-destination')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('freezes the feedback baseline when a refreshed current translation arrives during editing', async () => {
+    editorPreference.enabled = false;
+    fetchTextUnitFeedbackBaselineMock.mockResolvedValue({
+      target: 'Pagar {price} agora',
+      ai: true,
+      kind: 'AI_TRANSLATE',
+    });
+    const { queryClient } = renderTextUnitDetailPage();
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    const note = await screen.findByRole('textbox', { name: 'AI feedback note' });
+    fireEvent.change(note, { target: { value: 'The edited version uses the imperative.' } });
+    act(() => {
+      queryClient.setQueryData<TextUnitsApi.ApiTextUnit>(
+        ['text-unit-detail', 3, 'pt-PT'],
+        (current) =>
+          current ? { ...current, tmTextUnitVariantId: 31, target: 'Novo texto {price}' } : current,
+      );
+    });
+    expect(editor).toHaveValue('Pague {price} agora');
+    expect(note).toHaveValue('The edited version uses the imperative.');
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(saveTextUnitMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reviewedVariantId: 30,
+          target: 'Pague {price} agora',
+        }),
+      ),
+    );
+  });
+
+  it('holds feedback and navigation while integrity validation is in progress', async () => {
+    editorPreference.enabled = false;
+    fetchTextUnitFeedbackBaselineMock.mockResolvedValue({
+      target: 'Pagar {price} agora',
+      ai: true,
+      kind: 'AI_TRANSLATE',
+    });
+    let finishValidation!: (result: { checkResult: boolean }) => void;
+    checkTextUnitIntegrityMock.mockReturnValue(
+      new Promise<{ checkResult: boolean }>((resolve) => {
+        finishValidation = resolve;
+      }),
+    );
+    renderTextUnitDetailPage();
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    const note = await screen.findByRole('textbox', { name: 'AI feedback note' });
+    fireEvent.change(note, { target: { value: 'Use the imperative.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(checkTextUnitIntegrityMock).toHaveBeenCalledOnce());
+    expect(editor).toBeDisabled();
+    expect(note).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to workbench' }));
+    expect(screen.queryByRole('heading', { name: 'Workbench dashboard' })).not.toBeInTheDocument();
+    act(() => finishValidation({ checkResult: true }));
+    await waitFor(() =>
+      expect(saveTextUnitMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reviewFeedback: expect.objectContaining({ note: 'Use the imperative.' }) as unknown,
+        }),
+      ),
+    );
+  });
+
+  it('ignores an integrity result after the Details editor has been unmounted', async () => {
+    editorPreference.enabled = false;
+    let finishValidation!: (result: { checkResult: boolean }) => void;
+    const validation = new Promise<{ checkResult: boolean }>((resolve) => {
+      finishValidation = resolve;
+    });
+    checkTextUnitIntegrityMock.mockReturnValue(validation);
+    const { unmount } = renderTextUnitDetailPage();
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(checkTextUnitIntegrityMock).toHaveBeenCalledOnce());
+    unmount();
+    await act(async () => {
+      finishValidation({ checkResult: true });
+      await validation;
+    });
+    expect(saveTextUnitMock).not.toHaveBeenCalled();
   });
 
   it('falls back from saved Ultra for manual review, follow-up and retry without rewriting preferences', async () => {
@@ -950,13 +1146,15 @@ describe('TextUnitDetailPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() =>
-      expect(saveTextUnitMock).toHaveBeenCalledWith({
-        tmTextUnitId: 3,
-        localeId: 17,
-        target: nextTarget,
-        status: 'APPROVED',
-        includedInLocalizedFile: true,
-      }),
+      expect(saveTextUnitMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tmTextUnitId: 3,
+          localeId: 17,
+          target: nextTarget,
+          status: 'APPROVED',
+          includedInLocalizedFile: true,
+        }),
+      ),
     );
     expect(checkTextUnitIntegrityMock).toHaveBeenCalledWith({
       tmTextUnitId: 3,

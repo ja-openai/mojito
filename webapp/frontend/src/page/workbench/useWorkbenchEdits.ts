@@ -1,6 +1,14 @@
 import type { InfiniteData } from '@tanstack/react-query';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { type MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type MutableRefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   type ApiTextUnit,
@@ -13,6 +21,10 @@ import {
 import { isMf2Message } from '../../components/mf2/messageFormat';
 import { mf2TranslationErrorCount } from '../../components/mf2/translationValidation';
 import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
+import {
+  type TextUnitFeedbackWidget,
+  useTextUnitReviewFeedback,
+} from '../../hooks/useTextUnitReviewFeedback';
 import {
   buildIntegrityCheckErrorReport,
   checkTextUnitIntegrityWithRetry,
@@ -56,6 +68,7 @@ type PendingDiscardAction =
   | { kind: 'navigate'; onContinue: () => void };
 
 type Params = {
+  username: string;
   apiRows: WorkbenchRow[];
   canSearch: boolean;
   activeSearchRequest: TextUnitSearchRequest | null;
@@ -65,6 +78,7 @@ type Params = {
 type UseWorkbenchEditsResult = {
   editingRowId: string | null;
   editingValue: string;
+  feedbackWidget: TextUnitFeedbackWidget | null;
   canSaveEditing: boolean;
   editedRowIds: Set<string>;
   statusSavingRowIds: Set<string>;
@@ -136,6 +150,7 @@ function rowHasMf2Errors(row: WorkbenchRow, target = row.translation ?? '') {
 }
 
 export function useWorkbenchEdits({
+  username,
   apiRows,
   canSearch,
   activeSearchRequest,
@@ -144,6 +159,19 @@ export function useWorkbenchEdits({
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [editingInitialValue, setEditingInitialValue] = useState('');
+  const [editingVariantId, setEditingVariantId] = useState<number | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
+  const editingRow = apiRows.find((row) => row.id === editingRowId);
+  const feedback = useTextUnitReviewFeedback({
+    username,
+    tmTextUnitId: editingRow?.tmTextUnitId ?? null,
+    localeId: editingRow?.localeId ?? null,
+    variantId: editingVariantId,
+    baselineTarget: editingInitialValue,
+    target: editingValue,
+    enabled: editingRow?.canEdit === true,
+  });
+  const { decorateRequest, reset: resetFeedback } = feedback;
   const [pendingDiscardAction, setPendingDiscardAction] = useState<PendingDiscardAction | null>(
     null,
   );
@@ -167,6 +195,27 @@ export function useWorkbenchEdits({
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const saveAttemptRef = useRef(0);
   const queryClient = useQueryClient();
+
+  useLayoutEffect(() => {
+    saveAttemptRef.current += 1;
+    translationInputRef.current?.blur();
+    setEditingRowId(null);
+    setEditingValue('');
+    setEditingInitialValue('');
+    setEditingVariantId(null);
+    setIsValidating(false);
+    setPendingValidationSave(null);
+    setPendingDiscardAction(null);
+    setPendingBulkAction(null);
+    setSaveErrorMessage(null);
+    setBulkActionErrorMessage(null);
+    setStatusSavingRowIds(new Set());
+    setWorksetEdits(new Map());
+    setDiffRowId(null);
+    return () => {
+      saveAttemptRef.current += 1;
+    };
+  }, [username]);
 
   const matchesMutationTarget = (
     item: ApiTextUnit,
@@ -363,6 +412,7 @@ export function useWorkbenchEdits({
       setEditingRowId(null);
       setEditingValue('');
       setEditingInitialValue('');
+      setEditingVariantId(null);
       setPendingDiscardAction(null);
       setPendingValidationSave(null);
       setSaveErrorMessage(null);
@@ -400,6 +450,7 @@ export function useWorkbenchEdits({
       setEditingRowId(null);
       setEditingValue('');
       setEditingInitialValue('');
+      setEditingVariantId(null);
       setPendingDiscardAction(null);
       setPendingValidationSave(null);
       setSaveErrorMessage(null);
@@ -420,40 +471,53 @@ export function useWorkbenchEdits({
     rowRefs.current[rowId] = element;
   }, []);
 
-  const handleStartEditing = useCallback((rowId: string, translation: string | null) => {
-    saveAttemptRef.current += 1;
-    const nextValue = translation ?? '';
-    setEditingRowId(rowId);
-    setEditingValue(nextValue);
-    setEditingInitialValue(nextValue);
-    setSaveErrorMessage(null);
-    setBulkActionErrorMessage(null);
-    setPendingValidationSave(null);
-    setPendingDiscardAction(null);
-  }, []);
-
-  const handleCancelEditing = useCallback(() => {
-    saveAttemptRef.current += 1;
-    translationInputRef.current?.blur();
-    setEditingRowId(null);
-    setEditingValue('');
-    setEditingInitialValue('');
-    setSaveErrorMessage(null);
-    setBulkActionErrorMessage(null);
-    setPendingValidationSave(null);
-    setPendingDiscardAction(null);
-  }, []);
-
-  const handleChangeEditingValue = useCallback((value: string) => {
-    setEditingValue(value);
-  }, []);
-
-  const hasUnsavedChanges = editingRowId !== null && editingValue !== editingInitialValue;
   const hasPendingWrites =
     saveTextUnitMutation.isPending ||
     statusSavingRowIds.size > 0 ||
     deleteAllMutation.isPending ||
     updateAllStatusesMutation.isPending;
+
+  const handleStartEditing = useCallback(
+    (rowId: string, translation: string | null) => {
+      saveAttemptRef.current += 1;
+      const nextValue = translation ?? '';
+      setEditingRowId(rowId);
+      setEditingValue(nextValue);
+      setEditingInitialValue(nextValue);
+      setEditingVariantId(apiRows.find((row) => row.id === rowId)?.tmTextUnitVariantId ?? null);
+      resetFeedback();
+      setSaveErrorMessage(null);
+      setBulkActionErrorMessage(null);
+      setPendingValidationSave(null);
+      setPendingDiscardAction(null);
+    },
+    [apiRows, resetFeedback],
+  );
+
+  const handleCancelEditing = useCallback(() => {
+    saveAttemptRef.current += 1;
+    setIsValidating(false);
+    translationInputRef.current?.blur();
+    setEditingRowId(null);
+    setEditingValue('');
+    setEditingInitialValue('');
+    setEditingVariantId(null);
+    resetFeedback();
+    setSaveErrorMessage(null);
+    setBulkActionErrorMessage(null);
+    setPendingValidationSave(null);
+    setPendingDiscardAction(null);
+  }, [resetFeedback]);
+
+  const handleChangeEditingValue = useCallback(
+    (value: string) => {
+      if (!hasPendingWrites && !isValidating) setEditingValue(value);
+    },
+    [hasPendingWrites, isValidating],
+  );
+
+  const hasUnsavedChanges =
+    editingRowId !== null && (editingValue !== editingInitialValue || feedback.dirty);
   const canSaveEditing = useMemo(() => {
     if (!editingRowId) {
       return false;
@@ -462,11 +526,12 @@ export function useWorkbenchEdits({
     if (!row || !row.canEdit) {
       return false;
     }
-    return editingValue !== editingInitialValue || row.status !== 'Accepted';
-  }, [apiRows, editingInitialValue, editingRowId, editingValue]);
+    return editingValue !== editingInitialValue || row.status !== 'Accepted' || feedback.dirty;
+  }, [apiRows, editingInitialValue, editingRowId, editingValue, feedback.dirty]);
 
   const handleRequestStartEditing = useCallback(
     (rowId: string, translation: string | null) => {
+      if (hasPendingWrites || isValidating) return;
       const row = apiRows.find((candidate) => candidate.id === rowId);
       if (row && !row.canEdit) {
         setSaveErrorMessage('You cannot edit this locale.');
@@ -479,7 +544,7 @@ export function useWorkbenchEdits({
 
       handleStartEditing(rowId, translation);
     },
-    [apiRows, editingRowId, hasUnsavedChanges, handleStartEditing],
+    [apiRows, editingRowId, hasUnsavedChanges, hasPendingWrites, isValidating, handleStartEditing],
   );
 
   const requestNavigate = useCallback(
@@ -523,15 +588,22 @@ export function useWorkbenchEdits({
       setPendingValidationSave(null);
       setSaveErrorMessage(null);
 
-      void saveTextUnitMutation.mutateAsync(request).then(() => {
-        handleCancelEditing();
-      });
+      const attemptId = saveAttemptRef.current;
+      void saveTextUnitMutation
+        .mutateAsync(request)
+        .then(() => {
+          if (saveAttemptRef.current === attemptId) handleCancelEditing();
+        })
+        .catch(() => {
+          // The mutation reports the error; keep the translation and feedback drafts for retry.
+        });
     },
     [handleCancelEditing, saveTextUnitMutation],
   );
 
   const runIntegrityCheckAndSave = useCallback(
     (request: SaveTextUnitMutationVars, attemptId: number) => {
+      setIsValidating(true);
       void checkTextUnitIntegrityWithRetry({
         tmTextUnitId: request.tmTextUnitId,
         localeId: request.localeId,
@@ -541,6 +613,7 @@ export function useWorkbenchEdits({
           if (saveAttemptRef.current !== attemptId) {
             return;
           }
+          setIsValidating(false);
           if (result?.checkResult === false) {
             const failureDetail = result.failureDetail?.trim() || null;
             const report = buildIntegrityCheckErrorReport({
@@ -565,6 +638,7 @@ export function useWorkbenchEdits({
           if (saveAttemptRef.current !== attemptId) {
             return;
           }
+          setIsValidating(false);
           setPendingValidationSave({
             request,
             title: INTEGRITY_CHECK_UNAVAILABLE_TITLE,
@@ -605,7 +679,7 @@ export function useWorkbenchEdits({
   }, []);
 
   const handleSaveEditing = useCallback(() => {
-    if (!editingRowId) {
+    if (!editingRowId || hasPendingWrites || isValidating) {
       return;
     }
 
@@ -625,7 +699,7 @@ export function useWorkbenchEdits({
       return;
     }
 
-    if (editingValue === editingInitialValue && row.status === 'Accepted') {
+    if (editingValue === editingInitialValue && row.status === 'Accepted' && !feedback.dirty) {
       return;
     }
     if (rowHasMf2Errors(row, editingValue)) {
@@ -638,11 +712,13 @@ export function useWorkbenchEdits({
     ensureBaselineEdit(row);
 
     const request: SaveTextUnitMutationVars = {
-      tmTextUnitId: row.tmTextUnitId,
-      localeId: row.localeId,
-      target: editingValue,
-      status: 'APPROVED',
-      includedInLocalizedFile: true,
+      ...decorateRequest({
+        tmTextUnitId: row.tmTextUnitId,
+        localeId: row.localeId,
+        target: editingValue,
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+      }),
       __targetLocale: row.locale,
       __rowId: row.id,
     };
@@ -655,6 +731,10 @@ export function useWorkbenchEdits({
     editingValue,
     ensureBaselineEdit,
     runIntegrityCheckAndSave,
+    decorateRequest,
+    feedback.dirty,
+    hasPendingWrites,
+    isValidating,
   ]);
 
   const handleChangeStatus = useCallback(
@@ -859,6 +939,7 @@ export function useWorkbenchEdits({
   return {
     editingRowId,
     editingValue,
+    feedbackWidget: feedback.widget,
     canSaveEditing,
     editedRowIds,
     statusSavingRowIds,
@@ -872,7 +953,7 @@ export function useWorkbenchEdits({
     onChangeStatus: handleChangeStatus,
     translationInputRef,
     registerRowRef,
-    isSaving: saveTextUnitMutation.isPending,
+    isSaving: saveTextUnitMutation.isPending || isValidating,
     isApplyingBulkAction: deleteAllMutation.isPending || updateAllStatusesMutation.isPending,
     bulkActionRowCount: deletableCurrentVariantIds.length,
     bulkActionErrorMessage,

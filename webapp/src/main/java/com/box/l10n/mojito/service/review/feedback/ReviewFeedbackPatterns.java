@@ -24,6 +24,7 @@ public class ReviewFeedbackPatterns {
   public record PatternEvidence(
       String locale,
       Long projectId,
+      Long repositoryId,
       String model,
       String promptVersion,
       String category,
@@ -87,7 +88,7 @@ public class ReviewFeedbackPatterns {
   }
 
   public static Report aggregate(List<ReviewFeedbackEvent> events) {
-    record Cohort(String locale, Long project, String model, String prompt) {}
+    record Cohort(String locale, Long project, Long repository, String model, String prompt) {}
     record Key(Cohort cohort, String category, String transform) {}
     record Version(Long stringId, String baselineHash) {}
     record ReviewerVersion(Cohort cohort, Version version, Long reviewer) {}
@@ -96,9 +97,17 @@ public class ReviewFeedbackPatterns {
     Map<Key, List<ReviewFeedbackEvent>> groups = new LinkedHashMap<>();
     Map<Cohort, Map<Version, Set<String>>> outcomes = new HashMap<>();
     for (var event : events) {
+      var evidence = payload(event);
+      // A Workbench draft may retain optional feedback, but it is not a reviewed judgment.
+      if (evidence.path("surface").asText().equals("WORKBENCH")
+          && !evidence.path("reviewComplete").asBoolean()) continue;
       var cohort =
           new Cohort(
-              event.getLocale(), event.getProjectId(), event.getModel(), event.getPromptVersion());
+              event.getLocale(),
+              event.getProjectId(),
+              event.getProjectId() == null ? evidence.path("repositoryId").asLong() : null,
+              event.getModel(),
+              event.getPromptVersion());
       var version = new Version(event.getTextUnitId(), event.getBaselineHash());
       // Input is newest-first. A reviewer's later correction replaces their earlier vote in
       // this observation window; the immutable events themselves are never rewritten.
@@ -141,6 +150,7 @@ public class ReviewFeedbackPatterns {
               new PatternEvidence(
                   c.locale(),
                   c.project(),
+                  c.repository(),
                   c.model(),
                   c.prompt(),
                   key.category(),

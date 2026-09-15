@@ -1,6 +1,7 @@
 import { containsLikePattern } from '../utils/likeSearch';
 import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
 import { isTransientHttpError, poll } from '../utils/poller';
+import type { ReviewerFeedback } from './review-feedback';
 
 export type SearchAttribute =
   | 'stringId'
@@ -91,6 +92,9 @@ export type TextUnitSearchRequest = {
 };
 
 export type SaveTextUnitRequest = {
+  reviewedVariantId?: number;
+  feedbackOperationId?: string;
+  reviewFeedback?: ReviewerFeedback;
   tmTextUnitId: number;
   localeId: number;
   target: string;

@@ -22,6 +22,12 @@ const checkTextUnitIntegrityMock = vi.hoisted(() =>
   }),
 );
 
+vi.mock('../../api/review-feedback', () => ({
+  fetchTextUnitFeedbackBaseline: vi
+    .fn()
+    .mockResolvedValue({ target: 'Bonjour', ai: true, kind: 'AI_TRANSLATE' }),
+}));
+
 vi.mock('../../api/text-units', async (importOriginal) => ({
   ...(await importOriginal<typeof TextUnitsApi>()),
   saveTextUnit: saveTextUnitMock,
@@ -75,6 +81,7 @@ describe('useWorkbenchEdits MF2 bulk validation', () => {
     const { result } = renderHook(
       () =>
         useWorkbenchEdits({
+          username: 'reviewer',
           apiRows: [mf2Row],
           canSearch: true,
           activeSearchRequest: null,
@@ -124,20 +131,21 @@ describe('useWorkbenchEdits navigation guard', () => {
     return { promise, resolve };
   }
 
-  function renderEdits() {
+  function renderEdits(username = 'reviewer') {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const wrapper = ({ children }: PropsWithChildren) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
     return renderHook(
-      () =>
+      ({ username }) =>
         useWorkbenchEdits({
+          username,
           apiRows: [row, otherRow],
           canSearch: true,
           activeSearchRequest: null,
           canBypassIntegrityCheck: false,
         }),
-      { wrapper },
+      { wrapper, initialProps: { username } },
     );
   }
 
@@ -283,6 +291,141 @@ describe('useWorkbenchEdits navigation guard', () => {
     },
   );
 
+  it('saves captured feedback with the exact reviewed version and keeps it for a failed-save retry', async () => {
+    saveTextUnitMock
+      .mockRejectedValueOnce(new Error('Connection interrupted'))
+      .mockResolvedValueOnce(saved);
+    const { result } = renderEdits();
+    act(() => result.current.onStartEditing(row.id, row.translation));
+    act(() => result.current.onChangeEditingValue('Salut'));
+    await waitFor(() => expect(result.current.feedbackWidget).not.toBeNull());
+    act(() => result.current.feedbackWidget!.onReason('TONE_STYLE'));
+    act(() => result.current.feedbackWidget!.onNote('Use an informal greeting.'));
+    act(() => result.current.onSaveEditing());
+    await waitFor(() => expect(result.current.saveErrorMessage).toBe('Connection interrupted'));
+    expect(result.current.feedbackWidget?.note).toBe('Use an informal greeting.');
+    const first = saveTextUnitMock.mock.calls[0][0];
+    expect(first).toMatchObject({
+      reviewedVariantId: 10,
+      feedbackOperationId: expect.any(String) as unknown,
+      reviewFeedback: { reason: 'TONE_STYLE', note: 'Use an informal greeting.' },
+    });
+    act(() => result.current.onSaveEditing());
+    await waitFor(() => expect(result.current.editingRowId).toBeNull());
+    expect(saveTextUnitMock.mock.calls[1][0]).toEqual(first);
+    expect(result.current.feedbackWidget).toBeNull();
+  });
+
+  it.each([true, false])(
+    "discards another account's draft and ignores its late integrity result (%s)",
+    async (checkResult) => {
+      const validation = deferred<TextUnitIntegrityCheckResult>();
+      checkTextUnitIntegrityMock.mockReturnValueOnce(validation.promise);
+      const { result, rerender } = renderEdits();
+      act(() => result.current.onStartEditing(row.id, row.translation));
+      act(() => result.current.onChangeEditingValue('Salut'));
+      await waitFor(() => expect(result.current.feedbackWidget).not.toBeNull());
+      act(() => result.current.feedbackWidget!.onNote('First account feedback.'));
+      act(() => result.current.onSaveEditing());
+      expect(result.current.isSaving).toBe(true);
+
+      rerender({ username: 'another-reviewer' });
+      expect(result.current.editingRowId).toBeNull();
+      expect(result.current.editingValue).toBe('');
+      expect(result.current.feedbackWidget).toBeNull();
+      expect(result.current.pendingValidationSave).toBeNull();
+      expect(result.current.isSaving).toBe(false);
+
+      act(() => result.current.onStartEditing(otherRow.id, otherRow.translation));
+      act(() => result.current.onChangeEditingValue('Au revoir'));
+      await waitFor(() => expect(result.current.feedbackWidget).not.toBeNull());
+      expect(result.current.feedbackWidget?.note).toBe('');
+      await act(async () => {
+        validation.resolve({ checkResult });
+        await validation.promise;
+      });
+      expect(saveTextUnitMock).not.toHaveBeenCalled();
+      expect(result.current.pendingValidationSave).toBeNull();
+      expect(result.current.editingRowId).toBe(otherRow.id);
+      expect(result.current.editingValue).toBe('Au revoir');
+    },
+  );
+
+  it('clears a pending validation request when the account changes', async () => {
+    checkTextUnitIntegrityMock.mockResolvedValueOnce({ checkResult: false });
+    const { result, rerender } = renderEdits();
+    act(() => result.current.onStartEditing(row.id, row.translation));
+    act(() => result.current.onChangeEditingValue('Salut'));
+    act(() => result.current.onSaveEditing());
+    await waitFor(() => expect(result.current.pendingValidationSave).not.toBeNull());
+    rerender({ username: 'another-reviewer' });
+    expect(result.current.pendingValidationSave).toBeNull();
+    act(() => result.current.confirmValidationSave());
+    act(() => result.current.retryValidationSave());
+    expect(saveTextUnitMock).not.toHaveBeenCalled();
+    expect(checkTextUnitIntegrityMock).toHaveBeenCalledOnce();
+  });
+
+  it.each([true, false])(
+    'ignores an integrity result (%s) after the Workbench has unmounted',
+    async (checkResult) => {
+      const validation = deferred<TextUnitIntegrityCheckResult>();
+      checkTextUnitIntegrityMock.mockReturnValueOnce(validation.promise);
+      const { result, unmount } = renderEdits();
+      act(() => result.current.onStartEditing(row.id, row.translation));
+      act(() => result.current.onChangeEditingValue('Salut'));
+      act(() => result.current.onSaveEditing());
+      expect(result.current.isSaving).toBe(true);
+      unmount();
+      await act(async () => {
+        validation.resolve({ checkResult });
+        await validation.promise;
+      });
+      expect(saveTextUnitMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('includes retained feedback in the discard guard after the target is restored', async () => {
+    const { result } = renderEdits();
+    act(() => result.current.onStartEditing(row.id, row.translation));
+    act(() => result.current.onChangeEditingValue('Salut'));
+    await waitFor(() => expect(result.current.feedbackWidget).not.toBeNull());
+    act(() => result.current.feedbackWidget!.onNote('Keep the existing wording.'));
+    act(() => result.current.onChangeEditingValue(row.translation!));
+    const navigate = vi.fn();
+    act(() => result.current.requestNavigate(navigate));
+    expect(result.current.showDiscardDialog).toBe(true);
+    expect(navigate).not.toHaveBeenCalled();
+    act(() => result.current.dismissDiscardEditing());
+    expect(result.current.feedbackWidget?.note).toBe('Keep the existing wording.');
+    act(() => result.current.onCancelEditing());
+    expect(result.current.feedbackWidget).toBeNull();
+  });
+
+  it('freezes the feedback through integrity retries and protects edits during validation', async () => {
+    const check = deferred<TextUnitIntegrityCheckResult>();
+    checkTextUnitIntegrityMock.mockReturnValueOnce(check.promise);
+    const { result } = renderEdits();
+    act(() => result.current.onStartEditing(row.id, row.translation));
+    act(() => result.current.onChangeEditingValue('Salut'));
+    await waitFor(() => expect(result.current.feedbackWidget).not.toBeNull());
+    act(() => result.current.feedbackWidget!.onNote('Use an informal greeting.'));
+    act(() => result.current.onSaveEditing());
+    expect(result.current.isSaving).toBe(true);
+    act(() => result.current.onChangeEditingValue('A later edit'));
+    expect(result.current.editingValue).toBe('Salut');
+    await act(async () => {
+      check.resolve({ checkResult: false });
+      await check.promise;
+    });
+    await waitFor(() => expect(result.current.pendingValidationSave).not.toBeNull());
+    expect(result.current.isSaving).toBe(false);
+    const captured = result.current.pendingValidationSave!.request;
+    expect(captured.reviewFeedback?.note).toBe('Use an informal greeting.');
+    expect(captured.reviewedVariantId).toBe(10);
+    expect(saveTextUnitMock).not.toHaveBeenCalled();
+  });
+
   it('waits for every active status save, including an earlier concurrent save', async () => {
     const firstSave = deferred<ApiTextUnit>();
     const secondSave = deferred<ApiTextUnit>();
@@ -405,6 +548,7 @@ describe('useWorkbenchEdits saved-by attribution', () => {
     const { result } = renderHook(
       () =>
         useWorkbenchEdits({
+          username: 'reviewer',
           apiRows: [row],
           canSearch: true,
           activeSearchRequest: null,

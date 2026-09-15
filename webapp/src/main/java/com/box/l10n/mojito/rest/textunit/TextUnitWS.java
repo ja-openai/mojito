@@ -11,6 +11,7 @@ import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.View;
+import com.box.l10n.mojito.rest.review.ReviewFeedbackWS;
 import com.box.l10n.mojito.rest.textunit.TextUnitWS.SearchTextUnitsHybridResponse.HybridSearchError;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.asset.AssetPathNotFoundException;
@@ -25,6 +26,7 @@ import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.repository.RepositoryNameNotFoundException;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.review.feedback.WorkbenchReviewFeedbackService;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantService;
@@ -63,6 +65,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -111,6 +114,8 @@ public class TextUnitWS {
   @Autowired AssetRepository assetRepository;
 
   @Autowired UserService userService;
+
+  @Autowired WorkbenchReviewFeedbackService reviewFeedback;
 
   @Autowired StructuredBlobStorage structuredBlobStorage;
 
@@ -450,20 +455,28 @@ public class TextUnitWS {
         : string;
   }
 
-  /**
-   * Creates a TextUnit.
-   *
-   * <p>Correspond to adding a new TMTextUnitVariant (new translation) in the system and to create
-   * the TMTextUnitCurrentVariant (to make the new translation current).
-   *
-   * @param textUnitDTO data used to update the TMTextUnitCurrentVariant. {@link
-   *     TextUnitDTO#getTmTextUnitId()}, {@link TextUnitDTO#getLocaleId()}, {@link
-   *     TextUnitDTO#getTarget()} are the only 3 fields that are used for the update.
-   * @return the created TextUnit (contains the new translation with its id)
-   */
-  @Transactional
+  /** Saves the current translation, optionally recording feedback on the exact reviewed variant. */
+  // A waiting retry must see the acceptance receipt committed by the previous row-lock holder.
+  @Transactional(isolation = Isolation.READ_COMMITTED)
   @RequestMapping(method = RequestMethod.POST, value = "/api/textunits")
-  public TextUnitDTO addTextUnit(@RequestBody TextUnitDTO textUnitDTO) {
+  public TextUnitDTO saveTextUnit(@RequestBody TextUnitSaveRequest request) {
+    if (!request.hasReviewFeedbackMetadata()) return addTextUnit(request);
+    return reviewFeedback.save(
+        request,
+        request.getReviewedVariantId(),
+        request.getFeedbackOperationId(),
+        request.getReviewFeedback(),
+        () -> addTextUnit(request));
+  }
+
+  @RequestMapping(method = RequestMethod.GET, value = "/api/textunits/{id}/feedback-baseline")
+  public ReviewFeedbackWS.Baseline feedbackBaseline(
+      @PathVariable Long id, @RequestParam Long localeId, @RequestParam Long tmTextUnitVariantId) {
+    var baseline = reviewFeedback.baseline(id, localeId, tmTextUnitVariantId);
+    return new ReviewFeedbackWS.Baseline(baseline.target(), baseline.ai(), baseline.kind());
+  }
+
+  public TextUnitDTO addTextUnit(TextUnitDTO textUnitDTO) {
     userService.checkUserCanEditLocale(textUnitDTO.getLocaleId());
 
     logger.debug("Add TextUnit");
