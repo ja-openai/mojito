@@ -353,8 +353,7 @@ build. Local MySQL 8.0.43 SQL checks used 1,001,000 synthetic incidents plus 1,0
 1,000,000 linked feedback rows. Forced covering seeks read 501 entries per branch (about 0.84 ms
 median); a scoped 500-fingerprint receipt query took about 3.04 ms. These are warm SQL measurements,
 not end-to-end API or production throughput. Representative concurrent load, production migration
-cost and production query plans remain rollout checks. The maintained full-chain migration test
-expects 118 migrations (116 SQL plus two Java), ending at V119.
+cost and production query plans remain rollout checks.
 
 The automated checks cover core state transitions, real database transactions and lease races,
 idempotent ingestion/routing/decisions, exact feedback lineage, project deletion, authorization,

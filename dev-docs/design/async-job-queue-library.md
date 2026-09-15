@@ -483,11 +483,11 @@ release gates below.
    with no duplicate migration scanning or implicit schema writes. Current
    [native isolated-artifact contracts](async-job-queue-review.md#fresh-flyway-artifact-contract-2026-09-13-utc)
    now verify Flyway install, no-op rerun and checksum rejection on MySQL 8.4.11
-   and PostgreSQL 16.15. The separate
-   [MySQL application-classpath contract](async-job-queue-review.md#mysql-application-flyway-chain-2026-09-13-utc)
-   verifies this branch's SQL and Java migrations together. Neither establishes
-   standalone module schema ownership, the selected new master base, Spring Boot
-   startup or historical adoption. Resolve Flyway 11.7.2's MySQL tested-version warning and
+   and PostgreSQL 16.15. Separate MySQL 8.0/8.4 tests exercise Boot fresh-install
+   through V113 and populated V112-to-V113 migration/restart with legacy data
+   preserved. These queue-specific contracts do not establish standalone module
+   schema ownership or adoption from other historical versions. Resolve Flyway
+   11.7.2's MySQL tested-version warning and
    preserve checksums of any historically applied queue version until actual
    applied-history decisions are resolved.
 4. Before an OSS release, define API/schema compatibility, payload encoding/limits,

@@ -73,6 +73,14 @@ Before committing
 - Run narrower tests that match the files touched. For frontend behavior,
   include `npm --prefix webapp/frontend run test` unless the change is docs
   only.
+- Keep routine commit preparation free of external services, including when
+  migrations change. Use mocks or in-memory databases for local tests; do not
+  start Docker Desktop, database containers, MySQL, PostgreSQL, Redis, or
+  OpenSearch just to prepare a commit.
+- Run real-database integration checks in CI or when the user explicitly
+  requests local database validation. Leave
+  `mojito.asyncJobQueue.testcontainers` unset for routine commit checks;
+  skipping that opt-in suite is not a local commit blocker.
 - If any warnings or failures remain after the standard checks, report them before committing.
 
 Commit messages

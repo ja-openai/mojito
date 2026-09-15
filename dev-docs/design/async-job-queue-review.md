@@ -15,10 +15,10 @@ an execution proposal, not rollout approval or evidence of live configuration re
 - The integration of queue `086f26b16c` with published master `ed4bc31eda` moves
   only the unapplied queue migration resources from V109 to V113 in both dialects.
   Their SQL is byte-for-byte unchanged; master's V109 through V112 are preserved.
-  Tests and the isolated consumer probe now select V113. The full MySQL classpath
-  contract expects 112 migrations (110 SQL plus Java V9 and V56), with V113 last.
-  The V109 and 108-migration results below remain historical evidence from the
-  older queue base. Any target
+  Tests and the isolated consumer probe select V113. Maintained migration coverage
+  includes the isolated queue scripts and Boot fresh-install/V112-to-V113 tests.
+  The full-application chain results below are historical; that test has been
+  removed from the queue suite. Any target
   that applied an earlier queue migration requires separate history/schema
   reconciliation without rewriting applied checksums.
 - Fresh integration verification passes 1,364 focused tests with 51 database opt-in
@@ -27,9 +27,10 @@ an execution proposal, not rollout approval or evidence of live configuration re
   `AsyncJobQueueApplicationMigrationTest` methods pass through Boot's production
   Flyway strategy: fresh install and populated V112-to-V113 upgrade preserve
   legacy task/blob/AI Review rows, locales and prior migration history/checksums,
-  then restart without changes. The updated full-application Flyway chain method
-  also passes. These three native tests have no skips or reruns; only container
-  orchestration was adapted, while SQL and migration strategy ran unchanged.
+  then restart without changes. The now-retired full-application Flyway chain
+  method also passed at that checkpoint. Those three native tests had no skips or
+  reruns; only container orchestration was adapted, while SQL and migration
+  strategy ran unchanged.
   The required Linux MySQL/PostgreSQL lanes and deployed startup remain separate
   gates. Flyway's existing MySQL 8.4 support warning remains unresolved.
 - The Boot migration fixture now runs both maintained methods against MySQL 8.0
@@ -48,9 +49,8 @@ an execution proposal, not rollout approval or evidence of live configuration re
 - The [fresh Flyway contract](#fresh-flyway-artifact-contract-2026-09-13-utc)
   passes on native MySQL 8.4.11 and PostgreSQL 16.15: the isolated queue artifact
   installs once, validates, preserves data/history on rerun, and rejects checksum
-  drift. The [current-branch MySQL application chain](#mysql-application-flyway-chain-2026-09-13-utc)
-  also passes fresh installation and no-op rerun, including its two Java migrations.
-  Neither proves historical adoption or installation on the selected new master base.
+  drift. These isolated-artifact checks do not prove adoption from an existing
+  application's migration history.
   Flyway 11.7.2 warns that MySQL 8.4 exceeds its tested support range;
   settle the supported Flyway/database baseline before production certification.
 - The original admin chunk is not independently buildable: its configuration test
@@ -210,7 +210,7 @@ an execution proposal, not rollout approval or evidence of live configuration re
 
 | Gate | Implemented evidence | Remaining prerequisite and exit condition |
 | --- | --- | --- |
-| Merge base and schema adoption | One queue migration per dialect on the branch's existing base; collision regression; native isolated Flyway install/rerun/checksum contracts for both databases; current-branch MySQL application-classpath installation and no-op rerun. | Split the premature repair-test dependency from the admin chunk and verify each resulting foundation commit; preserve current core fixes. Confirm applied queue migration history and timestamp provenance; refresh onto the selected current master, choose unapplied rename versus forward upgrade, and pass full-application fresh-install plus historical-upgrade rehearsal without rewriting applied checksums. Resolve the MySQL/Flyway support warning. |
+| Merge base and schema adoption | One queue migration per dialect on the branch's existing base; collision regression; native isolated Flyway install/rerun/checksum contracts for both databases; MySQL Boot fresh-install through V113 and populated V112-to-V113 migration/restart. | Split the premature repair-test dependency from the admin chunk and verify each resulting foundation commit; preserve current core fixes. Confirm applied queue migration history and timestamp provenance; refresh onto the selected current master, choose unapplied rename versus forward upgrade, and pass full-application fresh-install plus historical-upgrade rehearsal without rewriting applied checksums. Resolve the MySQL/Flyway support warning. |
 | Durable direct admission | Frozen request identity, strict body and canonical stored-identity readers, explicit JPA/JDBC enlistment primitive, unknown-enqueue containment and fault fixtures. | Decide the [API/authorization/lifetime contract](async-job-queue-admission.md#decisions-versus-defaults) and schema path; implement persisted reservations, atomic task/queue acceptance, verified inputs and primary-key recovery. Same-key crash/retry tests must return one accepted task/job, not merely avoid false compensation. |
 | Parent fan-out recovery | Separate default-off fan-out flag, resolution preflight and reproduced partial-admission failures. | Build on durable admission with frozen manifests and stable child slots. Approve duplicate-tag/size policy; crash and concurrent resume must retain exactly N child identities and reconstruct the same output map. |
 | Business publication and replay | Attempt-private output plus fenced DONE selection; all non-null pull-run tracking excluded; terminal-task replay containment. | Approve the [lineage authority contract](async-job-queue-lineage.md#exact-scope-and-owner-decisions), retire old writers, implement business-generation fencing and fresh linked replay. Queue-row leases alone do not fence shared caches, branch state or lineage writes. |
@@ -572,8 +572,7 @@ JDBC-store suite: **53 pass, 16 opt-in skips, zero failures/errors or reruns**
 across four suites. All 11 Python report-validator tests and root
 `mvn -Pno-local-config spotless:apply` pass. Independent scoped review found no
 introduced issue. Existing ThreadDeath/weaving warnings remain, separate from
-the MySQL/Flyway compatibility warning below. The required CI store-suite floor rises from 18 to
-20, and the application matrix to 195 cases (194 required plus optional throughput).
+the MySQL/Flyway compatibility warning below.
 These native cases are not full Docker/Linux CI, application-wide Flyway scanning,
 historical upgrade/adoption, timestamp provenance, or resolution of the V109
 collision on current master. MySQL emitted Flyway's tested-version warning
@@ -583,19 +582,21 @@ PostgreSQL uses verify-full. No production queue code or migration SQL changed.
 
 ## MySQL Application Flyway Chain (2026-09-13 UTC)
 
-The maintained `mysqlApplicationFlywayChainInstallsQueueAndRerunsWithoutChanges`
-contract now scans `classpath:db/migration` on a fresh disposable MySQL schema.
-It requires all **108 migrations: 106 SQL and the Java migrations V9 and V56**,
+**Historical result: this test has been removed from the maintained queue suite.**
+
+The `mysqlApplicationFlywayChainInstallsQueueAndRerunsWithoutChanges`
+contract scanned `classpath:db/migration` on a fresh disposable MySQL schema.
+At this checkpoint it required **108 migrations: 106 SQL and the Java migrations V9 and V56**,
 successful history states, SQL checksums, and V109 as the final queue migration.
-The Java migrations inherit null checksums; the contract does not invent checksums
+The Java migrations inherited null checksums; the contract did not invent checksums
 or bypass classpath discovery. A filesystem-only SQL rehearsal missed those two
 migrations; independent review caught that test defect, and the exact JUnit method
 reproduced the 106-versus-108 failure before the assertions were corrected.
 
-After migration and validation, the test enqueues, claims and completes a real
-queue job. A fresh Flyway instance must execute zero migrations and preserve the
-entire history, seeded locale rows and terminal job. Cleaning and baselining are
-disabled. No repair runs, no source SQL changes, and no existing database is touched.
+After migration and validation, the test enqueued, claimed and completed a real
+queue job. A fresh Flyway instance executed zero migrations and preserved the
+entire history, seeded locale rows and terminal job. Cleaning and baselining were
+disabled. No repair ran, no source SQL changed, and no existing database was touched.
 
 The final formatted JUnit method passed on native MySQL 8.4.11 in **5.012 s**, with one test
 and zero failures, ignored cases or assumptions. Only Testcontainers lifecycle
@@ -608,19 +609,19 @@ failing control, is retained in `/private/tmp/queue-app-flyway.moqJXi/`. The pri
 server shut down cleanly; its listener/PID disappeared before only its owned
 datadir was removed. More than 26 GiB remained available throughout verification.
 
-Focused Maven controls select 70 tests: **53 pass and 17 opt-in database/performance
-cases skip**, with no failures or reruns. All 11 Python report-validator fixtures
-pass, as does root `mvn -Pno-local-config spotless:apply`. The final independent
+Focused Maven controls selected 70 tests: **53 passed and 17 opt-in database/performance
+cases skipped**, with no failures or reruns. All 11 Python report-validator fixtures
+passed, as did root `mvn -Pno-local-config spotless:apply`. The final independent
 scoped review found no material issue. Existing ThreadDeath and weaving warnings
-remain. The CI store-suite floor rises to 21; the application lane now requires
-195 non-skipped cases plus its sole optional throughput benchmark (196 total).
+remained.
 
-This proves only fresh installation from this branch's existing migration set.
-It does not exercise Spring Boot's `FlyWayConfig` strategy, legacy upgrades or
+This proved only fresh installation from that branch's existing migration set.
+It did not exercise Spring Boot's `FlyWayConfig` strategy, legacy upgrades or
 backfills on populated data, the current-master merge, PostgreSQL application
 installation, Docker/Linux CI or capacity. Existing historical SQL deprecation
-warnings and Flyway's MySQL tested-version warning remain. Applied-history,
-timestamp provenance, V109 collision and workload-adoption gates stay open.
+warnings and Flyway's MySQL tested-version warning remained. Applied-history,
+timestamp provenance, V109 collision and workload-adoption gates were open at
+this checkpoint.
 
 ## Required Database Report Gate (2026-09-13 UTC)
 
@@ -636,9 +637,9 @@ Missing PostgreSQL cannot be masked by additional HSQL tests. Zero-test
 `BeforeClass` assumption reports fail. The sole allowed skip is
 `JdbcAsyncJobStoreDatabaseIntegrationTest.runtimePerformanceSmokeRunsAgainstRealDatabases`;
 throughput remains opt-in, not a required correctness or capacity claim.
-The current matrix floors are 196 application cases (195 required plus that
-benchmark), 18 lean-consumer cases and 36 JPA-consumer cases. Floors are explicit
-maintenance contracts, not semantic validation of method bodies or DB identity.
+The maintained matrix floors live in
+[`verify_queue_reports.py`](../../.github/scripts/verify_queue_reports.py).
+They check suite completeness, not method semantics or database identity.
 
 Application verification now starts with `clean test`, like both independent
 consumers, so old reports cannot satisfy the gate. A Java workflow regression
