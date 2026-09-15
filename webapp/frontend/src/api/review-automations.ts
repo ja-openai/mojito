@@ -1,3 +1,6 @@
+export type ReviewAutomationSource = 'CURRENT_TRANSLATIONS' | 'INCIDENTS';
+export type ReviewAutomationIncidentScope = 'ALL' | 'REVIEW_FEATURES';
+
 export type ApiReviewAutomationFeature = {
   id: number;
   name: string;
@@ -27,6 +30,9 @@ export type ApiReviewAutomationSummary = {
   assignTranslator: boolean;
   trigger: ApiReviewAutomationTrigger | null;
   featureCount: number;
+  reviewSource?: ReviewAutomationSource;
+  incidentReviewType?: string | null;
+  incidentScope?: ReviewAutomationIncidentScope;
   features: ApiReviewAutomationFeature[];
 };
 
@@ -43,6 +49,9 @@ export type ApiReviewAutomation = {
   maxWordCountPerProject: number;
   assignTranslator: boolean;
   excludedLocaleTags: string[];
+  reviewSource?: ReviewAutomationSource;
+  incidentReviewType?: string | null;
+  incidentScope?: ReviewAutomationIncidentScope;
   trigger: ApiReviewAutomationTrigger | null;
   features: ApiReviewAutomationFeature[];
 };
@@ -65,6 +74,9 @@ export type ApiReviewAutomationBatchExportRow = {
   assignTranslator: boolean;
   featureNames: string[];
   excludedLocaleTags: string[];
+  reviewSource?: ReviewAutomationSource;
+  incidentReviewType?: string | null;
+  incidentScope?: ReviewAutomationIncidentScope;
 };
 
 export type ApiReviewAutomationRunResult = {
@@ -72,6 +84,9 @@ export type ApiReviewAutomationRunResult = {
   automationId: number;
   automationName: string;
   featureCount: number;
+  reviewSource?: ReviewAutomationSource;
+  incidentReviewType?: string | null;
+  incidentScope?: ReviewAutomationIncidentScope;
   createdProjectRequestCount: number;
   createdProjectCount: number;
   createdLocaleCount: number;
@@ -91,6 +106,9 @@ export type ApiReviewAutomationRun = {
   startedAt: string | null;
   finishedAt: string | null;
   featureCount: number;
+  reviewSource?: ReviewAutomationSource;
+  incidentReviewType?: string | null;
+  incidentScope?: ReviewAutomationIncidentScope;
   createdProjectRequestCount: number;
   createdProjectCount: number;
   createdLocaleCount: number;
@@ -125,6 +143,9 @@ type UpsertReviewAutomationPayload = {
   assignTranslator: boolean;
   featureIds: number[];
   excludedLocaleTags?: string[];
+  reviewSource?: ReviewAutomationSource;
+  incidentReviewType?: string | null;
+  incidentScope?: ReviewAutomationIncidentScope;
 };
 
 type BatchUpsertPayload = {
@@ -141,6 +162,9 @@ type BatchUpsertPayload = {
     assignTranslator?: boolean | null;
     featureIds: number[];
     excludedLocaleTags?: string[];
+    reviewSource?: ReviewAutomationSource;
+    incidentReviewType?: string | null;
+    incidentScope?: ReviewAutomationIncidentScope;
   }>;
 };
 

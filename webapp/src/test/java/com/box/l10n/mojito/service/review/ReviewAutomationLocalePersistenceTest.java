@@ -51,7 +51,8 @@ public class ReviewAutomationLocalePersistenceTest {
         """);
     DatabasePopulatorUtils.execute(
         new ResourceDatabasePopulator(
-            new ClassPathResource("db/migration/V114__Review_Automation_Excluded_Locales.sql")),
+            new ClassPathResource("db/migration/V114__Review_Automation_Excluded_Locales.sql"),
+            new ClassPathResource("db/migration/V116__Review_Automation_Incident_Source.sql")),
         dataSource);
     assertNull(
         jdbc.queryForObject(
@@ -71,6 +72,12 @@ public class ReviewAutomationLocalePersistenceTest {
         entityManager.getTransaction().begin();
         ReviewAutomation legacy = entityManager.find(ReviewAutomation.class, 7L);
         assertEquals("Legacy", legacy.getName());
+        assertEquals(ReviewAutomation.ReviewSource.CURRENT_TRANSLATIONS, legacy.getReviewSource());
+        assertNull(legacy.getIncidentReviewType());
+        assertEquals(ReviewAutomation.IncidentScope.REVIEW_FEATURES, legacy.getIncidentScope());
+        legacy.setIncidentScope(ReviewAutomation.IncidentScope.ALL);
+        legacy.setReviewSource(ReviewAutomation.ReviewSource.INCIDENTS);
+        legacy.setIncidentReviewType("TERMINOLOGY");
         assertEquals(List.of(), legacy.getExcludedLocaleTags());
         legacy.setExcludedLocaleTags(List.of("he", "fr-FR"));
         entityManager.getTransaction().commit();
@@ -86,6 +93,9 @@ public class ReviewAutomationLocalePersistenceTest {
         detached = entityManager.find(ReviewAutomation.class, 7L);
       }
       assertEquals(List.of("he", "fr-FR"), detached.getExcludedLocaleTags());
+      assertEquals(ReviewAutomation.ReviewSource.INCIDENTS, detached.getReviewSource());
+      assertEquals("TERMINOLOGY", detached.getIncidentReviewType());
+      assertEquals(ReviewAutomation.IncidentScope.ALL, detached.getIncidentScope());
 
       try (EntityManager entityManager = entityManagerFactory.createEntityManager()) {
         entityManager.getTransaction().begin();

@@ -2,10 +2,37 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchAgentReviewFeedback, saveAgentReviewOutcome } from './agent-reviews';
+import {
+  fetchAgentReviewFeedback,
+  reopenAgentFinding,
+  saveAgentReviewOutcome,
+} from './agent-reviews';
 import { createReviewProjectClientContext } from './review-project-client-context';
 
 afterEach(() => vi.unstubAllGlobals());
+
+it('reopens the same project with the observed current state', async () => {
+  const result = { projectId: 7, proposalId: 92, proposalRevision: 4 };
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(result)));
+  vi.stubGlobal('fetch', fetchMock);
+  const request = {
+    requestKey: 'stable-round',
+    expectedProposalVersion: 4,
+    expectedCurrentVariantId: 22,
+    expectedSource: 'Account',
+    expectedSourceComment: null,
+    expectedCurrentTarget: 'Compte',
+    expectedCurrentStatus: 'APPROVED',
+    expectedCurrentIncludedInLocalizedFile: true,
+  };
+  expect(await reopenAgentFinding(7, 91, request)).toEqual(result);
+  expect(fetchMock).toHaveBeenCalledWith('/api/agent-reviews/projects/7/proposals/91/reopen', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+});
 
 describe('Agent review outcome transport', () => {
   it.each(['KEEP_CURRENT', 'DEFER', 'REQUEST_REVISION'] as const)(

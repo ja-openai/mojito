@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.service.review;
 
+import com.box.l10n.mojito.entity.review.ReviewAutomation.IncidentScope;
+import com.box.l10n.mojito.entity.review.ReviewAutomation.ReviewSource;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -20,7 +22,10 @@ public record SearchReviewAutomationsView(
       boolean assignTranslator,
       ReviewAutomationTriggerStatusView trigger,
       long featureCount,
-      List<FeatureSummary> features) {}
+      List<FeatureSummary> features,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {}
 
   public record FeatureSummary(Long id, String name) {}
 

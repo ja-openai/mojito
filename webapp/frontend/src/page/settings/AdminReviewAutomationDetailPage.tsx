@@ -10,6 +10,8 @@ import {
   fetchReviewAutomationRuns,
   fetchReviewAutomations,
   repairReviewAutomationTrigger,
+  type ReviewAutomationIncidentScope,
+  type ReviewAutomationSource,
   runReviewAutomationNow,
   updateReviewAutomation,
 } from '../../api/review-automations';
@@ -30,6 +32,7 @@ import {
   getSharedFeatureScheduleWarnings,
   SHARED_FEATURE_AUTOMATION_WARNING_LIMIT,
 } from './reviewAutomationSharedFeatureWarnings';
+import { ReviewAutomationSourceFields } from './ReviewAutomationSourceFields';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
@@ -65,6 +68,11 @@ export function AdminReviewAutomationDetailPage() {
   const queryClient = useQueryClient();
   const params = useParams<{ automationId?: string }>();
 
+  const [reviewSourceDraft, setReviewSourceDraft] =
+    useState<ReviewAutomationSource>('CURRENT_TRANSLATIONS');
+  const [incidentScopeDraft, setIncidentScopeDraft] =
+    useState<ReviewAutomationIncidentScope>('ALL');
+  const [incidentReviewTypeDraft, setIncidentReviewTypeDraft] = useState('');
   const [nameDraft, setNameDraft] = useState('');
   const [enabledDraft, setEnabledDraft] = useState(true);
   const [isScheduleBuilderOpen, setIsScheduleBuilderOpen] = useState(false);
@@ -143,6 +151,9 @@ export function AdminReviewAutomationDetailPage() {
       assignTranslator: boolean;
       featureIds: number[];
       excludedLocaleTags: string[];
+      reviewSource: ReviewAutomationSource;
+      incidentScope: ReviewAutomationIncidentScope;
+      incidentReviewType: string | null;
     }) => updateReviewAutomation(parsedAutomationId as number, payload),
     onSuccess: async (updated) => {
       queryClient.setQueryData(['review-automation', parsedAutomationId], updated);
@@ -209,6 +220,9 @@ export function AdminReviewAutomationDetailPage() {
     if (!automation) {
       return;
     }
+    setReviewSourceDraft(automation.reviewSource ?? 'CURRENT_TRANSLATIONS');
+    setIncidentScopeDraft(automation.incidentScope ?? 'REVIEW_FEATURES');
+    setIncidentReviewTypeDraft(automation.incidentReviewType ?? '');
     setNameDraft(automation.name);
     setEnabledDraft(automation.enabled);
     setTimeZoneDraft(automation.timeZone);
@@ -248,6 +262,15 @@ export function AdminReviewAutomationDetailPage() {
     if (!automation) {
       return false;
     }
+    if (
+      reviewSourceDraft !== (automation.reviewSource ?? 'CURRENT_TRANSLATIONS') ||
+      (reviewSourceDraft === 'INCIDENTS' &&
+        incidentScopeDraft !== (automation.incidentScope ?? 'REVIEW_FEATURES')) ||
+      (reviewSourceDraft === 'INCIDENTS' &&
+        incidentReviewTypeDraft.trim() !== (automation.incidentReviewType ?? ''))
+    ) {
+      return true;
+    }
     const normalizedName = normalizeAutomationName(nameDraft);
     if (normalizedName !== automation.name) {
       return true;
@@ -283,6 +306,9 @@ export function AdminReviewAutomationDetailPage() {
     return existingIds.some((id, index) => id !== featureIdsDraft[index]);
   }, [
     automationQuery.data,
+    reviewSourceDraft,
+    incidentScopeDraft,
+    incidentReviewTypeDraft,
     cronExpressionDraft,
     enabledDraft,
     excludedLocaleTagsDraft,
@@ -345,6 +371,10 @@ export function AdminReviewAutomationDetailPage() {
       assignTranslator: assignTranslatorDraft,
       featureIds: [...featureIdsDraft].sort((a, b) => a - b),
       excludedLocaleTags: excludedLocaleTagsDraft,
+      reviewSource: reviewSourceDraft,
+      incidentScope: incidentScopeDraft,
+      incidentReviewType:
+        reviewSourceDraft === 'INCIDENTS' ? incidentReviewTypeDraft.trim() || null : null,
     });
   };
 
@@ -557,36 +587,50 @@ export function AdminReviewAutomationDetailPage() {
                   <span>Assign translator from locale pool</span>
                 </label>
               </div>
-              <div className="settings-field">
-                <div className="settings-field__header">
-                  <div className="settings-field__label">Review features</div>
+              <ReviewAutomationSourceFields
+                reviewSource={reviewSourceDraft}
+                incidentReviewType={incidentReviewTypeDraft}
+                incidentScope={incidentScopeDraft}
+                onScopeChange={setIncidentScopeDraft}
+                onSourceChange={(next) => {
+                  setReviewSourceDraft(next);
+                  if (next === 'INCIDENTS') setIncidentScopeDraft('ALL');
+                }}
+                onTypeChange={setIncidentReviewTypeDraft}
+              />
+              {reviewSourceDraft !== 'INCIDENTS' || incidentScopeDraft === 'REVIEW_FEATURES' ? (
+                <div className="settings-field">
+                  <div className="settings-field__header">
+                    <div className="settings-field__label">Review features</div>
+                  </div>
+                  <ReviewFeatureMultiSelect
+                    label="Review features"
+                    options={reviewFeaturesQuery.data ?? []}
+                    selectedIds={featureIdsDraft}
+                    onChange={(next) => {
+                      setFeatureIdsDraft([...next].sort((a, b) => a - b));
+                      setStatusNotice(null);
+                    }}
+                    className="settings-repository-select"
+                    buttonAriaLabel="Select review features for review automation"
+                    disabled={reviewFeaturesQuery.isLoading}
+                    enabledOnlyByDefault
+                  />
+                  <p className="settings-hint">
+                    Automations can share review features and span multiple repositories indirectly
+                    through those features.
+                  </p>
+                  <ReviewAutomationSharedFeatureWarning
+                    warnings={sharedFeatureWarnings}
+                    checkedAutomationCount={
+                      enabledAutomationsQuery.data?.reviewAutomations.length ?? 0
+                    }
+                    totalAutomationCount={enabledAutomationsQuery.data?.totalCount ?? 0}
+                  />
                 </div>
-                <ReviewFeatureMultiSelect
-                  label="Review features"
-                  options={reviewFeaturesQuery.data ?? []}
-                  selectedIds={featureIdsDraft}
-                  onChange={(next) => {
-                    setFeatureIdsDraft([...next].sort((a, b) => a - b));
-                    setStatusNotice(null);
-                  }}
-                  className="settings-repository-select"
-                  buttonAriaLabel="Select review features for review automation"
-                  disabled={reviewFeaturesQuery.isLoading}
-                  enabledOnlyByDefault
-                />
-                <p className="settings-hint">
-                  Automations can share review features and span multiple repositories indirectly
-                  through those features.
-                </p>
-                <ReviewAutomationSharedFeatureWarning
-                  warnings={sharedFeatureWarnings}
-                  checkedAutomationCount={
-                    enabledAutomationsQuery.data?.reviewAutomations.length ?? 0
-                  }
-                  totalAutomationCount={enabledAutomationsQuery.data?.totalCount ?? 0}
-                />
-              </div>
+              ) : null}
               <ReviewAutomationExcludedLocalesField
+                allRepositories={reviewSourceDraft === 'INCIDENTS' && incidentScopeDraft === 'ALL'}
                 featureIds={featureIdsDraft}
                 selectedTags={excludedLocaleTagsDraft}
                 onChange={(next) => {

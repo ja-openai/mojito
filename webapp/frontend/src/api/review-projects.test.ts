@@ -23,6 +23,51 @@ const request = {
 };
 
 describe('Review Project decision revision transport', () => {
+  it('saves an edited completed incident through one atomic request', async () => {
+    const clientContext = createReviewProjectClientContext('review_accept', {
+      projectId: 7,
+      textUnitId: 17,
+      tmTextUnitId: 117,
+      reviewStateRevision: request.expectedReviewStateRevision,
+    });
+    const reopenAgentReview = {
+      requestKey: 'reopen-key',
+      expectedProposalVersion: 4,
+      expectedCurrentVariantId: 22,
+      expectedSource: 'Account',
+      expectedSourceComment: null,
+      expectedCurrentTarget: 'Compte',
+      expectedCurrentStatus: 'APPROVED',
+      expectedCurrentIncludedInLocalizedFile: true,
+    };
+    const agentReview = {
+      proposalId: 91,
+      proposalRevision: 2,
+      proposalVersion: 4,
+      requestId: 'save-key',
+      action: 'ACCEPT' as const,
+    };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 17 })));
+    vi.stubGlobal('fetch', fetchMock);
+    await saveReviewProjectTextUnitDecision({
+      ...request,
+      clientContext,
+      agentReview,
+      reopenAgentReview,
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/agent-reviews/projects/7/proposals/91/reopen-and-save');
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      reopen: reopenAgentReview,
+      decision: {
+        target: request.target,
+        expectedReviewStateRevision: request.expectedReviewStateRevision,
+        agentReview,
+      },
+    });
+  });
+
   it.each([
     ['translation', saveReviewProjectTextUnitDecision],
     ['state only', setReviewProjectTextUnitDecisionState],

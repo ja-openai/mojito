@@ -2,6 +2,7 @@ import './review-projects-page.css';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import type { IncidentReviewProjectResult, ReviewSource } from '../../api/incident-review-projects';
 import type { ApiReviewFeatureOption } from '../../api/review-features';
 import {
   type ApiReviewProjectType,
@@ -36,6 +37,9 @@ import {
 } from '../../utils/request-attachments';
 
 export type ReviewProjectCreateFormValues = {
+  reviewSource: ReviewSource;
+  incidentReviewType: string | null;
+  allRepositories: boolean;
   name: string;
   dueDate: string;
   type: ApiReviewProjectType;
@@ -55,6 +59,12 @@ export type ReviewProjectCreateFormValues = {
 export type ReviewProjectSourceMode = 'TEXT_UNITS' | 'REPOSITORIES' | 'REVIEW_FEATURE';
 
 type Props = {
+  reviewSource?: ReviewSource;
+  onChangeReviewSource?: (source: ReviewSource) => void;
+  onPreviewIncidents?: (
+    payload: ReviewProjectCreateFormValues,
+  ) => Promise<IncidentReviewProjectResult>;
+  incidentPreviewRevision?: number;
   defaultName: string;
   defaultDueDate: string;
   localeOptions: LocaleSelectionOption[];
@@ -84,6 +94,10 @@ type Props = {
 };
 
 export function ReviewProjectCreateForm({
+  reviewSource = 'CURRENT_TRANSLATIONS',
+  onChangeReviewSource,
+  onPreviewIncidents,
+  incidentPreviewRevision = 0,
   defaultName,
   defaultDueDate,
   localeOptions,
@@ -105,12 +119,23 @@ export function ReviewProjectCreateForm({
   onChangeTeam,
   selectedStatusFilter,
   onChangeStatusFilter,
-  isSubmitting = false,
+  isSubmitting: externalIsSubmitting = false,
   errorMessage,
   submitLabel = 'Create',
   onSubmit,
   onCancel,
 }: Props) {
+  const [incidentReviewType, setIncidentReviewType] = useState('');
+  const [allIncidentRepositories, setAllIncidentRepositories] = useState(true);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [incidentPreview, setIncidentPreview] = useState<{
+    key: string;
+    result: IncidentReviewProjectResult;
+  } | null>(null);
+  const isIncidentReview = reviewSource === 'INCIDENTS';
+  const isAllIncidents = isIncidentReview && allIncidentRepositories;
+  const isSubmitting = externalIsSubmitting || isPreviewing;
   const [name, setName] = useState(defaultName);
   const [dueDate, setDueDate] = useState(defaultDueDate);
   const [type, setType] = useState<ApiReviewProjectType>('NORMAL');
@@ -162,18 +187,21 @@ export function ReviewProjectCreateForm({
     (/^\d+$/.test(maxWordCountDraft.trim()) &&
       Number.isInteger(maxWordCountPerProject) &&
       maxWordCountPerProject >= 1 &&
-      maxWordCountPerProject <= 2147483647);
+      maxWordCountPerProject <= (isIncidentReview ? 100000 : 2147483647));
 
   const canSubmit = useMemo(
     () =>
       Boolean(name.trim()) &&
       Boolean(dueDate) &&
-      (sourceMode === 'TEXT_UNITS'
-        ? tmTextUnitIds.length > 0
-        : sourceMode === 'REPOSITORIES'
-          ? selectedRepositoryIds.length > 0
-          : selectedReviewFeatureIds.length > 0) &&
-      selectedLocaleTags.length > 0 &&
+      (isAllIncidents ||
+        (sourceMode === 'TEXT_UNITS'
+          ? tmTextUnitIds.length > 0
+          : sourceMode === 'REPOSITORIES'
+            ? selectedRepositoryIds.length > 0
+            : selectedReviewFeatureIds.length > 0)) &&
+      (isIncidentReview || selectedLocaleTags.length > 0) &&
+      (!isIncidentReview ||
+        (selectedTeamId != null && (isAllIncidents || sourceMode !== 'TEXT_UNITS'))) &&
       maxWordCountValid &&
       uploadQueue.every((item) => item.status !== 'uploading'),
     [
@@ -183,11 +211,37 @@ export function ReviewProjectCreateForm({
       selectedLocaleTags.length,
       selectedReviewFeatureIds.length,
       selectedRepositoryIds.length,
+      isIncidentReview,
+      isAllIncidents,
+      selectedTeamId,
       sourceMode,
       tmTextUnitIds.length,
       uploadQueue,
     ],
   );
+
+  const payload: ReviewProjectCreateFormValues = {
+    reviewSource,
+    allRepositories: isAllIncidents,
+    incidentReviewType: incidentReviewType.trim() || null,
+    name: name.trim(),
+    dueDate: localDateTimeInputToIso(dueDate) ?? '',
+    type,
+    localeTags: selectedLocaleTags,
+    notes: notes.trim().length > 0 ? notes : null,
+    tmTextUnitIds: !isIncidentReview && sourceMode === 'TEXT_UNITS' ? tmTextUnitIds : null,
+    repositoryIds: !isAllIncidents && sourceMode === 'REPOSITORIES' ? selectedRepositoryIds : null,
+    reviewFeatureIds:
+      !isAllIncidents && sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureIds : null,
+    statusFilter: selectedStatusFilter,
+    skipTextUnitsInOpenProjects,
+    maxWordCountPerProject,
+    screenshotImageIds: screenshotKeys,
+    teamId: selectedTeamId,
+    assignTranslator,
+  };
+  const previewKey = JSON.stringify([payload, incidentPreviewRevision]);
+  const currentPreview = incidentPreview?.key === previewKey ? incidentPreview.result : null;
 
   const addScreenshotKeys = (raw: string[]) => {
     const next = raw
@@ -271,29 +325,77 @@ export function ReviewProjectCreateForm({
           />
         </label>
 
+        {onChangeReviewSource ? (
+          <div className="review-create__field">
+            <span className="review-create__label">Review source</span>
+            <div
+              className="review-projects-page__mode-toggle"
+              role="group"
+              aria-label="Review source"
+            >
+              {(['CURRENT_TRANSLATIONS', 'INCIDENTS'] as const).map((source) => (
+                <button
+                  key={source}
+                  type="button"
+                  className={`review-projects-page__mode-button${reviewSource === source ? ' is-active' : ''}`}
+                  aria-pressed={reviewSource === source}
+                  onClick={() => onChangeReviewSource(source)}
+                  disabled={isSubmitting}
+                >
+                  {source === 'INCIDENTS' ? 'Incidents' : 'Current translations'}
+                </button>
+              ))}
+            </div>
+            {isIncidentReview ? (
+              <span className="review-create__hint">
+                Collect open incidents for one-at-a-time review. Current translations change only
+                when a reviewer accepts a correction.
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="review-create__field">
-          <span className="review-create__label">Scope</span>
+          <span className="review-create__label">
+            {isIncidentReview ? 'Incident scope' : 'Scope'}
+          </span>
           <div
             className="review-projects-page__mode-toggle"
             role="group"
-            aria-label="Project scope"
+            aria-label={isIncidentReview ? 'Incident scope' : 'Project scope'}
           >
+            {isIncidentReview ? (
+              <button
+                type="button"
+                className={`review-projects-page__mode-button${isAllIncidents ? ' is-active' : ''}`}
+                aria-pressed={isAllIncidents}
+                onClick={() => setAllIncidentRepositories(true)}
+                disabled={isSubmitting}
+              >
+                All eligible incidents
+              </button>
+            ) : null}
+            {!isIncidentReview ? (
+              <button
+                type="button"
+                className={`review-projects-page__mode-button${
+                  sourceMode === 'TEXT_UNITS' ? ' is-active' : ''
+                }`}
+                onClick={() => onChangeSourceMode('TEXT_UNITS')}
+                disabled={isSubmitting || (!collectionOptions?.length && !tmTextUnitIds.length)}
+              >
+                Selected text units
+              </button>
+            ) : null}
             <button
               type="button"
               className={`review-projects-page__mode-button${
-                sourceMode === 'TEXT_UNITS' ? ' is-active' : ''
+                !isAllIncidents && sourceMode === 'REPOSITORIES' ? ' is-active' : ''
               }`}
-              onClick={() => onChangeSourceMode('TEXT_UNITS')}
-              disabled={isSubmitting || (!collectionOptions?.length && !tmTextUnitIds.length)}
-            >
-              Selected text units
-            </button>
-            <button
-              type="button"
-              className={`review-projects-page__mode-button${
-                sourceMode === 'REPOSITORIES' ? ' is-active' : ''
-              }`}
-              onClick={() => onChangeSourceMode('REPOSITORIES')}
+              onClick={() => {
+                setAllIncidentRepositories(false);
+                onChangeSourceMode('REPOSITORIES');
+              }}
               disabled={isSubmitting || !repositoryOptions.length}
             >
               Repositories
@@ -301,9 +403,12 @@ export function ReviewProjectCreateForm({
             <button
               type="button"
               className={`review-projects-page__mode-button${
-                sourceMode === 'REVIEW_FEATURE' ? ' is-active' : ''
+                !isAllIncidents && sourceMode === 'REVIEW_FEATURE' ? ' is-active' : ''
               }`}
-              onClick={() => onChangeSourceMode('REVIEW_FEATURE')}
+              onClick={() => {
+                setAllIncidentRepositories(false);
+                onChangeSourceMode('REVIEW_FEATURE');
+              }}
               disabled={isSubmitting || !reviewFeatureOptions?.length}
             >
               Review feature
@@ -311,7 +416,7 @@ export function ReviewProjectCreateForm({
           </div>
         </div>
 
-        {sourceMode === 'REPOSITORIES' && onChangeRepositories ? (
+        {!isAllIncidents && sourceMode === 'REPOSITORIES' && onChangeRepositories ? (
           <div className="review-create__field">
             <span className="review-create__label">Repositories</span>
             <RepositoryMultiSelect
@@ -326,7 +431,10 @@ export function ReviewProjectCreateForm({
           </div>
         ) : null}
 
-        {sourceMode === 'TEXT_UNITS' && collectionOptions?.length && onChangeCollection ? (
+        {!isIncidentReview &&
+        sourceMode === 'TEXT_UNITS' &&
+        collectionOptions?.length &&
+        onChangeCollection ? (
           <label className="review-create__field">
             <span className="review-create__label">Collection</span>
             <CollectionSelect
@@ -339,14 +447,20 @@ export function ReviewProjectCreateForm({
           </label>
         ) : null}
 
-        {sourceMode === 'TEXT_UNITS' && !collectionOptions?.length && collectionName ? (
+        {!isIncidentReview &&
+        sourceMode === 'TEXT_UNITS' &&
+        !collectionOptions?.length &&
+        collectionName ? (
           <div className="review-create__field">
             <span className="review-create__label">Collection</span>
             <div className="review-create__pill">{collectionName}</div>
           </div>
         ) : null}
 
-        {sourceMode === 'REVIEW_FEATURE' && reviewFeatureOptions && onChangeReviewFeatures ? (
+        {!isAllIncidents &&
+        sourceMode === 'REVIEW_FEATURE' &&
+        reviewFeatureOptions &&
+        onChangeReviewFeatures ? (
           <div className="review-create__field">
             <span className="review-create__label">Review features</span>
             <ReviewFeatureMultiSelect
@@ -364,47 +478,73 @@ export function ReviewProjectCreateForm({
 
         <div className="review-create__field">
           <span className="review-create__hint">
-            {sourceMode === 'TEXT_UNITS'
-              ? `${tmTextUnitIds.length} selected text unit${tmTextUnitIds.length === 1 ? '' : 's'}`
-              : sourceMode === 'REPOSITORIES'
-                ? `${selectedRepositoryIds.length} selected repositor${selectedRepositoryIds.length === 1 ? 'y' : 'ies'}`
-                : `Creates one request per selected feature from review-needed strings (${selectedReviewFeatureIds.length} selected).`}
+            {isAllIncidents
+              ? 'Collects matching open incidents across repositories for the owning team. Incidents already assigned or reviewed in their current state are skipped.'
+              : isIncidentReview
+                ? `Collects open incidents from ${sourceMode === 'REPOSITORIES' ? `${selectedRepositoryIds.length} selected repositor${selectedRepositoryIds.length === 1 ? 'y' : 'ies'}` : `${selectedReviewFeatureIds.length} selected review feature${selectedReviewFeatureIds.length === 1 ? '' : 's'}`}. Incidents already assigned or reviewed in their current state are skipped.`
+                : sourceMode === 'TEXT_UNITS'
+                  ? `${tmTextUnitIds.length} selected text unit${tmTextUnitIds.length === 1 ? '' : 's'}`
+                  : sourceMode === 'REPOSITORIES'
+                    ? `${selectedRepositoryIds.length} selected repositor${selectedRepositoryIds.length === 1 ? 'y' : 'ies'}`
+                    : `Creates one request per selected feature from review-needed strings (${selectedReviewFeatureIds.length} selected).`}
           </span>
         </div>
 
-        <label className="review-create__field">
-          <span className="review-create__label">Status filter</span>
-          <SingleSelectDropdown
-            label="Status filter"
-            className="review-create__select-dropdown"
-            options={REVIEW_PROJECT_CREATE_STATUS_FILTERS.map((option) => ({
-              value: option,
-              label: REVIEW_PROJECT_CREATE_STATUS_FILTER_LABELS[option],
-            }))}
-            value={selectedStatusFilter}
-            onChange={(next) => {
-              if (next == null) {
-                return;
-              }
-              onChangeStatusFilter(next);
-            }}
-            disabled={isSubmitting}
-            searchable={false}
-          />
-        </label>
+        {isIncidentReview ? (
+          <label className="review-create__field">
+            <span className="review-create__label">Incident review type (optional)</span>
+            <SingleSelectDropdown
+              label="Incident review type"
+              className="review-create__select-dropdown"
+              options={[{ value: 'TRANSLATION_QUALITY', label: 'Translation quality' }]}
+              value={incidentReviewType || null}
+              onChange={(value) => setIncidentReviewType(value ?? '')}
+              noneLabel="All incident types"
+              placeholder="All incident types"
+              searchable={false}
+              buttonAriaLabel="Incident review type"
+              disabled={isSubmitting}
+            />
+          </label>
+        ) : (
+          <>
+            <label className="review-create__field">
+              <span className="review-create__label">Status filter</span>
+              <SingleSelectDropdown
+                label="Status filter"
+                className="review-create__select-dropdown"
+                options={REVIEW_PROJECT_CREATE_STATUS_FILTERS.map((option) => ({
+                  value: option,
+                  label: REVIEW_PROJECT_CREATE_STATUS_FILTER_LABELS[option],
+                }))}
+                value={selectedStatusFilter}
+                onChange={(next) => {
+                  if (next == null) {
+                    return;
+                  }
+                  onChangeStatusFilter(next);
+                }}
+                disabled={isSubmitting}
+                searchable={false}
+              />
+            </label>
 
-        <label className="review-create__checkbox">
-          <input
-            type="checkbox"
-            checked={skipTextUnitsInOpenProjects}
-            onChange={(event) => setSkipTextUnitsInOpenProjects(event.target.checked)}
-            disabled={isSubmitting}
-          />
-          <span>Skip text units already in active review projects</span>
-        </label>
+            <label className="review-create__checkbox">
+              <input
+                type="checkbox"
+                checked={skipTextUnitsInOpenProjects}
+                onChange={(event) => setSkipTextUnitsInOpenProjects(event.target.checked)}
+                disabled={isSubmitting}
+              />
+              <span>Skip text units already in active review projects</span>
+            </label>
+          </>
+        )}
 
         <div className="review-create__field">
-          <span className="review-create__label">Locales</span>
+          <span className="review-create__label">
+            {isIncidentReview ? 'Locales (optional)' : 'Locales'}
+          </span>
           <LocaleMultiSelect
             options={localeOptions.map((opt) => ({ tag: opt.tag, label: opt.label }))}
             selectedTags={selectedLocaleTags}
@@ -413,6 +553,11 @@ export function ReviewProjectCreateForm({
             align="left"
             disabled={isSubmitting}
           />
+          {isIncidentReview ? (
+            <span className="review-create__hint">
+              Leave empty to include all eligible incident locales.
+            </span>
+          ) : null}
         </div>
 
         <div className="review-create__field">
@@ -445,7 +590,8 @@ export function ReviewProjectCreateForm({
               id="review-create-max-word-count-error"
               role="alert"
             >
-              Enter a whole number from 1 to 2,147,483,647, or leave blank.
+              Enter a whole number from 1 to {isIncidentReview ? '100,000' : '2,147,483,647'}, or
+              leave blank.
             </span>
           ) : null}
         </div>
@@ -453,7 +599,9 @@ export function ReviewProjectCreateForm({
         {teamOptions && onChangeTeam ? (
           <>
             <label className="review-create__field">
-              <span className="review-create__label">Team (optional)</span>
+              <span className="review-create__label">
+                {isIncidentReview ? 'Owning team' : 'Team (optional)'}
+              </span>
               <SingleSelectDropdown
                 label="Team"
                 className="review-create__select-dropdown"
@@ -553,11 +701,72 @@ export function ReviewProjectCreateForm({
         </div>
       </div>
 
+      {isIncidentReview && currentPreview ? (
+        <div className="review-create__report" role="status">
+          <div className="review-create__report-title">Incident preview</div>
+          <div className="review-create__report-summary">
+            {currentPreview.eligibleIncidentCount} eligible incident
+            {currentPreview.eligibleIncidentCount === 1 ? '' : 's'}
+            {' · '}
+            {currentPreview.projectCount} project{currentPreview.projectCount === 1 ? '' : 's'}
+            {' · '}
+            {currentPreview.localeTags.length} locale
+            {currentPreview.localeTags.length === 1 ? '' : 's'}
+          </div>
+          {currentPreview.skippedIncidentCount > 0 ? (
+            <details>
+              <summary>
+                {currentPreview.skippedIncidentCount} incident
+                {currentPreview.skippedIncidentCount === 1 ? '' : 's'} skipped
+              </summary>
+              <ul>
+                {currentPreview.skipped.map((item) => (
+                  <li key={item.incidentId}>
+                    Incident #{item.incidentId}: {item.reason}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+          <p className="review-create__hint">
+            {currentPreview.hasMore
+              ? 'This preview covers the next batch. More incidents remain to check for this selection; you can continue after creating it.'
+              : 'Availability is checked again when you create the projects.'}
+          </p>
+        </div>
+      ) : null}
       <div className="review-create__actions">
         {errorMessage ? <div className="review-create__error">{errorMessage}</div> : null}
+        {previewError ? (
+          <div className="review-create__error" role="alert">
+            {previewError}
+          </div>
+        ) : null}
         {onCancel ? (
           <button type="button" className="review-create__ghost" onClick={onCancel}>
             Cancel
+          </button>
+        ) : null}
+        {isIncidentReview && onPreviewIncidents ? (
+          <button
+            type="button"
+            className="review-create__ghost"
+            disabled={!canSubmit || isSubmitting}
+            onClick={() => {
+              setIsPreviewing(true);
+              setPreviewError(null);
+              void onPreviewIncidents(payload)
+                .then((result) => setIncidentPreview({ key: previewKey, result }))
+                .catch((error: unknown) => {
+                  setIncidentPreview(null);
+                  setPreviewError(
+                    error instanceof Error ? error.message : 'Unable to preview incidents.',
+                  );
+                })
+                .finally(() => setIsPreviewing(false));
+            }}
+          >
+            {isPreviewing ? 'Previewing…' : 'Preview incidents'}
           </button>
         ) : null}
         <button
@@ -565,33 +774,23 @@ export function ReviewProjectCreateForm({
           className="review-create__cta"
           onClick={() => {
             if (!canSubmit || isSubmitting) return;
-            const dueIso = localDateTimeInputToIso(dueDate);
-            if (!dueIso) {
+            if (!payload.dueDate) {
               return;
             }
-            onSubmit({
-              name: name.trim(),
-              dueDate: dueIso,
-              type,
-              localeTags: selectedLocaleTags,
-              notes: notes.trim().length > 0 ? notes : null,
-              tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmTextUnitIds : null,
-              repositoryIds: sourceMode === 'REPOSITORIES' ? selectedRepositoryIds : null,
-              reviewFeatureIds: sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureIds : null,
-              statusFilter: selectedStatusFilter,
-              skipTextUnitsInOpenProjects,
-              maxWordCountPerProject,
-              screenshotImageIds: screenshotKeys,
-              teamId: selectedTeamId,
-              assignTranslator,
-            });
+            onSubmit(payload);
           }}
-          disabled={!canSubmit || isSubmitting}
+          disabled={!canSubmit || isSubmitting || (isIncidentReview && !currentPreview)}
         >
           {isSubmitting ? (
             <>
               <span className="spinner" aria-hidden="true" /> {submitLabel}…
             </>
+          ) : isIncidentReview && currentPreview && !currentPreview.eligibleIncidentCount ? (
+            currentPreview.hasMore ? (
+              'Continue to next batch'
+            ) : (
+              'Check for new incidents'
+            )
           ) : (
             submitLabel
           )}

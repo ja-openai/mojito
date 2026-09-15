@@ -287,6 +287,210 @@ public class ReviewAutomationServiceTest {
         webService().getReviewAutomationBatchExport().getFirst().excludedLocaleTags());
   }
 
+  @Test
+  public void incidentSourceRoundTripsAndLegacyUpdatesPreserveIt() {
+    ReviewAutomation automation = existingAutomation();
+    ReviewAutomationWS webService = webService();
+    ObjectMapper mapper = new ObjectMapper();
+    String payload =
+        """
+        {"name":"Daily","cronExpression":"0 0 9 ? * MON-FRI","teamId":2,
+         "reviewSource":"INCIDENTS","incidentReviewType":"TERMINOLOGY"}
+        """;
+    ReviewAutomationWS.ReviewAutomationResponse saved =
+        webService.updateReviewAutomation(
+            7L,
+            mapper.readValueUnchecked(
+                payload, ReviewAutomationWS.UpsertReviewAutomationRequest.class));
+    assertEquals(ReviewAutomation.ReviewSource.INCIDENTS, saved.reviewSource());
+    assertEquals("TERMINOLOGY", saved.incidentReviewType());
+    assertEquals(List.of("he"), saved.excludedLocaleTags());
+
+    webService.updateReviewAutomation(
+        7L,
+        mapper.readValueUnchecked(
+            "{\"name\":\"Daily\",\"cronExpression\":\"0 0 9 ? * MON-FRI\",\"teamId\":2}",
+            ReviewAutomationWS.UpsertReviewAutomationRequest.class));
+    assertEquals(ReviewAutomation.ReviewSource.INCIDENTS, automation.getReviewSource());
+    assertEquals("TERMINOLOGY", automation.getIncidentReviewType());
+
+    when(reviewAutomationRepository.findAllOptionRows())
+        .thenReturn(List.of(new ReviewAutomationOptionRow(7L, "Daily", true)));
+    when(reviewAutomationRepository.findAllById(List.of(7L))).thenReturn(List.of(automation));
+    assertEquals(
+        "TERMINOLOGY", webService.getReviewAutomationBatchExport().getFirst().incidentReviewType());
+  }
+
+  @Test
+  public void selectingAllIncidentTypesClearsTypeAndCurrentSourceClearsIncidentFilter() {
+    ReviewAutomation automation = existingAutomation();
+    automation.setReviewSource(ReviewAutomation.ReviewSource.INCIDENTS);
+    automation.setIncidentReviewType("TERMINOLOGY");
+    reviewAutomationService.updateReviewAutomation(
+        7L,
+        "Daily",
+        true,
+        "0 0 9 ? * MON-FRI",
+        "UTC",
+        2L,
+        1,
+        2000,
+        true,
+        List.of(),
+        null,
+        ReviewAutomation.ReviewSource.INCIDENTS,
+        " ");
+    assertEquals(null, automation.getIncidentReviewType());
+    reviewAutomationService.updateReviewAutomation(
+        7L,
+        "Daily",
+        true,
+        "0 0 9 ? * MON-FRI",
+        "UTC",
+        2L,
+        1,
+        2000,
+        true,
+        List.of(),
+        null,
+        ReviewAutomation.ReviewSource.CURRENT_TRANSLATIONS,
+        "TERMINOLOGY");
+    assertEquals(ReviewAutomation.ReviewSource.CURRENT_TRANSLATIONS, automation.getReviewSource());
+    assertEquals(null, automation.getIncidentReviewType());
+  }
+
+  @Test
+  public void incidentWordLimitIsValidatedWhileCurrentTranslationLimitIsUnchanged() {
+    ReviewAutomation automation = existingAutomation();
+    reviewAutomationService.updateReviewAutomation(
+        7L,
+        "Daily",
+        true,
+        "0 0 9 ? * MON-FRI",
+        "UTC",
+        2L,
+        1,
+        100000,
+        true,
+        List.of(),
+        null,
+        ReviewAutomation.ReviewSource.INCIDENTS,
+        null);
+    assertEquals(Integer.valueOf(100000), automation.getMaxWordCountPerProject());
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            reviewAutomationService.updateReviewAutomation(
+                7L,
+                "Daily",
+                true,
+                "0 0 9 ? * MON-FRI",
+                "UTC",
+                2L,
+                1,
+                100001,
+                true,
+                List.of(),
+                null,
+                ReviewAutomation.ReviewSource.INCIDENTS,
+                null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            reviewAutomationService.batchUpsert(
+                List.of(
+                    new ReviewAutomationService.BatchUpsertRow(
+                        7L,
+                        "Daily",
+                        true,
+                        "0 0 9 ? * MON-FRI",
+                        "UTC",
+                        2L,
+                        1,
+                        100001,
+                        true,
+                        List.of(),
+                        null)),
+                ReviewAutomationService.BatchUpsertMode.MERGE));
+
+    reviewAutomationService.updateReviewAutomation(
+        7L,
+        "Daily",
+        true,
+        "0 0 9 ? * MON-FRI",
+        "UTC",
+        2L,
+        1,
+        100001,
+        true,
+        List.of(),
+        null,
+        ReviewAutomation.ReviewSource.CURRENT_TRANSLATIONS,
+        null);
+    assertEquals(Integer.valueOf(100001), automation.getMaxWordCountPerProject());
+    assertEquals(ReviewAutomation.ReviewSource.CURRENT_TRANSLATIONS, automation.getReviewSource());
+  }
+
+  @Test
+  public void newIncidentAutomationDefaultsToAllWhileLegacyUpdatesRetainTheirScope() {
+    Team team = new Team();
+    team.setId(2L);
+    when(teamRepository.findById(2L)).thenReturn(Optional.of(team));
+    when(reviewAutomationRepository.save(Mockito.any(ReviewAutomation.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewAutomation automation = invocation.getArgument(0);
+              automation.setId(42L);
+              return automation;
+            });
+    reviewAutomationService.batchUpsert(
+        List.of(
+            new ReviewAutomationService.BatchUpsertRow(
+                null,
+                "New incidents",
+                true,
+                "0 0 9 ? * MON-FRI",
+                "UTC",
+                2L,
+                1,
+                2000,
+                true,
+                List.of(),
+                List.of(),
+                ReviewAutomation.ReviewSource.INCIDENTS,
+                null,
+                null)),
+        ReviewAutomationService.BatchUpsertMode.MERGE);
+    ArgumentCaptor<ReviewAutomation> captor = ArgumentCaptor.forClass(ReviewAutomation.class);
+    verify(reviewAutomationRepository).save(captor.capture());
+    assertEquals(ReviewAutomation.IncidentScope.ALL, captor.getValue().getIncidentScope());
+
+    ReviewAutomation legacy = existingAutomation();
+    legacy.setReviewSource(ReviewAutomation.ReviewSource.INCIDENTS);
+    reviewAutomationService.updateReviewAutomation(
+        7L, "Daily", true, "0 0 9 ? * MON-FRI", "UTC", 2L, 1, 2000, true, List.of(), null);
+    assertEquals(ReviewAutomation.IncidentScope.REVIEW_FEATURES, legacy.getIncidentScope());
+    reviewAutomationService.updateReviewAutomation(
+        7L,
+        "Daily",
+        true,
+        "0 0 9 ? * MON-FRI",
+        "UTC",
+        2L,
+        1,
+        2000,
+        true,
+        List.of(),
+        null,
+        ReviewAutomation.ReviewSource.INCIDENTS,
+        null,
+        ReviewAutomation.IncidentScope.ALL);
+    reviewAutomationService.updateReviewAutomation(
+        7L, "Daily", true, "0 0 9 ? * MON-FRI", "UTC", 2L, 1, 2000, true, List.of(), null);
+    assertEquals(ReviewAutomation.IncidentScope.ALL, legacy.getIncidentScope());
+  }
+
   private ReviewAutomation existingAutomation() {
     ReviewAutomation automation = new ReviewAutomation();
     automation.setId(7L);

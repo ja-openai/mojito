@@ -1,3 +1,7 @@
+import type {
+  ReviewAutomationIncidentScope,
+  ReviewAutomationSource,
+} from '../../api/review-automations';
 import { DEFAULT_REVIEW_AUTOMATION_TIME_ZONE } from '../../utils/reviewAutomationSchedule';
 
 export type ParsedReviewAutomationBatchRow = {
@@ -17,6 +21,9 @@ export type ParsedReviewAutomationBatchRow = {
   featureIds: number[];
   featureNames: string[];
   excludedLocaleTags?: string[];
+  reviewSource?: ReviewAutomationSource;
+  incidentReviewType?: string | null;
+  incidentScope?: ReviewAutomationIncidentScope;
   errors: string[];
 };
 
@@ -33,8 +40,11 @@ export const formatReviewAutomationBatchRow = (row: {
   assignTranslator?: boolean | null;
   featureNames: string[];
   excludedLocaleTags?: string[];
+  reviewSource?: ReviewAutomationSource;
+  incidentReviewType?: string | null;
+  incidentScope?: ReviewAutomationIncidentScope;
 }) =>
-  `${row.name} | ${row.enabled ? 'enabled' : 'disabled'} | ${row.cronExpression} | ${row.timeZone} | ${row.teamName ?? ''} | ${row.assignTranslator === false ? 'no-translator' : 'assign-translator'} | ${row.dueDateOffsetDays} | ${row.maxWordCountPerProject} | ${row.featureNames.join('; ')}${row.excludedLocaleTags == null ? '' : ` | ${row.excludedLocaleTags.join('; ')}`}`;
+  `${row.name} | ${row.enabled ? 'enabled' : 'disabled'} | ${row.cronExpression} | ${row.timeZone} | ${row.teamName ?? ''} | ${row.assignTranslator === false ? 'no-translator' : 'assign-translator'} | ${row.dueDateOffsetDays} | ${row.maxWordCountPerProject} | ${row.featureNames.join('; ')}${row.excludedLocaleTags == null && row.reviewSource == null ? '' : ` | ${(row.excludedLocaleTags ?? []).join('; ')}`}${row.reviewSource == null ? '' : ` | ${row.reviewSource} | ${row.incidentReviewType ?? ''}`}${row.incidentScope == null ? '' : ` | ${row.incidentScope}`}`;
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
 
@@ -164,8 +174,31 @@ export function parseReviewAutomationBatchInput(
             ]
           : undefined;
 
+      const reviewSourceInput =
+        parts.length >= 11 ? parts[10] || 'CURRENT_TRANSLATIONS' : undefined;
+      const reviewSource: ReviewAutomationSource | undefined =
+        reviewSourceInput === 'INCIDENTS' || reviewSourceInput === 'CURRENT_TRANSLATIONS'
+          ? reviewSourceInput
+          : undefined;
+      const incidentReviewType = parts.length >= 12 ? parts[11] || null : undefined;
+      const incidentScopeInput = parts.length >= 13 ? parts[12] || undefined : undefined;
+      const incidentScope: ReviewAutomationIncidentScope | undefined =
+        incidentScopeInput === 'ALL' || incidentScopeInput === 'REVIEW_FEATURES'
+          ? incidentScopeInput
+          : undefined;
       const errors: string[] = [];
-      if (parts.length > 10) {
+      if (incidentScopeInput != null && incidentScope == null)
+        errors.push('Incident scope must be ALL or REVIEW_FEATURES');
+      if (reviewSourceInput != null && reviewSource == null) {
+        errors.push('Review source must be CURRENT_TRANSLATIONS or INCIDENTS');
+      }
+      if (
+        incidentReviewType &&
+        (incidentReviewType.length > 64 || !/^[A-Z][A-Z0-9_]*$/.test(incidentReviewType))
+      ) {
+        errors.push('Incident review type must be an uppercase identifier up to 64 characters');
+      }
+      if (parts.length > 13) {
         errors.push('Too many columns');
       }
       if (!normalizedName) {
@@ -233,6 +266,9 @@ export function parseReviewAutomationBatchInput(
         featureIds: resolvedFeatureIds.sort((left, right) => left - right),
         featureNames: resolvedFeatureNames,
         excludedLocaleTags,
+        reviewSource,
+        incidentReviewType,
+        incidentScope,
         errors,
       };
     });

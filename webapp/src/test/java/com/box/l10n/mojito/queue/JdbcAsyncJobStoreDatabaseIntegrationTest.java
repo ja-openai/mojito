@@ -172,18 +172,18 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
       Flyway flyway = applicationMysqlFlyway(dataSource);
       assertThat(flyway.info().applied()).isEmpty();
       // This branch has version gaps and two Java migrations; scan the full application classpath.
-      assertThat(flyway.info().pending()).hasSize(113);
+      assertThat(flyway.info().pending()).hasSize(118);
       var installed = flyway.migrate();
       assertThat(installed.success).isTrue();
-      assertThat(installed.migrationsExecuted).isEqualTo(113);
+      assertThat(installed.migrationsExecuted).isEqualTo(118);
       var migrations = flyway.info().all();
       assertThat(migrations)
-          .hasSize(113)
+          .hasSize(118)
           .allSatisfy(
               migration -> assertThat(migration.getState()).isEqualTo(MigrationState.SUCCESS));
       assertThat(migrations)
           .filteredOn(migration -> migration.getType() == CoreMigrationType.SQL)
-          .hasSize(111)
+          .hasSize(116)
           .allSatisfy(migration -> assertThat(migration.getChecksum()).isNotNull());
       assertThat(migrations)
           .filteredOn(migration -> migration.getType() == CoreMigrationType.JDBC)
@@ -191,9 +191,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
           .extracting(MigrationInfo::getVersion)
           .containsExactly(MigrationVersion.fromVersion("9"), MigrationVersion.fromVersion("56"));
       assertThat(flyway.info().current().getVersion())
-          .isEqualTo(MigrationVersion.fromVersion("114"));
-      assertThat(flyway.info().current().getScript())
-          .isEqualTo("V114__Review_Automation_Excluded_Locales.sql");
+          .isEqualTo(MigrationVersion.fromVersion("119"));
+      assertThat(flyway.info().current().getScript()).isEqualTo("V119__Review_Intake_Identity.sql");
       flyway.validate();
 
       JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -296,7 +295,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         AsyncJobStoreIdentityContract.assertLeaseOwnerIsolation(store);
       }
       jdbc.execute(
-          "ALTER TABLE async_job_queue MODIFY worker_id VARCHAR(128) CHARACTER SET latin1 COLLATE latin1_swedish_ci NULL");
+          "ALTER TABLE async_job_queue MODIFY worker_id VARCHAR(128) CHARACTER SET latin1 COLLATE"
+              + " latin1_swedish_ci NULL");
       AsyncJobStoreIdentityContract.assertLeaseOwnerIsolation(store);
     }
   }
@@ -428,7 +428,9 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     try (Connection connection = dataSource.getConnection();
         var insert =
             connection.prepareStatement(
-                "INSERT INTO async_job_queue(queue_name,status,available_at,job_data,worker_id,lease_token,lease_until,attempt_count) VALUES(?,?,?,'{}',?,?,?,?)")) {
+                "INSERT INTO"
+                    + " async_job_queue(queue_name,status,available_at,job_data,worker_id,lease_token,lease_until,attempt_count)"
+                    + " VALUES(?,?,?,'{}',?,?,?,?)")) {
       connection.setAutoCommit(false);
       for (int i = 0; i < 1500; i++) {
         boolean running = fixture.equals("running") || (!fixture.equals("queued") && i % 2 != 0);
@@ -476,7 +478,9 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     try (Connection connection = dataSource.getConnection();
         var insert =
             connection.prepareStatement(
-                "INSERT INTO async_job_queue(queue_name,status,available_at,job_data,updated_date,last_error) VALUES(?,?,'2020-01-01','{}',?,?)")) {
+                "INSERT INTO"
+                    + " async_job_queue(queue_name,status,available_at,job_data,updated_date,last_error)"
+                    + " VALUES(?,?,'2020-01-01','{}',?,?)")) {
       connection.setAutoCommit(false);
       for (int i = 0; i <= 1500; i++) {
         boolean excluded = i < 500;
@@ -802,7 +806,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
           .as("Confirmed completion must not manufacture a lease-loss signal")
           .isZero();
       logger.info(
-          "Async job queue {} renewal contention: {} handlers, {} competing polls, {} successful renewals",
+          "Async job queue {} renewal contention: {} handlers, {} competing polls, {} successful"
+              + " renewals",
           dialect,
           jobCount,
           polls,

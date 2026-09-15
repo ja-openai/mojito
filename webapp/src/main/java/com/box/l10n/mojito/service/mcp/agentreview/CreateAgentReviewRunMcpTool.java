@@ -18,7 +18,10 @@ public class CreateAgentReviewRunMcpTool extends AgentReviewMcpTool<CreateRunReq
       new McpToolDescriptor(
           "agent_review.create_run",
           "Create shared translation review run",
-          "Persist immutable locale/feature scope and input manifest for a shared agent review run. Requires PM or admin with team/repository access. Same requestKey and payload reuse the run; changed payload conflicts. Does not start Codex, alter current translations, or approve proposals.",
+          "Persist immutable locale/feature scope and input manifest for a shared agent review run."
+              + " Requires PM or admin with team/repository access. Same requestKey and payload"
+              + " reuse the run; changed payload conflicts. Does not start Codex, alter current"
+              + " translations, or approve proposals.",
           false,
           false,
           List.of(
@@ -29,7 +32,8 @@ public class CreateAgentReviewRunMcpTool extends AgentReviewMcpTool<CreateRunReq
                   string(128)),
               new McpToolParameter(
                   "reviewType",
-                  "Configured workflow type. Use TRANSLATION_QUALITY for standard translation review.",
+                  "Configured workflow type. Use TRANSLATION_QUALITY for standard translation"
+                      + " review.",
                   true,
                   string(64)),
               new McpToolParameter(
@@ -46,14 +50,22 @@ public class CreateAgentReviewRunMcpTool extends AgentReviewMcpTool<CreateRunReq
                   string(128)),
               new McpToolParameter(
                   "groups",
-                  "Non-overlapping repository/locale/feature groups with explicit text-unit scope. At most 10,000 total scoped rows.",
+                  "Non-overlapping repository/locale/feature groups with explicit text-unit scope."
+                      + " At most 10,000 total scoped rows.",
                   true,
                   groups()),
               new McpToolParameter(
                   "inputManifestJson",
-                  "JSON containing frozen inputs, context provenance, and portable artifact descriptions. Stored durably with the scope.",
+                  "JSON containing frozen inputs, context provenance, and portable artifact"
+                      + " descriptions. Stored durably with the scope.",
                   true,
                   string(AgentReviewContracts.MAX_ARTIFACT_BYTES)),
+              new McpToolParameter(
+                  "routingPolicy",
+                  "IMMEDIATE (default) creates projects after group completion; QUEUED publishes"
+                      + " typed incidents for manual or scheduled incident batches.",
+                  false,
+                  values("IMMEDIATE", "QUEUED")),
               new McpToolParameter(
                   "dueDateOffsetDays",
                   "Days from project creation to due date; defaults to 7.",
@@ -66,7 +78,8 @@ public class CreateAgentReviewRunMcpTool extends AgentReviewMcpTool<CreateRunReq
                   integer(1, 100000)),
               new McpToolParameter(
                   "assignTranslator",
-                  "Use normal team assignment when routing; defaults to true. Unassigned projects remain visible to PMs.",
+                  "Use normal team assignment when routing; defaults to true. Unassigned projects"
+                      + " remain visible to PMs.",
                   false,
                   Boolean.class)));
 

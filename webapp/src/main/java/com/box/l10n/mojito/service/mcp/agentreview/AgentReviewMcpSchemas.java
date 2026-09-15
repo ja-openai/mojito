@@ -157,6 +157,7 @@ final class AgentReviewMcpSchemas {
     properties.put("verifierIdentity", nullable(string(255)));
     properties.put("verificationRationale", nullable(string(MAX_EVIDENCE_LENGTH)));
     properties.put("integrityDiagnostics", nullable(string(MAX_EVIDENCE_LENGTH)));
+    properties.put("concernKey", nullable(string(255)));
     properties.put("previousProposalId", nullable(positiveId()));
     properties.put("respondsToFeedbackId", nullable(positiveId()));
     return Map.of(

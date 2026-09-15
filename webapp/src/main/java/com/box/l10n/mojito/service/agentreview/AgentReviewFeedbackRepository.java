@@ -25,7 +25,24 @@ public interface AgentReviewFeedbackRepository extends JpaRepository<AgentReview
   List<AgentReviewFeedback> findByProposalIdOrderByIdAsc(Long proposalId);
 
   @Query(
-      "select f from AgentReviewFeedback f, AgentReviewProposal p where f.proposalId = p.id and p.runId = :runId and p.disposition = com.box.l10n.mojito.entity.agentreview.Disposition.FOLLOW_UP and f.id > :afterId and f.followUpRequested = true and not exists (select newer.id from AgentReviewFeedback newer where newer.proposalId = f.proposalId and newer.actorType = com.box.l10n.mojito.entity.agentreview.ActorType.HUMAN and newer.id > f.id) and not exists (select response.id from AgentReviewFeedback response where response.respondsToFeedbackId = f.id) order by f.id")
+      "select distinct f.reviewedStateFingerprint from AgentReviewFeedback f, AgentReviewProposal"
+          + " p, AgentReviewRun r where f.reviewedStateFingerprint in :fingerprints and"
+          + " f.proposalId = p.id and p.runId = r.id and r.teamId = :teamId and r.reviewType ="
+          + " :reviewType")
+  java.util.Set<String> findReviewedStates(
+      @Param("teamId") Long teamId,
+      @Param("reviewType") String reviewType,
+      @Param("fingerprints") java.util.Collection<String> fingerprints);
+
+  @Query(
+      "select f from AgentReviewFeedback f, AgentReviewProposal p where f.proposalId = p.id and"
+          + " p.runId = :runId and p.disposition ="
+          + " com.box.l10n.mojito.entity.agentreview.Disposition.FOLLOW_UP and f.id > :afterId and"
+          + " f.followUpRequested = true and not exists (select newer.id from AgentReviewFeedback"
+          + " newer where newer.proposalId = f.proposalId and newer.actorType ="
+          + " com.box.l10n.mojito.entity.agentreview.ActorType.HUMAN and newer.id > f.id) and not"
+          + " exists (select response.id from AgentReviewFeedback response where"
+          + " response.respondsToFeedbackId = f.id) order by f.id")
   List<AgentReviewFeedback> findPendingByRunId(
       @Param("runId") Long runId, @Param("afterId") Long afterId, Pageable pageable);
 }

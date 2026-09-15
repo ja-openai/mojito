@@ -116,6 +116,18 @@ public class AgentReviewRun extends AuditableEntity {
   @Column(name = "assign_translator", nullable = false)
   private boolean assignTranslator;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "routing_policy", nullable = false, length = 32)
+  private RoutingPolicy routingPolicy = RoutingPolicy.IMMEDIATE;
+
+  public RoutingPolicy getRoutingPolicy() {
+    return routingPolicy;
+  }
+
+  public void setRoutingPolicy(RoutingPolicy routingPolicy) {
+    this.routingPolicy = routingPolicy;
+  }
+
   public String getRequestKey() {
     return requestKey;
   }

@@ -27,7 +27,10 @@ public class TranslationIncidentWS {
       String observedLocale,
       String repository,
       String reason,
-      String sourceReference) {}
+      String sourceReference,
+      Long teamId,
+      String reviewType,
+      String concernKey) {}
 
   public record RejectIncidentRequest(String comment) {}
 
@@ -65,7 +68,10 @@ public class TranslationIncidentWS {
             request == null ? null : request.observedLocale(),
             request == null ? null : request.repository(),
             request == null ? null : request.reason(),
-            request == null ? null : request.sourceReference()));
+            request == null ? null : request.sourceReference(),
+            request == null ? null : request.teamId(),
+            request == null ? null : request.reviewType(),
+            request == null ? null : request.concernKey()));
   }
 
   @PostMapping("/{incidentId}/reject")
@@ -89,5 +95,23 @@ public class TranslationIncidentWS {
         incidentId,
         new TranslationIncidentService.UpdateStatusRequest(
             request == null ? null : request.status()));
+  }
+
+  @org.springframework.web.bind.annotation.ExceptionHandler(
+      org.springframework.dao.DataIntegrityViolationException.class)
+  public org.springframework.http.ResponseEntity<java.util.Map<String, String>>
+      duplicatePendingIncident() {
+    return org.springframework.http.ResponseEntity.status(409)
+        .body(
+            java.util.Map.of(
+                "message",
+                "A matching incident is already pending. Refresh and reuse that incident."));
+  }
+
+  @org.springframework.web.bind.annotation.ExceptionHandler(
+      org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+  public org.springframework.http.ResponseEntity<java.util.Map<String, String>> concurrentChange() {
+    return org.springframework.http.ResponseEntity.status(409)
+        .body(java.util.Map.of("message", "This incident changed. Refresh before saving again."));
   }
 }

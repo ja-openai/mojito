@@ -22,18 +22,24 @@ public class AgentReviewMigrationTest {
         Statement sql = connection.createStatement()) {
       ScriptUtils.executeSqlScript(
           connection, new ClassPathResource("db/migration/V111__Agent_Review.sql"));
+      sql.execute(
+          "create table translation_incident (id bigint primary key, status varchar(32),"
+              + " resolution_review_project_id bigint, selected_tm_text_unit_id bigint,"
+              + " resolved_locale_id bigint)");
+      ScriptUtils.executeSqlScript(
+          connection, new ClassPathResource("db/migration/V115__Incident_Review_Batches.sql"));
       sql.execute("create table review_project (id bigint primary key)");
       sql.execute("insert into review_project values (42)");
       sql.execute(
           """
-          insert into agent_review_run
-            (id,request_key,request_fingerprint,input_fingerprint,requested_by_user_id,review_type,team_id,
-             repository_ids_json,locale_ids_json,method_version,configuration_version,manifest_sha256,
-             status,planned_group_count,completed_group_count,failed_group_count,reviewed_item_count,
-             revision,claim_generation,due_date_offset_days,max_word_count_per_project,assign_translator)
-          values (1,'request','hash','inputs',4,'TRANSLATION_QUALITY',5,'[2]','[3]','v1','v1','blob',
-             'RUNNING',1,0,0,0,0,0,7,1500,true)
-          """);
+insert into agent_review_run
+  (id,request_key,request_fingerprint,input_fingerprint,requested_by_user_id,review_type,team_id,
+   repository_ids_json,locale_ids_json,method_version,configuration_version,manifest_sha256,
+   status,planned_group_count,completed_group_count,failed_group_count,reviewed_item_count,
+   revision,claim_generation,due_date_offset_days,max_word_count_per_project,assign_translator)
+values (1,'request','hash','inputs',4,'TRANSLATION_QUALITY',5,'[2]','[3]','v1','v1','blob',
+   'RUNNING',1,0,0,0,0,0,7,1500,true)
+""");
       sql.execute(proposal(10, "submission", "finding", 1));
       assertThrows(
           SQLException.class, () -> sql.execute(proposal(11, "submission", "other-finding", 1)));
@@ -43,6 +49,59 @@ public class AgentReviewMigrationTest {
       sql.execute(proposal(13, "revision", "finding", 2));
       sql.execute(feedback(20, "human", "HUMAN", null));
       sql.execute(feedback(21, "response", "AGENT", 20L));
+      ScriptUtils.executeSqlScript(
+          connection, new ClassPathResource("db/migration/V117__Agent_Review_State_Receipt.sql"));
+      ScriptUtils.executeSqlScript(
+          connection, new ClassPathResource("db/migration/V119__Review_Intake_Identity.sql"));
+      // Existing rows remain unkeyed. Nullable unique keys protect only trustworthy new intake.
+      try (var rows =
+          sql.executeQuery("select intake_fingerprint from agent_review_proposal where id=10")) {
+        assertTrue(rows.next());
+        assertNull(rows.getString(1));
+      }
+      sql.execute(
+          "update agent_review_proposal set intake_fingerprint='concern',"
+              + " active_intake_fingerprint='concern' where id=10");
+      assertThrows(
+          SQLException.class,
+          () ->
+              sql.execute(
+                  "update agent_review_proposal set active_intake_fingerprint='concern' where"
+                      + " id=13"));
+      sql.execute("update agent_review_proposal set active_intake_fingerprint=null where id=10");
+      sql.execute(
+          "update agent_review_proposal set active_intake_fingerprint='concern' where id=13");
+      sql.execute(
+          "insert into translation_incident(id,active_intake_fingerprint) values(101,'incident')");
+      assertThrows(
+          SQLException.class,
+          () ->
+              sql.execute(
+                  "insert into translation_incident(id,active_intake_fingerprint)"
+                      + " values(102,'incident')"));
+      sql.execute(
+          "insert into translation_incident(id,active_intake_fingerprint)"
+              + " values(103,null),(104,null)");
+      sql.execute(
+          "insert into agent_review_submission(id,request_fingerprint,proposal_id)"
+              + " values('submission','request',10)");
+      assertThrows(
+          SQLException.class,
+          () ->
+              sql.execute(
+                  "insert into agent_review_submission(id,request_fingerprint,proposal_id)"
+                      + " values('submission','request',13)"));
+      try (var results =
+          sql.executeQuery("select routing_policy from agent_review_run where id=1")) {
+        assertTrue(results.next());
+        assertEquals("IMMEDIATE", results.getString(1));
+      }
+      try (var results =
+          sql.executeQuery(
+              "select reviewed_state_fingerprint from agent_review_feedback where id=20")) {
+        assertTrue(results.next());
+        assertNull(results.getString(1));
+      }
       assertThrows(
           SQLException.class, () -> sql.execute(feedback(22, "another-response", "AGENT", 20L)));
       assertThrows(SQLException.class, () -> sql.execute(feedback(23, "human", "HUMAN", null)));
@@ -50,7 +109,8 @@ public class AgentReviewMigrationTest {
       sql.execute("delete from review_project where id=42");
       try (var results =
           sql.executeQuery(
-              "select review_project_id, source, proposed_target from agent_review_proposal where id=10")) {
+              "select review_project_id, source, proposed_target from agent_review_proposal where"
+                  + " id=10")) {
         assertTrue(results.next());
         assertEquals(42, results.getLong(1));
         assertEquals("保存 😀", results.getString(2));
@@ -68,7 +128,9 @@ public class AgentReviewMigrationTest {
   }
 
   private String proposal(long id, String key, String finding, int revision) {
-    return "insert into agent_review_proposal (id,run_id,submission_key,request_fingerprint,finding_id,proposal_revision,group_key,repository_id,locale_id,tm_text_unit_id,source,proposed_target,category,readiness,disposition,rationale,producer_identity,review_project_id,version) values ("
+    return "insert into agent_review_proposal"
+        + " (id,run_id,submission_key,request_fingerprint,finding_id,proposal_revision,group_key,repository_id,locale_id,tm_text_unit_id,source,proposed_target,category,readiness,disposition,rationale,producer_identity,review_project_id,version)"
+        + " values ("
         + id
         + ",1,'"
         + key
@@ -76,11 +138,14 @@ public class AgentReviewMigrationTest {
         + finding
         + "',"
         + revision
-        + ",'fr/settings',2,3,6,'保存 😀','Enregistrer','OBVIOUS_ERROR','READY','ROUTED','Meaning mismatch','worker',42,0)";
+        + ",'fr/settings',2,3,6,'保存 😀','Enregistrer','OBVIOUS_ERROR','READY','ROUTED','Meaning"
+        + " mismatch','worker',42,0)";
   }
 
   private String feedback(long id, String key, String actor, Long respondsTo) {
-    return "insert into agent_review_feedback (id,proposal_id,request_key,request_fingerprint,actor_type,actor_user_id,actor_identity,action,follow_up_requested,responds_to_feedback_id) values ("
+    return "insert into agent_review_feedback"
+        + " (id,proposal_id,request_key,request_fingerprint,actor_type,actor_user_id,actor_identity,action,follow_up_requested,responds_to_feedback_id)"
+        + " values ("
         + id
         + ",10,'"
         + key

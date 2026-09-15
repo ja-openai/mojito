@@ -9,6 +9,7 @@ import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitFeedback.Recommend
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.EntityWithIdNotFoundException;
+import com.box.l10n.mojito.service.agentreview.AgentReviewReReviewService;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
@@ -55,6 +56,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class ReviewProjectWS {
 
   private final ReviewProjectService reviewProjectService;
+  private final AgentReviewReReviewService agentReviewReReviewService;
   private final StructuredBlobStorage structuredBlobStorage;
   private final ObjectMapper objectMapper;
   private final SearchReviewProjectRequestsHybridProperties
@@ -67,8 +69,10 @@ public class ReviewProjectWS {
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
       SearchReviewProjectRequestsHybridProperties searchReviewProjectRequestsHybridProperties,
       @Qualifier("searchReviewProjectRequestsHybridExecutor")
-          AsyncTaskExecutor searchReviewProjectRequestsHybridExecutor) {
+          AsyncTaskExecutor searchReviewProjectRequestsHybridExecutor,
+      AgentReviewReReviewService agentReviewReReviewService) {
     this.reviewProjectService = reviewProjectService;
+    this.agentReviewReReviewService = agentReviewReReviewService;
     this.structuredBlobStorage = structuredBlobStorage;
     this.objectMapper = objectMapper;
     this.searchReviewProjectRequestsHybridProperties = searchReviewProjectRequestsHybridProperties;
@@ -419,6 +423,29 @@ public class ReviewProjectWS {
     } catch (IllegalArgumentException illegalArgumentException) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
+  @PostMapping("/agent-reviews/projects/{projectId}/proposals/{proposalId}/reopen-and-save")
+  public ResponseEntity<GetReviewProjectResponse.ReviewProjectTextUnit> reopenAndSave(
+      @PathVariable long projectId,
+      @PathVariable long proposalId,
+      @RequestBody AgentReviewReReviewService.EditRequest request) {
+    try {
+      return ResponseEntity.ok(
+          toTextUnitResponse(
+              agentReviewReReviewService.reopenAndSave(projectId, proposalId, request)));
+    } catch (ReviewProjectCurrentVariantConflictException conflict) {
+      var current = conflict.getCurrentTextUnit();
+      return current == null
+          ? ResponseEntity.status(HttpStatus.CONFLICT).build()
+          : ResponseEntity.status(HttpStatus.CONFLICT)
+              .body(
+                  toTextUnitResponse(reviewProjectService.getReviewProjectTextUnit(current.id())));
+    } catch (AccessDeniedException exception) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, exception.getMessage());
+    } catch (IllegalArgumentException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
   }
 

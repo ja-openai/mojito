@@ -30,6 +30,17 @@ import jakarta.persistence.Table;
           unique = false)
     })
 public class AgentReviewFeedback extends AuditableEntity {
+  @Column(name = "reviewed_state_fingerprint", length = 64)
+  private String reviewedStateFingerprint;
+
+  public String getReviewedStateFingerprint() {
+    return reviewedStateFingerprint;
+  }
+
+  public void setReviewedStateFingerprint(String value) {
+    reviewedStateFingerprint = value;
+  }
+
   @Column(name = "response_run_id")
   private Long responseRunId;
 

@@ -1,9 +1,16 @@
 import './review-projects-page.css';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
+import {
+  createIncidentReviewProjects,
+  type IncidentReviewProjectRequest,
+  type IncidentReviewProjectResult,
+  previewIncidentReviewProjects,
+  type ReviewSource,
+} from '../../api/incident-review-projects';
 import { type ApiReviewFeatureOption, fetchReviewFeatureOptions } from '../../api/review-features';
 import {
   REVIEW_PROJECT_CREATE_STATUS_FILTERS,
@@ -136,6 +143,7 @@ function normalizeIds(values: number[] | null | undefined) {
 
 function getInitialSourceMode(search: string, navState: ReviewProjectNavState | null) {
   const params = new URLSearchParams(search);
+  if (params.get('scope') === 'incidents') return 'REPOSITORIES';
   const querySourceMode = parseReviewProjectSourceMode(params.get('scope'));
   if (querySourceMode) {
     return querySourceMode;
@@ -218,6 +226,7 @@ function buildCreateSubmissionReport(
 }
 
 export function ReviewProjectCreatePage() {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -229,6 +238,11 @@ export function ReviewProjectCreatePage() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<ReviewProjectSourceMode>(() =>
     getInitialSourceMode(location.search, navState),
+  );
+  const [reviewSource, setReviewSource] = useState<ReviewSource>(() =>
+    urlSearchParams.get('source') === 'incidents' || urlSearchParams.get('scope') === 'incidents'
+      ? 'INCIDENTS'
+      : 'CURRENT_TRANSLATIONS',
   );
   const [selectedRepositoryIds, setSelectedRepositoryIds] = useState<number[]>(() => {
     const queryRepositoryIds = getRepositoryIdsFromSearch(location.search);
@@ -249,8 +263,14 @@ export function ReviewProjectCreatePage() {
     useState<ReviewProjectCreateStatusFilter>('ALL');
   const [statusFilterWasCustomized, setStatusFilterWasCustomized] = useState(false);
   const [submissionReport, setSubmissionReport] = useState<CreateSubmissionReport | null>(null);
+  const [incidentCreationReport, setIncidentCreationReport] =
+    useState<IncidentReviewProjectResult | null>(null);
+  const [lastIncidentRequest, setLastIncidentRequest] =
+    useState<IncidentReviewProjectRequest | null>(null);
+  const [incidentPreviewRevision, setIncidentPreviewRevision] = useState(0);
 
   const createReviewProject = useCreateReviewProject();
+  const createIncidentProjects = useMutation({ mutationFn: createIncidentReviewProjects });
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams', 'review-project-create'],
     queryFn: fetchTeams,
@@ -346,14 +366,14 @@ export function ReviewProjectCreatePage() {
     }
 
     const currentModeIsAvailable =
-      (sourceMode === 'TEXT_UNITS' && hasTextUnitSource) ||
+      (sourceMode === 'TEXT_UNITS' && hasTextUnitSource && reviewSource !== 'INCIDENTS') ||
       (sourceMode === 'REPOSITORIES' && hasRepositories) ||
       (sourceMode === 'REVIEW_FEATURE' && hasReviewFeatures);
     if (currentModeIsAvailable) {
       return;
     }
 
-    if (hasTextUnitSource) {
+    if (hasTextUnitSource && reviewSource !== 'INCIDENTS') {
       setSourceMode('TEXT_UNITS');
       return;
     }
@@ -371,6 +391,7 @@ export function ReviewProjectCreatePage() {
     repositoriesQuery.isLoading,
     reviewFeatureOptionsQuery.isLoading,
     sourceMode,
+    reviewSource,
   ]);
 
   useEffect(() => {
@@ -385,6 +406,8 @@ export function ReviewProjectCreatePage() {
 
   useEffect(() => {
     const nextParams = new URLSearchParams(urlSearchParams);
+    if (reviewSource === 'INCIDENTS') nextParams.set('source', 'incidents');
+    else nextParams.delete('source');
     if (sourceMode === 'TEXT_UNITS') {
       nextParams.delete('scope');
     } else {
@@ -400,7 +423,7 @@ export function ReviewProjectCreatePage() {
     if (nextParams.toString() !== urlSearchParams.toString()) {
       setUrlSearchParams(nextParams, { replace: true });
     }
-  }, [selectedRepositoryIds, setUrlSearchParams, sourceMode, urlSearchParams]);
+  }, [selectedRepositoryIds, setUrlSearchParams, sourceMode, reviewSource, urlSearchParams]);
 
   useEffect(() => {
     if (statusFilterWasCustomized) {
@@ -440,28 +463,71 @@ export function ReviewProjectCreatePage() {
     setSelectedCollectionId(activeCollection.id);
   }, [activeCollection, navState?.collectionId, selectedCollectionId, tmIds.length]);
 
+  const toIncidentRequest = useCallback(
+    (values: ReviewProjectCreateFormValues): IncidentReviewProjectRequest => {
+      if (values.teamId == null) throw new Error('Select a team for incident review.');
+      return {
+        allRepositories: values.allRepositories,
+        repositoryIds: values.repositoryIds,
+        reviewFeatureIds: values.reviewFeatureIds,
+        localeTags: values.localeTags,
+        reviewType: values.incidentReviewType,
+        teamId: values.teamId,
+        name: values.name,
+        dueDate: values.dueDate,
+        maxWordCountPerProject: values.maxWordCountPerProject,
+        assignTranslator: values.assignTranslator,
+        type: values.type,
+        notes: values.notes,
+        screenshotImageIds: values.screenshotImageIds,
+      };
+    },
+    [],
+  );
+
+  const handlePreviewIncidents = useCallback(
+    (values: ReviewProjectCreateFormValues) =>
+      previewIncidentReviewProjects(toIncidentRequest(values)),
+    [toIncidentRequest],
+  );
+
   const handleSubmit = useCallback(
     (values: ReviewProjectCreateFormValues) => {
-      if (createReviewProject.isPending) return;
-      if (sourceMode === 'TEXT_UNITS' && !tmIds.length) {
+      if (createReviewProject.isPending || createIncidentProjects.isPending) return;
+      const needsExplicitScope = values.reviewSource !== 'INCIDENTS' || !values.allRepositories;
+      if (needsExplicitScope && sourceMode === 'TEXT_UNITS' && !tmIds.length) {
         setErrorMessage('Add at least one text unit id.');
         setSubmissionReport(null);
         return;
       }
-      if (sourceMode === 'REVIEW_FEATURE' && !values.reviewFeatureIds?.length) {
+      if (
+        needsExplicitScope &&
+        sourceMode === 'REVIEW_FEATURE' &&
+        !values.reviewFeatureIds?.length
+      ) {
         setErrorMessage('Select at least one review feature.');
         setSubmissionReport(null);
         return;
       }
-      if (sourceMode === 'REPOSITORIES' && !values.repositoryIds?.length) {
+      if (needsExplicitScope && sourceMode === 'REPOSITORIES' && !values.repositoryIds?.length) {
         setErrorMessage('Select at least one repository.');
         setSubmissionReport(null);
         return;
       }
       setErrorMessage(null);
       setSubmissionReport(null);
+      setIncidentCreationReport(null);
       void (async () => {
         try {
+          if (values.reviewSource === 'INCIDENTS') {
+            const request = toIncidentRequest(values);
+            setLastIncidentRequest(request);
+            const response = await createIncidentProjects.mutateAsync(request);
+            setIncidentCreationReport(response);
+            setIncidentPreviewRevision((revision) => revision + 1);
+            void queryClient.invalidateQueries({ queryKey: ['review-projects'] });
+            return;
+          }
           if (sourceMode === 'TEXT_UNITS') {
             const response = await createReviewProject.mutateAsync({
               localeTags: values.localeTags,
@@ -558,8 +624,47 @@ export function ReviewProjectCreatePage() {
         }
       })();
     },
-    [createReviewProject, navigate, reviewFeaturesById, sourceMode, tmIds],
+    [
+      createReviewProject,
+      createIncidentProjects,
+      toIncidentRequest,
+      queryClient,
+      navigate,
+      reviewFeaturesById,
+      sourceMode,
+      tmIds,
+    ],
   );
+
+  const handleContinueIncidents = async () => {
+    if (!lastIncidentRequest || createIncidentProjects.isPending) return;
+    setErrorMessage(null);
+    try {
+      const next = await createIncidentProjects.mutateAsync(lastIncidentRequest);
+      setIncidentCreationReport((previous) =>
+        previous
+          ? {
+              ...next,
+              eligibleIncidentCount: previous.eligibleIncidentCount + next.eligibleIncidentCount,
+              skippedIncidentCount: previous.skippedIncidentCount + next.skippedIncidentCount,
+              projectCount: previous.projectCount + next.projectCount,
+              scannedIncidentCount:
+                (previous.scannedIncidentCount ?? 0) + (next.scannedIncidentCount ?? 0),
+              localeTags: [...new Set([...previous.localeTags, ...next.localeTags])],
+              projectIds: [...previous.projectIds, ...next.projectIds].slice(-100),
+              requestIds: [...previous.requestIds, ...next.requestIds].slice(-100),
+              skipped: [...previous.skipped, ...next.skipped].slice(-100),
+            }
+          : next,
+      );
+      setIncidentPreviewRevision((revision) => revision + 1);
+      void queryClient.invalidateQueries({ queryKey: ['review-projects'] });
+    } catch (error) {
+      setErrorMessage(
+        getCreateReviewProjectErrorMessage(error) || 'Unable to create the next incident batch.',
+      );
+    }
+  };
 
   return (
     <div className="review-projects-page review-projects-create">
@@ -573,6 +678,18 @@ export function ReviewProjectCreatePage() {
         {showCreateForm ? (
           <>
             <ReviewProjectCreateForm
+              reviewSource={reviewSource}
+              onChangeReviewSource={(source) => {
+                setReviewSource(source);
+                setErrorMessage(null);
+                setSubmissionReport(null);
+                setIncidentCreationReport(null);
+                if (source === 'INCIDENTS' && sourceMode === 'TEXT_UNITS') {
+                  setSourceMode(hasRepositories ? 'REPOSITORIES' : 'REVIEW_FEATURE');
+                }
+              }}
+              onPreviewIncidents={handlePreviewIncidents}
+              incidentPreviewRevision={incidentPreviewRevision}
               defaultName={prefillName || 'Review project'}
               defaultDueDate={prefillDueDate ?? defaultDueDate}
               localeOptions={localeOptions}
@@ -602,7 +719,7 @@ export function ReviewProjectCreatePage() {
                 setSelectedStatusFilter(next);
                 setStatusFilterWasCustomized(true);
               }}
-              isSubmitting={createReviewProject.isPending}
+              isSubmitting={createReviewProject.isPending || createIncidentProjects.isPending}
               errorMessage={errorMessage}
               submitLabel="Create"
               onSubmit={handleSubmit}
@@ -610,6 +727,67 @@ export function ReviewProjectCreatePage() {
                 void navigate(-1);
               }}
             />
+            {reviewSource === 'INCIDENTS' && incidentCreationReport ? (
+              <div className="review-create__report" role="status">
+                <div className="review-create__report-title">Incident review projects</div>
+                <p>
+                  Created {incidentCreationReport.projectCount} project
+                  {incidentCreationReport.projectCount === 1 ? '' : 's'}.{' '}
+                  {incidentCreationReport.skippedIncidentCount} incident
+                  {incidentCreationReport.skippedIncidentCount === 1 ? '' : 's'} skipped.
+                </p>
+                {incidentCreationReport.projectCount > incidentCreationReport.projectIds.length ? (
+                  <p>Showing the most recent 100 projects.</p>
+                ) : null}
+                {incidentCreationReport.projectIds.length ? (
+                  <ul>
+                    {incidentCreationReport.projectIds.map((id) => (
+                      <li key={id}>
+                        <Link to={`/review-projects/${id}`}>Open review project #{id}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>
+                    {incidentCreationReport.hasMore
+                      ? 'No projects were created from the incidents checked so far. More incidents remain to check.'
+                      : 'No eligible incidents remain in this pass through the selection.'}
+                  </p>
+                )}
+                {incidentCreationReport.hasMore ? (
+                  <div>
+                    <p>
+                      More incidents remain to check for this selection. Progress is saved between
+                      batches.
+                    </p>
+                    <button
+                      type="button"
+                      className="review-create__cta"
+                      disabled={createIncidentProjects.isPending}
+                      onClick={() => void handleContinueIncidents()}
+                    >
+                      {createIncidentProjects.isPending ? 'Creating…' : 'Create next batch'}
+                    </button>
+                  </div>
+                ) : null}
+                {incidentCreationReport.skipped.length ? (
+                  <details>
+                    <summary>Skipped incidents</summary>
+                    {incidentCreationReport.skippedIncidentCount >
+                    incidentCreationReport.skipped.length ? (
+                      <p>Showing the most recent 100 skipped incidents.</p>
+                    ) : null}
+                    <ul>
+                      {incidentCreationReport.skipped.map((item) => (
+                        <li key={item.incidentId}>
+                          Incident #{item.incidentId}: {item.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </div>
+            ) : null}
             {submissionReport ? (
               <div
                 className={`review-create__report${

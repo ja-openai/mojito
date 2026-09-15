@@ -27,6 +27,10 @@ while claiming that other people can resume the run.
 - Use review type `TRANSLATION_QUALITY` unless the user requests another configured workflow.
   One run belongs to one team, with named repository/locale/feature groups. Keep strings from the same
   screen, composed message, and runtime branches together. Split large locales into disjoint groups.
+- When humans should collect findings from Create review project or an incident automation, create
+  the run with `routingPolicy: QUEUED`. Completed eligible findings then appear as typed incidents;
+  the chosen batch creates their Review Projects. `IMMEDIATE` remains the default for existing
+  callers and creates projects as groups complete. Inspect `routingPolicy` when resuming a run.
 - Capture source and current target identity, including variant IDs and exact text. Preserve empty
   targets separately from absent variants. Save frozen input/context artifacts in Mojito: glossary
   entries, relevant code excerpts and revision, runtime examples, and screenshots where available.
@@ -83,6 +87,12 @@ marking the new revision `READY`. Once routed, revise only in response to pendin
   item result; retry failed/unknown items with the same key and payload, replacing only the claim
   after takeover. A successful batch request can still contain failed items. A changed proposal is a
   revision, not a retry with changed text.
+- Supply a stable optional `concernKey` for a recurring issue (for example, a specific glossary rule).
+  Reuse that key across runs for the same concern; use different keys for genuinely distinct concerns.
+  Without one, Mojito uses normalized rationale. Exact pending duplicates reuse the saved finding,
+  which can belong to an earlier run: record the returned proposal/finding identity in the ledger.
+  An already-reviewed exact state in this team/type returns a conflict asking for **Review again**;
+  treat that as handled work, not a transient failure to retry indefinitely.
 - Save per-group coverage, including reviewed groups with **zero findings**, missing inputs,
   unreviewed rows, failed checks, and unresolved questions. Missing inputs never count as reviewed.
 - Upload frozen inputs and an artifact index, then commit an `IN_PROGRESS` checkpoint before a
@@ -96,8 +106,9 @@ marking the new revision `READY`. Once routed, revise only in response to pendin
 - Renew the claim while working. If another coordinator owns it or the generation is stale, stop
   publishing, inspect the latest run, and reconcile before taking over. Never forge newer tokens.
 - Finish the run only when the coverage ledger accurately describes the requested scope. Finish
-  triggers idempotent routing of eligible findings into Review Projects; optional/held findings stay
-  saved. Run completion records agent execution, not completion of human review.
+  triggers idempotent intake of eligible findings: `IMMEDIATE` creates Review Projects and `QUEUED`
+  publishes incidents awaiting a manual or scheduled batch. Optional/held findings stay saved.
+  Run completion records agent execution, not completion of human review.
 
 ## Human feedback and follow-up
 

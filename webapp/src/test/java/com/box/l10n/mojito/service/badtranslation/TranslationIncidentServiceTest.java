@@ -52,7 +52,9 @@ public class TranslationIncidentServiceTest {
           userService,
           auditorAwareImpl,
           serverConfig,
-          ObjectMapper.withNoFailOnUnknownProperties());
+          ObjectMapper.withNoFailOnUnknownProperties(),
+          Mockito.mock(TranslationIncidentIntakeService.class),
+          Mockito.mock(com.box.l10n.mojito.service.team.TeamService.class));
 
   @Before
   public void setUp() {

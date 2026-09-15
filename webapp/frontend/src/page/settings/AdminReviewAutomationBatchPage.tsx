@@ -6,6 +6,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
+import type { ReviewAutomationIncidentScope } from '../../api/review-automations';
+import type { ReviewAutomationSource } from '../../api/review-automations';
 import {
   batchUpsertReviewAutomations,
   fetchReviewAutomationBatchExport,
@@ -219,6 +221,9 @@ export function AdminReviewAutomationBatchPage() {
         assignTranslator: row.assignTranslator,
         featureIds: row.featureIds,
         excludedLocaleTags: row.excludedLocaleTags,
+        reviewSource: row.reviewSource,
+        incidentReviewType: row.incidentReviewType,
+        incidentScope: row.incidentScope,
       })),
     });
   };
@@ -234,6 +239,9 @@ export function AdminReviewAutomationBatchPage() {
       maxWordCountPerProject: number;
       featureNames: string[];
       excludedLocaleTags?: string[];
+      reviewSource?: ReviewAutomationSource;
+      incidentReviewType?: string | null;
+      incidentScope?: ReviewAutomationIncidentScope;
     }>,
     options?: { emptyMessage: string; sourceLabel: string },
   ) => {
@@ -385,7 +393,8 @@ export function AdminReviewAutomationBatchPage() {
               <li>
                 `name | enabled|disabled | cron | timezone | team | assign-translator|no-translator
                 | due-date-offset-days | max-word-count | feature-a; feature-b |
-                excluded-locale-tags`
+                excluded-locale-tags | CURRENT_TRANSLATIONS|INCIDENTS | incident-review-type |
+                ALL|REVIEW_FEATURES`
               </li>
               <li>Blank status defaults to enabled.</li>
               <li>Blank timezone defaults to UTC.</li>
@@ -403,6 +412,13 @@ export function AdminReviewAutomationBatchPage() {
                 Excluded locales are optional, separated by semicolons or commas (for example, he;
                 fr-CA). Omit the final column to keep existing exclusions; leave it empty after the
                 final pipe to clear them. New automations default to no exclusions.
+              </li>
+              <li>
+                Review source and incident review type are optional. Omit these columns to preserve
+                saved values. New automations use current translations. An empty incident review
+                type selects all types. New incident automations default to all eligible incidents;
+                set REVIEW_FEATURES to restrict them to selected features. Omit scope to retain an
+                existing setting.
               </li>
               <li>Prefill merges into the editor by default; the modal can replace editor text.</li>
               <li>
@@ -460,7 +476,20 @@ export function AdminReviewAutomationBatchPage() {
                   <div className="user-batch-page__cell--muted">{row.dueDateOffsetDays}d</div>
                   <div className="user-batch-page__cell--muted">{row.maxWordCountPerProject}</div>
                   <div className="user-batch-page__cell--muted">
-                    {row.featureNames.length ? row.featureNames.join(', ') : 'No review features'}
+                    {row.reviewSource === 'INCIDENTS' &&
+                    (row.incidentScope === 'ALL' ||
+                      (row.action === 'create' && row.incidentScope == null))
+                      ? 'All eligible incidents'
+                      : row.featureNames.length
+                        ? row.featureNames.join(', ')
+                        : 'No review features'}
+                    <div>
+                      {row.reviewSource === 'INCIDENTS'
+                        ? `Incidents · ${row.incidentReviewType?.replace(/_/g, ' ').toLowerCase() || 'All incident types'}`
+                        : row.reviewSource === 'CURRENT_TRANSLATIONS' || row.action === 'create'
+                          ? 'Current translations'
+                          : 'Keep existing source'}
+                    </div>
                   </div>
                   <div className="user-batch-page__cell--muted">
                     {row.excludedLocaleTags == null

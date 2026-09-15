@@ -68,11 +68,14 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ReviewProjectService {
@@ -588,7 +591,9 @@ public class ReviewProjectService {
     }
 
     logger.info(
-        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}, reviewFeatureId={}, repositoryIdCount={}, statusFilter={}, skipTextUnitsInOpenProjects={}",
+        "Create review project request: name='{}', teamId={}, requestedLocales={},"
+            + " tmTextUnitCount={}, reviewFeatureId={}, repositoryIdCount={}, statusFilter={},"
+            + " skipTextUnitsInOpenProjects={}",
         request.name(),
         request.teamId(),
         request.localeTags(),
@@ -758,7 +763,8 @@ public class ReviewProjectService {
         localePlans.add(
             preparedLocalePlan(locale.bcp47Tag(), localeReference, candidates, chunkCount, null));
         logger.info(
-            "Prepared automated review project locale '{}' for feature '{}' with {} candidates across {} chunk(s)",
+            "Prepared automated review project locale '{}' for feature '{}' with {} candidates"
+                + " across {} chunk(s)",
             locale.bcp47Tag(),
             reviewFeature.getName(),
             candidates.size(),
@@ -777,7 +783,8 @@ public class ReviewProjectService {
         getPreparedLocalesWithChunks(localePlans, maxWordCountPerProject);
     if (localesToCreate.isEmpty()) {
       logger.info(
-          "No automated review project request created for feature '{}' because no eligible text units were found",
+          "No automated review project request created for feature '{}' because no eligible text"
+              + " units were found",
           reviewFeature.getName());
       return buildCreateReviewProjectRequestResult(
           null,
@@ -824,6 +831,36 @@ public class ReviewProjectService {
       int maxWordCount,
       boolean assignTranslator,
       List<AgentReviewCandidate> snapshots) {
+    return createAgentReviewProjects(
+        runId,
+        localeId,
+        name,
+        teamId,
+        dueDate,
+        maxWordCount,
+        assignTranslator,
+        snapshots,
+        ReviewProjectType.NORMAL,
+        "Agent findings with staged proposals. Review the diff and evidence before accepting.",
+        null,
+        teamService.getCurrentUserIdOrThrow());
+  }
+
+  /** Shared incident batching preserves project settings and the original review run. */
+  @Transactional
+  public List<Long> createAgentReviewProjects(
+      Long runId,
+      Long localeId,
+      String name,
+      Long teamId,
+      ZonedDateTime dueDate,
+      int maxWordCount,
+      boolean assignTranslator,
+      List<AgentReviewCandidate> snapshots,
+      ReviewProjectType type,
+      String notes,
+      List<String> screenshotImageIds,
+      Long requestedByUserId) {
     if (!userService.isCurrentUserAdminOrPm()) {
       throw new AccessDeniedException("Agent review routing requires a PM or administrator");
     }
@@ -866,12 +903,12 @@ public class ReviewProjectService {
     PersistedReviewProjectRequest result =
         persistPreparedReviewProjectRequest(
             name,
-            "Agent findings with staged proposals. Review the diff and evidence before accepting.",
-            null,
-            ReviewProjectType.NORMAL,
+            notes,
+            screenshotImageIds,
+            type == null ? ReviewProjectType.NORMAL : type,
             dueDate,
             teamId,
-            userId,
+            requestedByUserId == null ? userId : requestedByUserId,
             assignTranslator,
             null,
             chunks);
@@ -879,6 +916,85 @@ public class ReviewProjectService {
       project.setAgentReviewRunId(runId);
     }
     return result.projectIds();
+  }
+
+  /** A reviewer can start another round only for a row they could already decide. */
+  @Transactional(propagation = Propagation.MANDATORY)
+  public ReviewProjectTextUnit createHumanReReviewProject(
+      ReviewProjectTextUnit previousRow, TMTextUnitVariant current) {
+    ReviewProject previous = previousRow.getReviewProject();
+    // Recheck assignment after waiting for translation/proposal locks; do not copy stale access.
+    entityManager.refresh(previous, LockModeType.PESSIMISTIC_WRITE);
+    if (!userService.isCurrentUserTranslationRole())
+      throw new AccessDeniedException("A translation role is required");
+    assertCurrentUserCanReadProject(previous);
+    userService.checkUserCanEditLocale(previous.getLocale().getId());
+    if (previous.getAgentReviewRunId() == null) {
+      throw new IllegalArgumentException("Review again requires an incident review project");
+    }
+    User actor = resolveUser(teamService.getCurrentUserIdOrThrow(), "reviewer");
+    ReviewProjectRequest request = new ReviewProjectRequest();
+    request.setName("Review again · Project " + previous.getId());
+    request.setNotes(
+        "A new human review round using the current translation. Previous decisions remain in the"
+            + " original project.");
+    request.setCreatedByUser(actor);
+    reviewProjectRequestRepository.save(request);
+    ReviewProject next = new ReviewProject();
+    next.setType(previous.getType());
+    next.setAgentReviewRunId(previous.getAgentReviewRunId());
+    next.setReviewProjectRequest(request);
+    next.setLocale(previous.getLocale());
+    next.setTeam(previous.getTeam());
+    next.setAssignedPmUser(previous.getAssignedPmUser());
+    next.setAssignedTranslatorUser(previous.getAssignedTranslatorUser());
+    next.setCreatedByUser(actor);
+    next.setDueDate(ZonedDateTime.now().plusDays(7));
+    next.setTextUnitCount(1);
+    next.setWordCount(
+        wordCountService.getEnglishWordCount(previousRow.getTmTextUnit().getContent()));
+    reviewProjectRepository.save(next);
+    ReviewProjectTextUnit row = new ReviewProjectTextUnit();
+    row.setReviewProject(next);
+    row.setTmTextUnit(previousRow.getTmTextUnit());
+    row.setTmTextUnitVariant(current);
+    reviewProjectTextUnitRepository.save(row);
+    reviewProjectAssignmentWindowService.ensureOpenWindow(next, next.getAssignedTranslatorUser());
+    recordAssignmentHistory(next, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null, actor);
+    return row;
+  }
+
+  /** Reopens the existing work item; immutable proposal feedback retains earlier decisions. */
+  @Transactional(propagation = Propagation.MANDATORY)
+  public ReviewProjectTextUnit reopenHumanReviewRow(
+      ReviewProjectTextUnit row, TMTextUnitVariant current) {
+    ReviewProject project = row.getReviewProject();
+    entityManager.refresh(project, LockModeType.PESSIMISTIC_WRITE);
+    if (!userService.isCurrentUserTranslationRole())
+      throw new AccessDeniedException("A translation role is required");
+    assertCurrentUserCanReadProject(project);
+    userService.checkUserCanEditLocale(project.getLocale().getId());
+    if (project.getAgentReviewRunId() == null) {
+      throw new IllegalArgumentException("Reopening requires an incident review project");
+    }
+    if (project.getStatus() != ReviewProjectStatus.OPEN) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Reopen the project before reviewing");
+    }
+    ReviewProjectTextUnitDecision decision =
+        reviewProjectTextUnitDecisionRepository
+            .findByReviewProjectTextUnitId(row.getId())
+            .orElseThrow(
+                () ->
+                    new ResponseStatusException(
+                        HttpStatus.CONFLICT, "This row has not been reviewed"));
+    boolean wasDecided = decision.getDecisionState() == DecisionState.DECIDED;
+    row.setTmTextUnitVariant(current);
+    reviewProjectTextUnitRepository.save(row);
+    decision.setDecisionState(DecisionState.PENDING);
+    reviewProjectTextUnitDecisionRepository.saveAndFlush(decision);
+    // Use the ordinary atomic progress update, including its flush/clear semantics.
+    updateProjectDecidedCount(project.getId(), getWordCount(row), wasDecided, false);
+    return row;
   }
 
   private static class CandidateReviewTextUnitDTO extends TextUnitDTO {
@@ -1142,14 +1258,16 @@ public class ReviewProjectService {
             : SAVE_DECISION_PHASE_SLOW_LOG_THRESHOLD_MS;
     if (elapsedMillis >= slowLogThresholdMillis) {
       logger.info(
-          "Review project save decision phase completed: phase={}, result={}, elapsedMs={}, reviewProjectTextUnitId={}",
+          "Review project save decision phase completed: phase={}, result={}, elapsedMs={},"
+              + " reviewProjectTextUnitId={}",
           phase,
           result,
           elapsedMillis,
           reviewProjectTextUnitId);
     } else {
       logger.debug(
-          "Review project save decision phase completed: phase={}, result={}, elapsedMs={}, reviewProjectTextUnitId={}",
+          "Review project save decision phase completed: phase={}, result={}, elapsedMs={},"
+              + " reviewProjectTextUnitId={}",
           phase,
           result,
           elapsedMillis,
@@ -3777,6 +3895,16 @@ public class ReviewProjectService {
             () ->
                 new IllegalArgumentException(
                     "reviewProjectTextUnit with id: " + reviewProjectTextUnitId + " not found"));
+  }
+
+  @Transactional(readOnly = true)
+  public GetProjectDetailView.ReviewProjectTextUnit getReviewProjectTextUnit(Long textUnitId) {
+    ReviewProjectTextUnit row =
+        reviewProjectTextUnitRepository
+            .findById(textUnitId)
+            .orElseThrow(() -> new IllegalArgumentException("Review row not found"));
+    assertCurrentUserCanReadProject(row.getReviewProject());
+    return fetchReviewProjectTextUnitWithFeedback(textUnitId, row.getReviewProject());
   }
 
   private GetProjectDetailView.ReviewProjectTextUnit fetchReviewProjectTextUnitWithFeedback(

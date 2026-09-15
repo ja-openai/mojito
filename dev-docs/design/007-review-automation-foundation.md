@@ -43,6 +43,9 @@ Data Model
   - `dueDateOffsetDays`
   - `maxWordCountPerProject`
   - `assignTranslator`
+  - `reviewSource` (`CURRENT_TRANSLATIONS` by default, or `INCIDENTS`)
+  - `incidentReviewType` (optional incident-type filter)
+  - `incidentScope` (`ALL` or `REVIEW_FEATURES`; stored explicitly)
   - `excludedLocaleTags` (canonical locale tags; empty by default)
   - `features` (`many-to-many` to `ReviewFeature`)
 - `ReviewAutomationRun`
@@ -61,11 +64,15 @@ Backend Notes
 
 - List API uses Spring Data projections to avoid hydrating full automation entities for the table.
 - Batch tooling uses lightweight options/export queries so the editor is not tied to the paged list limit.
-- Enabled automations may share review features. Sequential runs skip text units already covered by open review projects; overlapping shared-feature runs can still send the same text units more than once, so admins should stagger schedules when sharing features.
+- Enabled automations may share review features. Current-translation runs skip text units already covered by open review projects; overlapping shared-feature runs can still send the same text units more than once, so admins should stagger those schedules. Incident batches lock and recheck intake rows to prevent duplicate assignment.
 - Review-feature deletion is blocked if the feature is referenced by an automation.
 - Scheduler synchronization happens after automation CRUD commits, so Quartz stays aligned with saved config.
 - Cron execution runs as the system user and reuses the same feature-based review-project creation path as manual creation.
-- Automated creation always excludes text units already covered by any open review project for the same `tmTextUnit + locale`.
+- Current-translation automation excludes text units already covered by any open review project for the same `tmTextUnit + locale`.
+- **Incidents** uses the same batch service as manual incident-source creation. New incident configurations default to **All eligible incidents** of the selected type and owning team; selected review features optionally narrow that queue. It retains exclusions, assignment, deadline, and source-word cap. It selects open, unassigned, exact-state incidents, including those about approved translations, preserving proposal provenance and staging ordinary incidents truthfully as human review. Global intake must be explicitly stored as `incidentScope=ALL`; an empty legacy feature scope never consumes the whole queue.
+- Incident producers can set `routingPolicy=QUEUED` so manual or scheduled batches assign the work later. Batch selection and durable human-reviewed state receipts are independent of the normal active-project filter. See [agent translation review](036-agent-translation-review.md).
+- Each incident automation execution processes at most 10 slices of up to 500 candidates/25 projects each, and yields after roughly 30 seconds checked between slices. A single in-flight slice is allowed to finish. Each slice commits its saved cursor and project assignment together; later scheduled or **Run now** executions resume that selection. Skipped-only slices still advance. A completed automation run means its bounded execution completed, not that the whole incident queue is empty. Counts retain successfully committed slices if a later slice fails. The `incident_continuations` counter and run log record when work remains.
+- Migration `V116__Review_Automation_Incident_Source.sql` adds source/type. Existing automation rows default to current translations. Create/edit, summaries, and batch export/upsert preserve the selection; **Run now** and cron use the same policy.
 - Each automation can exclude specific locales from all of its review features. Both cron runs and **Run now** skip those locales before searching for candidates; excluded locales count as skipped in run history. Matching uses exact canonical locale tags, not language families.
 - Exclusions use the global Mojito locale catalog, so an admin can exclude a locale such as Hebrew (`he`) before enabling it on a repository. An empty list includes every feature locale. This setting does not change manual review-project creation, existing projects, translation generation, or another automation's configuration.
 - Detail, create/update, and batch export/upsert expose `excludedLocaleTags`. Omitted or null values default to an empty list on create and preserve the saved list on update; an explicit empty list clears it. Locale tags are trimmed, validated against the catalog, canonicalized, and deduplicated.

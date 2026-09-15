@@ -13,9 +13,18 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 @RepositoryRestResource(exported = false)
 public interface AgentReviewProposalRepository extends JpaRepository<AgentReviewProposal, Long> {
-  List<AgentReviewProposal> findByReviewProjectId(Long projectId);
+  Optional<AgentReviewProposal> findByActiveIntakeFingerprint(String fingerprint);
 
-  Optional<AgentReviewProposal> findByReviewProjectTextUnitId(Long rowId);
+  @Query(
+      "select p from AgentReviewProposal p where p.tmTextUnitId = :unitId and p.localeId ="
+          + " :localeId and p.disposition = :disposition order by p.id desc")
+  List<AgentReviewProposal> findRecentPendingForString(
+      @Param("unitId") Long unitId,
+      @Param("localeId") Long localeId,
+      @Param("disposition") com.box.l10n.mojito.entity.agentreview.Disposition disposition,
+      Pageable pageable);
+
+  List<AgentReviewProposal> findByReviewProjectId(Long projectId);
 
   List<AgentReviewProposal> findByRunIdAndIdGreaterThanOrderByIdAsc(
       Long runId, Long afterId, Pageable pageable);
@@ -37,6 +46,9 @@ public interface AgentReviewProposalRepository extends JpaRepository<AgentReview
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
-      "select p from AgentReviewProposal p where p.runId = :runId and p.readiness = com.box.l10n.mojito.entity.agentreview.Readiness.READY and p.disposition = com.box.l10n.mojito.entity.agentreview.Disposition.OPEN order by p.id")
+      "select p from AgentReviewProposal p where p.runId = :runId and p.readiness in"
+          + " (com.box.l10n.mojito.entity.agentreview.Readiness.READY,"
+          + " com.box.l10n.mojito.entity.agentreview.Readiness.HUMAN_REVIEW) and p.disposition ="
+          + " com.box.l10n.mojito.entity.agentreview.Disposition.OPEN order by p.id")
   List<AgentReviewProposal> findReadyForUpdateByRunId(@Param("runId") Long runId);
 }

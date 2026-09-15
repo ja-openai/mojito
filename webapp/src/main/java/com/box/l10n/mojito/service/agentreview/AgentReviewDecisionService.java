@@ -65,7 +65,9 @@ public class AgentReviewDecisionService {
       AgentReviewProposal proposal,
       AgentReviewDecisionRequest request,
       String contextFingerprint,
-      boolean replay) {}
+      boolean replay,
+      String currentSource,
+      String currentSourceComment) {}
 
   /** Caller has authorized the project/locale and locked TM/current before this proposal lock. */
   @Transactional(propagation = Propagation.MANDATORY)
@@ -129,11 +131,6 @@ public class AgentReviewDecisionService {
                 : DecisionState.DECIDED)) {
       throw new IllegalArgumentException("Feedback-only actions must not change the translation");
     }
-    if (request.action() == AgentReviewDecisionRequest.Action.KEEP_CURRENT
-        && request.originalAssessment() == OriginalAssessment.BAD) {
-      throw new IllegalArgumentException(
-          "Request another fix when the original translation is wrong");
-    }
     String fingerprint =
         fingerprint(
             Arrays.asList(
@@ -146,7 +143,14 @@ public class AgentReviewDecisionService {
                 expectedVariantId,
                 expectedReviewRevision,
                 decisionNotes));
-    Prepared prepared = new Prepared(proposal, request, fingerprint, false);
+    Prepared prepared =
+        new Prepared(
+            proposal,
+            request,
+            fingerprint,
+            false,
+            row.getTmTextUnit().getContent(),
+            row.getTmTextUnit().getComment());
     Optional<AgentReviewFeedback> previous =
         feedback.findByProposalIdAndActorTypeAndRequestKey(
             proposal.getId(), ActorType.HUMAN, request.requestId());
@@ -157,14 +161,22 @@ public class AgentReviewDecisionService {
           feedbackRequest(
               prepared,
               accept ? NormalizationUtils.normalize(target) : saved.getFinalTarget(),
-              saved.getAppliedVariantId()));
+              saved.getAppliedVariantId(),
+              saved.getReviewedStateFingerprint(),
+              saved.getAction()));
       if (!Objects.equals(id(current), accept ? saved.getAppliedVariantId() : expectedVariantId)
           || !Objects.equals(row.getTmTextUnit().getContent(), proposal.getSource())
           || !Objects.equals(row.getTmTextUnit().getComment(), proposal.getSourceComment())) {
         throw conflict(
             "Translation changed after this decision; refresh to inspect the saved result");
       }
-      return new Prepared(proposal, request, fingerprint, true);
+      return new Prepared(
+          proposal,
+          request,
+          fingerprint,
+          true,
+          row.getTmTextUnit().getContent(),
+          row.getTmTextUnit().getComment());
     }
     if (row.getReviewProject().getStatus() != ReviewProjectStatus.OPEN) {
       throw conflict("Reopen the project before reviewing this proposal");
@@ -176,6 +188,12 @@ public class AgentReviewDecisionService {
                 feedback.findFirstByProposalIdOrderByIdDesc(proposal.getId()).orElse(null)))) {
       throw conflict(
           "This proposal has changed or already received a decision; refresh the review");
+    }
+    if ((request.action() == AgentReviewDecisionRequest.Action.KEEP_CURRENT
+            || (accept && keepsOriginalTarget(proposal, target)))
+        && request.originalAssessment() == OriginalAssessment.BAD) {
+      throw new IllegalArgumentException(
+          "Request another fix when the original translation is wrong");
     }
     if (accept) {
       if (stale(
@@ -210,7 +228,23 @@ public class AgentReviewDecisionService {
             feedbackRequest(
                 prepared,
                 finalVariant == null ? null : finalVariant.getContent(),
-                applies ? id(finalVariant) : null));
+                applies ? id(finalVariant) : null,
+                applies
+                        || prepared.request().action()
+                            == AgentReviewDecisionRequest.Action.KEEP_CURRENT
+                    ? AgentReviewStateFingerprint.of(
+                        prepared.proposal().getTmTextUnitId(),
+                        prepared.proposal().getLocaleId(),
+                        prepared.currentSource(),
+                        prepared.currentSourceComment(),
+                        id(finalVariant),
+                        finalVariant == null ? null : finalVariant.getContent(),
+                        finalVariant == null || finalVariant.getStatus() == null
+                            ? null
+                            : finalVariant.getStatus().name(),
+                        finalVariant == null ? null : finalVariant.isIncludedInLocalizedFile())
+                    : null,
+                null));
     Long incidentId = prepared.proposal().getIncidentId();
     if (incidentId != null
         && (saved.getAction() == FeedbackAction.ACCEPT
@@ -232,20 +266,28 @@ public class AgentReviewDecisionService {
   }
 
   private AgentReviewContracts.HumanFeedbackRequest feedbackRequest(
-      Prepared prepared, String finalTarget, Long variantId) {
+      Prepared prepared,
+      String finalTarget,
+      Long variantId,
+      String reviewedStateFingerprint,
+      FeedbackAction recordedAction) {
     AgentReviewDecisionRequest request = prepared.request();
     FeedbackAction action =
-        switch (request.action()) {
-          case ACCEPT ->
-              Objects.equals(
-                      NormalizationUtils.normalize(prepared.proposal().getProposedTarget()),
-                      finalTarget)
-                  ? FeedbackAction.ACCEPT
-                  : FeedbackAction.EDIT_ACCEPT;
-          case KEEP_CURRENT -> FeedbackAction.KEEP_CURRENT;
-          case DEFER -> FeedbackAction.DEFER;
-          case REQUEST_REVISION -> FeedbackAction.REQUEST_REVISION;
-        };
+        recordedAction != null
+            ? recordedAction
+            : switch (request.action()) {
+              case ACCEPT ->
+                  keepsOriginalTarget(prepared.proposal(), finalTarget)
+                      ? FeedbackAction.KEEP_CURRENT
+                      : Objects.equals(
+                              NormalizationUtils.normalize(prepared.proposal().getProposedTarget()),
+                              finalTarget)
+                          ? FeedbackAction.ACCEPT
+                          : FeedbackAction.EDIT_ACCEPT;
+              case KEEP_CURRENT -> FeedbackAction.KEEP_CURRENT;
+              case DEFER -> FeedbackAction.DEFER;
+              case REQUEST_REVISION -> FeedbackAction.REQUEST_REVISION;
+            };
     return new AgentReviewContracts.HumanFeedbackRequest(
         request.requestId(),
         request.proposalId(),
@@ -257,7 +299,16 @@ public class AgentReviewDecisionService {
         request.action() == AgentReviewDecisionRequest.Action.REQUEST_REVISION,
         finalTarget,
         variantId,
-        prepared.contextFingerprint());
+        prepared.contextFingerprint(),
+        reviewedStateFingerprint);
+  }
+
+  private static boolean keepsOriginalTarget(AgentReviewProposal proposal, String target) {
+    // ACCEPT is guarded against this baseline before any write. Metadata can create a new TUV
+    // without changing the translation, so classify by text and retain the saved variant receipt.
+    return Objects.equals(
+        NormalizationUtils.normalize(proposal.getBaselineTarget()),
+        NormalizationUtils.normalize(target));
   }
 
   /** Load proposal context only for agent projects, using a bounded number of queries. */
@@ -273,7 +324,10 @@ public class AgentReviewDecisionService {
     List<AgentReviewProposal> projectProposals =
         entityManager
             .createQuery(
-                "select p from AgentReviewProposal p where p.reviewProjectId = :projectId order by p.id",
+                "select p from AgentReviewProposal p where p.reviewProjectId = :projectId"
+                    + " and not exists (select newer.id from AgentReviewProposal newer where"
+                    + " newer.reviewProjectTextUnitId = p.reviewProjectTextUnitId and newer.id > p.id)"
+                    + " order by p.id",
                 AgentReviewProposal.class)
             .setParameter("projectId", project.getId())
             .getResultList();
@@ -281,8 +335,9 @@ public class AgentReviewDecisionService {
     Map<Long, String> lastRequests =
         entityManager
             .createQuery(
-                "select f from AgentReviewFeedback f where f.proposalId in :ids and f.actorType = :actor "
-                    + "and f.id = (select max(f2.id) from AgentReviewFeedback f2 where f2.proposalId = f.proposalId and f2.actorType = :actor)",
+                "select f from AgentReviewFeedback f where f.proposalId in :ids and f.actorType ="
+                    + " :actor and f.id = (select max(f2.id) from AgentReviewFeedback f2 where"
+                    + " f2.proposalId = f.proposalId and f2.actorType = :actor)",
                 AgentReviewFeedback.class)
             .setParameter("ids", projectProposals.stream().map(AgentReviewProposal::getId).toList())
             .setParameter("actor", ActorType.HUMAN)
@@ -293,12 +348,24 @@ public class AgentReviewDecisionService {
     Map<Long, AgentReviewFeedback> latestFeedback =
         entityManager
             .createQuery(
-                "select f from AgentReviewFeedback f where f.proposalId in :ids "
-                    + "and f.id = (select max(f2.id) from AgentReviewFeedback f2 where f2.proposalId = f.proposalId)",
+                "select f from AgentReviewFeedback f where f.proposalId in :ids and f.id = (select"
+                    + " max(f2.id) from AgentReviewFeedback f2 where f2.proposalId = f.proposalId)",
                 AgentReviewFeedback.class)
             .setParameter("ids", projectProposals.stream().map(AgentReviewProposal::getId).toList())
             .getResultStream()
             .collect(Collectors.toMap(AgentReviewFeedback::getProposalId, Function.identity()));
+    Map<Long, Long> nextProjects =
+        entityManager
+            .createQuery(
+                "select p from AgentReviewProposal p where p.previousProposalId in :ids and"
+                    + " p.reviewProjectId is not null",
+                AgentReviewProposal.class)
+            .setParameter("ids", projectProposals.stream().map(AgentReviewProposal::getId).toList())
+            .getResultStream()
+            .collect(
+                Collectors.toMap(
+                    AgentReviewProposal::getPreviousProposalId,
+                    AgentReviewProposal::getReviewProjectId));
     String reviewType =
         runs.findById(project.getAgentReviewRunId())
             .map(AgentReviewRun::getReviewType)
@@ -314,7 +381,8 @@ public class AgentReviewDecisionService {
                 reviewType,
                 row,
                 lastRequests.get(proposal.getId()),
-                latestFeedback.get(proposal.getId())));
+                latestFeedback.get(proposal.getId()),
+                nextProjects.get(proposal.getId())));
     }
     return result;
   }
@@ -324,9 +392,11 @@ public class AgentReviewDecisionService {
       String reviewType,
       ReviewProjectTextUnitDetail row,
       String lastRequestId,
-      AgentReviewFeedback latestFeedback) {
+      AgentReviewFeedback latestFeedback,
+      Long nextProjectId) {
     return new AgentReviewProposalView(
         proposal.getId(),
+        proposal.getPreviousProposalId(),
         proposal.getProposalRevision(),
         proposal.getVersion(),
         proposal.getFindingId(),
@@ -350,7 +420,11 @@ public class AgentReviewDecisionService {
                 row.currentTmTextUnitVariantId(),
                 row.currentTmTextUnitVariantContent()),
         lastRequestId,
-        canReconsider(proposal, latestFeedback));
+        canReconsider(proposal, latestFeedback),
+        nextProjectId == null
+            && (proposal.getDisposition() == Disposition.RESOLVED
+                || proposal.getDisposition() == Disposition.FOLLOW_UP),
+        nextProjectId);
   }
 
   private List<AgentReviewProposalView.Evidence> evidence(AgentReviewProposal proposal) {

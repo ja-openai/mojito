@@ -20,6 +20,7 @@ export type ApiAgentReviewContext = {
   proposalRevision: number;
   proposalVersion: number;
   findingId: string;
+  previousProposalId?: number | null;
   runId: number;
   reviewType: string;
   reviewedSource: string;
@@ -34,6 +35,8 @@ export type ApiAgentReviewContext = {
   disposition: string;
   stale: boolean;
   canReconsider?: boolean;
+  canReviewAgain?: boolean;
+  nextReviewProjectId?: number | null;
   lastFeedbackRequestId?: string | null;
 };
 
@@ -114,4 +117,40 @@ export async function saveAgentReviewOutcome({
     throw error;
   }
   return data as ApiReviewProjectTextUnit;
+}
+
+export type AgentReviewAgainRequest = {
+  requestKey: string;
+  expectedProposalVersion: number;
+  expectedCurrentVariantId: number | null;
+  expectedSource: string;
+  expectedSourceComment: string | null;
+  expectedCurrentTarget: string | null;
+  expectedCurrentStatus: string | null;
+  expectedCurrentIncludedInLocalizedFile: boolean | null;
+};
+
+export async function reopenAgentFinding(
+  projectId: number,
+  proposalId: number,
+  request: AgentReviewAgainRequest,
+): Promise<{ projectId: number; proposalId: number; proposalRevision: number }> {
+  const response = await fetch(
+    `/api/agent-reviews/projects/${projectId}/proposals/${proposalId}/reopen`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    },
+  );
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
+        ? data.message
+        : 'Could not start another review. Refresh to check the latest state, then try again.',
+    );
+  }
+  return data as { projectId: number; proposalId: number; proposalRevision: number };
 }

@@ -84,6 +84,69 @@ describe('AdminReviewAutomationDetailPage excluded locales', () => {
     );
   });
 
+  it('saves incident review source and type while retaining existing project settings', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const source = await screen.findByRole('combobox', { name: 'Review source' });
+    await user.selectOptions(source, 'INCIDENTS');
+    expect(screen.getByRole('button', { name: 'Select incident scope' })).toHaveTextContent(
+      'All eligible incidents',
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Select review features for review automation' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Select incident review type' }));
+    await user.click(screen.getByRole('button', { name: 'Translation quality' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(mocks.updateReviewAutomation).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({
+          reviewSource: 'INCIDENTS',
+          incidentReviewType: 'TRANSLATION_QUALITY',
+          incidentScope: 'ALL',
+          teamId: 2,
+          featureIds: [3],
+          excludedLocaleTags: [],
+          maxWordCountPerProject: 2000,
+          dueDateOffsetDays: 1,
+          assignTranslator: true,
+        }),
+      ),
+    );
+  });
+
+  it('retains existing feature-scoped incident settings until scope is explicitly changed', async () => {
+    savedAutomation = {
+      ...savedAutomation,
+      reviewSource: 'INCIDENTS',
+      incidentScope: 'REVIEW_FEATURES',
+    };
+    const user = userEvent.setup();
+    renderPage();
+    const scope = await screen.findByRole('button', { name: 'Select incident scope' });
+    expect(scope).toHaveTextContent('Selected review features');
+    expect(
+      screen.getByRole('button', { name: 'Select review features for review automation' }),
+    ).toBeInTheDocument();
+    await user.click(scope);
+    await user.click(screen.getByRole('button', { name: 'All eligible incidents' }));
+    expect(
+      screen.queryByRole('button', { name: 'Select review features for review automation' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(mocks.updateReviewAutomation).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({
+          reviewSource: 'INCIDENTS',
+          incidentScope: 'ALL',
+          excludedLocaleTags: [],
+        }),
+      ),
+    );
+  });
+
   it('saves a selected locale, reloads it, and explicitly clears the exclusion', async () => {
     const user = userEvent.setup();
     const firstRender = renderPage();

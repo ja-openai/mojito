@@ -1,0 +1,118 @@
+.agent-review-report {
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  background: color-mix(in srgb, var(--color-warning-soft) 30%, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-inline-start: 3px solid var(--color-warning);
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-sm);
+}
+
+.agent-review-report__header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.agent-review-report__header strong {
+  color: var(--color-warning);
+  font-weight: var(--font-weight-medium);
+}
+
+.agent-review-report__origin,
+.agent-review-report h3 {
+  color: var(--color-text-muted);
+}
+
+.agent-review-report h3 {
+  font-size: inherit;
+  font-weight: var(--font-weight-medium);
+  margin: 0 0 var(--space-2);
+}
+
+.agent-review-report__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-inline-start: auto;
+}
+
+.agent-review-report__link {
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.agent-review-report__columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.agent-review-report p {
+  margin: 0 0 var(--space-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.agent-review-report__translation {
+  unicode-bidi: plaintext;
+}
+
+.agent-review-report__choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5rem;
+}
+
+.agent-review-report__selected {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 2rem;
+  color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+}
+
+.agent-review-report__finding {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.agent-review-report del {
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+}
+
+.agent-review-report ins {
+  background: color-mix(in srgb, var(--color-success, #1a7f37) 20%, transparent);
+  text-decoration: none;
+}
+
+.agent-review-report .agent-review-report__error {
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+@media (max-width: 900px) {
+  .agent-review-report__columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .agent-review-report__columns > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .agent-review-report__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

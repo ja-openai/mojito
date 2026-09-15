@@ -35,6 +35,10 @@ public class AgentReviewProjectService {
   private final AgentReviewService reviews;
   private final AgentReviewRunRepository runs;
   private final AgentReviewProposalRepository proposals;
+  private final AgentReviewStateService reviewedStates;
+  private final com.box.l10n.mojito.service.badtranslation.TranslationIncidentIntakeService
+      incidentIntake;
+  private final com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository currentVariants;
   private final TranslationIncidentRepository incidents;
   private final TMTextUnitRepository textUnits;
   private final ReviewProjectService reviewProjects;
@@ -47,6 +51,9 @@ public class AgentReviewProjectService {
       AgentReviewService reviews,
       AgentReviewRunRepository runs,
       AgentReviewProposalRepository proposals,
+      AgentReviewStateService reviewedStates,
+      com.box.l10n.mojito.service.badtranslation.TranslationIncidentIntakeService incidentIntake,
+      com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository currentVariants,
       TranslationIncidentRepository incidents,
       TMTextUnitRepository textUnits,
       ReviewProjectService reviewProjects,
@@ -57,6 +64,9 @@ public class AgentReviewProjectService {
     this.reviews = reviews;
     this.runs = runs;
     this.proposals = proposals;
+    this.reviewedStates = reviewedStates;
+    this.incidentIntake = incidentIntake;
+    this.currentVariants = currentVariants;
     this.incidents = incidents;
     this.textUnits = textUnits;
     this.reviewProjects = reviewProjects;
@@ -108,10 +118,21 @@ public class AgentReviewProjectService {
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review run not found"));
     AgentReviewContracts.RunView view = reviews.getRun(runId);
-    if (!Objects.equals(automaticReviewType, run.getReviewType())
+    if ((!Objects.equals(automaticReviewType, run.getReviewType())
+            && run.getRoutingPolicy() != RoutingPolicy.QUEUED)
         || run.getStatus() == RunStatus.CANCELLED) {
       return new RouteResult(runId, projectIds(runId), 0, 0, List.of());
     }
+    // Use the same parent-string-before-proposal order as human decisions and incident batches.
+    proposals.findByRunIdOrderByIdAsc(runId).stream()
+        .filter(p -> p.getDisposition() == Disposition.OPEN)
+        .map(AgentReviewProposal::getTmTextUnitId)
+        .distinct()
+        .sorted()
+        .forEach(
+            id ->
+                entityManager.find(
+                    TMTextUnit.class, id, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE));
     List<AgentReviewProposal> ready = reviews.findReadyProposalsForUpdate(runId);
     Map<RoutingGroup, List<AgentReviewProposal>> groups = new LinkedHashMap<>();
     List<String> errors = new ArrayList<>();
@@ -126,6 +147,34 @@ public class AgentReviewProjectService {
         skipped++;
         continue;
       }
+      TMTextUnit unit = entityManager.find(TMTextUnit.class, proposal.getTmTextUnitId());
+      entityManager.refresh(unit, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+      var currentRow =
+          currentVariants.findForUpdateByLocaleIdAndTmTextUnitId(
+              proposal.getLocaleId(), proposal.getTmTextUnitId());
+      if (currentRow != null)
+        entityManager.refresh(currentRow, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+      var current = currentRow == null ? null : currentRow.getTmTextUnitVariant();
+      if (current != null) entityManager.refresh(current);
+      String currentState =
+          AgentReviewStateFingerprint.of(
+              unit.getId(),
+              proposal.getLocaleId(),
+              unit.getContent(),
+              unit.getComment(),
+              current == null ? null : current.getId(),
+              current == null ? null : current.getContent(),
+              current == null || current.getStatus() == null ? null : current.getStatus().name(),
+              current == null ? null : current.isIncludedInLocalizedFile());
+      if (proposal.getRespondsToFeedbackId() == null
+          && reviewedStates.isReviewed(run.getTeamId(), run.getReviewType(), currentState)) {
+        skipped++;
+        errors.add(
+            "Finding "
+                + proposal.getFindingId()
+                + ": current translation was already reviewed; use Review again.");
+        continue;
+      }
       Optional<TranslationIncident> existingIncident =
           incidents.findForUpdateByReviewFindingId(proposal.getFindingId());
       if (existingIncident.isPresent()
@@ -135,6 +184,31 @@ public class AgentReviewProjectService {
             "Finding "
                 + proposal.getFindingId()
                 + ": its incident is closed. Reopen the incident explicitly before routing.");
+        continue;
+      }
+      TranslationIncident incident =
+          existingIncident.orElseGet(() -> createIncident(run, proposal));
+      proposal.setIncidentId(incident.getId());
+      // Preserve historical reports, but only current snapshots may enter ordinary review work.
+      // The same fields are checked by manual/scheduled incident batching.
+      String reportedState =
+          AgentReviewStateFingerprint.of(
+              proposal.getTmTextUnitId(),
+              proposal.getLocaleId(),
+              proposal.getSource(),
+              proposal.getSourceComment(),
+              proposal.getBaselineVariantId(),
+              proposal.getBaselineTarget(),
+              proposal.getBaselineStatus(),
+              proposal.getBaselineIncludedInLocalizedFile());
+      if (!Objects.equals(reportedState, currentState)) {
+        skipped++;
+        errors.add(
+            "Finding " + proposal.getFindingId() + ": current string changed since the finding.");
+        continue;
+      }
+      if (run.getRoutingPolicy() == RoutingPolicy.QUEUED) {
+        // Findings become visible in the incident queue without preempting manual/cron batching.
         continue;
       }
       groups
@@ -179,7 +253,8 @@ public class AgentReviewProjectService {
         List<ReviewProjectTextUnit> rows =
             entityManager
                 .createQuery(
-                    "select r from ReviewProjectTextUnit r join fetch r.reviewProject where r.reviewProject.id in :ids",
+                    "select r from ReviewProjectTextUnit r join fetch r.reviewProject where"
+                        + " r.reviewProject.id in :ids",
                     ReviewProjectTextUnit.class)
                 .setParameter("ids", created)
                 .getResultList();
@@ -213,6 +288,8 @@ public class AgentReviewProjectService {
     incident.setStatus(TranslationIncidentStatus.OPEN);
     incident.setResolution(TranslationIncidentResolution.PENDING_REVIEW);
     incident.setReviewType(run.getReviewType());
+    incident.setReviewTeamId(run.getTeamId());
+    incident.setIntakeFingerprint(proposal.getIntakeFingerprint());
     incident.setReviewRunId(run.getId());
     incident.setReviewFindingId(proposal.getFindingId());
     incident.setLookupResolutionStatus("UNIQUE_MATCH");
@@ -229,12 +306,22 @@ public class AgentReviewProjectService {
     incident.setSelectedTmTextUnitId(unit.getId());
     incident.setSelectedTmTextUnitVariantId(proposal.getBaselineVariantId());
     incident.setSelectedSource(proposal.getSource());
+    incident.setSelectedSourceComment(proposal.getSourceComment());
     incident.setSelectedTarget(proposal.getBaselineTarget());
     incident.setSelectedTranslationStatus(proposal.getBaselineStatus());
     incident.setSelectedIncludedInLocalizedFile(proposal.getBaselineIncludedInLocalizedFile());
     incident.setSelectedAssetPath(unit.getAsset().getPath());
     incident.setSelectedCanReject(false);
-    return incidents.save(incident);
+    TranslationIncident saved = incidentIntake.saveOrReuse(incident);
+    if (saved.getReviewFindingId() == null) {
+      saved.setReviewRunId(run.getId());
+      saved.setReviewFindingId(proposal.getFindingId());
+    } else if (!Objects.equals(saved.getReviewFindingId(), proposal.getFindingId())) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT,
+          "This concern already belongs to a pending finding; reuse that finding");
+    }
+    return saved;
   }
 
   private List<Long> projectIds(long runId) {
@@ -291,8 +378,9 @@ public class AgentReviewProjectService {
     List<Object[]> rows =
         entityManager
             .createQuery(
-                "select f, p.proposalRevision from AgentReviewFeedback f, AgentReviewProposal p "
-                    + "where f.proposalId = p.id and p.findingId = :findingId and f.id > :afterId order by f.id",
+                "select f, p.proposalRevision from AgentReviewFeedback f, AgentReviewProposal p"
+                    + " where f.proposalId = p.id and p.findingId = :findingId and f.id > :afterId"
+                    + " order by f.id",
                 Object[].class)
             .setParameter("findingId", proposal.getFindingId())
             .setParameter("afterId", afterId)

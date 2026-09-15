@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.agentreview;
 
 import static com.box.l10n.mojito.service.agentreview.AgentReviewContracts.*;
 import static org.junit.Assert.*;
+import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -24,6 +25,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.LockModeType;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -446,7 +448,10 @@ public class AgentReviewTransactionTest {
         "Checked context",
         null,
         previous,
-        respondsTo);
+        respondsTo,
+        // This shared-schema fixture uses one mocked string across tests. Give each independent
+        // scenario a distinct concern; identical retries retain the same key.
+        "fixture-run:" + runId + ":concern:" + key);
   }
 
   private String upload(String value) {
@@ -471,9 +476,17 @@ public class AgentReviewTransactionTest {
               "jdbc:hsqldb:mem:agent-review-tx-" + UUID.randomUUID() + ";sql.syntax_mys=true",
               "sa",
               "");
+      new JdbcTemplate(source)
+          .execute(
+              "create table translation_incident (id bigint primary key, status varchar(32),"
+                  + " resolution_review_project_id bigint, selected_tm_text_unit_id bigint,"
+                  + " resolved_locale_id bigint)");
       DatabasePopulatorUtils.execute(
           new ResourceDatabasePopulator(
-              new ClassPathResource("db/migration/V111__Agent_Review.sql")),
+              new ClassPathResource("db/migration/V111__Agent_Review.sql"),
+              new ClassPathResource("db/migration/V115__Incident_Review_Batches.sql"),
+              new ClassPathResource("db/migration/V117__Agent_Review_State_Receipt.sql"),
+              new ClassPathResource("db/migration/V119__Review_Intake_Identity.sql")),
           source);
       new JdbcTemplate(source).execute("create table guarded_save_marker (id bigint primary key)");
       return source;
@@ -585,10 +598,17 @@ public class AgentReviewTransactionTest {
         ObjectMapper mapper,
         EntityManager entityManager,
         PlatformTransactionManager tx) {
+      // Legacy TM rows are mocked in this lean fixture. Core proposal/run locks remain real;
+      // source/current locking is exercised with real TM rows in AgentReviewProjectDbTest.
+      EntityManager serviceEntityManager = mock(EntityManager.class, delegatesTo(entityManager));
+      doNothing()
+          .when(serviceEntityManager)
+          .refresh(any(TMTextUnit.class), eq(LockModeType.PESSIMISTIC_WRITE));
       return new AgentReviewService(
           runs,
           proposals,
           feedback,
+          new AgentReviewStateService(feedback),
           repositories,
           repositoryLocales,
           textUnits,
@@ -598,7 +618,7 @@ public class AgentReviewTransactionTest {
           userService(),
           blobs,
           mapper,
-          entityManager,
+          serviceEntityManager,
           tx);
     }
   }

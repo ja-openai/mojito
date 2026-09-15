@@ -3,6 +3,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   AGENT_REVIEW_FEEDBACK_QUERY_KEY,
+  type AgentReviewAgainRequest,
   type AgentReviewDecision,
   saveAgentReviewOutcome,
 } from '../../api/agent-reviews';
@@ -49,6 +50,7 @@ export type SaveDecisionRequest = {
   textUnitId: number;
   clientContext?: ReviewProjectClientContext;
   agentReview?: AgentReviewDecision;
+  reopenAgentReview?: AgentReviewAgainRequest;
   tmTextUnitId: number | null;
   reportUrl?: string | null;
   reviewProjectTextUnitUrl?: string | null;
@@ -263,6 +265,14 @@ function hasMatchingSavedDecision(
 function confirmsAgentReviewFeedback(action: PendingAction, textUnit: ApiReviewProjectTextUnit) {
   if (!('agentReview' in action.request) || !action.request.agentReview) return true;
   const expected = action.request.agentReview;
+  const actual = textUnit.agentReview;
+  if (action.kind === 'save-decision' && action.request.reopenAgentReview) {
+    return (
+      actual?.previousProposalId === expected.proposalId &&
+      actual.proposalRevision === expected.proposalRevision + 1 &&
+      actual.lastFeedbackRequestId === expected.requestId
+    );
+  }
   return (
     textUnit.agentReview?.proposalId === expected.proposalId &&
     textUnit.agentReview.proposalRevision === expected.proposalRevision &&
@@ -402,6 +412,7 @@ export function useReviewProjectMutations(
           overrideChangedCurrent: action.request.overrideChangedCurrent,
           decisionNotes: action.request.decisionNotes,
           agentReview: action.request.agentReview,
+          reopenAgentReview: action.request.reopenAgentReview,
         });
       }
       if (action.kind === 'terminology-feedback') {

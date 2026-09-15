@@ -72,6 +72,26 @@ function renderComposer(overrides: Partial<ComponentProps<typeof AiChatReview>> 
 }
 
 describe('AiChatReview', () => {
+  it('allows an explicit first review for reports without changing automatic preferences', async () => {
+    const { props, rerender } = renderComposer({ allowManualReview: true });
+    rerender(
+      <AiChatReview {...props} settings={{ ...props.settings!, automaticDisabled: false }} />,
+    );
+    expect(props.onReview).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Review' }));
+    expect(props.onReview).toHaveBeenCalledOnce();
+    expect(props.settings?.onChangeAutomaticDisabled).not.toHaveBeenCalled();
+  });
+  it('keeps suggestions visible but prevents Use in a completed review', async () => {
+    const suggestion = { content: 'Votre compte', kind: 'correction' as const };
+    const { props, rerender } = renderReview('Compte', [suggestion]);
+    rerender(<AiChatReview {...props} readOnly />);
+    expect(screen.getByText('Votre compte')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Use' }));
+    expect(props.onUseSuggestion).not.toHaveBeenCalled();
+  });
+
   it('offers one Review CTA for the first empty round with automatic review off', async () => {
     const user = userEvent.setup();
     const { props } = renderComposer();

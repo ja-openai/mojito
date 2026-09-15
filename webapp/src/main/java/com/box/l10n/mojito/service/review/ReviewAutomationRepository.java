@@ -56,7 +56,10 @@ public interface ReviewAutomationRepository extends JpaRepository<ReviewAutomati
             ra.dueDateOffsetDays,
             ra.maxWordCountPerProject,
             ra.assignTranslator,
-            count(distinct rf.id)
+            count(distinct rf.id),
+            ra.reviewSource,
+            ra.incidentReviewType,
+            ra.incidentScope
           )
           from ReviewAutomation ra
           left join ra.team team
@@ -75,7 +78,10 @@ public interface ReviewAutomationRepository extends JpaRepository<ReviewAutomati
             team.name,
             ra.dueDateOffsetDays,
             ra.maxWordCountPerProject,
-            ra.assignTranslator
+            ra.assignTranslator,
+            ra.reviewSource,
+            ra.incidentReviewType,
+            ra.incidentScope
           order by lower(ra.name) asc, ra.id asc
           """,
       countQuery =

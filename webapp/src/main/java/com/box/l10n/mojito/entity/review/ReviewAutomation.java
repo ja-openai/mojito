@@ -5,6 +5,8 @@ import com.box.l10n.mojito.entity.Team;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
@@ -22,6 +24,51 @@ import java.util.Set;
     name = "review_automation",
     indexes = {@Index(name = "UK__REVIEW_AUTOMATION__NAME", columnList = "name", unique = true)})
 public class ReviewAutomation extends AuditableEntity {
+
+  public enum ReviewSource {
+    CURRENT_TRANSLATIONS,
+    INCIDENTS
+  }
+
+  public enum IncidentScope {
+    ALL,
+    REVIEW_FEATURES
+  }
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "incident_scope", nullable = false, length = 32)
+  private IncidentScope incidentScope = IncidentScope.REVIEW_FEATURES;
+
+  public IncidentScope getIncidentScope() {
+    return incidentScope;
+  }
+
+  public void setIncidentScope(IncidentScope incidentScope) {
+    this.incidentScope = incidentScope;
+  }
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "review_source", nullable = false, length = 32)
+  private ReviewSource reviewSource = ReviewSource.CURRENT_TRANSLATIONS;
+
+  @Column(name = "incident_review_type", length = 64)
+  private String incidentReviewType;
+
+  public ReviewSource getReviewSource() {
+    return reviewSource;
+  }
+
+  public void setReviewSource(ReviewSource reviewSource) {
+    this.reviewSource = reviewSource;
+  }
+
+  public String getIncidentReviewType() {
+    return incidentReviewType;
+  }
+
+  public void setIncidentReviewType(String incidentReviewType) {
+    this.incidentReviewType = incidentReviewType;
+  }
 
   public static final int NAME_MAX_LENGTH = 255;
   public static final int CRON_EXPRESSION_MAX_LENGTH = 255;

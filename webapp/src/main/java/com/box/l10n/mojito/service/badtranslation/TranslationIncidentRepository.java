@@ -16,6 +16,17 @@ public interface TranslationIncidentRepository
     extends JpaRepository<TranslationIncident, Long>,
         JpaSpecificationExecutor<TranslationIncident> {
 
+  Optional<TranslationIncident> findByActiveIntakeFingerprint(String fingerprint);
+
+  @org.springframework.data.jpa.repository.Query(
+      "select i from TranslationIncident i where i.selectedTmTextUnitId = :unitId and"
+          + " i.resolvedLocaleId = :localeId and i.status ="
+          + " com.box.l10n.mojito.entity.TranslationIncidentStatus.OPEN order by i.id desc")
+  java.util.List<TranslationIncident> findRecentOpenForString(
+      @org.springframework.data.repository.query.Param("unitId") Long unitId,
+      @org.springframework.data.repository.query.Param("localeId") Long localeId,
+      Pageable pageable);
+
   Optional<TranslationIncident> findByReviewFindingId(String findingId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)

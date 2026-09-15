@@ -3,6 +3,8 @@ package com.box.l10n.mojito.service.review;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.review.ReviewAutomation;
+import com.box.l10n.mojito.entity.review.ReviewAutomation.IncidentScope;
+import com.box.l10n.mojito.entity.review.ReviewAutomation.ReviewSource;
 import com.box.l10n.mojito.entity.review.ReviewFeature;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserService;
@@ -141,7 +143,14 @@ public class ReviewAutomationService {
                   normalizeAssignTranslator(
                       automation != null ? automation.getAssignTranslator() : null, true),
                   featureNamesByAutomationId.getOrDefault(row.id(), List.of()),
-                  automation != null ? automation.getExcludedLocaleTags() : List.of());
+                  automation != null ? automation.getExcludedLocaleTags() : List.of(),
+                  automation != null
+                      ? automation.getReviewSource()
+                      : ReviewSource.CURRENT_TRANSLATIONS,
+                  automation != null ? automation.getIncidentReviewType() : null,
+                  automation != null
+                      ? automation.getIncidentScope()
+                      : IncidentScope.REVIEW_FEATURES);
             })
         .toList();
   }
@@ -179,7 +188,10 @@ public class ReviewAutomationService {
         loadTriggerStatusByAutomationId(List.of(reviewAutomation.getId()))
             .getOrDefault(reviewAutomation.getId(), defaultTriggerStatusView()),
         features,
-        reviewAutomation.getExcludedLocaleTags());
+        reviewAutomation.getExcludedLocaleTags(),
+        reviewAutomation.getReviewSource(),
+        reviewAutomation.getIncidentReviewType(),
+        reviewAutomation.getIncidentScope());
   }
 
   @Transactional(readOnly = true)
@@ -205,6 +217,66 @@ public class ReviewAutomationService {
       Boolean assignTranslator,
       List<Long> featureIds,
       List<String> excludedLocaleTags) {
+    return createReviewAutomation(
+        name,
+        enabled,
+        cronExpression,
+        timeZone,
+        teamId,
+        dueDateOffsetDays,
+        maxWordCountPerProject,
+        assignTranslator,
+        featureIds,
+        excludedLocaleTags,
+        null,
+        null);
+  }
+
+  @Transactional
+  public ReviewAutomationDetail createReviewAutomation(
+      String name,
+      Boolean enabled,
+      String cronExpression,
+      String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
+      Integer maxWordCountPerProject,
+      Boolean assignTranslator,
+      List<Long> featureIds,
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType) {
+    return createReviewAutomation(
+        name,
+        enabled,
+        cronExpression,
+        timeZone,
+        teamId,
+        dueDateOffsetDays,
+        maxWordCountPerProject,
+        assignTranslator,
+        featureIds,
+        excludedLocaleTags,
+        reviewSource,
+        incidentReviewType,
+        null);
+  }
+
+  @Transactional
+  public ReviewAutomationDetail createReviewAutomation(
+      String name,
+      Boolean enabled,
+      String cronExpression,
+      String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
+      Integer maxWordCountPerProject,
+      Boolean assignTranslator,
+      List<Long> featureIds,
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {
     requireAdmin();
     String normalizedName = normalizeName(name);
     ensureNameAvailable(normalizedName, null);
@@ -221,6 +293,7 @@ public class ReviewAutomationService {
         normalizeMaxWordCountPerProject(maxWordCountPerProject));
     reviewAutomation.setAssignTranslator(normalizeAssignTranslator(assignTranslator, true));
     reviewAutomation.setExcludedLocaleTags(normalizeExcludedLocaleTags(excludedLocaleTags));
+    applyReviewSource(reviewAutomation, reviewSource, incidentReviewType, incidentScope);
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
     ReviewAutomation saved = reviewAutomationRepository.save(reviewAutomation);
     syncSchedulerAfterCommit();
@@ -240,6 +313,70 @@ public class ReviewAutomationService {
       Boolean assignTranslator,
       List<Long> featureIds,
       List<String> excludedLocaleTags) {
+    return updateReviewAutomation(
+        automationId,
+        name,
+        enabled,
+        cronExpression,
+        timeZone,
+        teamId,
+        dueDateOffsetDays,
+        maxWordCountPerProject,
+        assignTranslator,
+        featureIds,
+        excludedLocaleTags,
+        null,
+        null);
+  }
+
+  @Transactional
+  public ReviewAutomationDetail updateReviewAutomation(
+      Long automationId,
+      String name,
+      Boolean enabled,
+      String cronExpression,
+      String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
+      Integer maxWordCountPerProject,
+      Boolean assignTranslator,
+      List<Long> featureIds,
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType) {
+    return updateReviewAutomation(
+        automationId,
+        name,
+        enabled,
+        cronExpression,
+        timeZone,
+        teamId,
+        dueDateOffsetDays,
+        maxWordCountPerProject,
+        assignTranslator,
+        featureIds,
+        excludedLocaleTags,
+        reviewSource,
+        incidentReviewType,
+        null);
+  }
+
+  @Transactional
+  public ReviewAutomationDetail updateReviewAutomation(
+      Long automationId,
+      String name,
+      Boolean enabled,
+      String cronExpression,
+      String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
+      Integer maxWordCountPerProject,
+      Boolean assignTranslator,
+      List<Long> featureIds,
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {
     requireAdmin();
     ReviewAutomation reviewAutomation =
         reviewAutomationRepository
@@ -264,6 +401,7 @@ public class ReviewAutomationService {
     if (excludedLocaleTags != null) {
       reviewAutomation.setExcludedLocaleTags(normalizeExcludedLocaleTags(excludedLocaleTags));
     }
+    applyReviewSource(reviewAutomation, reviewSource, incidentReviewType, incidentScope);
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
     reviewAutomationRepository.save(reviewAutomation);
     syncSchedulerAfterCommit();
@@ -354,6 +492,8 @@ public class ReviewAutomationService {
         reviewAutomation.setExcludedLocaleTags(
             normalizeExcludedLocaleTags(row.excludedLocaleTags()));
       }
+      applyReviewSource(
+          reviewAutomation, row.reviewSource(), row.incidentReviewType(), row.incidentScope());
       reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
       ReviewAutomation saved = reviewAutomationRepository.save(reviewAutomation);
       retainedIds.add(saved.getId());
@@ -476,7 +616,10 @@ public class ReviewAutomationService {
                     normalizeAssignTranslator(row.assignTranslator(), true),
                     triggerStatusByAutomationId.getOrDefault(row.id(), defaultTriggerStatusView()),
                     row.featureCount(),
-                    featuresByAutomationId.getOrDefault(row.id(), List.of())))
+                    featuresByAutomationId.getOrDefault(row.id(), List.of()),
+                    row.reviewSource(),
+                    row.incidentReviewType(),
+                    row.incidentScope()))
         .toList();
   }
 
@@ -695,6 +838,41 @@ public class ReviewAutomationService {
     return List.copyOf(normalized);
   }
 
+  private void applyReviewSource(
+      ReviewAutomation automation,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {
+    ReviewSource effectiveSource =
+        reviewSource == null ? automation.getReviewSource() : reviewSource;
+    if (effectiveSource == ReviewSource.INCIDENTS
+        && automation.getMaxWordCountPerProject() > 100000) {
+      throw new IllegalArgumentException(
+          "Incident review projects must contain at most 100000 source words");
+    }
+    if (incidentScope != null) {
+      automation.setIncidentScope(incidentScope);
+    } else if (automation.getId() == null && effectiveSource == ReviewSource.INCIDENTS) {
+      automation.setIncidentScope(IncidentScope.ALL);
+    }
+    if (reviewSource != null) {
+      automation.setReviewSource(reviewSource);
+    }
+    if (automation.getReviewSource() == ReviewSource.CURRENT_TRANSLATIONS) {
+      automation.setIncidentReviewType(null);
+    } else if (reviewSource != null || incidentReviewType != null) {
+      String normalized = incidentReviewType == null ? null : incidentReviewType.trim();
+      if (normalized != null
+          && !normalized.isEmpty()
+          && (normalized.length() > 64 || !normalized.matches("[A-Z][A-Z0-9_]*"))) {
+        throw new IllegalArgumentException(
+            "Incident review type must be an uppercase identifier up to 64 characters");
+      }
+      automation.setIncidentReviewType(
+          normalized == null || normalized.isEmpty() ? null : normalized);
+    }
+  }
+
   private void requireAdmin() {
     if (!userService.isCurrentUserAdmin()) {
       throw new AccessDeniedException("Admin role required");
@@ -715,7 +893,10 @@ public class ReviewAutomationService {
       boolean assignTranslator,
       ReviewAutomationTriggerStatusView trigger,
       List<FeatureRef> features,
-      List<String> excludedLocaleTags) {
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {
     public record TeamRef(Long id, String name) {}
 
     public record FeatureRef(Long id, String name) {}
@@ -734,7 +915,10 @@ public class ReviewAutomationService {
       int maxWordCountPerProject,
       boolean assignTranslator,
       List<String> featureNames,
-      List<String> excludedLocaleTags) {}
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {}
 
   public record BatchUpsertRow(
       Long id,
@@ -747,7 +931,39 @@ public class ReviewAutomationService {
       Integer maxWordCountPerProject,
       Boolean assignTranslator,
       List<Long> featureIds,
-      List<String> excludedLocaleTags) {}
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {
+    public BatchUpsertRow(
+        Long id,
+        String name,
+        Boolean enabled,
+        String cronExpression,
+        String timeZone,
+        Long teamId,
+        Integer dueDateOffsetDays,
+        Integer maxWordCountPerProject,
+        Boolean assignTranslator,
+        List<Long> featureIds,
+        List<String> excludedLocaleTags) {
+      this(
+          id,
+          name,
+          enabled,
+          cronExpression,
+          timeZone,
+          teamId,
+          dueDateOffsetDays,
+          maxWordCountPerProject,
+          assignTranslator,
+          featureIds,
+          excludedLocaleTags,
+          null,
+          null,
+          null);
+    }
+  }
 
   public enum BatchUpsertMode {
     MERGE,

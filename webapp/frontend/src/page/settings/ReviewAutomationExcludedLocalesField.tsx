@@ -11,19 +11,22 @@ export function ReviewAutomationExcludedLocalesField({
   selectedTags,
   onChange,
   disabled = false,
+  allRepositories = false,
 }: {
   featureIds: number[];
   selectedTags: string[];
   onChange: (tags: string[]) => void;
   disabled?: boolean;
+  allRepositories?: boolean;
 }) {
   const [showAllLocales, setShowAllLocales] = useState(false);
+  const allLocales = allRepositories || showAllLocales;
   const localesQuery = useLocales();
   const sortedFeatureIds = [...new Set(featureIds)].sort((a, b) => a - b);
   const featureLocalesQuery = useQuery({
     queryKey: ['review-features', 'locales', sortedFeatureIds],
     queryFn: () => fetchReviewFeatureLocales(sortedFeatureIds),
-    enabled: sortedFeatureIds.length > 0,
+    enabled: !allRepositories && sortedFeatureIds.length > 0,
     staleTime: 30_000,
   });
   const resolveLocaleName = useLocaleDisplayNameResolver();
@@ -31,7 +34,7 @@ export function ReviewAutomationExcludedLocalesField({
     () =>
       [
         ...new Set([
-          ...(showAllLocales
+          ...(allLocales
             ? (localesQuery.data ?? []).map((locale) => locale.bcp47Tag)
             : (featureLocalesQuery.data ?? [])),
           ...selectedTags,
@@ -39,7 +42,7 @@ export function ReviewAutomationExcludedLocalesField({
       ]
         .sort((first, second) => first.localeCompare(second))
         .map((tag) => ({ tag, label: resolveLocaleName(tag) })),
-    [featureLocalesQuery.data, localesQuery.data, resolveLocaleName, selectedTags, showAllLocales],
+    [featureLocalesQuery.data, localesQuery.data, resolveLocaleName, selectedTags, allLocales],
   );
 
   return (
@@ -55,33 +58,40 @@ export function ReviewAutomationExcludedLocalesField({
         buttonAriaLabel="Select excluded locales"
         showSelectionPresets
         showAllSelectedSummary={false}
-        customActions={[
-          {
-            label: showAllLocales ? 'Show feature locales' : 'Show all locales',
-            ariaLabel: showAllLocales
-              ? 'Show locales used by selected review features'
-              : 'Show all available locales',
-            onClick: () => setShowAllLocales((current) => !current),
-          },
-        ]}
+        customActions={
+          allRepositories
+            ? []
+            : [
+                {
+                  label: showAllLocales ? 'Show feature locales' : 'Show all locales',
+                  ariaLabel: showAllLocales
+                    ? 'Show locales used by selected review features'
+                    : 'Show all available locales',
+                  onClick: () => setShowAllLocales((current) => !current),
+                },
+              ]
+        }
       />
       <p className="settings-hint">
         These languages are skipped when this automation creates review projects. Leave empty to
-        include all locales from its review features.
+        include{' '}
+        {allRepositories ? 'all eligible locales.' : 'all locales from its review features.'}
       </p>
       <p className="settings-hint">
-        {showAllLocales
-          ? 'Showing all locales, including languages not yet enabled on these features.'
-          : featureIds.length === 0
-            ? 'Select review features to see their locales, or choose Show all locales.'
-            : 'Showing locales used by the selected review features, plus any current exclusions.'}
+        {allRepositories
+          ? 'Showing all locales. Exclusions apply across all repositories.'
+          : showAllLocales
+            ? 'Showing all locales, including languages not yet enabled on these features.'
+            : featureIds.length === 0
+              ? 'Select review features to see their locales, or choose Show all locales.'
+              : 'Showing locales used by the selected review features, plus any current exclusions.'}
       </p>
-      {(showAllLocales ? localesQuery.isLoading : featureLocalesQuery.isLoading) ? (
+      {(allLocales ? localesQuery.isLoading : featureLocalesQuery.isLoading) ? (
         <p className="settings-hint">Loading locales…</p>
       ) : null}
-      {(showAllLocales ? localesQuery.isError : featureLocalesQuery.isError) ? (
+      {(allLocales ? localesQuery.isError : featureLocalesQuery.isError) ? (
         <p className="settings-hint is-error">
-          {showAllLocales
+          {allLocales
             ? 'Could not load available locales.'
             : 'Could not load feature locales. Choose Show all locales to use the full list.'}
         </p>

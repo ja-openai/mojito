@@ -17,7 +17,8 @@ public class CreateIncidentMcpTool
       new McpToolDescriptor(
           "bad_translation.create_incident",
           "Create translation incident",
-          "Create a persisted translation incident from a string id and observed locale so Mojito can store lookup context before any rejection decision.",
+          "Create a persisted translation incident from a string id and observed locale so Mojito"
+              + " can store lookup context before any rejection decision.",
           false,
           false,
           List.of(
@@ -37,6 +38,20 @@ public class CreateIncidentMcpTool
               new McpToolParameter(
                   "sourceReference",
                   "Optional build URL or operator reference string captured with the incident.",
+                  false),
+              new McpToolParameter(
+                  "teamId",
+                  "Optional owning review team. Set this to honor that team's prior human"
+                      + " decisions; omitted reports are unscoped.",
+                  false,
+                  Long.class),
+              new McpToolParameter(
+                  "reviewType", "Review type, defaults to TRANSLATION_QUALITY.", false),
+              new McpToolParameter(
+                  "concernKey",
+                  "Optional stable rule/concern identifier for this specific defect. Reuse across"
+                      + " scans; distinct defects must use distinct keys. Otherwise normalized"
+                      + " reason identifies the concern.",
                   false)));
 
   private final TranslationIncidentService translationIncidentService;

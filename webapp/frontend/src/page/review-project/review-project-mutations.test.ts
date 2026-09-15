@@ -1347,6 +1347,80 @@ describe('Agent feedback acknowledgements', () => {
     disposition: 'ROUTED',
     stale: false,
   };
+  it.each([true, false])(
+    'only acknowledges the direct successor when editing a reviewed incident: %s',
+    async (matches) => {
+      const nextVariant = {
+        id: 32,
+        content: 'Pagar agora',
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+        comment: null,
+      };
+      const updated = {
+        ...textUnit,
+        reviewStateRevision: 'new-round-row',
+        currentTmTextUnitVariant: nextVariant,
+        reviewProjectTextUnitDecision: {
+          decisionState: 'DECIDED' as const,
+          decisionTmTextUnitVariant: nextVariant,
+          notes: null,
+        },
+        agentReview: {
+          ...context,
+          proposalId: 92,
+          previousProposalId: matches ? 91 : 90,
+          proposalRevision: 2,
+          lastFeedbackRequestId: 'edit-key',
+        },
+      };
+      saveReviewProjectTextUnitDecisionMock.mockResolvedValue(updated);
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], project);
+      const { result } = renderMutationsHook(queryClient);
+      const reopenAgentReview = {
+        requestKey: 'reopen-key',
+        expectedProposalVersion: 2,
+        expectedCurrentVariantId: null,
+        expectedSource: 'Pay now',
+        expectedSourceComment: null,
+        expectedCurrentTarget: null,
+        expectedCurrentStatus: null,
+        expectedCurrentIncludedInLocalizedFile: null,
+      };
+      act(() => {
+        result.current.onRequestSaveDecision({
+          textUnitId: textUnit.id,
+          tmTextUnitId: null,
+          target: nextVariant.content,
+          comment: null,
+          status: 'APPROVED',
+          includedInLocalizedFile: true,
+          decisionState: 'DECIDED',
+          expectedReviewStateRevision: textUnit.reviewStateRevision,
+          agentReview: { ...agentReview, action: 'ACCEPT', requestId: 'edit-key' },
+          reopenAgentReview,
+        });
+      });
+      await waitFor(() =>
+        expect(result.current.actionState.phase).toBe(matches ? 'succeeded' : 'failed'),
+      );
+      expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledWith(
+        expect.objectContaining({ reopenAgentReview }),
+      );
+      const cached = queryClient.getQueryData<ApiReviewProjectDetail>([
+        ...REVIEW_PROJECT_DETAIL_QUERY_KEY,
+        project.id,
+      ]);
+      if (matches) {
+        expect(cached?.reviewProjectTextUnits?.[0]).toEqual(updated);
+      } else {
+        expect(cached).toEqual(project);
+      }
+    },
+  );
   it('requires the exact feedback request acknowledgement before reporting success', async () => {
     saveAgentReviewOutcomeMock.mockResolvedValue({
       ...textUnit,

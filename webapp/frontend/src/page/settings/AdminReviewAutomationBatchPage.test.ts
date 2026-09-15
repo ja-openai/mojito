@@ -60,6 +60,35 @@ describe('formatReviewAutomationBatchRow', () => {
 });
 
 describe('parseReviewAutomationBatchInput', () => {
+  it('round-trips explicit all-incident scope and preserves omitted legacy scope', () => {
+    expect(
+      parseRows('Mobile | | INCIDENTS | TRANSLATION_QUALITY')[0].incidentScope,
+    ).toBeUndefined();
+    const [row] = parseRows('Mobile | he | INCIDENTS | TRANSLATION_QUALITY | ALL');
+    expect(row.errors).toEqual([]);
+    expect(row.incidentScope).toBe('ALL');
+    expect(formatReviewAutomationBatchRow(row)).toContain(
+      '| INCIDENTS | TRANSLATION_QUALITY | ALL',
+    );
+    expect(parseRows('Mobile | | INCIDENTS | | UNKNOWN')[0].errors).toContain(
+      'Incident scope must be ALL or REVIEW_FEATURES',
+    );
+  });
+
+  it('preserves omitted source and round-trips incident selection with exclusions', () => {
+    expect(parseRows('Mobile')[0].reviewSource).toBeUndefined();
+    const [row] = parseRows('Mobile | he; fr-CA | INCIDENTS | TERMINOLOGY');
+    expect(row.errors).toEqual([]);
+    expect(row.reviewSource).toBe('INCIDENTS');
+    expect(row.incidentReviewType).toBe('TERMINOLOGY');
+    expect(row.excludedLocaleTags).toEqual(['he', 'fr-CA']);
+    expect(formatReviewAutomationBatchRow(row)).toContain('| he; fr-CA | INCIDENTS | TERMINOLOGY');
+  });
+
+  it('rejects unknown incident source and malformed review type', () => {
+    expect(parseRows('Mobile | | UNKNOWN | bad type')[0].errors).toHaveLength(2);
+  });
+
   it('preserves existing exclusions when the optional column is omitted', () => {
     const [row] = parseRows('Mobile');
 

@@ -7,6 +7,7 @@ import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.agentreview.*;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
@@ -64,6 +65,7 @@ public class AgentReviewService {
   private final AgentReviewRunRepository runs;
   private final AgentReviewProposalRepository proposals;
   private final AgentReviewFeedbackRepository feedback;
+  private final AgentReviewStateService reviewedStates;
   private final RepositoryRepository repositories;
   private final RepositoryLocaleRepository repositoryLocales;
   private final TMTextUnitRepository textUnits;
@@ -82,6 +84,7 @@ public class AgentReviewService {
       AgentReviewRunRepository runs,
       AgentReviewProposalRepository proposals,
       AgentReviewFeedbackRepository feedback,
+      AgentReviewStateService reviewedStates,
       RepositoryRepository repositories,
       RepositoryLocaleRepository repositoryLocales,
       TMTextUnitRepository textUnits,
@@ -96,6 +99,7 @@ public class AgentReviewService {
     this.runs = runs;
     this.proposals = proposals;
     this.feedback = feedback;
+    this.reviewedStates = reviewedStates;
     this.repositories = repositories;
     this.repositoryLocales = repositoryLocales;
     this.textUnits = textUnits;
@@ -133,7 +137,11 @@ public class AgentReviewService {
     require(
         maxWords >= 1 && maxWords <= 100000, "maxWordCountPerProject must be between 1 and 100000");
     jsonText(request.inputManifestJson(), "inputManifestJson", MAX_ARTIFACT_BYTES, true);
-    String fingerprint = fingerprint(request);
+    var createRequestJson = mapper.valueToTree(request);
+    if (request.routingPolicy() == null || request.routingPolicy() == RoutingPolicy.IMMEDIATE) {
+      ((com.fasterxml.jackson.databind.node.ObjectNode) createRequestJson).remove("routingPolicy");
+    }
+    String fingerprint = fingerprint(createRequestJson);
     Long userId = teamService.getCurrentUserIdOrThrow();
     // Serialize creation for the actor so concurrent retries cannot both publish runs/artifacts.
     entityManager.find(User.class, userId, LockModeType.PESSIMISTIC_WRITE);
@@ -166,6 +174,8 @@ public class AgentReviewService {
     run.setDueDateOffsetDays(dueDays);
     run.setMaxWordCountPerProject(maxWords);
     run.setAssignTranslator(request.assignTranslator() == null || request.assignTranslator());
+    run.setRoutingPolicy(
+        request.routingPolicy() == null ? RoutingPolicy.IMMEDIATE : request.routingPolicy());
     // Save a non-null temporary hash to allocate the id; rollback leaves no readable half-run.
     run.setManifestSha256("pending");
     runs.saveAndFlush(run);
@@ -333,6 +343,26 @@ public class AgentReviewService {
                   .noneMatch(g -> g.status() == GroupStatus.IN_PROGRESS),
           "Every group needs a completed, failed, or missing-input checkpoint before finishing");
     }
+    if (request.cancel()) {
+      List<AgentReviewProposal> drafts =
+          proposals.findByRunIdOrderByIdAsc(runId).stream()
+              .filter(
+                  p ->
+                      p.getDisposition() == Disposition.OPEN
+                          && p.getReviewProjectTextUnitId() == null)
+              .toList();
+      drafts.stream()
+          .map(AgentReviewProposal::getTmTextUnitId)
+          .distinct()
+          .sorted()
+          .forEach(
+              id ->
+                  textUnits
+                      .findById(id)
+                      .ifPresent(
+                          unit -> entityManager.refresh(unit, LockModeType.PESSIMISTIC_WRITE)));
+      drafts.forEach(AgentReviewProposal::releaseActiveIntakeFingerprint);
+    }
     run.setStatus(
         request.cancel()
             ? RunStatus.CANCELLED
@@ -414,6 +444,14 @@ public class AgentReviewService {
       sameFingerprint(existing.getRequestFingerprint(), fingerprint);
       return existing;
     }
+    String submissionId = sha256(runId + ":" + request.submissionKey());
+    AgentReviewSubmission alias = entityManager.find(AgentReviewSubmission.class, submissionId);
+    if (alias != null) {
+      sameFingerprint(alias.getRequestFingerprint(), fingerprint);
+      return proposals
+          .findById(alias.getProposalId())
+          .orElseThrow(() -> missing("Previously submitted proposal"));
+    }
     Group group = group(run, request.groupKey());
     require(
         group.tmTextUnitIds().contains(request.tmTextUnitId()),
@@ -427,6 +465,11 @@ public class AgentReviewService {
           proposals
               .findForUpdateById(request.previousProposalId())
               .orElseThrow(() -> missing("Previous proposal"));
+      int previousRevision = previous.getProposalRevision();
+      if (proposals.findByFindingIdOrderByProposalRevisionAsc(previous.getFindingId()).stream()
+          .anyMatch(candidate -> candidate.getProposalRevision() > previousRevision)) {
+        conflict("A newer review round already exists for this finding");
+      }
       AgentReviewRun previousRun = readRun(previous.getRunId());
       assertSameWorkflow(run, previousRun);
       require(
@@ -446,6 +489,17 @@ public class AgentReviewService {
     } else {
       require(
           request.respondsToFeedbackId() == null, "Feedback response requires previousProposalId");
+      assertNotAlreadyHumanReviewed(run, request, group);
+      String intake = intakeFingerprint(run, request, group);
+      AgentReviewProposal duplicate = proposals.findByActiveIntakeFingerprint(intake).orElse(null);
+      if (duplicate == null && (request.concernKey() == null || request.concernKey().isBlank())) {
+        duplicate = findLegacyPending(run, request, group, intake);
+      }
+      if (duplicate != null) {
+        entityManager.persist(
+            new AgentReviewSubmission(submissionId, fingerprint, duplicate.getId()));
+        return duplicate;
+      }
     }
     AgentReviewProposal proposal = new AgentReviewProposal();
     proposal.setRunId(runId);
@@ -470,6 +524,7 @@ public class AgentReviewService {
     proposal.setCategory(request.category());
     proposal.setReadiness(request.readiness());
     proposal.setDisposition(Disposition.OPEN);
+    proposal.setIntakeFingerprint(intakeFingerprint(run, request, group));
     proposal.setRationale(request.rationale());
     proposal.setEvidenceJson(request.evidenceJson());
     proposal.setProducerIdentity(request.producerIdentity());
@@ -479,6 +534,8 @@ public class AgentReviewService {
     if (previous != null) {
       advanceFeedbackVersion(previous);
       previous.setDisposition(Disposition.SUPERSEDED);
+      // Release the unique active identity before inserting its successor.
+      proposals.flush();
       proposal.setIncidentId(previous.getIncidentId());
     }
     proposals.saveAndFlush(proposal);
@@ -618,7 +675,10 @@ public class AgentReviewService {
     require(
         request.contextFingerprint().matches("[a-f0-9]{64}"),
         "contextFingerprint must be a SHA-256 hash");
-    String fingerprint = fingerprint(request);
+    var requestJson = mapper.valueToTree(request);
+    ((com.fasterxml.jackson.databind.node.ObjectNode) requestJson)
+        .remove("reviewedStateFingerprint");
+    String fingerprint = fingerprint(requestJson);
     AgentReviewFeedback existing =
         feedback
             .findByProposalIdAndActorTypeAndRequestKey(
@@ -643,16 +703,33 @@ public class AgentReviewService {
         "A human review action is required");
     boolean applies =
         request.action() == FeedbackAction.ACCEPT || request.action() == FeedbackAction.EDIT_ACCEPT;
+    boolean keptWithSavedVariant =
+        request.action() == FeedbackAction.KEEP_CURRENT && request.appliedVariantId() != null;
+    require(
+        request.action() != FeedbackAction.KEEP_CURRENT
+            || request.originalAssessment() != OriginalAssessment.BAD,
+        "Request another fix when the original translation is wrong");
+    // A guarded metadata save retains the translation but may write a new variant. Keep its
+    // exact receipt for retries without describing that metadata change as a translation fix.
+    require(
+        !keptWithSavedVariant
+            || (request.finalTarget() != null
+                && Objects.equals(
+                    NormalizationUtils.normalize(proposal.getBaselineTarget()),
+                    request.finalTarget())
+                && request.reviewedStateFingerprint() != null
+                && request.reviewedStateFingerprint().matches("[a-f0-9]{64}")),
+        "A saved keep-current receipt requires the unchanged target and reviewed state");
     require(
         !applies || (request.finalTarget() != null && request.appliedVariantId() != null),
         "Accepted feedback requires the exact applied target and variant");
     require(
-        applies || request.appliedVariantId() == null,
+        applies || keptWithSavedVariant || request.appliedVariantId() == null,
         "Non-applying decisions must not claim an applied variant");
     boolean followUp =
         request.followUpRequested() || request.action() == FeedbackAction.REQUEST_REVISION;
     require(
-        !applies || !followUp,
+        (!applies && !keptWithSavedVariant) || !followUp,
         "Acceptance resolves this proposal; follow-up requires a separate finding");
     advanceFeedbackVersion(proposal);
     AgentReviewFeedback entry = new AgentReviewFeedback();
@@ -669,6 +746,7 @@ public class AgentReviewService {
     entry.setFollowUpRequested(followUp);
     entry.setFinalTarget(request.finalTarget());
     entry.setAppliedVariantId(request.appliedVariantId());
+    entry.setReviewedStateFingerprint(request.reviewedStateFingerprint());
     proposal.setDisposition(
         followUp
             ? Disposition.FOLLOW_UP
@@ -776,6 +854,7 @@ public class AgentReviewService {
     text(request.baselineStatus(), "baselineStatus", 32, false);
     text(request.proposedTarget(), "proposedTarget", MAX_TEXT_LENGTH, false);
     text(request.rationale(), "rationale", MAX_EVIDENCE_LENGTH, true);
+    text(request.concernKey(), "concernKey", 255, false);
     text(request.producerIdentity(), "producerIdentity", 255, true);
     text(request.verifierIdentity(), "verifierIdentity", 255, false);
     text(request.verificationRationale(), "verificationRationale", MAX_EVIDENCE_LENGTH, false);
@@ -784,6 +863,10 @@ public class AgentReviewService {
     require(
         request.category() != null && request.readiness() != null,
         "category and readiness are required");
+    require(
+        request.readiness() != Readiness.HUMAN_REVIEW
+            && request.category() != Category.HUMAN_REVIEW,
+        "Human review is reserved for explicit incident intake and Review again");
     if (request.readiness() == Readiness.READY) {
       require(
           request.category() != Category.OPTIONAL_IMPROVEMENT,
@@ -796,6 +879,7 @@ public class AgentReviewService {
     }
     TMTextUnit unit =
         textUnits.findById(request.tmTextUnitId()).orElseThrow(() -> bad("String does not exist"));
+    entityManager.refresh(unit, LockModeType.PESSIMISTIC_WRITE);
     require(
         Objects.equals(unit.getAsset().getRepository().getId(), group.repositoryId()),
         "String repository changed");
@@ -831,6 +915,81 @@ public class AgentReviewService {
     // evidence.
     // Human application uses Mojito's guarded correction path and its mandatory integrity
     // validation.
+  }
+
+  /** Human decisions suppress fresh reports of the exact reviewed state across runs. */
+  private void assertNotAlreadyHumanReviewed(
+      AgentReviewRun run, SubmitProposalRequest request, Group group) {
+    String state =
+        AgentReviewStateFingerprint.of(
+            request.tmTextUnitId(),
+            group.localeId(),
+            request.source(),
+            request.sourceComment(),
+            request.baselineVariantId(),
+            request.baselineTarget(),
+            request.baselineStatus(),
+            request.baselineIncludedInLocalizedFile());
+    if (reviewedStates.isReviewed(run.getTeamId(), run.getReviewType(), state)) {
+      conflict(
+          "This exact translation has already been reviewed by a human. Use Review again for an"
+              + " explicit new round.");
+    }
+  }
+
+  private String intakeFingerprint(AgentReviewRun run, SubmitProposalRequest request, Group group) {
+    return AgentReviewStateFingerprint.finding(
+        run.getTeamId(),
+        run.getReviewType(),
+        AgentReviewStateFingerprint.of(
+            request.tmTextUnitId(),
+            group.localeId(),
+            request.source(),
+            request.sourceComment(),
+            request.baselineVariantId(),
+            request.baselineTarget(),
+            request.baselineStatus(),
+            request.baselineIncludedInLocalizedFile()),
+        request.concernKey(),
+        request.rationale());
+  }
+
+  private AgentReviewProposal findLegacyPending(
+      AgentReviewRun run, SubmitProposalRequest request, Group group, String intake) {
+    for (Disposition disposition :
+        List.of(Disposition.OPEN, Disposition.ROUTED, Disposition.FOLLOW_UP)) {
+      for (AgentReviewProposal candidate :
+          proposals.findRecentPendingForString(
+              request.tmTextUnitId(), group.localeId(), disposition, PageRequest.of(0, 100))) {
+        if (candidate.getIntakeFingerprint() != null) continue;
+        AgentReviewRun owner = runs.findById(candidate.getRunId()).orElse(null);
+        if (owner == null
+            || !Objects.equals(owner.getTeamId(), run.getTeamId())
+            || !Objects.equals(owner.getReviewType(), run.getReviewType())) continue;
+        String candidateState =
+            AgentReviewStateFingerprint.of(
+                candidate.getTmTextUnitId(),
+                candidate.getLocaleId(),
+                candidate.getSource(),
+                candidate.getSourceComment(),
+                candidate.getBaselineVariantId(),
+                candidate.getBaselineTarget(),
+                candidate.getBaselineStatus(),
+                candidate.getBaselineIncludedInLocalizedFile());
+        if (intake.equals(
+            AgentReviewStateFingerprint.finding(
+                owner.getTeamId(),
+                owner.getReviewType(),
+                candidateState,
+                null,
+                candidate.getRationale()))) {
+          candidate.setIntakeFingerprint(intake);
+          proposals.flush();
+          return candidate;
+        }
+      }
+    }
+    return null;
   }
 
   private AgentReviewFeedback pendingResponse(Long feedbackId, AgentReviewProposal proposal) {
@@ -985,7 +1144,8 @@ public class AgentReviewService {
         run.getMaxWordCountPerProject(),
         run.getAssignTranslator(),
         run.getCreatedDate(),
-        run.getCompletedAt());
+        run.getCompletedAt(),
+        run.getRoutingPolicy());
   }
 
   private RunView view(AgentReviewRun run) {
@@ -1014,7 +1174,8 @@ public class AgentReviewService {
         run.getMaxWordCountPerProject(),
         run.getAssignTranslator(),
         run.getCreatedDate(),
-        run.getCompletedAt());
+        run.getCompletedAt(),
+        run.getRoutingPolicy());
   }
 
   private record ArtifactContent(String contentType, String contentBase64) {}
@@ -1075,6 +1236,9 @@ public class AgentReviewService {
   private String fingerprintWithoutClaim(Object value) {
     var tree = mapper.valueToTree(value);
     ((com.fasterxml.jackson.databind.node.ObjectNode) tree).remove("claim");
+    if (value instanceof SubmitProposalRequest request && request.concernKey() == null) {
+      ((com.fasterxml.jackson.databind.node.ObjectNode) tree).remove("concernKey");
+    }
     return sha256(json(tree));
   }
 

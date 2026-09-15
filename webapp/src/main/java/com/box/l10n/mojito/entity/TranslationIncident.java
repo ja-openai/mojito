@@ -5,10 +5,60 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "translation_incident")
 public class TranslationIncident extends AuditableEntity {
+
+  @Column(name = "intake_fingerprint", length = 64)
+  private String intakeFingerprint;
+
+  @Column(name = "active_intake_fingerprint", length = 64, unique = true)
+  private String activeIntakeFingerprint;
+
+  @Column(name = "review_team_id")
+  private Long reviewTeamId;
+
+  @Column(name = "selected_source_comment", length = Integer.MAX_VALUE)
+  private String selectedSourceComment;
+
+  public Long getReviewTeamId() {
+    return reviewTeamId;
+  }
+
+  public void setReviewTeamId(Long value) {
+    reviewTeamId = value;
+  }
+
+  public String getSelectedSourceComment() {
+    return selectedSourceComment;
+  }
+
+  public void setSelectedSourceComment(String value) {
+    selectedSourceComment = value;
+  }
+
+  public String getIntakeFingerprint() {
+    return intakeFingerprint;
+  }
+
+  public String getActiveIntakeFingerprint() {
+    return activeIntakeFingerprint;
+  }
+
+  public void setIntakeFingerprint(String value) {
+    intakeFingerprint = value;
+    activeIntakeFingerprint = status == TranslationIncidentStatus.OPEN ? value : null;
+  }
+
+  @Version
+  @Column(name = "version", nullable = false)
+  private long version;
+
+  public long getVersion() {
+    return version;
+  }
 
   @Column(name = "review_type", length = 64)
   private String reviewType;
@@ -212,6 +262,7 @@ public class TranslationIncident extends AuditableEntity {
 
   public void setStatus(TranslationIncidentStatus status) {
     this.status = status;
+    activeIntakeFingerprint = status == TranslationIncidentStatus.OPEN ? intakeFingerprint : null;
   }
 
   public TranslationIncidentResolution getResolution() {

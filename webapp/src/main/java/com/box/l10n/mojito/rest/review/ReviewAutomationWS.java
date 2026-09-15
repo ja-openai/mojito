@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.rest.review;
 
+import com.box.l10n.mojito.entity.review.ReviewAutomation.IncidentScope;
+import com.box.l10n.mojito.entity.review.ReviewAutomation.ReviewSource;
 import com.box.l10n.mojito.service.review.ReviewAutomationCronSchedulerService;
 import com.box.l10n.mojito.service.review.ReviewAutomationRunService;
 import com.box.l10n.mojito.service.review.ReviewAutomationSchedulerService;
@@ -59,7 +61,10 @@ public class ReviewAutomationWS {
         boolean assignTranslator,
         TriggerStatusRef trigger,
         long featureCount,
-        List<FeatureRef> features) {}
+        List<FeatureRef> features,
+        ReviewSource reviewSource,
+        String incidentReviewType,
+        IncidentScope incidentScope) {}
   }
 
   public record ReviewAutomationResponse(
@@ -76,7 +81,10 @@ public class ReviewAutomationWS {
       boolean assignTranslator,
       TriggerStatusRef trigger,
       List<FeatureRef> features,
-      List<String> excludedLocaleTags) {}
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {}
 
   public record FeatureRef(Long id, String name) {}
 
@@ -101,7 +109,10 @@ public class ReviewAutomationWS {
       Integer maxWordCountPerProject,
       Boolean assignTranslator,
       List<Long> featureIds,
-      List<String> excludedLocaleTags) {}
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {}
 
   public record BatchUpsertReviewAutomationsRequest(
       ReviewAutomationService.BatchUpsertMode mode, List<BatchRow> rows) {
@@ -116,7 +127,10 @@ public class ReviewAutomationWS {
         Integer maxWordCountPerProject,
         Boolean assignTranslator,
         List<Long> featureIds,
-        List<String> excludedLocaleTags) {}
+        List<String> excludedLocaleTags,
+        ReviewSource reviewSource,
+        String incidentReviewType,
+        IncidentScope incidentScope) {}
   }
 
   public record ReviewAutomationOptionResponse(Long id, String name, boolean enabled) {}
@@ -132,7 +146,10 @@ public class ReviewAutomationWS {
       int maxWordCountPerProject,
       boolean assignTranslator,
       List<String> featureNames,
-      List<String> excludedLocaleTags) {}
+      List<String> excludedLocaleTags,
+      ReviewSource reviewSource,
+      String incidentReviewType,
+      IncidentScope incidentScope) {}
 
   public record RunAutomationResponse(
       Long runId,
@@ -222,7 +239,10 @@ public class ReviewAutomationWS {
                     row.maxWordCountPerProject(),
                     row.assignTranslator(),
                     row.featureNames(),
-                    row.excludedLocaleTags()))
+                    row.excludedLocaleTags(),
+                    row.reviewSource(),
+                    row.incidentReviewType(),
+                    row.incidentScope()))
         .toList();
   }
 
@@ -341,7 +361,10 @@ public class ReviewAutomationWS {
               request != null ? request.maxWordCountPerProject() : null,
               request != null ? request.assignTranslator() : null,
               request != null ? request.featureIds() : List.of(),
-              request != null ? request.excludedLocaleTags() : null));
+              request != null ? request.excludedLocaleTags() : null,
+              request != null ? request.reviewSource() : null,
+              request != null ? request.incidentReviewType() : null,
+              request != null ? request.incidentScope() : null));
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
@@ -363,7 +386,10 @@ public class ReviewAutomationWS {
               request != null ? request.maxWordCountPerProject() : null,
               request != null ? request.assignTranslator() : null,
               request != null ? request.featureIds() : List.of(),
-              request != null ? request.excludedLocaleTags() : null));
+              request != null ? request.excludedLocaleTags() : null,
+              request != null ? request.reviewSource() : null,
+              request != null ? request.incidentReviewType() : null,
+              request != null ? request.incidentScope() : null));
     } catch (IllegalArgumentException ex) {
       HttpStatus status =
           ex.getMessage() != null && ex.getMessage().startsWith("Review automation not found:")
@@ -405,7 +431,10 @@ public class ReviewAutomationWS {
                                   row.maxWordCountPerProject(),
                                   row.assignTranslator(),
                                   row.featureIds(),
-                                  row.excludedLocaleTags()))
+                                  row.excludedLocaleTags(),
+                                  row.reviewSource(),
+                                  row.incidentReviewType(),
+                                  row.incidentScope()))
                       .toList(),
               request == null ? null : request.mode());
       return new BatchUpsertReviewAutomationsResponse(
@@ -433,7 +462,10 @@ public class ReviewAutomationWS {
         view.featureCount(),
         view.features().stream()
             .map(feature -> new FeatureRef(feature.id(), feature.name()))
-            .toList());
+            .toList(),
+        view.reviewSource(),
+        view.incidentReviewType(),
+        view.incidentScope());
   }
 
   private ReviewAutomationResponse toDetailResponse(
@@ -454,7 +486,10 @@ public class ReviewAutomationWS {
         detail.features().stream()
             .map(feature -> new FeatureRef(feature.id(), feature.name()))
             .toList(),
-        detail.excludedLocaleTags());
+        detail.excludedLocaleTags(),
+        detail.reviewSource(),
+        detail.incidentReviewType(),
+        detail.incidentScope());
   }
 
   private TriggerStatusRef toTriggerStatusRef(ReviewAutomationTriggerStatusView trigger) {

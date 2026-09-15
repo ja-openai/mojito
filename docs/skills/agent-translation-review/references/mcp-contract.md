@@ -58,6 +58,10 @@ Create a run with:
   2,097,152 characters. The entire stored manifest, including groups and the JSON-string envelope,
   must also fit 2 MiB of UTF-8 bytes. Keep this manifest compact; store larger prepared input bundles
   as artifacts immediately after claiming the run.
+- Optional `routingPolicy`: `IMMEDIATE` (default) creates projects after completed groups;
+  `QUEUED` publishes typed incidents for manual or scheduled incident batches. The batch's project
+  settings apply when it creates projects. The policy is immutable and returned by run inspection
+  and run listings.
 - Optional project defaults: `dueDateOffsetDays` (1–365, default 7), `maxWordCountPerProject`
   (1–100,000, default 1,500), `assignTranslator` (default true).
 
@@ -101,6 +105,20 @@ uncertain batch recoverable on another machine. On resume, page `list_proposals`
 keys against that ledger before repeating work. A successful proposal may exist even when the last
 group checkpoint still says `IN_PROGRESS`. Replace only the claim when replaying a saved payload.
 
+`submit_proposal`/`submit_proposals` accept an optional `concernKey` (up to 255 characters). It is a
+stable issue identity within the exact string/locale/source/context/target state and owning team/type.
+Omitting it falls back to normalized rationale. A duplicate pending finding returns the existing
+proposal, possibly from an earlier run; persist the returned identity. The submission key still
+replays that result after resolution. Distinct concern keys preserve separate findings. A fresh
+submission for an exact state already accepted or kept by this team/type returns a conflict directing
+the caller to **Review again**; do not endlessly retry that conflict. Changed translation state is
+eligible again. Legacy receipts are not invented from old baselines.
+
+Generic `bad_translation.create_incident` also accepts optional `teamId`, `reviewType` and `concernKey`; supply the
+reviewing team to participate in its reviewed-state suppression. Omitted team means unscoped intake.
+That path and agent routing share indexed incident reuse. These identities are independent of whether
+a Review Project remains open.
+
 Checkpoint shape:
 
 ```json
@@ -133,6 +151,9 @@ the claim. Claim fields are excluded from proposal/checkpoint idempotency finger
 Routing runs after successful claim/checkpoint/finish and can also be retried explicitly. The
 `routing` object has `runId`, `projectIds`, `proposalCount`, `skippedCount`, and `errors`. Check
 `errors` even when the tool succeeded: committed review progress survives a routing failure.
+For `QUEUED` runs, routing publishes eligible incidents without creating projects. Use the
+**Incidents** review source in Create review project or review automation to batch them later;
+repeated routing does not duplicate their incident identity.
 
 ## Findings, revisions, and feedback
 

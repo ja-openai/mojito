@@ -5,6 +5,7 @@ import java.util.List;
 /** Immutable proposal context alongside the current editable Review Project row. */
 public record AgentReviewProposalView(
     Long proposalId,
+    Long previousProposalId,
     int proposalRevision,
     long proposalVersion,
     String findingId,
@@ -22,6 +23,8 @@ public record AgentReviewProposalView(
     String disposition,
     boolean stale,
     String lastFeedbackRequestId,
-    boolean canReconsider) {
+    boolean canReconsider,
+    boolean canReviewAgain,
+    Long nextReviewProjectId) {
   public record Evidence(String label, String url) {}
 }

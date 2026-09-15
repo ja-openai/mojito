@@ -37,7 +37,19 @@ public class TranslationIncidentService {
       String observedLocale,
       String repository,
       String reason,
-      String sourceReference) {}
+      String sourceReference,
+      Long teamId,
+      String reviewType,
+      String concernKey) {
+    public CreateIncidentRequest(
+        String stringId,
+        String observedLocale,
+        String repository,
+        String reason,
+        String sourceReference) {
+      this(stringId, observedLocale, repository, reason, sourceReference, null, null, null);
+    }
+  }
 
   public record RejectIncidentRequest(String comment) {}
 
@@ -180,6 +192,8 @@ public class TranslationIncidentService {
   private final AuditorAwareImpl auditorAwareImpl;
   private final ServerConfig serverConfig;
   private final ObjectMapper objectMapper;
+  private final TranslationIncidentIntakeService intake;
+  private final com.box.l10n.mojito.service.team.TeamService teamService;
 
   public TranslationIncidentService(
       TranslationIncidentRepository translationIncidentRepository,
@@ -192,7 +206,9 @@ public class TranslationIncidentService {
       UserService userService,
       AuditorAwareImpl auditorAwareImpl,
       ServerConfig serverConfig,
-      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper) {
+      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
+      TranslationIncidentIntakeService intake,
+      com.box.l10n.mojito.service.team.TeamService teamService) {
     this.translationIncidentRepository = Objects.requireNonNull(translationIncidentRepository);
     this.badTranslationLookupService = Objects.requireNonNull(badTranslationLookupService);
     this.badTranslationReviewProjectService =
@@ -206,6 +222,8 @@ public class TranslationIncidentService {
     this.auditorAwareImpl = Objects.requireNonNull(auditorAwareImpl);
     this.serverConfig = Objects.requireNonNull(serverConfig);
     this.objectMapper = Objects.requireNonNull(objectMapper);
+    this.intake = Objects.requireNonNull(intake);
+    this.teamService = Objects.requireNonNull(teamService);
   }
 
   @Transactional(readOnly = true)
@@ -254,10 +272,12 @@ public class TranslationIncidentService {
     return toDetail(getIncidentEntity(incidentId));
   }
 
-  @Transactional
+  @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
   public IncidentDetail createIncident(CreateIncidentRequest request) {
     assertCurrentUserCanManageIncidents();
     CreateIncidentRequest validatedRequest = validateCreateRequest(request);
+    if (validatedRequest.teamId() != null)
+      teamService.assertCurrentUserCanAccessTeam(validatedRequest.teamId());
     BadTranslationLookupService.FindTranslationResult lookupResult =
         badTranslationLookupService.findTranslation(
             new BadTranslationLookupService.FindTranslationInput(
@@ -266,6 +286,8 @@ public class TranslationIncidentService {
                 validatedRequest.repository()));
 
     TranslationIncident incident = new TranslationIncident();
+    incident.setReviewTeamId(validatedRequest.teamId());
+    incident.setReviewType(validatedRequest.reviewType());
     incident.setStatus(TranslationIncidentStatus.OPEN);
     incident.setResolution(TranslationIncidentResolution.PENDING_REVIEW);
     incident.setLookupResolutionStatus(lookupResult.resolutionStatus().name());
@@ -296,8 +318,7 @@ public class TranslationIncidentService {
           validatedRequest.sourceReference());
     }
 
-    translationIncidentRepository.save(incident);
-    return toDetail(incident);
+    return toDetail(intake.create(incident, validatedRequest.concernKey()));
   }
 
   @Transactional
@@ -922,12 +943,26 @@ public class TranslationIncidentService {
     if (request == null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "request body is required");
     }
+    String reviewType =
+        com.box.l10n.mojito.service.agentreview.AgentReviewStateFingerprint.reviewType(
+            request.reviewType());
+    if (!reviewType.matches("[A-Z][A-Z0-9_]{0,63}"))
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "reviewType must be an uppercase identifier up to 64 characters");
+    if (request.teamId() != null && request.teamId() <= 0)
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "teamId must be positive");
+    if (request.concernKey() != null && request.concernKey().length() > 255)
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "concernKey must be at most 255 characters");
     return new CreateIncidentRequest(
         requireNonBlank(request.stringId(), "stringId"),
         requireNonBlank(request.observedLocale(), "observedLocale"),
         normalizeOptional(request.repository()),
         requireNonBlank(request.reason(), "reason"),
-        normalizeOptional(request.sourceReference()));
+        normalizeOptional(request.sourceReference()),
+        request.teamId(),
+        reviewType,
+        normalizeOptional(request.concernKey()));
   }
 
   private String requireNonBlank(String value, String fieldName) {

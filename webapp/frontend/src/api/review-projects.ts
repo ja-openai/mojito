@@ -1,6 +1,10 @@
 import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
 import { isTransientHttpError, poll } from '../utils/poller';
-import type { AgentReviewDecision, ApiAgentReviewContext } from './agent-reviews';
+import type {
+  AgentReviewAgainRequest,
+  AgentReviewDecision,
+  ApiAgentReviewContext,
+} from './agent-reviews';
 import type { ApiGlossaryTermEvidence } from './glossaries';
 import {
   type ReviewProjectClientContext,
@@ -980,10 +984,12 @@ export const saveReviewProjectTextUnitDecision = async ({
   overrideChangedCurrent = false,
   decisionNotes,
   agentReview,
+  reopenAgentReview,
 }: {
   textUnitId: number;
   clientContext?: ReviewProjectClientContext;
   agentReview?: AgentReviewDecision;
+  reopenAgentReview?: AgentReviewAgainRequest;
   target: string;
   comment: string | null;
   status: string;
@@ -995,23 +1001,30 @@ export const saveReviewProjectTextUnitDecision = async ({
   /** Reviewer-facing decision note. Send the current value when saving a target should preserve it. */
   decisionNotes?: string | null;
 }): Promise<ApiReviewProjectTextUnit> => {
-  const response = await fetch(`/api/review-project-text-units/${textUnitId}/decision`, {
+  if (reopenAgentReview && (!clientContext?.owner.projectId || !agentReview)) {
+    throw new Error('Project and proposal identity are required to update this review.');
+  }
+  const decision = {
+    clientContext: reviewProjectContextForTransport(clientContext),
+    target,
+    comment,
+    status,
+    includedInLocalizedFile,
+    decisionState,
+    expectedCurrentTmTextUnitVariantId,
+    expectedReviewStateRevision,
+    overrideChangedCurrent,
+    decisionNotes,
+    agentReview,
+  };
+  const url = reopenAgentReview
+    ? `/api/agent-reviews/projects/${clientContext!.owner.projectId}/proposals/${agentReview!.proposalId}/reopen-and-save`
+    : `/api/review-project-text-units/${textUnitId}/decision`;
+  const response = await fetch(url, {
     method: 'POST',
     credentials: 'include',
     headers: jsonHeaders,
-    body: JSON.stringify({
-      clientContext: reviewProjectContextForTransport(clientContext),
-      target,
-      comment,
-      status,
-      includedInLocalizedFile,
-      decisionState,
-      expectedCurrentTmTextUnitVariantId,
-      expectedReviewStateRevision,
-      overrideChangedCurrent,
-      decisionNotes,
-      agentReview,
-    }),
+    body: JSON.stringify(reopenAgentReview ? { reopen: reopenAgentReview, decision } : decision),
   });
 
   const responseClone = response.clone();

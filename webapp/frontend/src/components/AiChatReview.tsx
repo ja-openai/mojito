@@ -26,8 +26,10 @@ type AiChatReviewProps = {
   getSuggestionError?: (suggestion: AiReviewSuggestion) => string | null;
   onRetryError?: () => void;
   onReview?: () => void;
+  allowManualReview?: boolean;
   settings?: AiReviewSettings;
   isResponding: boolean;
+  readOnly?: boolean;
   className?: string;
 };
 
@@ -41,8 +43,10 @@ export function AiChatReview({
   getSuggestionError,
   onRetryError,
   onReview,
+  allowManualReview = false,
   settings,
   isResponding,
+  readOnly = false,
   className,
 }: AiChatReviewProps) {
   const validationId = useId();
@@ -61,7 +65,10 @@ export function AiChatReview({
   const hasInput = input.trim().length > 0;
   const showScore = settings?.showScore ?? true;
   const submitReview =
-    Boolean(onReview) && settings?.automaticDisabled === true && messages.length === 0 && !hasInput;
+    Boolean(onReview) &&
+    (allowManualReview || settings?.automaticDisabled === true) &&
+    messages.length === 0 &&
+    !hasInput;
   const submitDisabled =
     isResponding ||
     (settings ? !settings.ready || settings.isSaving : false) ||
@@ -206,7 +213,7 @@ export function AiChatReview({
                           <button
                             type="button"
                             className="ai-chat-review__button"
-                            disabled={Boolean(suggestionErrors.get(suggestion))}
+                            disabled={readOnly || Boolean(suggestionErrors.get(suggestion))}
                             aria-describedby={
                               suggestionErrors.get(suggestion)
                                 ? `${validationId}-${index}-${suggestionIndex}`

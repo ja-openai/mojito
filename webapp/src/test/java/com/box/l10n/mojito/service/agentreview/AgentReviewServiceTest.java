@@ -211,6 +211,7 @@ public class AgentReviewServiceTest {
             runs,
             proposals,
             feedback,
+            new AgentReviewStateService(feedback),
             repositories,
             repositoryLocales,
             textUnits,
@@ -582,6 +583,59 @@ public class AgentReviewServiceTest {
     assertEquals(Disposition.ROUTED, second.getDisposition());
     verify(variants, never()).save(any());
     verify(textUnits, never()).save(any());
+  }
+
+  @Test
+  public void keptMetadataReceiptRequiresUnchangedTextReviewedStateAndNoFollowUp() {
+    AgentReviewProposal proposal = service.submitProposal(run.id(), proposal("a"));
+    assertBad(
+        () ->
+            service.appendHumanFeedback(
+                human(
+                    proposal, "missing-state", FeedbackAction.KEEP_CURRENT, false, "Ancien", 8L)));
+    assertBad(
+        () ->
+            service.appendHumanFeedback(
+                savedKeep(proposal, "changed-text", "Different", null, false)));
+    assertBad(
+        () ->
+            service.appendHumanFeedback(
+                savedKeep(proposal, "bad-original", "Ancien", OriginalAssessment.BAD, false)));
+    assertBad(
+        () -> service.appendHumanFeedback(savedKeep(proposal, "follow-up", "Ancien", null, true)));
+    assertBad(
+        () ->
+            service.appendHumanFeedback(
+                human(proposal, "defer", FeedbackAction.DEFER, false, "Ancien", 8L)));
+    HumanFeedbackRequest request = savedKeep(proposal, "metadata", "Ancien", null, false);
+    AgentReviewFeedback receipt = service.appendHumanFeedback(request);
+    assertEquals(FeedbackAction.KEEP_CURRENT, receipt.getAction());
+    assertEquals(Long.valueOf(8L), receipt.getAppliedVariantId());
+    assertEquals(Disposition.RESOLVED, proposal.getDisposition());
+    assertEquals(receipt.getId(), service.appendHumanFeedback(request).getId());
+    verify(variants, never()).save(any());
+    verify(textUnits, never()).save(any());
+  }
+
+  private HumanFeedbackRequest savedKeep(
+      AgentReviewProposal proposal,
+      String key,
+      String target,
+      OriginalAssessment assessment,
+      boolean followUp) {
+    return new HumanFeedbackRequest(
+        key,
+        proposal.getId(),
+        proposal.getVersion(),
+        FeedbackAction.KEEP_CURRENT,
+        assessment,
+        null,
+        null,
+        followUp,
+        target,
+        8L,
+        "a".repeat(64),
+        "b".repeat(64));
   }
 
   @Test

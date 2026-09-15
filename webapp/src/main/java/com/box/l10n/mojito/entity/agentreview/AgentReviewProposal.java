@@ -38,6 +38,39 @@ import jakarta.persistence.Version;
           unique = false)
     })
 public class AgentReviewProposal extends AuditableEntity {
+  @Column(name = "intake_fingerprint", length = 64)
+  private String intakeFingerprint;
+
+  @Column(name = "active_intake_fingerprint", length = 64, unique = true)
+  private String activeIntakeFingerprint;
+
+  public String getIntakeFingerprint() {
+    return intakeFingerprint;
+  }
+
+  public String getActiveIntakeFingerprint() {
+    return activeIntakeFingerprint;
+  }
+
+  public void setIntakeFingerprint(String value) {
+    intakeFingerprint = value;
+    refreshActiveIntakeFingerprint();
+  }
+
+  /** Cancellation releases only the live claim, preserving the finding's original identity. */
+  public void releaseActiveIntakeFingerprint() {
+    activeIntakeFingerprint = null;
+  }
+
+  private void refreshActiveIntakeFingerprint() {
+    activeIntakeFingerprint =
+        disposition == Disposition.OPEN
+                || disposition == Disposition.ROUTED
+                || disposition == Disposition.FOLLOW_UP
+            ? intakeFingerprint
+            : null;
+  }
+
   @Column(name = "run_id", nullable = false)
   private Long runId;
 
@@ -301,6 +334,7 @@ public class AgentReviewProposal extends AuditableEntity {
 
   public void setDisposition(Disposition disposition) {
     this.disposition = disposition;
+    refreshActiveIntakeFingerprint();
   }
 
   public String getRationale() {

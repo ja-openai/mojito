@@ -25,7 +25,7 @@ public class ReviewProjectWSCreateTest {
   private final ReviewProjectService reviewProjectService = mock(ReviewProjectService.class);
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final ReviewProjectWS reviewProjectWS =
-      new ReviewProjectWS(reviewProjectService, null, objectMapper, null, null);
+      new ReviewProjectWS(reviewProjectService, null, objectMapper, null, null, null);
 
   @Test
   public void createForwardsOptionalWordLimit() throws Exception {

@@ -34,7 +34,33 @@ public final class AgentReviewContracts {
       String inputManifestJson,
       Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
-      Boolean assignTranslator) {}
+      Boolean assignTranslator,
+      RoutingPolicy routingPolicy) {
+    public CreateRunRequest(
+        String requestKey,
+        String reviewType,
+        Long teamId,
+        String methodVersion,
+        String configurationVersion,
+        List<Group> groups,
+        String inputManifestJson,
+        Integer dueDateOffsetDays,
+        Integer maxWordCountPerProject,
+        Boolean assignTranslator) {
+      this(
+          requestKey,
+          reviewType,
+          teamId,
+          methodVersion,
+          configurationVersion,
+          groups,
+          inputManifestJson,
+          dueDateOffsetDays,
+          maxWordCountPerProject,
+          assignTranslator,
+          null);
+    }
+  }
 
   public record ClaimRequest(String owner, Long expectedGeneration, Integer leaseSeconds) {}
 
@@ -88,7 +114,55 @@ public final class AgentReviewContracts {
       String verificationRationale,
       String integrityDiagnostics,
       Long previousProposalId,
-      Long respondsToFeedbackId) {}
+      Long respondsToFeedbackId,
+      String concernKey) {
+    public SubmitProposalRequest(
+        Claim claim,
+        String submissionKey,
+        String groupKey,
+        Long tmTextUnitId,
+        String source,
+        String sourceComment,
+        Long baselineVariantId,
+        String baselineTarget,
+        String baselineStatus,
+        Boolean baselineIncludedInLocalizedFile,
+        String proposedTarget,
+        Category category,
+        Readiness readiness,
+        String rationale,
+        String evidenceJson,
+        String producerIdentity,
+        String verifierIdentity,
+        String verificationRationale,
+        String integrityDiagnostics,
+        Long previousProposalId,
+        Long respondsToFeedbackId) {
+      this(
+          claim,
+          submissionKey,
+          groupKey,
+          tmTextUnitId,
+          source,
+          sourceComment,
+          baselineVariantId,
+          baselineTarget,
+          baselineStatus,
+          baselineIncludedInLocalizedFile,
+          proposedTarget,
+          category,
+          readiness,
+          rationale,
+          evidenceJson,
+          producerIdentity,
+          verifierIdentity,
+          verificationRationale,
+          integrityDiagnostics,
+          previousProposalId,
+          respondsToFeedbackId,
+          null);
+    }
+  }
 
   public record SubmissionResult(
       int index,
@@ -119,7 +193,35 @@ public final class AgentReviewContracts {
       boolean followUpRequested,
       String finalTarget,
       Long appliedVariantId,
-      String contextFingerprint) {}
+      String contextFingerprint,
+      String reviewedStateFingerprint) {
+    public HumanFeedbackRequest(
+        String requestKey,
+        Long proposalId,
+        long expectedVersion,
+        FeedbackAction action,
+        OriginalAssessment originalAssessment,
+        SuggestionAssessment suggestionAssessment,
+        String explanation,
+        boolean followUpRequested,
+        String finalTarget,
+        Long appliedVariantId,
+        String contextFingerprint) {
+      this(
+          requestKey,
+          proposalId,
+          expectedVersion,
+          action,
+          originalAssessment,
+          suggestionAssessment,
+          explanation,
+          followUpRequested,
+          finalTarget,
+          appliedVariantId,
+          contextFingerprint,
+          null);
+    }
+  }
 
   public record RunView(
       Long id,
@@ -146,7 +248,63 @@ public final class AgentReviewContracts {
       int maxWordCountPerProject,
       boolean assignTranslator,
       ZonedDateTime createdDate,
-      ZonedDateTime completedAt) {}
+      ZonedDateTime completedAt,
+      RoutingPolicy routingPolicy) {
+    public RunView(
+        Long id,
+        String reviewType,
+        Long teamId,
+        List<Long> repositoryIds,
+        List<Long> localeIds,
+        String methodVersion,
+        String configurationVersion,
+        String inputFingerprint,
+        String manifestSha256,
+        RunStatus status,
+        long revision,
+        String claimOwner,
+        long claimGeneration,
+        ZonedDateTime leaseExpiresAt,
+        int plannedGroupCount,
+        int completedGroupCount,
+        int failedGroupCount,
+        int reviewedItemCount,
+        String checkpointSha256,
+        Checkpoint checkpoint,
+        int dueDateOffsetDays,
+        int maxWordCountPerProject,
+        boolean assignTranslator,
+        ZonedDateTime createdDate,
+        ZonedDateTime completedAt) {
+      this(
+          id,
+          reviewType,
+          teamId,
+          repositoryIds,
+          localeIds,
+          methodVersion,
+          configurationVersion,
+          inputFingerprint,
+          manifestSha256,
+          status,
+          revision,
+          claimOwner,
+          claimGeneration,
+          leaseExpiresAt,
+          plannedGroupCount,
+          completedGroupCount,
+          failedGroupCount,
+          reviewedItemCount,
+          checkpointSha256,
+          checkpoint,
+          dueDateOffsetDays,
+          maxWordCountPerProject,
+          assignTranslator,
+          createdDate,
+          completedAt,
+          RoutingPolicy.IMMEDIATE);
+    }
+  }
 
   /** Listing metadata only; inspect the run to load its complete checkpoint. */
   public record RunSummary(
@@ -173,7 +331,61 @@ public final class AgentReviewContracts {
       int maxWordCountPerProject,
       boolean assignTranslator,
       ZonedDateTime createdDate,
-      ZonedDateTime completedAt) {}
+      ZonedDateTime completedAt,
+      RoutingPolicy routingPolicy) {
+    public RunSummary(
+        Long id,
+        String reviewType,
+        Long teamId,
+        List<Long> repositoryIds,
+        List<Long> localeIds,
+        String methodVersion,
+        String configurationVersion,
+        String inputFingerprint,
+        String manifestSha256,
+        RunStatus status,
+        long revision,
+        String claimOwner,
+        long claimGeneration,
+        ZonedDateTime leaseExpiresAt,
+        int plannedGroupCount,
+        int completedGroupCount,
+        int failedGroupCount,
+        int reviewedItemCount,
+        String checkpointSha256,
+        int dueDateOffsetDays,
+        int maxWordCountPerProject,
+        boolean assignTranslator,
+        ZonedDateTime createdDate,
+        ZonedDateTime completedAt) {
+      this(
+          id,
+          reviewType,
+          teamId,
+          repositoryIds,
+          localeIds,
+          methodVersion,
+          configurationVersion,
+          inputFingerprint,
+          manifestSha256,
+          status,
+          revision,
+          claimOwner,
+          claimGeneration,
+          leaseExpiresAt,
+          plannedGroupCount,
+          completedGroupCount,
+          failedGroupCount,
+          reviewedItemCount,
+          checkpointSha256,
+          dueDateOffsetDays,
+          maxWordCountPerProject,
+          assignTranslator,
+          createdDate,
+          completedAt,
+          RoutingPolicy.IMMEDIATE);
+    }
+  }
 
   public record RunPage(List<RunSummary> runs, Long nextBeforeId) {}
 

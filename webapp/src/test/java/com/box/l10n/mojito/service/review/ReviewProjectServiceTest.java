@@ -73,6 +73,7 @@ import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
+import com.box.l10n.mojito.test.ThreadBoundTransactionAdvice;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 import java.time.ZonedDateTime;
@@ -80,13 +81,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionTemplate;
 
 public class ReviewProjectServiceTest {
 
@@ -2158,6 +2165,75 @@ public class ReviewProjectServiceTest {
     when(userService.isCurrentUserTranslator()).thenReturn(isTranslator);
     when(userService.isCurrentUserAdminOrPm()).thenReturn(isAdmin || isPm);
     when(userRepository.findById(99L)).thenReturn(Optional.of(currentUser));
+  }
+
+  @Test
+  public void reopenIncidentReviewPreservesDecisionEvidenceAndUpdatesPendingProgress() {
+    when(userService.isCurrentUserTranslationRole()).thenReturn(true);
+    ReviewProject project = project(12L, team(7L), locale(13L, "fr"), null, null);
+    project.setAgentReviewRunId(1L);
+    TMTextUnit unit = new TMTextUnit();
+    unit.setId(321L);
+    unit.setWordCount(7);
+    ReviewProjectTextUnit row = new ReviewProjectTextUnit();
+    row.setId(55L);
+    row.setTmTextUnit(unit);
+    row.setReviewProject(project);
+    TMTextUnitVariant originalDecision = new TMTextUnitVariant();
+    originalDecision.setId(20L);
+    ReviewProjectTextUnitDecision decision = new ReviewProjectTextUnitDecision();
+    decision.setReviewProjectTextUnit(row);
+    decision.setDecisionState(ReviewProjectTextUnitDecision.DecisionState.DECIDED);
+    decision.setDecisionVariant(originalDecision);
+    decision.setNotes("Earlier human explanation");
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(decision));
+    TMTextUnitVariant current = new TMTextUnitVariant();
+    current.setId(30L);
+    assertEquals(row, inTransaction(() -> reviewProjectService.reopenHumanReviewRow(row, current)));
+    assertEquals(current, row.getTmTextUnitVariant());
+    assertEquals(ReviewProjectTextUnitDecision.DecisionState.PENDING, decision.getDecisionState());
+    assertEquals(originalDecision, decision.getDecisionVariant());
+    assertEquals("Earlier human explanation", decision.getNotes());
+    verify(reviewProjectRepository).decrementDecidedProgress(12L, 7L);
+    verify(userService).checkUserCanEditLocale(13L);
+    verify(reviewProjectRequestRepository, never()).save(any());
+    verify(reviewProjectRepository, never()).save(any());
+  }
+
+  @Test
+  public void reopenIncidentReviewRequiresOpenProjectAndTranslationRole() {
+    when(userService.isCurrentUserTranslationRole()).thenReturn(true);
+    ReviewProject project = project(12L, team(7L), locale(13L, "fr"), null, null);
+    project.setAgentReviewRunId(1L);
+    project.setStatus(ReviewProjectStatus.CLOSED);
+    ReviewProjectTextUnit row = new ReviewProjectTextUnit();
+    row.setId(55L);
+    row.setReviewProject(project);
+    assertThrows(
+        org.springframework.web.server.ResponseStatusException.class,
+        () -> inTransaction(() -> reviewProjectService.reopenHumanReviewRow(row, null)));
+    project.setStatus(ReviewProjectStatus.OPEN);
+    when(userService.isCurrentUserTranslationRole()).thenReturn(false);
+    assertThrows(
+        AccessDeniedException.class,
+        () -> inTransaction(() -> reviewProjectService.reopenHumanReviewRow(row, null)));
+    verify(reviewProjectTextUnitDecisionRepository, never()).saveAndFlush(any());
+    verify(reviewProjectRepository, never()).decrementDecidedProgress(anyLong(), anyLong());
+  }
+
+  private <T> T inTransaction(Supplier<T> action) {
+    EmbeddedDatabase database =
+        new EmbeddedDatabaseBuilder()
+            .generateUniqueName(true)
+            .setType(EmbeddedDatabaseType.HSQL)
+            .build();
+    DataSourceTransactionManager transactions = new DataSourceTransactionManager(database);
+    try (ThreadBoundTransactionAdvice ignored = new ThreadBoundTransactionAdvice(transactions)) {
+      return new TransactionTemplate(transactions).execute(status -> action.get());
+    } finally {
+      database.shutdown();
+    }
   }
 
   private long saveDecisionDurationCount(String phase, String result, boolean hasTarget) {
