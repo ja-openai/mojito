@@ -10,6 +10,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import type * as AgentReviewsApi from '../../api/agent-reviews';
 import type { AiReviewRequest, AiReviewResponse } from '../../api/ai-review';
 import type * as GlossariesApi from '../../api/glossaries';
+import type * as ReviewFeedbackApi from '../../api/review-feedback';
 import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
 import type * as TextUnitsApi from '../../api/text-units';
@@ -36,6 +37,13 @@ const saveAgentReviewOutcomeMock = vi.hoisted(() =>
   vi.fn<typeof AgentReviewsApi.saveAgentReviewOutcome>(),
 );
 const reopenAgentFindingMock = vi.hoisted(() => vi.fn<typeof AgentReviewsApi.reopenAgentFinding>());
+const fetchReviewFeedbackBaselineMock = vi.hoisted(() =>
+  vi.fn<typeof ReviewFeedbackApi.fetchReviewFeedbackBaseline>(),
+);
+vi.mock('../../api/review-feedback', async (importActual) => ({
+  ...(await importActual<typeof ReviewFeedbackApi>()),
+  fetchReviewFeedbackBaseline: fetchReviewFeedbackBaselineMock,
+}));
 vi.mock('../../api/agent-reviews', async (importActual) => ({
   ...(await importActual<typeof AgentReviewsApi>()),
   fetchAgentReviewFeedback: fetchAgentReviewFeedbackMock,
@@ -48,10 +56,7 @@ const fetchPrecomputedAiReviewMock = vi.hoisted(() => vi.fn());
 const requestAiReviewMock = vi.hoisted(() => vi.fn());
 const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
 const visibleTextEditorEnabledMock = vi.hoisted(() => vi.fn(() => true));
-const mf2TranslationEditorHostMock = vi.hoisted(() => ({
-  enabled: false,
-  errorCount: 0,
-}));
+const mf2TranslationEditorHostMock = vi.hoisted(() => ({ enabled: false, errorCount: 0 }));
 const virtualRowsLimitMock = vi.hoisted(() => ({ value: 1 }));
 const searchTextUnitsMock = vi.hoisted(() => vi.fn());
 const fetchTextUnitHistoryMock = vi.hoisted(() =>
@@ -259,6 +264,12 @@ beforeEach(() => {
   fetchAgentReviewFeedbackMock.mockReset();
   saveAgentReviewOutcomeMock.mockReset();
   fetchAgentReviewFeedbackMock.mockResolvedValue([]);
+  fetchReviewFeedbackBaselineMock.mockReset();
+  fetchReviewFeedbackBaselineMock.mockResolvedValue({
+    target: null,
+    ai: false,
+    kind: 'UNATTRIBUTED',
+  });
   reopenAgentFindingMock.mockReset();
   window.localStorage.clear();
   fetchUserPreferencesMock.mockReset();
@@ -473,17 +484,12 @@ function renderReviewProjectPageViewNode(
 
 describe('ReviewProjectPageView', () => {
   it('keeps the saved shortcut preference on a failed save and allows retrying', async () => {
-    fetchUserPreferencesMock.mockResolvedValue({
-      ...preferences,
-      shortcutHelp: 'header',
-    });
+    fetchUserPreferencesMock.mockResolvedValue({ ...preferences, shortcutHelp: 'header' });
     saveUserPreferencesMock.mockRejectedValueOnce(new Error('Network unavailable'));
     renderReviewProjectPageView();
 
     fireEvent.click(screen.getByRole('button', { name: 'Keyboard shortcuts' }));
-    const shortcutBar = screen.getByRole('checkbox', {
-      name: 'Show shortcut bar at the bottom',
-    });
+    const shortcutBar = screen.getByRole('checkbox', { name: 'Show shortcut bar at the bottom' });
     await waitFor(() => expect(shortcutBar).not.toBeChecked());
     fireEvent.click(shortcutBar);
 
@@ -497,10 +503,7 @@ describe('ReviewProjectPageView', () => {
       expect.anything(),
     );
 
-    saveUserPreferencesMock.mockResolvedValueOnce({
-      ...preferences,
-      shortcutHelp: 'bottom',
-    });
+    saveUserPreferencesMock.mockResolvedValueOnce({ ...preferences, shortcutHelp: 'bottom' });
     fireEvent.click(shortcutBar);
 
     await waitFor(() => expect(shortcutBar).toBeChecked());
@@ -611,10 +614,7 @@ describe('ReviewProjectPageView', () => {
     const unit: ApiReviewProjectTextUnit = {
       ...textUnit,
       tmTextUnit: { ...textUnit.tmTextUnit!, content: 'Pay %1$s now' },
-      baselineTmTextUnitVariant: {
-        ...textUnit.baselineTmTextUnitVariant!,
-        content: '',
-      },
+      baselineTmTextUnitVariant: { ...textUnit.baselineTmTextUnitVariant!, content: '' },
     };
 
     try {
@@ -622,9 +622,7 @@ describe('ReviewProjectPageView', () => {
         project: { ...project, reviewProjectTextUnits: [unit] },
         mutations: buildMutations({ onRequestSaveDecision }),
       });
-      const editor = await screen.findByRole('textbox', {
-        name: 'Translation',
-      });
+      const editor = await screen.findByRole('textbox', { name: 'Translation' });
       editor.focus();
       await user.keyboard('%');
 
@@ -636,11 +634,7 @@ describe('ReviewProjectPageView', () => {
 
       await user.keyboard('{Control>}{Enter}{/Control}');
       expect(onRequestSaveDecision).toHaveBeenCalledWith(
-        expect.objectContaining({
-          target: '%1$s',
-          textUnitId: unit.id,
-          status: 'APPROVED',
-        }),
+        expect.objectContaining({ target: '%1$s', textUnitId: unit.id, status: 'APPROVED' }),
       );
     } finally {
       restoreDom();
@@ -686,10 +680,7 @@ describe('ReviewProjectPageView', () => {
     });
 
     const editor = await screen.findByRole('textbox', { name: 'Translation' });
-    const wasNotCancelled = fireEvent.keyDown(editor, {
-      key: 'Enter',
-      metaKey: true,
-    });
+    const wasNotCancelled = fireEvent.keyDown(editor, { key: 'Enter', metaKey: true });
 
     expect(wasNotCancelled).toBe(false);
     expect(onRequestSaveDecision).toHaveBeenCalledWith(
@@ -732,10 +723,7 @@ describe('ReviewProjectPageView', () => {
         {
           projectId: project.id,
           project,
-          mutations: buildMutations({
-            onRequestSaveDecision,
-            onRequestDecisionState,
-          }),
+          mutations: buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
           selectedTextUnitQueryId: null,
           onSelectedTextUnitIdChange: noop,
           openRequestDetailsQuery: false,
@@ -751,9 +739,7 @@ describe('ReviewProjectPageView', () => {
     fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
 
     fireEvent.click(screen.getByRole('tab', { name: 'Search' }));
-    const searchInput = await screen.findByRole('searchbox', {
-      name: 'Search translation',
-    });
+    const searchInput = await screen.findByRole('searchbox', { name: 'Search translation' });
     fireEvent.change(searchInput, { target: { value: 'pagamento' } });
     fireEvent.submit(searchInput.closest('form')!);
 
@@ -814,9 +800,7 @@ describe('ReviewProjectPageView', () => {
 
     // A server refresh updates an already-open review without losing its draft.
     await act(async () => {
-      await queryClient.refetchQueries({
-        queryKey: userPreferencesQueryKey(user.username),
-      });
+      await queryClient.refetchQueries({ queryKey: userPreferencesQueryKey(user.username) });
     });
     await waitFor(() =>
       expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument(),
@@ -850,9 +834,7 @@ describe('ReviewProjectPageView', () => {
     };
 
     const { rerender } = render(renderReviewProjectPageViewNode(baseProps, queryClient));
-    const originalEditor = await screen.findByRole('textbox', {
-      name: 'Translation',
-    });
+    const originalEditor = await screen.findByRole('textbox', { name: 'Translation' });
 
     rerender(
       renderReviewProjectPageViewNode(
@@ -864,9 +846,7 @@ describe('ReviewProjectPageView', () => {
       ),
     );
 
-    const nextEditor = await screen.findByRole('textbox', {
-      name: 'Translation',
-    });
+    const nextEditor = await screen.findByRole('textbox', { name: 'Translation' });
     expect(nextEditor).not.toBe(originalEditor);
     expect(nextEditor).toHaveTextContent('Cancel payment');
   });
@@ -936,15 +916,8 @@ describe('ReviewProjectPageView', () => {
 
   it('keeps arrow-key row navigation available after accepting and advancing', async () => {
     const nextTextUnit = buildNextTextUnit();
-    const liveProject = {
-      ...project,
-      reviewProjectTextUnits: [textUnit, nextTextUnit],
-    };
-    const acceptedVariant = {
-      ...textUnit.baselineTmTextUnitVariant,
-      id: 31,
-      status: 'APPROVED',
-    };
+    const liveProject = { ...project, reviewProjectTextUnits: [textUnit, nextTextUnit] };
+    const acceptedVariant = { ...textUnit.baselineTmTextUnitVariant, id: 31, status: 'APPROVED' };
     saveReviewProjectTextUnitDecisionMock.mockResolvedValue({
       ...textUnit,
       currentTmTextUnitVariant: acceptedVariant,
@@ -1025,11 +998,7 @@ describe('ReviewProjectPageView', () => {
       ...project,
       reviewProjectTextUnits: [textUnit, nextTextUnit],
     };
-    const acceptedVariant = {
-      ...textUnit.baselineTmTextUnitVariant,
-      id: 31,
-      status: 'APPROVED',
-    };
+    const acceptedVariant = { ...textUnit.baselineTmTextUnitVariant, id: 31, status: 'APPROVED' };
     const decidedTextUnit: ApiReviewProjectTextUnit = {
       ...textUnit,
       currentTmTextUnitVariant: acceptedVariant,
@@ -1207,9 +1176,7 @@ one {{Você tem {$count} arquivo.}}
       mutations: buildMutations({ onRequestSaveDecision }),
     });
 
-    const editor = await screen.findByRole('textbox', {
-      name: 'Target count: one',
-    });
+    const editor = await screen.findByRole('textbox', { name: 'Target count: one' });
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Accept' })).toBeEnabled();
     });
@@ -1239,9 +1206,7 @@ one {{Você tem {$count} arquivo.}}
       mutations: buildMutations({ onRequestSaveDecision }),
     });
 
-    const editor = await screen.findByRole('textbox', {
-      name: 'Target Message',
-    });
+    const editor = await screen.findByRole('textbox', { name: 'Target Message' });
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /Fix \d+ MF2 errors? before accepting/,
     );
@@ -1281,10 +1246,7 @@ one {{Você tem {$count} arquivo.}}
         ...project,
         reviewProjectTextUnits: [rejectedMf2TextUnit],
       },
-      mutations: buildMutations({
-        onRequestDecisionState,
-        onRequestSaveDecision,
-      }),
+      mutations: buildMutations({ onRequestDecisionState, onRequestSaveDecision }),
     });
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -1395,10 +1357,7 @@ one {{Você tem {$count} arquivo.}}
 
   it('bypasses untagged precomputed reviews and sends the selected preset and default style', async () => {
     fetchPrecomputedAiReviewMock.mockResolvedValue({
-      message: {
-        role: 'assistant',
-        content: 'Cached review from an unknown version.',
-      },
+      message: { role: 'assistant', content: 'Cached review from an unknown version.' },
       suggestions: [],
     });
     renderReviewProjectPageView();
@@ -1502,15 +1461,11 @@ one {{Você tem {$count} arquivo.}}
     renderReviewProjectPageView();
     await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
     const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
-    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
-      reviewStyle: 'corrections_only',
-    });
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ reviewStyle: 'corrections_only' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
     const style = screen.getByRole('combobox', { name: 'Review style' });
-    fireEvent.change(style, {
-      target: { value: 'corrections_and_alternatives' },
-    });
+    fireEvent.change(style, { target: { value: 'corrections_and_alternatives' } });
     await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
     expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({
       aiReviewStyle: 'corrections_and_alternatives',
@@ -1518,10 +1473,7 @@ one {{Você tem {$count} arquivo.}}
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
     expect(oldSignal.aborted).toBe(false);
     await act(async () => {
-      finishSave({
-        ...preferences,
-        aiReviewStyle: 'corrections_and_alternatives',
-      });
+      finishSave({ ...preferences, aiReviewStyle: 'corrections_and_alternatives' });
       await Promise.resolve();
     });
     await screen.findByText('No issues found.');
@@ -1545,10 +1497,7 @@ one {{Você tem {$count} arquivo.}}
   });
 
   it('changes style with automatic review off without starting a review, then uses it for one-off Review', async () => {
-    fetchUserPreferencesMock.mockResolvedValue({
-      ...preferences,
-      aiReviewAutomaticDisabled: true,
-    });
+    fetchUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewAutomaticDisabled: true });
     renderReviewProjectPageView();
     const reviewButton = await screen.findByRole('button', { name: 'Review' });
     await waitFor(() => expect(reviewButton).toBeEnabled());
@@ -1571,9 +1520,7 @@ one {{Você tem {$count} arquivo.}}
         'corrections_only',
       ),
     );
-    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({
-      aiReviewStyle: 'corrections_only',
-    });
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewStyle: 'corrections_only' });
     expect(screen.getByRole('checkbox', { name: 'Automatic review' })).not.toBeChecked();
     expect(screen.queryByText('No issues found.')).not.toBeInTheDocument();
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
@@ -1606,45 +1553,28 @@ one {{Você tem {$count} arquivo.}}
     );
     const scoreToggle = screen.getByRole('checkbox', { name: 'Show score' });
     expect(scoreToggle).toBeChecked();
-    saveUserPreferencesMock.mockResolvedValue({
-      ...preferences,
-      aiReviewShowScore: false,
-    });
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewShowScore: false });
     fireEvent.click(scoreToggle);
     await waitFor(() => expect(scoreToggle).not.toBeChecked());
-    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({
-      aiReviewShowScore: false,
-    });
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewShowScore: false });
     expect(signal.aborted).toBe(false);
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
     await act(async () => {
       finishReview({
-        message: {
-          role: 'assistant',
-          content: 'Current translation is valid.',
-        },
+        message: { role: 'assistant', content: 'Current translation is valid.' },
         suggestions: [],
-        review: {
-          score: 2,
-          explanation: 'Current translation is valid.',
-          confidenceLevel: 94,
-        },
+        review: { score: 2, explanation: 'Current translation is valid.', confidenceLevel: 94 },
       });
       await Promise.resolve();
     });
     await screen.findByText('Current translation is valid.');
     expect(screen.queryByLabelText('Model confidence: 94 out of 100')).not.toBeInTheDocument();
-    saveUserPreferencesMock.mockResolvedValue({
-      ...preferences,
-      aiReviewShowScore: true,
-    });
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewShowScore: true });
     fireEvent.click(scoreToggle);
     expect(await screen.findByLabelText('Model confidence: 94 out of 100')).toHaveTextContent(
       /^94$/,
     );
-    expect(saveUserPreferencesMock.mock.calls[1][0]).toEqual({
-      aiReviewShowScore: true,
-    });
+    expect(saveUserPreferencesMock.mock.calls[1][0]).toEqual({ aiReviewShowScore: true });
     expect(screen.getByText('Current translation is valid.')).toBeVisible();
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
     expect(requestAiReviewMock.mock.calls[0][0]).not.toHaveProperty('showScore');
@@ -1654,9 +1584,7 @@ one {{Você tem {$count} arquivo.}}
     renderReviewProjectPageView();
     await screen.findByText('No issues found.');
     const title = screen.getByText('AI Chat Review');
-    const speedButton = screen.getByRole('button', {
-      name: 'Review speed: Balanced',
-    });
+    const speedButton = screen.getByRole('button', { name: 'Review speed: Balanced' });
     expect(title.parentElement).toContainElement(speedButton);
     expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument();
     const header = title.closest('.review-project-detail__label-row') as HTMLElement;
@@ -1685,9 +1613,7 @@ one {{Você tem {$count} arquivo.}}
     expect(await within(panel).findByRole('alert')).toHaveTextContent(
       'Could not save review speed.',
     );
-    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({
-      aiReviewPreset: 'fast',
-    });
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'fast' });
     expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
       'aria-disabled',
       'false',
@@ -1695,17 +1621,13 @@ one {{Você tem {$count} arquivo.}}
     expect(slider).toHaveValue('2');
     expect(screen.getByText('No issues found.')).toBeVisible();
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
-    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
-      presetId: 'balanced',
-    });
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ presetId: 'balanced' });
   });
 
   it('retries a failed preferences load from the speed popup before requesting review', async () => {
     fetchUserPreferencesMock.mockRejectedValueOnce(new Error('Settings unavailable'));
     renderReviewProjectPageView();
-    const speedButton = await screen.findByRole('button', {
-      name: 'Review speed: Balanced',
-    });
+    const speedButton = await screen.findByRole('button', { name: 'Review speed: Balanced' });
     await waitFor(() => expect(speedButton).toHaveAttribute('aria-disabled', 'false'));
     fireEvent.click(speedButton);
     const panel = screen.getByRole('dialog', { name: 'Review speed' });
@@ -1727,23 +1649,16 @@ one {{Você tem {$count} arquivo.}}
   });
 
   it('enables automatic review without changing the selected preset', async () => {
-    fetchUserPreferencesMock.mockResolvedValue({
-      ...preferences,
-      aiReviewAutomaticDisabled: true,
-    });
+    fetchUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewAutomaticDisabled: true });
     saveUserPreferencesMock.mockResolvedValue(preferences);
     renderReviewProjectPageView();
-    const speedButton = await screen.findByRole('button', {
-      name: 'Review speed: Balanced',
-    });
+    const speedButton = await screen.findByRole('button', { name: 'Review speed: Balanced' });
     await waitFor(() => expect(speedButton).toHaveAttribute('aria-disabled', 'false'));
     fireEvent.click(speedButton);
     expect(requestAiReviewMock).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic review' }));
     await screen.findByText('No issues found.');
-    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({
-      aiReviewAutomaticDisabled: false,
-    });
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewAutomaticDisabled: false });
     expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
     expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
       presetId: 'balanced',
@@ -1753,18 +1668,12 @@ one {{Você tem {$count} arquivo.}}
 
   it('skips precomputed AI review when glossary context is available', async () => {
     fetchPrecomputedAiReviewMock.mockResolvedValue({
-      message: {
-        role: 'assistant',
-        content: 'Cached review without glossary context.',
-      },
+      message: { role: 'assistant', content: 'Cached review without glossary context.' },
       suggestions: [],
       review: null,
     });
     requestAiReviewMock.mockResolvedValue({
-      message: {
-        role: 'assistant',
-        content: 'Live review with glossary context.',
-      },
+      message: { role: 'assistant', content: 'Live review with glossary context.' },
       suggestions: [],
       review: null,
     });
@@ -1825,18 +1734,12 @@ one {{Você tem {$count} arquivo.}}
 
   it('skips precomputed AI review when warning context is available', async () => {
     fetchPrecomputedAiReviewMock.mockResolvedValue({
-      message: {
-        role: 'assistant',
-        content: 'Cached review without warning context.',
-      },
+      message: { role: 'assistant', content: 'Cached review without warning context.' },
       suggestions: [],
       review: null,
     });
     requestAiReviewMock.mockResolvedValue({
-      message: {
-        role: 'assistant',
-        content: 'Live review with warning context.',
-      },
+      message: { role: 'assistant', content: 'Live review with warning context.' },
       suggestions: [],
       review: null,
     });
@@ -1870,30 +1773,10 @@ one {{Você tem {$count} arquivo.}}
   });
 
   it.each([
-    {
-      target: 'Pay\u00a0{price} now',
-      locale: 'en-US',
-      assisted: false,
-      code: 'U+00A0',
-    },
-    {
-      target: 'Pay\u00a0{price} now',
-      locale: 'en-US',
-      assisted: true,
-      code: 'U+00A0',
-    },
-    {
-      target: 'Payer\u202f{price}',
-      locale: 'fr-FR',
-      assisted: false,
-      code: 'U+202F',
-    },
-    {
-      target: 'Payer\u202f{price}',
-      locale: 'fr-FR',
-      assisted: true,
-      code: 'U+202F',
-    },
+    { target: 'Pay\u00a0{price} now', locale: 'en-US', assisted: false, code: 'U+00A0' },
+    { target: 'Pay\u00a0{price} now', locale: 'en-US', assisted: true, code: 'U+00A0' },
+    { target: 'Payer\u202f{price}', locale: 'fr-FR', assisted: false, code: 'U+202F' },
+    { target: 'Payer\u202f{price}', locale: 'fr-FR', assisted: true, code: 'U+202F' },
   ])(
     'sends neutral $code context for $locale with assisted=$assisted',
     async ({ target, locale, assisted, code }) => {
@@ -1939,9 +1822,7 @@ one {{Você tem {$count} arquivo.}}
         screen.queryByRole('button', { name: /translation warnings/ }),
       ).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Non-breaking spaces' }));
-      const dialog = screen.getByRole('dialog', {
-        name: 'Non-breaking spaces',
-      });
+      const dialog = screen.getByRole('dialog', { name: 'Non-breaking spaces' });
       expect(within(dialog).getByText(new RegExp(code.replace('+', '\\+')))).toBeInTheDocument();
       expect(within(dialog).queryByText(/issues? detected/)).not.toBeInTheDocument();
       expect(
@@ -1959,10 +1840,7 @@ one {{Você tem {$count} arquivo.}}
         reviewProjectTextUnits: [
           {
             ...textUnit,
-            baselineTmTextUnitVariant: {
-              ...textUnit.baselineTmTextUnitVariant!,
-              content: target,
-            },
+            baselineTmTextUnitVariant: { ...textUnit.baselineTmTextUnitVariant!, content: target },
           },
         ],
       },
@@ -2126,10 +2004,7 @@ one {{Você tem {$count} arquivo.}}
           finishOldReview = resolve;
         }),
     );
-    saveUserPreferencesMock.mockResolvedValue({
-      ...preferences,
-      aiReviewPreset: 'fastest',
-    });
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewPreset: 'fastest' });
     renderReviewProjectPageView();
     await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
     const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
@@ -2138,9 +2013,7 @@ one {{Você tem {$count} arquivo.}}
     fireEvent.change(slider, { target: { value: '0' } });
     fireEvent.pointerUp(slider);
     await screen.findByText('No issues found.');
-    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({
-      aiReviewPreset: 'fastest',
-    });
+    expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: 'fastest' });
     expect(oldSignal.aborted).toBe(true);
     expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
       presetId: 'fastest',
@@ -2179,9 +2052,7 @@ one {{Você tem {$count} arquivo.}}
       renderReviewProjectPageView({}, { ...user, role });
       await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
       const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
-      expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
-        presetId: 'balanced',
-      });
+      expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({ presetId: 'balanced' });
 
       fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
       const slider = screen.getByRole('slider', { name: 'Review speed' });
@@ -2190,9 +2061,7 @@ one {{Você tem {$count} arquivo.}}
       expect(saveUserPreferencesMock).not.toHaveBeenCalled();
       fireEvent.pointerUp(slider);
       await waitFor(() => expect(saveUserPreferencesMock).toHaveBeenCalledTimes(1));
-      expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({
-        aiReviewPreset: preset,
-      });
+      expect(saveUserPreferencesMock.mock.calls[0][0]).toEqual({ aiReviewPreset: preset });
       expect(screen.getByRole('button', { name: 'Review speed: Balanced' })).toHaveAttribute(
         'aria-disabled',
         'true',
@@ -2230,10 +2099,7 @@ one {{Você tem {$count} arquivo.}}
   );
 
   it('explains automatic Ultra fallback while preserving Ultra for manual Ask', async () => {
-    fetchUserPreferencesMock.mockResolvedValue({
-      ...preferences,
-      aiReviewPreset: 'ultra',
-    });
+    fetchUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewPreset: 'ultra' });
     renderReviewProjectPageView({}, { ...user, role: 'ROLE_ADMIN' });
     await screen.findByText('No issues found.');
     expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent(
@@ -2261,10 +2127,7 @@ one {{Você tem {$count} arquivo.}}
 
   it('stops an automatic request when automatic review is disabled and allows manual Ask', async () => {
     requestAiReviewMock.mockImplementationOnce(() => new Promise(() => undefined));
-    saveUserPreferencesMock.mockResolvedValue({
-      ...preferences,
-      aiReviewAutomaticDisabled: true,
-    });
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewAutomaticDisabled: true });
     renderReviewProjectPageView();
     await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
     const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
@@ -2299,10 +2162,7 @@ one {{Você tem {$count} arquivo.}}
           finishManual = resolve;
         }),
     );
-    saveUserPreferencesMock.mockResolvedValue({
-      ...preferences,
-      aiReviewAutomaticDisabled: true,
-    });
+    saveUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewAutomaticDisabled: true });
     fireEvent.change(
       screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
       {
@@ -2320,10 +2180,7 @@ one {{Você tem {$count} arquivo.}}
     expect(signal.aborted).toBe(false);
     await act(async () => {
       finishManual({
-        message: {
-          role: 'assistant',
-          content: 'Manual explanation completed.',
-        },
+        message: { role: 'assistant', content: 'Manual explanation completed.' },
         suggestions: [],
       });
       await Promise.resolve();
@@ -2482,10 +2339,7 @@ function renderAgentReview(
   mutations = buildMutations(),
 ) {
   return renderReviewProjectPageView({
-    project: {
-      ...project,
-      reviewProjectTextUnits: [buildAgentTextUnit(overrides)],
-    },
+    project: { ...project, reviewProjectTextUnits: [buildAgentTextUnit(overrides)] },
     mutations,
   });
 }
@@ -2497,9 +2351,7 @@ function renderReviewWithRetainedNotes(
   originalAssessment?: 'BAD',
 ) {
   visibleTextEditorEnabledMock.mockReturnValue(false);
-  const queryClient = createQueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
   const props: ReviewProjectPageViewProps = {
     projectId: 7,
     project: { ...project, reviewProjectTextUnits: [row] },
@@ -2527,11 +2379,7 @@ function renderReviewWithRetainedNotes(
     values: { ...retained.values, target: retained.base.target, ...notes },
   });
   if (originalAssessment && row.agentReview) {
-    const base = {
-      originalAssessment: '',
-      suggestionAssessment: '',
-      explanation: '',
-    };
+    const base = { originalAssessment: '', suggestionAssessment: '', explanation: '' };
     queryClient.setQueryData([...key, `agent-feedback:${row.agentReview.proposalId}`], {
       base,
       values: { ...base, originalAssessment },
@@ -2560,10 +2408,7 @@ describe('Agent proposal review in Review Projects', () => {
         ...row,
         id: 101 + index,
         tmTextUnit: { ...row.tmTextUnit!, id: 3 + index, name },
-        currentTmTextUnitVariant: {
-          ...row.currentTmTextUnitVariant!,
-          status: 'APPROVED',
-        },
+        currentTmTextUnitVariant: { ...row.currentTmTextUnitVariant!, status: 'APPROVED' },
         agentReview: { ...row.agentReview!, proposalId: 901 + index },
         reviewProjectTextUnitDecision: {
           decisionState: index === 0 || index === 4 ? 'PENDING' : 'DECIDED',
@@ -2692,10 +2537,7 @@ describe('Agent proposal review in Review Projects', () => {
   it('runs a fresh AI review only on request and keeps the recorded report separate', async () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     requestAiReviewMock.mockResolvedValueOnce({
-      message: {
-        role: 'assistant',
-        content: 'This draft uses the expected payment terminology.',
-      },
+      message: { role: 'assistant', content: 'This draft uses the expected payment terminology.' },
       suggestions: [],
     });
     const { container } = renderAgentReview();
@@ -2800,10 +2642,7 @@ describe('Agent proposal review in Review Projects', () => {
           explanation: 'An older note awaiting context.',
         },
       ]);
-      renderAgentReview({
-        disposition,
-        canReviewAgain: disposition !== 'SUPERSEDED',
-      });
+      renderAgentReview({ disposition, canReviewAgain: disposition !== 'SUPERSEDED' });
       const request = screen.getByRole('button', { name: 'View report →' });
       expect(request).toBeVisible();
       expect(
@@ -2832,6 +2671,238 @@ describe('Agent proposal review in Review Projects', () => {
         expect(screen.getByRole('button', { name: /^Pending$/ })).toBeEnabled();
       }
       expect(screen.getByRole('region', { name: 'Evidence and verification' })).toBeVisible();
+    },
+  );
+
+  it('keeps ordinary AI review feedback quiet for cosmetic edits and saves material edit feedback with Accept', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    fetchReviewFeedbackBaselineMock.mockResolvedValue({
+      target: 'Pay {price} now',
+      ai: true,
+      kind: 'AI_TRANSLATE',
+    });
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    renderReviewProjectPageView({ mutations: buildMutations({ onRequestSaveDecision }) });
+    await waitFor(() => expect(fetchReviewFeedbackBaselineMock).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(screen.queryByText('Comment on translation')).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText('Decision notes')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unsent notes')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'AI translation feedback' }),
+    ).not.toBeInTheDocument();
+    const editor = screen.getByRole('textbox', { name: 'Translation' });
+    fireEvent.change(editor, { target: { value: 'Pay {price} now!' } });
+    expect(
+      screen.queryByRole('region', { name: 'AI translation feedback' }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Terminology' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'AI feedback note' }), {
+      target: { value: 'Use the approved product term.' },
+    });
+    expect(screen.queryByText('Comment on translation')).not.toBeInTheDocument();
+    expect(screen.queryByText('Decision notes')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unsent notes')).not.toBeInTheDocument();
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+    expect(onRequestSaveDecision).toHaveBeenCalledOnce();
+    const saved = onRequestSaveDecision.mock.calls[0][0];
+    expect(saved.target).toBe('Pague {price} agora');
+    expect(saved.reviewFeedback).toMatchObject({
+      reason: 'TERMINOLOGY',
+      note: 'Use the approved product term.',
+    });
+    expect(saved.decisionNotes).toBe('Use the approved product term.');
+  });
+
+  it('keeps standard note fields for ordinary reviews without an AI baseline', async () => {
+    renderReviewProjectPageView();
+    await waitFor(() => expect(fetchReviewFeedbackBaselineMock).toHaveBeenCalledOnce());
+    expect(screen.getByText('Comment on translation')).toBeVisible();
+    expect(screen.getByText('Decision notes')).toBeVisible();
+    expect(screen.queryByText('Unsent notes')).not.toBeInTheDocument();
+  });
+
+  it.each(['ROUTED', 'RESOLVED'])(
+    'replaces empty legacy fields with unified feedback in %s incident review',
+    (disposition) => {
+      renderAgentReview({ disposition, canReviewAgain: disposition === 'RESOLVED' });
+      expect(screen.queryByText('Comment on translation')).not.toBeInTheDocument();
+      expect(screen.queryByText('Decision notes')).not.toBeInTheDocument();
+      expect(screen.queryByText('Unsent notes')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+      expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
+      expect(screen.queryByText('Comment on translation')).not.toBeInTheDocument();
+      expect(screen.queryByText('Decision notes')).not.toBeInTheDocument();
+    },
+  );
+
+  it('shows incident feedback immediately on Use suggestion and retains it across original/suggestion selection', () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    renderAgentReview({}, buildMutations({ onRequestSaveDecision }));
+    expect(
+      screen.queryByRole('region', { name: 'AI translation feedback' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+    const feedbackRegion = screen.getByRole('region', { name: 'AI translation feedback' });
+    const feedback = within(feedbackRegion);
+    fireEvent.click(screen.getByRole('button', { name: 'Use original translation' }));
+    expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedbackRegion);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: '' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Reset$/ }));
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pay {price} now');
+    expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedbackRegion);
+    fireEvent.change(feedback.getByRole('textbox', { name: 'AI feedback note' }), {
+      target: { value: 'Temporary explanation' },
+    });
+    fireEvent.change(feedback.getByRole('textbox', { name: 'AI feedback note' }), {
+      target: { value: '' },
+    });
+    expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBe(feedbackRegion);
+    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+    fireEvent.click(feedback.getByRole('button', { name: 'Terminology' }));
+    fireEvent.change(feedback.getByRole('textbox', { name: 'AI feedback note' }), {
+      target: { value: 'Use the approved product term.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Use original translation' }));
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pay {price} now');
+    expect(feedback.getByRole('button', { name: 'Terminology' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(feedback.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
+      'Use the approved product term.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+    expect(feedback.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
+      'Use the approved product term.',
+    );
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+    expect(onRequestSaveDecision.mock.calls[0][0]).toMatchObject({
+      target: 'Pague {price} agora',
+      agentReview: { action: 'ACCEPT', explanation: 'Use the approved product term.' },
+      reviewFeedback: { reason: 'TERMINOLOGY', note: 'Use the approved product term.' },
+    });
+  });
+
+  it.each([null, 'Pague {price} agora'])(
+    'shows feedback for tiny incident edits with proposal %j and retains a note without a reason when returning to original',
+    (proposedTarget) => {
+      visibleTextEditorEnabledMock.mockReturnValue(false);
+      renderAgentReview({ proposedTarget });
+      const editor = screen.getByRole('textbox', { name: 'Translation' });
+      fireEvent.change(editor, { target: { value: 'Pay {price} now!' } });
+      expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
+      fireEvent.change(screen.getByRole('textbox', { name: 'AI feedback note' }), {
+        target: { value: 'The exclamation mark is intentional.' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Use original translation' }));
+      expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
+      expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
+        'The exclamation mark is intentional.',
+      );
+      fireEvent.change(editor, { target: { value: 'Pay {price} now!' } });
+      expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
+      expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
+        'The exclamation mark is intentional.',
+      );
+    },
+  );
+
+  it('compares incident feedback visibility to the frozen original after the accepted correction becomes current', () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const row = buildAgentTextUnit({ disposition: 'RESOLVED', canReviewAgain: true });
+    row.currentTmTextUnitVariant = {
+      ...row.currentTmTextUnitVariant!,
+      content: 'Pague {price} agora',
+    };
+    row.reviewProjectTextUnitDecision = {
+      decisionState: 'DECIDED',
+      decisionTmTextUnitVariant: row.currentTmTextUnitVariant,
+    };
+    renderReviewProjectPageView({ project: { ...project, reviewProjectTextUnits: [row] } });
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pague {price} agora');
+    expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
+    expect(screen.getByRole('status', { name: 'Selected proposed correction' })).toBeVisible();
+  });
+
+  it.each(['note', 'reason'])(
+    'saves a completed incident %s-only change through atomic reopening without changing the accepted translation',
+    async (field) => {
+      visibleTextEditorEnabledMock.mockReturnValue(false);
+      const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+      const onRequestDecisionState =
+        vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
+      fetchAgentReviewFeedbackMock.mockResolvedValue([
+        {
+          id: 81,
+          proposalId: 901,
+          proposalRevision: 1,
+          actorType: 'HUMAN',
+          actorIdentity: 'Reviewer',
+          createdDate: '2026-09-14T11:00:00Z',
+          action: 'ACCEPT',
+          explanation: 'The earlier decision accepted this correction.',
+        },
+      ]);
+      const row = buildAgentTextUnit({ disposition: 'RESOLVED', canReviewAgain: true });
+      row.currentTmTextUnitVariant = {
+        ...row.currentTmTextUnitVariant!,
+        id: 31,
+        content: 'Pague {price} agora',
+      };
+      row.reviewProjectTextUnitDecision = {
+        decisionState: 'DECIDED',
+        decisionTmTextUnitVariant: row.currentTmTextUnitVariant,
+      };
+      renderReviewProjectPageView({
+        project: { ...project, reviewProjectTextUnits: [row] },
+        mutations: buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
+      });
+      expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
+      expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
+      fireEvent.click(screen.getByRole('button', { name: 'View report →' }));
+      const history = within(screen.getByRole('region', { name: 'Feedback and agent responses' }));
+      expect(
+        await history.findByText('The earlier decision accepted this correction.'),
+      ).toBeVisible();
+      if (field === 'note') {
+        fireEvent.change(screen.getByRole('textbox', { name: 'AI feedback note' }), {
+          target: { value: 'This correction uses the approved product term.' },
+        });
+      } else {
+        fireEvent.click(screen.getByRole('button', { name: 'Terminology' }));
+      }
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+        'Pague {price} agora',
+      );
+      expect(screen.getByRole('button', { name: /^Accept$/ })).toBeEnabled();
+      fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+      expect(onRequestSaveDecision).toHaveBeenCalledOnce();
+      expect(onRequestSaveDecision.mock.calls[0][0]).toMatchObject({
+        target: 'Pague {price} agora',
+        decisionState: 'DECIDED',
+        agentReview: {
+          action: 'ACCEPT',
+          proposalId: 901,
+          explanation:
+            field === 'note' ? 'This correction uses the approved product term.' : undefined,
+        },
+        reviewFeedback: {
+          note: field === 'note' ? 'This correction uses the approved product term.' : undefined,
+          reason: field === 'reason' ? 'TERMINOLOGY' : undefined,
+        },
+        reopenAgentReview: { expectedProposalVersion: 2, expectedCurrentVariantId: 31 },
+      });
+      expect(onRequestDecisionState).not.toHaveBeenCalled();
+      expect(reopenAgentFindingMock).not.toHaveBeenCalled();
+      expect(history.getByText('The earlier decision accepted this correction.')).toBeVisible();
     },
   );
 
@@ -2909,10 +2980,7 @@ describe('Agent proposal review in Review Projects', () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     const row = buildAgentTextUnit();
     const note = 'The payment team approved the current wording.';
-    let liveProject: ApiReviewProjectDetail = {
-      ...project,
-      reviewProjectTextUnits: [row],
-    };
+    let liveProject: ApiReviewProjectDetail = { ...project, reviewProjectTextUnits: [row] };
     let savedRow: ApiReviewProjectTextUnit = row;
     let savedRevision = 0;
     saveAgentReviewOutcomeMock.mockImplementation((request) => {
@@ -2968,9 +3036,7 @@ describe('Agent proposal review in Review Projects', () => {
       );
     }
     function mountReview() {
-      const queryClient = createQueryClient({
-        defaultOptions: { queries: { retry: false } },
-      });
+      const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
       queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], liveProject);
       const view = render(
         <QueryClientProvider client={queryClient}>
@@ -3033,21 +3099,14 @@ describe('Agent proposal review in Review Projects', () => {
           },
         ],
       };
-      return Promise.resolve({
-        projectId: 7,
-        proposalId: 902,
-        proposalRevision: 2,
-      });
+      return Promise.resolve({ projectId: 7, proposalId: 902, proposalRevision: 2 });
     });
     fireEvent.click(screen.getByRole('button', { name: /^Pending$/ }));
     await waitFor(() => expect(reopenAgentFindingMock).toHaveBeenCalledTimes(1));
     expect(reopenAgentFindingMock.mock.calls[0]).toEqual([
       7,
       901,
-      expect.objectContaining({
-        expectedProposalVersion: 3,
-        expectedCurrentVariantId: 30,
-      }),
+      expect.objectContaining({ expectedProposalVersion: 3, expectedCurrentVariantId: 30 }),
     ]);
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /^Pending$/ })).toHaveAttribute(
@@ -3066,9 +3125,7 @@ describe('Agent proposal review in Review Projects', () => {
         note,
       ),
     ).toBeVisible();
-    fireEvent.change(explanation, {
-      target: { value: `${note} Reconsidering the new context.` },
-    });
+    fireEvent.change(explanation, { target: { value: `${note} Reconsidering the new context.` } });
     expect(explanation).toHaveValue(`${note} Reconsidering the new context.`);
     expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pay {price} now');
     expect(saveAgentReviewOutcomeMock).toHaveBeenCalledTimes(1);
@@ -3158,11 +3215,7 @@ describe('Agent proposal review in Review Projects', () => {
       expectedCurrentTmTextUnitVariantId: 30,
       expectedReviewStateRevision: 'agent-row-v1',
       decisionState: 'DECIDED',
-      agentReview: {
-        action: 'KEEP_CURRENT',
-        proposalId: 901,
-        proposalVersion: 2,
-      },
+      agentReview: { action: 'KEEP_CURRENT', proposalId: 901, proposalVersion: 2 },
     });
     expect(onRequestDecisionState.mock.calls[0][0]).not.toHaveProperty('target');
     expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pay {price} now');
@@ -3174,25 +3227,17 @@ describe('Agent proposal review in Review Projects', () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    const row = buildAgentTextUnit({
-      disposition: 'RESOLVED',
-      canReviewAgain: true,
-    });
+    const row = buildAgentTextUnit({ disposition: 'RESOLVED', canReviewAgain: true });
     row.reviewProjectTextUnitDecision = {
       decisionState: 'DECIDED',
       decisionTmTextUnitVariant: row.currentTmTextUnitVariant,
     };
-    const queryClient = createQueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const props: ReviewProjectPageViewProps = {
       projectId: 7,
       project: { ...project, reviewProjectTextUnits: [row] },
-      mutations: buildMutations({
-        onRequestSaveDecision,
-        onRequestDecisionState,
-      }),
+      mutations: buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
       selectedTextUnitQueryId: null,
       onSelectedTextUnitIdChange: noop,
       openRequestDetailsQuery: false,
@@ -3302,9 +3347,7 @@ describe('Agent proposal review in Review Projects', () => {
     renderAgentReview({}, buildMutations({ onRequestDecisionState }));
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
-    fireEvent.change(screen.getByLabelText('Original translation'), {
-      target: { value: 'BAD' },
-    });
+    fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'BAD' } });
     expect(screen.getByRole('button', { name: /^Decided$/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
@@ -3322,12 +3365,8 @@ describe('Agent proposal review in Review Projects', () => {
       reviewedTarget: row.baselineTmTextUnitVariant?.content,
       proposedTarget,
     }).agentReview;
-    renderReviewProjectPageView({
-      project: { ...project, reviewProjectTextUnits: [row] },
-    });
-    const editor = await screen.findByRole('textbox', {
-      name: 'Target Message',
-    });
+    renderReviewProjectPageView({ project: { ...project, reviewProjectTextUnits: [row] } });
+    const editor = await screen.findByRole('textbox', { name: 'Target Message' });
     expect(editor).toBeVisible();
     fireEvent.click(await screen.findByRole('button', { name: 'Use suggestion' }));
     expect(editor).toHaveValue(proposedTarget);
@@ -3343,9 +3382,7 @@ describe('Agent proposal review in Review Projects', () => {
     fireEvent.change(screen.getByLabelText('Explanation'), {
       target: { value: 'Please check the product terminology.' },
     });
-    const evidence = screen.getByRole('region', {
-      name: 'Evidence and verification',
-    });
+    const evidence = screen.getByRole('region', { name: 'Evidence and verification' });
     expect(evidence.closest('.review-project-detail__side')).not.toBeNull();
     await waitFor(() => expect(fetchAgentReviewFeedbackMock).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole('tab', { name: 'History' }));
@@ -3407,12 +3444,7 @@ describe('Agent proposal review in Review Projects', () => {
       includedInLocalizedFile: true,
       expectedCurrentTmTextUnitVariantId: 30,
       expectedReviewStateRevision: 'agent-row-v1',
-      agentReview: {
-        proposalId: 901,
-        proposalRevision: 1,
-        proposalVersion: 2,
-        action: 'ACCEPT',
-      },
+      agentReview: { proposalId: 901, proposalRevision: 1, proposalVersion: 2, action: 'ACCEPT' },
     });
     expect(onRequestSaveDecision.mock.calls[0][0].agentReview?.requestId).toEqual(
       expect.any(String),
@@ -3456,16 +3488,10 @@ describe('Agent proposal review in Review Projects', () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    const row = {
-      ...buildAgentTextUnit({ reviewedTarget: null }),
-      currentTmTextUnitVariant: null,
-    };
+    const row = { ...buildAgentTextUnit({ reviewedTarget: null }), currentTmTextUnitVariant: null };
     renderReviewProjectPageView({
       project: { ...project, reviewProjectTextUnits: [row] },
-      mutations: buildMutations({
-        onRequestSaveDecision,
-        onRequestDecisionState,
-      }),
+      mutations: buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
     });
     expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('');
     fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
@@ -3486,9 +3512,7 @@ describe('Agent proposal review in Review Projects', () => {
         }),
     );
     const row = buildAgentTextUnit();
-    const queryClient = createQueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
     const props: ReviewProjectPageViewProps = {
       projectId: 7,
       project: { ...project, reviewProjectTextUnits: [row] },
@@ -3534,9 +3558,7 @@ describe('Agent proposal review in Review Projects', () => {
                 ...row,
                 agentReview: {
                   ...row.agentReview!,
-                  evidence: row.agentReview!.evidence?.map((item) => ({
-                    ...item,
-                  })),
+                  evidence: row.agentReview!.evidence?.map((item) => ({ ...item })),
                 },
               },
             ],
@@ -3574,9 +3596,7 @@ describe('Agent proposal review in Review Projects', () => {
     expect(editor).toHaveValue('Pague {price} agora');
     expect(screen.getByRole('status', { name: 'Selected proposed correction' })).toBeVisible();
     expect(
-      screen.queryByRole('button', {
-        name: /Selected proposed|Use suggestion/,
-      }),
+      screen.queryByRole('button', { name: /Selected proposed|Use suggestion/ }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Use original translation' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Use original translation' }));
@@ -3610,10 +3630,7 @@ describe('Agent proposal review in Review Projects', () => {
       complete = resolve;
     });
     reopenAgentFindingMock.mockReturnValue(pending);
-    const view = renderAgentReview({
-      disposition: 'RESOLVED',
-      canReviewAgain: true,
-    });
+    const view = renderAgentReview({ disposition: 'RESOLVED', canReviewAgain: true });
     fireEvent.click(screen.getByRole('button', { name: /^Pending$/ }));
     expect(reopenAgentFindingMock).toHaveBeenCalledTimes(1);
     const unload = new Event('beforeunload', { cancelable: true });
@@ -3638,9 +3655,7 @@ describe('Agent proposal review in Review Projects', () => {
       ...acceptedRow.currentTmTextUnitVariant!,
       content: 'Pague {price} agora',
     };
-    renderReviewProjectPageView({
-      project: { ...project, reviewProjectTextUnits: [acceptedRow] },
-    });
+    renderReviewProjectPageView({ project: { ...project, reviewProjectTextUnits: [acceptedRow] } });
     expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pague {price} agora');
     expect(screen.getByRole('textbox', { name: 'Translation' })).toBeDisabled();
     expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
@@ -3662,9 +3677,7 @@ describe('Agent proposal review in Review Projects', () => {
       expect(editor).toBeEnabled();
       expect(editor).toHaveValue('Pay {price} now');
       expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
-      fireEvent.change(editor, {
-        target: { value: 'Pague {price} imediatamente' },
-      });
+      fireEvent.change(editor, { target: { value: 'Pague {price} imediatamente' } });
       expect(screen.getByRole('button', { name: /^Accept$/ })).toBeEnabled();
       fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
       expect(onRequestSaveDecision.mock.calls[0][0]).toMatchObject({
@@ -3673,12 +3686,7 @@ describe('Agent proposal review in Review Projects', () => {
         includedInLocalizedFile: true,
         expectedCurrentTmTextUnitVariantId: 30,
         expectedReviewStateRevision: 'agent-row-v1',
-        agentReview: {
-          action: 'ACCEPT',
-          proposalId: 901,
-          proposalRevision: 1,
-          proposalVersion: 2,
-        },
+        agentReview: { action: 'ACCEPT', proposalId: 901, proposalRevision: 1, proposalVersion: 2 },
         reopenAgentReview: {
           expectedProposalVersion: 2,
           expectedCurrentVariantId: 30,
@@ -3719,10 +3727,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('adopts the new current value after an atomic completed-review edit without retaining a phantom draft', () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
-    const row = buildAgentTextUnit({
-      disposition: 'RESOLVED',
-      canReviewAgain: true,
-    });
+    const row = buildAgentTextUnit({ disposition: 'RESOLVED', canReviewAgain: true });
     row.reviewProjectTextUnitDecision = {
       decisionState: 'DECIDED',
       decisionTmTextUnitVariant: row.currentTmTextUnitVariant,
@@ -3730,9 +3735,7 @@ describe('Agent proposal review in Review Projects', () => {
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>(
       () => 41,
     );
-    const queryClient = createQueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
     const props: ReviewProjectPageViewProps = {
       projectId: 7,
       project: { ...project, reviewProjectTextUnits: [row] },
@@ -3880,9 +3883,7 @@ describe('Agent proposal review in Review Projects', () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     renderAgentReview();
     const editor = screen.getByRole('textbox', { name: 'Translation' });
-    fireEvent.change(editor, {
-      target: { value: 'Pague {price} imediatamente' },
-    });
+    fireEvent.change(editor, { target: { value: 'Pague {price} imediatamente' } });
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
     fireEvent.change(screen.getByLabelText('Explanation'), {
@@ -3931,19 +3932,14 @@ describe('Agent proposal review in Review Projects', () => {
     renderAgentReview({}, buildMutations({ onRequestSaveDecision, onRequestDecisionState }));
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
-    fireEvent.change(screen.getByLabelText('Original translation'), {
-      target: { value: 'GOOD' },
-    });
+    fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'GOOD' } });
     fireEvent.change(screen.getByLabelText('Suggested translation'), {
       target: { value: 'UNNECESSARY' },
     });
     fireEvent.change(screen.getByLabelText('Explanation'), {
       target: { value: 'This phrase matches our approved glossary.' },
     });
-    fireEvent.keyDown(screen.getByLabelText('Explanation'), {
-      key: 'Enter',
-      ctrlKey: true,
-    });
+    fireEvent.keyDown(screen.getByLabelText('Explanation'), { key: 'Enter', ctrlKey: true });
     expect(onRequestSaveDecision).not.toHaveBeenCalled();
     expect(onRequestDecisionState).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
@@ -3963,15 +3959,11 @@ describe('Agent proposal review in Review Projects', () => {
     renderAgentReview({}, buildMutations({ onRequestDecisionState }));
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
-    fireEvent.change(screen.getByLabelText('Original translation'), {
-      target: { value: 'BAD' },
-    });
+    fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'BAD' } });
     expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
     fireEvent.keyDown(window, { key: 'a' });
     expect(onRequestDecisionState).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('Original translation'), {
-      target: { value: '' },
-    });
+    fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: '' } });
     expect(screen.getByRole('button', { name: /^Accept$/ })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
     expect(onRequestDecisionState.mock.calls[0][0].agentReview).toMatchObject({
@@ -3985,9 +3977,7 @@ describe('Agent proposal review in Review Projects', () => {
     renderAgentReview({}, buildMutations({ onRequestSaveDecision }));
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
-    fireEvent.change(screen.getByLabelText('Original translation'), {
-      target: { value: 'BAD' },
-    });
+    fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'BAD' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Use suggestion' }));
     fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
     expect(onRequestSaveDecision.mock.calls[0][0].agentReview).toMatchObject({
@@ -4014,9 +4004,7 @@ describe('Agent proposal review in Review Projects', () => {
       );
       fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
       fireEvent.click(screen.getByText('Review feedback'));
-      fireEvent.change(screen.getByLabelText('Original translation'), {
-        target: { value: 'BAD' },
-      });
+      fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'BAD' } });
       if (disposition === 'RESOLVED') {
         view.rerender(
           renderReviewProjectPageViewNode(
@@ -4027,11 +4015,7 @@ describe('Agent proposal review in Review Projects', () => {
                 reviewProjectTextUnits: [
                   {
                     ...row,
-                    agentReview: {
-                      ...row.agentReview!,
-                      disposition,
-                      canReviewAgain: true,
-                    },
+                    agentReview: { ...row.agentReview!, disposition, canReviewAgain: true },
                     reviewProjectTextUnitDecision: {
                       decisionState: 'DECIDED',
                       decisionTmTextUnitVariant: row.currentTmTextUnitVariant,
@@ -4044,6 +4028,7 @@ describe('Agent proposal review in Review Projects', () => {
           ),
         );
       }
+      fireEvent.click(screen.getByText('Unsent notes'));
       expect(
         screen.getByPlaceholderText('Explain why you chose this translation (if not obvious).'),
       ).toHaveValue('This is still the reported original.');
@@ -4076,14 +4061,8 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('allows metadata edits on a completed correction even when the frozen original was rated BAD', () => {
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
-    const row = buildAgentTextUnit({
-      disposition: 'RESOLVED',
-      canReviewAgain: true,
-    });
-    const correction = {
-      ...row.currentTmTextUnitVariant!,
-      content: 'Pague {price} agora',
-    };
+    const row = buildAgentTextUnit({ disposition: 'RESOLVED', canReviewAgain: true });
+    const correction = { ...row.currentTmTextUnitVariant!, content: 'Pague {price} agora' };
     row.currentTmTextUnitVariant = correction;
     row.reviewProjectTextUnitDecision = {
       decisionState: 'DECIDED',
@@ -4095,7 +4074,8 @@ describe('Agent proposal review in Review Projects', () => {
       buildMutations({ onRequestSaveDecision }),
       'BAD',
     );
-    expect(screen.getByText('Decision notes')).toBeVisible();
+    fireEvent.click(screen.getByText('Unsent notes'));
+    expect(screen.queryByText('Decision notes')).not.toBeInTheDocument();
     fireEvent.change(
       screen.getByPlaceholderText('Explain why you chose this translation (if not obvious).'),
       { target: { value: 'The saved correction matches the glossary.' } },
@@ -4110,7 +4090,7 @@ describe('Agent proposal review in Review Projects', () => {
     });
   });
 
-  it('moves Tab focus through the standard comment and decision-note fields in incident review', () => {
+  it('skips closed legacy notes on Tab and visits the fields once their disclosure is open', () => {
     renderReviewWithRetainedNotes(buildAgentTextUnit(), {
       comment: 'Retained comment',
       decisionNotes: 'Retained decision note',
@@ -4123,13 +4103,11 @@ describe('Agent proposal review in Review Projects', () => {
       'Explain why the baseline translation was bad (to improve AI translation).',
     );
     editor.focus();
-    const tab = new KeyboardEvent('keydown', {
-      key: 'Tab',
-      bubbles: true,
-      cancelable: true,
-    });
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     fireEvent(editor, tab);
-    expect(tab.defaultPrevented).toBe(true);
+    expect(tab.defaultPrevented).toBe(false);
+    fireEvent.click(screen.getByText('Unsent notes'));
+    fireEvent.keyDown(editor, { key: 'Tab' });
     expect(comment).toHaveFocus();
     fireEvent.keyDown(comment, { key: 'Tab' });
     expect(decisionNotes).toHaveFocus();
@@ -4156,13 +4134,13 @@ describe('Agent proposal review in Review Projects', () => {
         }),
       });
       expect(
-        screen.getByPlaceholderText('Explain why you chose this translation (if not obvious).'),
-      ).toBeDisabled();
+        screen.queryByPlaceholderText('Explain why you chose this translation (if not obvious).'),
+      ).not.toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText(
+        screen.queryByPlaceholderText(
           'Explain why the baseline translation was bad (to improve AI translation).',
         ),
-      ).toBeDisabled();
+      ).not.toBeInTheDocument();
       const editor = screen.getByRole('textbox', { name: 'Target Message' });
       editor.focus();
       for (const shiftKey of [false, true]) {
@@ -4179,7 +4157,7 @@ describe('Agent proposal review in Review Projects', () => {
   );
 
   it.each(['ROUTED', 'RESOLVED'])(
-    'saves retained standard notes with normal Accept for %s incident review without changing text',
+    'recovers and saves legacy notes with normal Accept for %s incident review without changing text',
     (disposition) => {
       visibleTextEditorEnabledMock.mockReturnValue(false);
       const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
@@ -4195,10 +4173,7 @@ describe('Agent proposal review in Review Projects', () => {
       };
       renderReviewWithRetainedNotes(
         row,
-        {
-          comment: 'Earlier unsent comment.',
-          decisionNotes: 'Earlier unsent decision note.',
-        },
+        { comment: 'Earlier unsent comment.', decisionNotes: 'Earlier unsent decision note.' },
         buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
       );
       const comment = screen.getByPlaceholderText(
@@ -4207,18 +4182,17 @@ describe('Agent proposal review in Review Projects', () => {
       const decisionNotes = screen.getByPlaceholderText(
         'Explain why the baseline translation was bad (to improve AI translation).',
       );
+      expect(comment).not.toBeVisible();
+      expect(decisionNotes).not.toBeVisible();
+      fireEvent.click(screen.getByText('Unsent notes'));
       expect(comment).toHaveValue('Earlier unsent comment.');
       expect(decisionNotes).toHaveValue('Earlier unsent decision note.');
       expect(comment).toBeVisible();
       expect(comment).toBeEnabled();
       expect(decisionNotes).toBeVisible();
       expect(decisionNotes).toBeEnabled();
-      fireEvent.change(comment, {
-        target: { value: 'Use the approved checkout wording.' },
-      });
-      fireEvent.change(decisionNotes, {
-        target: { value: 'The original remained in English.' },
-      });
+      fireEvent.change(comment, { target: { value: 'Use the approved checkout wording.' } });
+      fireEvent.change(decisionNotes, { target: { value: 'The original remained in English.' } });
       expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pay {price} now');
       expect(onRequestSaveDecision).not.toHaveBeenCalled();
       expect(screen.getByRole('button', { name: /^Accept$/ })).toBeEnabled();
@@ -4241,15 +4215,56 @@ describe('Agent proposal review in Review Projects', () => {
     },
   );
 
+  it('recovers ordinary AI notes and shows the shared decision note only in the widget after editing', async () => {
+    fetchReviewFeedbackBaselineMock.mockResolvedValue({
+      target: 'Pay {price} now',
+      ai: true,
+      kind: 'AI_TRANSLATE',
+    });
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    renderReviewWithRetainedNotes(
+      textUnit,
+      { comment: 'Retained comment.', decisionNotes: 'Retained AI decision note.' },
+      buildMutations({ onRequestSaveDecision }),
+    );
+    await waitFor(() => expect(screen.getByText('Unsent notes')).toBeVisible());
+    expect(
+      screen.queryByRole('region', { name: 'AI translation feedback' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Unsent notes'));
+    expect(
+      screen.getByPlaceholderText('Explain why you chose this translation (if not obvious).'),
+    ).toHaveValue('Retained comment.');
+    expect(
+      screen.getByPlaceholderText(
+        'Explain why the baseline translation was bad (to improve AI translation).',
+      ),
+    ).toHaveValue('Retained AI decision note.');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Pague {price} agora' },
+    });
+    expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
+      'Retained AI decision note.',
+    );
+    expect(screen.queryByText('Decision notes')).not.toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('Explain why you chose this translation (if not obvious).'),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+    expect(onRequestSaveDecision.mock.calls[0][0]).toMatchObject({
+      target: 'Pague {price} agora',
+      comment: 'Retained comment.',
+      decisionNotes: 'Retained AI decision note.',
+      reviewFeedback: { note: 'Retained AI decision note.' },
+    });
+  });
+
   it('does not allow evidence to create executable links or silently overwrite a conflict', () => {
     const current = buildAgentTextUnit({ stale: true });
     renderAgentReview(
       {
         evidence: [
-          {
-            label: 'Checkout screenshot',
-            url: 'https://example.com/screenshot',
-          },
+          { label: 'Checkout screenshot', url: 'https://example.com/screenshot' },
           {
             label: 'Saved artifact',
             url: `/api/agent-reviews/projects/7/proposals/11/artifacts/${'a'.repeat(64)}`,
@@ -4258,10 +4273,7 @@ describe('Agent proposal review in Review Projects', () => {
           { label: 'Unrelated API stays text', url: '/api/users/me' },
         ],
       },
-      buildMutations({
-        activeTextUnitId: current.id,
-        conflictTextUnit: current,
-      }),
+      buildMutations({ activeTextUnitId: current.id, conflictTextUnit: current }),
     );
     expect(screen.queryByRole('button', { name: 'Use mine' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Use external' })).not.toBeInTheDocument();
@@ -4284,9 +4296,7 @@ describe('Agent proposal review in Review Projects', () => {
 it('adopts unchanged current text after keep-current feedback without leaving a phantom proposal draft', () => {
   visibleTextEditorEnabledMock.mockReturnValue(false);
   const initialRow = buildAgentTextUnit();
-  const queryClient = createQueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
   const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>(
     () => 40,
   );

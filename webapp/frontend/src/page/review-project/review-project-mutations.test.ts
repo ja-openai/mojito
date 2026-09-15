@@ -1029,11 +1029,20 @@ describe('Review Project save operation outcomes', () => {
       }),
     );
     const { result } = renderMutationsHook(queryClient);
-    const request = makeRequest();
+    const request = {
+      ...makeRequest(),
+      reviewFeedback: {
+        reason: 'TERMINOLOGY' as const,
+        note: 'Submitted note',
+        chatUsed: true,
+        aiSuggestionUsed: true,
+      },
+    };
     let operationId: number | void;
     act(() => {
       operationId = result.current.onRequestSaveDecision(request);
       request.target = 'Changed after submit';
+      request.reviewFeedback.note = 'Changed after submit';
       request.expectedCurrentTmTextUnitVariantId = 99;
       request.expectedReviewStateRevision = 'mutated-after-submit';
       request.clientContext!.targetOrigin!.owner.textUnitId = 999;
@@ -1042,6 +1051,12 @@ describe('Review Project save operation outcomes', () => {
     expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledWith(
       expect.objectContaining({
         target: 'Local translation',
+        reviewFeedback: {
+          reason: 'TERMINOLOGY',
+          note: 'Submitted note',
+          chatUsed: true,
+          aiSuggestionUsed: true,
+        },
         expectedCurrentTmTextUnitVariantId: null,
         expectedReviewStateRevision: 'draft-row-revision',
       }),

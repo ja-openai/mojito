@@ -12,6 +12,10 @@ import org.springframework.data.repository.query.Param;
 public interface AiTranslateTextUnitAttemptRepository
     extends JpaRepository<AiTranslateTextUnitAttempt, Long> {
 
+  Optional<AiTranslateTextUnitAttempt>
+      findFirstByTmTextUnit_IdAndLocale_IdAndTmTextUnitVariant_IdAndStatusOrderByIdDesc(
+          Long unitId, Long localeId, Long variantId, String status);
+
   List<AiTranslateTextUnitAttempt> findByTmTextUnit_IdAndLocale_IdOrderByCreatedDateDesc(
       Long tmTextUnitId, Long localeId);
 

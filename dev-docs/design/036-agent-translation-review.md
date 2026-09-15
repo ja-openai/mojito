@@ -230,11 +230,13 @@ existing project shell. Batch creation and assignment do not imply table-based e
   The report header shows **Reviewed**, **Awaiting feedback**, or **Replaced** as appropriate and
   remains accessible in every state. Do not invent a confidence percentage.
 - Keep optional original/suggestion assessments and explanation collapsed under
-  **Report → Review feedback**. Show the standard **Comment on translation** and **Decision notes**
-  fields below chat for all translation reviews, including incident-based reviews, with the same
-  placeholders and keyboard navigation. Retained drafts appear directly in those fields. Saving
-  changes to either field uses the ordinary guarded save, including on completed editable reviews.
-  Keyboard navigation skips disabled fields.
+  **Report → Review feedback**. The inline feedback widget replaces the bottom **Comment on
+  translation** and **Decision notes** fields for incident and known-AI reviews. Show it on a
+  changed reported translation, including immediately after **Use suggestion**. Keep unsent
+  older comments/notes accessible through a compact **Unsent notes** disclosure; fields already
+  represented by the widget are not duplicated. Ordinary reviews without this feedback flow
+  retain their standard fields. Saving retained notes uses the ordinary guarded save, including
+  on completed editable reviews. Keyboard navigation skips hidden or disabled fields.
   A metadata-only save records `KEEP_CURRENT` and dismisses the report when the reviewed text is
   retained; it must not report a translation correction. Preserve the actual saved variant receipt
   when comment changes create a new immutable variant. An original marked bad cannot be accepted

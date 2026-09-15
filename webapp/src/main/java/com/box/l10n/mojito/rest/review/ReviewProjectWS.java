@@ -411,7 +411,8 @@ public class ReviewProjectWS {
               request.getDecisionNotes(),
               request.getExpectedReviewStateRevision(),
               request.getAgentReview(),
-              request.getClientContext());
+              request.getClientContext(),
+              request.getReviewFeedback());
       return ResponseEntity.ok(toTextUnitResponse(detail));
     } catch (ReviewProjectCurrentVariantConflictException conflict) {
       GetProjectDetailView.ReviewProjectTextUnit currentTextUnit = conflict.getCurrentTextUnit();

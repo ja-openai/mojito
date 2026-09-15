@@ -7,9 +7,11 @@ import { AdminAiTranslateEvaluationsPage } from './AdminAiTranslateEvaluationsPa
 
 const mocks = vi.hoisted(() => ({
   fetchAiTranslateEvaluations: vi.fn(),
+  fetchReviewFeedbackPatterns: vi.fn(),
 }));
 
 vi.mock('../../api/ai-translate-evaluations', () => mocks);
+vi.mock('../../api/review-feedback', () => mocks);
 
 vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({ role: 'ROLE_ADMIN' }),
@@ -33,6 +35,7 @@ function renderPage() {
 describe('AdminAiTranslateEvaluationsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchReviewFeedbackPatterns.mockResolvedValue({ windowSize: 0, patterns: [] });
     mocks.fetchAiTranslateEvaluations.mockResolvedValue({
       summary: {
         reviewedCount: 2,

@@ -13,6 +13,8 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 @RepositoryRestResource(exported = false)
 public interface AgentReviewProposalRepository extends JpaRepository<AgentReviewProposal, Long> {
+  Optional<AgentReviewProposal> findFirstByReviewProjectTextUnitIdOrderByIdDesc(Long rowId);
+
   Optional<AgentReviewProposal> findByActiveIntakeFingerprint(String fingerprint);
 
   @Query(

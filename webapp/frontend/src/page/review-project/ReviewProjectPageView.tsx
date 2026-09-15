@@ -26,6 +26,7 @@ import {
   fetchGlossaryTerms,
   matchGlossaryTerms,
 } from '../../api/glossaries';
+import { fetchReviewFeedbackBaseline } from '../../api/review-feedback';
 import {
   createReviewProjectClientContext,
   createReviewProjectDiagnosticId,
@@ -88,6 +89,9 @@ import { mf2TranslationErrors } from '../../components/mf2/translationValidation
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
+import { isMaterialReviewEdit } from '../../components/review-feedback/review-edit-diff';
+import { ReviewEditFeedback } from '../../components/review-feedback/ReviewEditFeedback';
+import { useReviewFeedbackVisibility } from '../../components/review-feedback/useReviewFeedbackVisibility';
 import {
   RequestAttachmentsDropzone,
   type RequestAttachmentUploadQueueItem,
@@ -173,6 +177,7 @@ import type { ReviewProjectMutationControls } from './review-project-mutations';
 import { getDefaultReviewProjectShortcutHelpPreference } from './review-project-preferences';
 import { useAgentReviewChat } from './useAgentReviewChat';
 import { useAgentReviewFeedback } from './useAgentReviewFeedback';
+import { useReviewEditFeedback } from './useReviewEditFeedback';
 import {
   type ReviewProjectDecisionSnapshot as DecisionSnapshot,
   type ReviewProjectDraftStatus as StatusChoice,
@@ -448,10 +453,7 @@ const STATUS_FILTER_OPTIONS: Array<FilterOption<StatusFilter>> = [
   { value: 'all', label: 'All statuses' },
   { value: 'APPROVED', label: statusKeyToLabel('APPROVED') },
   { value: 'REVIEW_NEEDED', label: statusKeyToLabel('REVIEW_NEEDED') },
-  {
-    value: 'TRANSLATION_NEEDED',
-    label: statusKeyToLabel('TRANSLATION_NEEDED'),
-  },
+  { value: 'TRANSLATION_NEEDED', label: statusKeyToLabel('TRANSLATION_NEEDED') },
   { value: 'REJECTED', label: statusKeyToLabel('REJECTED') },
 ];
 
@@ -812,10 +814,7 @@ function buildTranslationWarnings(source: string, target: string): TranslationWa
     });
   }
   if (/ {2,}/.test(target)) {
-    warnings.push({
-      code: 'double-space',
-      message: 'Contains repeated spaces.',
-    });
+    warnings.push({ code: 'double-space', message: 'Contains repeated spaces.' });
   }
   if (/\t/.test(target)) {
     warnings.push({ code: 'tab', message: 'Contains tab characters.' });
@@ -877,11 +876,7 @@ function buildSnapshot(textUnit: ApiReviewProjectTextUnit, projectId: number): D
     suggestionSourceLabel: getSuggestionSourceLabel(suggestion?.source),
     targetOrigin:
       suggestion?.target != null
-        ? {
-            kind: 'staged_suggestion',
-            owner,
-            suggestionId: suggestion.id ?? undefined,
-          }
+        ? { kind: 'staged_suggestion', owner, suggestionId: suggestion.id ?? undefined }
         : { kind: 'server_snapshot', owner },
   };
 }
@@ -2065,6 +2060,32 @@ function DetailPane({
     startOperation: startAgentFeedbackOperation,
     reset: resetAgentFeedback,
   } = agentFeedback;
+  const editFeedback = useReviewEditFeedback(
+    user.username,
+    projectId,
+    textUnit.id,
+    mutations.actionState,
+  );
+  const {
+    read: readEditFeedback,
+    updateValues: updateEditFeedback,
+    startOperation: startEditFeedbackOperation,
+    reset: resetEditFeedback,
+  } = editFeedback;
+  const feedbackBaselineQuery = useQuery({
+    queryKey: [
+      'review-feedback-baseline',
+      user.username,
+      projectId,
+      textUnit.id,
+      textUnit.reviewStateRevision,
+    ],
+    enabled: !isTerminologyProject && !isAgentReview,
+    staleTime: 60_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+    queryFn: ({ signal }) => fetchReviewFeedbackBaseline(textUnit.id, signal),
+  });
   const snapshot = useMemo(() => buildSnapshot(textUnit, projectId), [textUnit, projectId]);
   const agentProposalStale =
     agentReview != null && (agentReview.stale || agentReview.reviewedSource !== snapshot.source);
@@ -2566,6 +2587,7 @@ function DetailPane({
     resetResolutionDraft();
     resetMetadataDraft();
     resetAgentFeedback();
+    resetEditFeedback();
     mutations.onDiscardAction(textUnit.id);
   }, [
     mutations,
@@ -2574,6 +2596,7 @@ function DetailPane({
     resetResolutionDraft,
     resetMetadataDraft,
     resetAgentFeedback,
+    resetEditFeedback,
     textUnit.id,
   ]);
 
@@ -2939,6 +2962,40 @@ function DetailPane({
   const isTerminologyDirty = feedbackDraft.dirty;
   const isTerminologyResolutionDirty = resolutionDraft.dirty;
   const isTranslationDirty = draftTarget !== draftBase.target;
+  const aiFeedbackBaseline = feedbackBaselineQuery.data?.ai
+    ? feedbackBaselineQuery.data.target
+    : null;
+  const feedbackNote = agentReview ? agentFeedback.values.explanation : draftDecisionNotes;
+  const hasReportedTranslationEdit =
+    agentReview != null && draftTarget !== (agentReview.reviewedTarget ?? '');
+  const hasFeedbackReason = editFeedback.values.reason !== '';
+  const isProblematic =
+    draftStatusChoice === 'REJECTED' || agentFeedback.values.originalAssessment === 'BAD';
+  const showUnifiedFeedback = useReviewFeedbackVisibility(
+    !isTerminologyProject && feedbackNote.length <= 500
+      ? JSON.stringify([user.username, projectId, textUnit.id])
+      : null,
+    (agentReview
+      ? hasReportedTranslationEdit || feedbackNote.length > 0
+      : isTranslationDirty &&
+        aiFeedbackBaseline !== null &&
+        isMaterialReviewEdit(aiFeedbackBaseline, draftTarget)) ||
+      isProblematic ||
+      hasFeedbackReason,
+  );
+  const readReviewFeedback = useCallback(() => {
+    const current = readEditFeedback();
+    const note = agentReview
+      ? readAgentFeedback()?.values.explanation
+      : readDraft()?.values.decisionNotes;
+    return {
+      reason: current?.values.reason || undefined,
+      note: note && note.length <= 500 ? note : undefined,
+      chatUsed: aiMessages.some((message) => message.sender === 'user'),
+      aiSuggestionUsed: current?.values.aiSuggestionUsed ?? false,
+    };
+  }, [agentReview, readAgentFeedback, readDraft, readEditFeedback, aiMessages]);
+
   const isTranslationReviewDirty =
     sourceChanged ||
     isTranslationDirty ||
@@ -2948,7 +3005,7 @@ function DetailPane({
     draftDecisionNotesNormalized !== draftBase.decisionNotes;
   const isDirty = isTerminologyProject
     ? isTerminologyDirty || isTerminologyResolutionDirty || metadataDraft.dirty
-    : isTranslationReviewDirty || agentFeedback.dirty;
+    : isTranslationReviewDirty || agentFeedback.dirty || hasFeedbackReason;
   const isRejected = draftStatusApi.includedInLocalizedFile === false;
   const canReset = !isTerminologyProject && isDirty && !isSavingGlobal;
   const isAcceptedAndDecided =
@@ -2974,7 +3031,8 @@ function DetailPane({
       (agentReview
         ? (canKeepAgentCurrent && !agentReviewCompleted) ||
           ((canEditCompletedReview || !agentProposalStale) &&
-            isTranslationReviewDirty &&
+            (isTranslationReviewDirty ||
+              (canEditCompletedReview && (agentFeedback.dirty || hasFeedbackReason))) &&
             !mf2HasErrors)
         : !mf2HasErrors && (!isAcceptedAndDecided || isDirty));
   const canApplyTerminologyResolution =
@@ -3016,7 +3074,7 @@ function DetailPane({
       isDirty: () => {
         if (isTerminologyProject)
           return isFeedbackDirty() || isResolutionDirty() || isMetadataDirty();
-        if (isAgentFeedbackDirty()) return true;
+        if (isAgentFeedbackDirty() || readEditFeedback()?.values.reason) return true;
         const current = readDraft();
         if (!current) return false;
         return (
@@ -3041,6 +3099,7 @@ function DetailPane({
     isMetadataDirty,
     isTerminologyProject,
     isAgentFeedbackDirty,
+    readEditFeedback,
     navigationGuardRef,
     readDraft,
   ]);
@@ -3115,6 +3174,7 @@ function DetailPane({
         status: nextStatusApi.status,
         includedInLocalizedFile: nextStatusApi.includedInLocalizedFile,
         decisionState: 'DECIDED',
+        reviewFeedback: readReviewFeedback(),
         ...(agentReview
           ? {
               agentReview: {
@@ -3154,11 +3214,14 @@ function DetailPane({
       if (typeof operationId === 'number') {
         startOperation(operationId);
         if (agentReview) startAgentFeedbackOperation(operationId);
+        startEditFeedbackOperation(operationId);
       }
       return operationId;
     },
     [
       readDraft,
+      readReviewFeedback,
+      startEditFeedbackOperation,
       snapshot.targetOrigin,
       startOperation,
       agentReview,
@@ -3200,6 +3263,7 @@ function DetailPane({
         reviewStateRevision: currentDraft.base.reviewStateRevision,
       }),
       decisionState: 'DECIDED',
+      reviewFeedback: readReviewFeedback(),
       expectedCurrentTmTextUnitVariantId: currentDraft.base.expectedCurrentVariantId,
       expectedReviewStateRevision: currentDraft.base.reviewStateRevision,
       agentReview: {
@@ -3216,6 +3280,7 @@ function DetailPane({
     if (typeof operationId === 'number') {
       startOperation(operationId);
       startAgentFeedbackOperation(operationId);
+      startEditFeedbackOperation(operationId);
     }
     return operationId;
   }, [
@@ -3226,6 +3291,8 @@ function DetailPane({
     projectId,
     readAgentFeedback,
     readDraft,
+    readReviewFeedback,
+    startEditFeedbackOperation,
     startOperation,
     startAgentFeedbackOperation,
     textUnit.id,
@@ -3397,13 +3464,14 @@ function DetailPane({
 
   const focusNextDetailEditor = useCallback(
     (field: DetailEditorField, shiftKey: boolean) => {
+      if (showUnifiedFeedback) return false;
       const fields: DetailEditorField[] = isTerminologyProject
         ? ['decisionNotes']
         : ['translation', 'comment', 'decisionNotes'];
       const editors = fields.filter((candidate) => {
         if (candidate === 'translation') return !isSavingGlobal && !agentReviewReadOnly;
         const editor = candidate === 'comment' ? commentRef.current : decisionNotesRef.current;
-        return editor != null && !editor.disabled;
+        return editor != null && !editor.disabled && !editor.closest('details:not([open])');
       });
       const currentIndex = editors.indexOf(field);
       if (currentIndex === -1 || editors.length < 2) {
@@ -3415,7 +3483,13 @@ function DetailPane({
       focusDetailEditor(editors[nextIndex]);
       return true;
     },
-    [focusDetailEditor, isTerminologyProject, isSavingGlobal, agentReviewReadOnly],
+    [
+      focusDetailEditor,
+      isTerminologyProject,
+      showUnifiedFeedback,
+      isSavingGlobal,
+      agentReviewReadOnly,
+    ],
   );
 
   const handleTextEditorKeyDown = useCallback(
@@ -3491,15 +3565,9 @@ function DetailPane({
         queryKey: [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
         exact: true,
       });
-      void queryClient.invalidateQueries({
-        queryKey: [REVIEW_PROJECTS_QUERY_KEY],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: [AGENT_REVIEW_FEEDBACK_QUERY_KEY],
-      });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [AGENT_REVIEW_FEEDBACK_QUERY_KEY] });
       request.current = null;
     } catch (error) {
       if (reopenOwnerActive.current) {
@@ -3557,7 +3625,7 @@ function DetailPane({
   const handleAccept = useCallback(() => {
     if (agentReview) {
       if (!canAccept) return;
-      if (canKeepAgentCurrent) return requestKeepCurrent();
+      if (canKeepAgentCurrent && !agentReviewCompleted) return requestKeepCurrent();
     }
     if (isTerminologyProject) {
       if (isPmTerminologyProject) {
@@ -3573,6 +3641,7 @@ function DetailPane({
     agentReview,
     canAccept,
     canKeepAgentCurrent,
+    agentReviewCompleted,
     requestKeepCurrent,
     isPmTerminologyProject,
     isTerminologyProject,
@@ -3875,6 +3944,9 @@ function DetailPane({
       const current = readDraft();
       if (!current || !sameReviewProjectSource(current.base, current.remote)) return;
       if (getAiSuggestionError(suggestion)) return;
+      if (reviewProjectAiSuggestionOrigin(suggestion)?.kind === 'ai_suggestion') {
+        updateEditFeedback((values) => ({ ...values, aiSuggestionUsed: true }));
+      }
       setDraftTarget(
         suggestion.content,
         reviewProjectAiSuggestionOrigin(suggestion) ?? {
@@ -3897,6 +3969,7 @@ function DetailPane({
       projectId,
       readDraft,
       setDraftTarget,
+      updateEditFeedback,
     ],
   );
 
@@ -4241,6 +4314,48 @@ function DetailPane({
       }
     };
   }, []);
+
+  const usesUnifiedFeedback =
+    agentReview != null || feedbackBaselineQuery.data?.ai === true || showUnifiedFeedback;
+  const hasLegacyCommentDraft = isCommentDirty;
+  const hasLegacyDecisionNotesDraft =
+    isDecisionNotesDirty && (agentReview != null || !showUnifiedFeedback);
+  const legacyNotesFields = (
+    <>
+      {!usesUnifiedFeedback || hasLegacyCommentDraft ? (
+        <div className="review-project-detail__field">
+          <div className="review-project-detail__label">Comment on translation</div>
+          <AutoTextarea
+            className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+            ref={commentRef}
+            disabled={agentReview != null && (isSavingGlobal || agentReviewReadOnly)}
+            value={draftComment}
+            onChange={(event) => setDraftComment(event.target.value)}
+            placeholder="Explain why you chose this translation (if not obvious)."
+            onKeyDown={handleEditorKeyDown}
+            rows={1}
+            style={{ resize: 'none' }}
+          />
+        </div>
+      ) : null}
+      {!usesUnifiedFeedback || hasLegacyDecisionNotesDraft ? (
+        <div className="review-project-detail__field">
+          <div className="review-project-detail__label">Decision notes</div>
+          <AutoTextarea
+            className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+            ref={decisionNotesRef}
+            disabled={agentReview != null && (isSavingGlobal || agentReviewReadOnly)}
+            value={draftDecisionNotes}
+            onChange={(event) => setDraftDecisionNotes(event.target.value)}
+            placeholder="Explain why the baseline translation was bad (to improve AI translation)."
+            onKeyDown={handleEditorKeyDown}
+            rows={1}
+            style={{ resize: 'none' }}
+          />
+        </div>
+      ) : null}
+    </>
+  );
 
   const aiReviewPanel = (
     <div className="review-project-detail__field review-project-detail__field--ai-chat">
@@ -4885,8 +5000,8 @@ function DetailPane({
                     />
                     {mf2ErrorCount != null && mf2ErrorCount > 0 ? (
                       <div className="review-project-detail__mf2-save-error" role="alert">
-                        Fix {mf2ErrorCount} MF2 error
-                        {mf2ErrorCount === 1 ? '' : 's'} before accepting.
+                        Fix {mf2ErrorCount} MF2 error{mf2ErrorCount === 1 ? '' : 's'} before
+                        accepting.
                       </div>
                     ) : null}
                   </>
@@ -5031,36 +5146,29 @@ function DetailPane({
                 </button>
               ) : null}
 
+              {showUnifiedFeedback ? (
+                <ReviewEditFeedback
+                  reason={editFeedback.values.reason}
+                  note={feedbackNote}
+                  onReason={(reason) => updateEditFeedback((values) => ({ ...values, reason }))}
+                  onNote={(note) =>
+                    agentReview
+                      ? agentFeedback.updateValues((values) => ({ ...values, explanation: note }))
+                      : setDraftDecisionNotes(note)
+                  }
+                  disabled={isSavingGlobal || isComposing || agentReviewReadOnly}
+                />
+              ) : null}
               {aiReviewPanel}
 
-              <div className="review-project-detail__field">
-                <div className="review-project-detail__label">Comment on translation</div>
-                <AutoTextarea
-                  className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
-                  ref={commentRef}
-                  disabled={agentReview != null && (isSavingGlobal || agentReviewReadOnly)}
-                  value={draftComment}
-                  onChange={(event) => setDraftComment(event.target.value)}
-                  placeholder="Explain why you chose this translation (if not obvious)."
-                  onKeyDown={handleEditorKeyDown}
-                  rows={1}
-                  style={{ resize: 'none' }}
-                />
-              </div>
-              <div className="review-project-detail__field">
-                <div className="review-project-detail__label">Decision notes</div>
-                <AutoTextarea
-                  className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
-                  ref={decisionNotesRef}
-                  disabled={agentReview != null && (isSavingGlobal || agentReviewReadOnly)}
-                  value={draftDecisionNotes}
-                  onChange={(event) => setDraftDecisionNotes(event.target.value)}
-                  placeholder="Explain why the baseline translation was bad (to improve AI translation)."
-                  onKeyDown={handleEditorKeyDown}
-                  rows={1}
-                  style={{ resize: 'none' }}
-                />
-              </div>
+              {!usesUnifiedFeedback ? (
+                legacyNotesFields
+              ) : hasLegacyCommentDraft || hasLegacyDecisionNotesDraft ? (
+                <details className="review-project-detail__field">
+                  <summary>Unsent notes</summary>
+                  {legacyNotesFields}
+                </details>
+              ) : null}
             </>
           )}
         </div>
@@ -5913,12 +6021,8 @@ function ReviewProjectHeader({
       if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
         await navigator.clipboard.write([
           new ClipboardItem({
-            'text/html': new Blob([translatorCloseRequestHtml], {
-              type: 'text/html',
-            }),
-            'text/plain': new Blob([translatorCloseRequestMessage], {
-              type: 'text/plain',
-            }),
+            'text/html': new Blob([translatorCloseRequestHtml], { type: 'text/html' }),
+            'text/plain': new Blob([translatorCloseRequestMessage], { type: 'text/plain' }),
           }),
         ]);
       } else {
@@ -5970,9 +6074,7 @@ function ReviewProjectHeader({
   useEffect(() => {
     return () => {
       revokeRequestAttachmentUploadQueuePreviews(
-        Array.from(attachmentUploadPreviewUrlsRef.current).map((preview) => ({
-          preview,
-        })),
+        Array.from(attachmentUploadPreviewUrlsRef.current).map((preview) => ({ preview })),
       );
       attachmentUploadPreviewUrlsRef.current.clear();
     };
@@ -6069,9 +6171,7 @@ function ReviewProjectHeader({
 
       const preparedFiles = await Promise.all(
         Array.from(files).map(async (file) =>
-          prepareDbBackedUploadFile(file, {
-            optimizeImages: optimizeImagesBeforeUpload,
-          }),
+          prepareDbBackedUploadFile(file, { optimizeImages: optimizeImagesBeforeUpload }),
         ),
       );
       const queueEntries = buildRequestAttachmentUploadQueueEntries(
@@ -6494,9 +6594,7 @@ function ReviewProjectHeader({
                 </div>
                 <div
                   className="integrity-check-alert-modal__report"
-                  dangerouslySetInnerHTML={{
-                    __html: translatorCloseRequestHtml,
-                  }}
+                  dangerouslySetInnerHTML={{ __html: translatorCloseRequestHtml }}
                 />
               </section>
             </div>

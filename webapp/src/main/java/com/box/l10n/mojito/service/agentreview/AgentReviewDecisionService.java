@@ -83,6 +83,35 @@ public class AgentReviewDecisionService {
       Long expectedVariantId,
       String expectedReviewRevision,
       String decisionNotes) {
+    return prepare(
+        row,
+        current,
+        request,
+        target,
+        comment,
+        status,
+        included,
+        decisionState,
+        expectedVariantId,
+        expectedReviewRevision,
+        decisionNotes,
+        null);
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public Prepared prepare(
+      ReviewProjectTextUnit row,
+      TMTextUnitVariant current,
+      AgentReviewDecisionRequest request,
+      String target,
+      String comment,
+      String status,
+      Boolean included,
+      DecisionState decisionState,
+      Long expectedVariantId,
+      String expectedReviewRevision,
+      String decisionNotes,
+      com.box.l10n.mojito.service.review.feedback.ReviewerFeedback reviewFeedback) {
     if (row.getReviewProject().getAgentReviewRunId() == null) {
       if (request != null) throw new IllegalArgumentException("This row has no agent proposal");
       return null;
@@ -131,8 +160,8 @@ public class AgentReviewDecisionService {
                 : DecisionState.DECIDED)) {
       throw new IllegalArgumentException("Feedback-only actions must not change the translation");
     }
-    String fingerprint =
-        fingerprint(
+    List<Object> identity =
+        new ArrayList<>(
             Arrays.asList(
                 request,
                 target,
@@ -143,6 +172,8 @@ public class AgentReviewDecisionService {
                 expectedVariantId,
                 expectedReviewRevision,
                 decisionNotes));
+    if (reviewFeedback != null) identity.add(reviewFeedback);
+    String fingerprint = fingerprint(identity);
     Prepared prepared =
         new Prepared(
             proposal,

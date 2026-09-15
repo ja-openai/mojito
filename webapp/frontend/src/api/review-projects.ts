@@ -6,6 +6,7 @@ import type {
   ApiAgentReviewContext,
 } from './agent-reviews';
 import type { ApiGlossaryTermEvidence } from './glossaries';
+import type { ReviewerFeedback } from './review-feedback';
 import {
   type ReviewProjectClientContext,
   reviewProjectContextForTransport,
@@ -984,11 +985,13 @@ export const saveReviewProjectTextUnitDecision = async ({
   overrideChangedCurrent = false,
   decisionNotes,
   agentReview,
+  reviewFeedback,
   reopenAgentReview,
 }: {
   textUnitId: number;
   clientContext?: ReviewProjectClientContext;
   agentReview?: AgentReviewDecision;
+  reviewFeedback?: ReviewerFeedback;
   reopenAgentReview?: AgentReviewAgainRequest;
   target: string;
   comment: string | null;
@@ -1016,6 +1019,7 @@ export const saveReviewProjectTextUnitDecision = async ({
     overrideChangedCurrent,
     decisionNotes,
     agentReview,
+    reviewFeedback,
   };
   const url = reopenAgentReview
     ? `/api/agent-reviews/projects/${clientContext!.owner.projectId}/proposals/${agentReview!.proposalId}/reopen-and-save`

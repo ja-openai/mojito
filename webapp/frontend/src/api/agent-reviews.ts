@@ -1,3 +1,4 @@
+import type { ReviewerFeedback } from './review-feedback';
 import {
   type ReviewProjectClientContext,
   reviewProjectContextForTransport,
@@ -95,6 +96,7 @@ export async function saveAgentReviewOutcome({
   expectedCurrentTmTextUnitVariantId?: number | null;
   expectedReviewStateRevision?: string | null;
   agentReview: AgentReviewDecision;
+  reviewFeedback?: ReviewerFeedback;
 }): Promise<ApiReviewProjectTextUnit> {
   const response = await fetch(`/api/review-project-text-units/${textUnitId}/decision`, {
     method: 'POST',

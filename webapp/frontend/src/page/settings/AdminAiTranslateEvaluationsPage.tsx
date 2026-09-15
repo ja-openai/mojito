@@ -11,6 +11,7 @@ import {
 } from '../../api/ai-translate-evaluations';
 import { SearchControl } from '../../components/SearchControl';
 import { useUser } from '../../hooks/useUser';
+import { ReviewFeedbackPatternsPanel } from './ReviewFeedbackPatternsPanel';
 
 type OutcomeFilter = 'all' | 'edited' | 'exact';
 
@@ -69,6 +70,8 @@ export function AdminAiTranslateEvaluationsPage() {
           </p>
         </div>
       </section>
+
+      <ReviewFeedbackPatternsPanel />
 
       {reportQuery.isError ? (
         <section className="settings-card">

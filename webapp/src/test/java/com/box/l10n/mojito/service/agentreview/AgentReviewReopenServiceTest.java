@@ -14,6 +14,7 @@ import com.box.l10n.mojito.service.review.GetProjectDetailView;
 import com.box.l10n.mojito.service.review.ReviewProjectClientContext;
 import com.box.l10n.mojito.service.review.ReviewProjectService;
 import com.box.l10n.mojito.service.review.ReviewProjectTextUnitRepository;
+import com.box.l10n.mojito.service.review.feedback.ReviewerFeedback;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.team.TeamService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
@@ -389,7 +390,8 @@ public class AgentReviewReopenServiceTest {
             nullable(String.class),
             eq("pending-revision"),
             any(),
-            nullable(ReviewProjectClientContext.class)))
+            nullable(ReviewProjectClientContext.class),
+            nullable(ReviewerFeedback.class)))
         .thenAnswer(
             call -> {
               AgentReviewDecisionRequest judgment = call.getArgument(10);
@@ -445,7 +447,8 @@ public class AgentReviewReopenServiceTest {
             nullable(String.class),
             eq("pending-revision"),
             any(),
-            nullable(ReviewProjectClientContext.class));
+            nullable(ReviewProjectClientContext.class),
+            nullable(ReviewerFeedback.class));
     request.decision().setTarget("Different correction");
     assertThatThrownBy(() -> service.reopenAndSave(7L, 10L, request))
         .hasMessageContaining("request key was already used");
@@ -487,7 +490,8 @@ public class AgentReviewReopenServiceTest {
             nullable(String.class),
             anyString(),
             any(),
-            nullable(ReviewProjectClientContext.class)))
+            nullable(ReviewProjectClientContext.class),
+            nullable(ReviewerFeedback.class)))
         .thenThrow(new IllegalArgumentException("Invalid translation"));
     assertThatThrownBy(() -> service.reopenAndSave(7L, 10L, editRequest()))
         .hasMessageContaining("Invalid translation");

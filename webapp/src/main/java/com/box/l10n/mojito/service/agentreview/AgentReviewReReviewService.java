@@ -92,7 +92,10 @@ public class AgentReviewReReviewService {
       Long expectedCurrentVariantId,
       String expectedReviewRevision,
       String decisionNotes,
-      AgentReviewDecisionRequest agentReview) {}
+      AgentReviewDecisionRequest agentReview,
+      @com.fasterxml.jackson.annotation.JsonInclude(
+              com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+          com.box.l10n.mojito.service.review.feedback.ReviewerFeedback reviewFeedback) {}
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public Result reviewAgain(long projectId, long proposalId, Request request) {
@@ -164,7 +167,8 @@ public class AgentReviewReReviewService {
         decision.getDecisionNotes(),
         current.reviewStateRevision(),
         nextJudgment,
-        decision.getClientContext());
+        decision.getClientContext(),
+        decision.getReviewFeedback());
   }
 
   private void validateEdit(long proposalId, EditRequest request) {
@@ -252,7 +256,8 @@ public class AgentReviewReReviewService {
                     decision.getExpectedCurrentTmTextUnitVariantId(),
                     decision.getExpectedReviewStateRevision(),
                     decision.getDecisionNotes(),
-                    decision.getAgentReview()));
+                    decision.getAgentReview(),
+                    decision.getReviewFeedback()));
     AgentReviewProposal replay =
         proposals.findByRunIdAndSubmissionKey(previous.getRunId(), key).orElse(null);
     if (replay != null) {

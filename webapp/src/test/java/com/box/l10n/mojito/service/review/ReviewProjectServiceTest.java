@@ -160,6 +160,10 @@ public class ReviewProjectServiceTest {
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   private final EntityManager entityManager = Mockito.mock(EntityManager.class);
 
+  private final com.box.l10n.mojito.service.review.feedback.ReviewFeedbackCaptureService
+      reviewFeedbackCapture =
+          Mockito.mock(
+              com.box.l10n.mojito.service.review.feedback.ReviewFeedbackCaptureService.class);
   private ReviewProjectService reviewProjectService;
   private User currentUser;
 
@@ -204,7 +208,8 @@ public class ReviewProjectServiceTest {
                 reviewFeatureRepository,
                 meterRegistry,
                 Mockito.mock(
-                    com.box.l10n.mojito.service.agentreview.AgentReviewDecisionService.class)));
+                    com.box.l10n.mojito.service.agentreview.AgentReviewDecisionService.class),
+                reviewFeedbackCapture));
     ReflectionTestUtils.setField(reviewProjectService, "entityManager", entityManager);
     doReturn(null).when(reviewProjectService).getProjectDetail(anyLong());
 
@@ -1317,6 +1322,12 @@ public class ReviewProjectServiceTest {
             "Looks good",
             null);
 
+    var order = Mockito.inOrder(reviewProjectTextUnitDecisionRepository, reviewFeedbackCapture);
+    order.verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(any());
+    order
+        .verify(reviewFeedbackCapture)
+        .capture(
+            eq(reviewProjectTextUnit), any(), any(), any(), eq("Bonjour"), eq(99L), any(), any());
     assertEquals(Long.valueOf(55L), detail.id());
     verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(any());
     verify(reviewProjectRepository).incrementDecidedProgress(12L, 7L);

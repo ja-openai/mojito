@@ -128,6 +128,8 @@ public class ReviewProjectService {
   private final ReviewFeatureRepository reviewFeatureRepository;
   private final MeterRegistry meterRegistry;
   private final AgentReviewDecisionService agentReviewDecisionService;
+  private final com.box.l10n.mojito.service.review.feedback.ReviewFeedbackCaptureService
+      reviewFeedbackCapture;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -167,7 +169,9 @@ public class ReviewProjectService {
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
       ReviewFeatureRepository reviewFeatureRepository,
       MeterRegistry meterRegistry,
-      AgentReviewDecisionService agentReviewDecisionService) {
+      AgentReviewDecisionService agentReviewDecisionService,
+      com.box.l10n.mojito.service.review.feedback.ReviewFeedbackCaptureService
+          reviewFeedbackCapture) {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
@@ -204,6 +208,7 @@ public class ReviewProjectService {
     this.reviewFeatureRepository = reviewFeatureRepository;
     this.meterRegistry = meterRegistry;
     this.agentReviewDecisionService = agentReviewDecisionService;
+    this.reviewFeedbackCapture = reviewFeedbackCapture;
   }
 
   public PollableFuture<CreateReviewProjectRequestResult> createReviewProjectRequestAsync(
@@ -2577,6 +2582,37 @@ public class ReviewProjectService {
       String expectedReviewStateRevision,
       AgentReviewDecisionRequest agentReview,
       ReviewProjectClientContext clientContext) {
+    return saveDecision(
+        reviewProjectTextUnitId,
+        target,
+        comment,
+        status,
+        includedInLocalizedFile,
+        decisionState,
+        expectedCurrentTmTextUnitVariantId,
+        overrideChangedCurrent,
+        decisionNotes,
+        expectedReviewStateRevision,
+        agentReview,
+        clientContext,
+        null);
+  }
+
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public GetProjectDetailView.ReviewProjectTextUnit saveDecision(
+      Long reviewProjectTextUnitId,
+      String target,
+      String comment,
+      String status,
+      Boolean includedInLocalizedFile,
+      DecisionState decisionState,
+      Long expectedCurrentTmTextUnitVariantId,
+      boolean overrideChangedCurrent,
+      String decisionNotes,
+      String expectedReviewStateRevision,
+      AgentReviewDecisionRequest agentReview,
+      ReviewProjectClientContext clientContext,
+      com.box.l10n.mojito.service.review.feedback.ReviewerFeedback reviewFeedback) {
 
     var trace =
         ReviewProjectSaveTrace.start(
@@ -2657,7 +2693,8 @@ public class ReviewProjectService {
                             decisionState,
                             expectedCurrentTmTextUnitVariantId,
                             expectedReviewStateRevision,
-                            decisionNotes);
+                            decisionNotes,
+                            reviewFeedback);
                 boolean replay = proposalDecision != null && proposalDecision.replay();
 
                 // An override chooses the draft, but must still match the version shown to the
@@ -2814,6 +2851,23 @@ public class ReviewProjectService {
                   .ifPresent(reviewProjectTextUnitSuggestionRepository::delete);
             }
           });
+
+      if (initialRead.agentReview() == null
+          || initialRead.agentReview().request().action()
+              == AgentReviewDecisionRequest.Action.ACCEPT
+          || initialRead.agentReview().request().action()
+              == AgentReviewDecisionRequest.Action.KEEP_CURRENT)
+        reviewFeedbackCapture.capture(
+            textUnit,
+            decision,
+            reviewedVariant,
+            initialRead.agentReview() == null ? null : initialRead.agentReview().proposal(),
+            hasTarget
+                ? target
+                : decision.getVariant() == null ? null : decision.getVariant().getContent(),
+            currentUser.getId(),
+            reviewFeedback,
+            clientContext);
 
       // Record lineage while the current variant and proposal are still managed. The following
       // atomic counter update flushes and clears the persistence context.

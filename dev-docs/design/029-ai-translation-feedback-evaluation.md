@@ -18,6 +18,10 @@ annotation workflow, or external service. Review work that already happens becom
 
 ## What the first slice does
 
+Accept-time immutable edit events and the optional reviewer-feedback module are described in
+`037-review-edit-feedback.md`. The Learning page also shows their asynchronously computed,
+bounded pattern window. The historical decision-join evaluation below remains available.
+
 The AI translation prompt settings page has a **Learning** tab. It is admin-only and read-only.
 It shows:
 
@@ -86,7 +90,8 @@ Even then, Mojito should remain the source of reviewed examples and import only 
 - LLM-as-judge scoring. Human review remains the primary label; a judge must be calibrated against
   it before use.
 - Automatic prompt proposals from edit clusters.
-- Statistical confidence intervals and minimum-sample promotion rules.
+- Statistical confidence intervals and calibrated promotion rules beyond the conservative
+  candidate-observation thresholds in `037-review-edit-feedback.md`.
 
 These should be added only after operators use the evidence page and we know which workflow removes
 real review work.

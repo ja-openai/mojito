@@ -7,6 +7,7 @@ import {
   type AgentReviewDecision,
   saveAgentReviewOutcome,
 } from '../../api/agent-reviews';
+import type { ReviewerFeedback } from '../../api/review-feedback';
 import {
   recoverReviewProjectClientContext,
   type ReviewProjectClientContext,
@@ -50,6 +51,7 @@ export type SaveDecisionRequest = {
   textUnitId: number;
   clientContext?: ReviewProjectClientContext;
   agentReview?: AgentReviewDecision;
+  reviewFeedback?: ReviewerFeedback;
   reopenAgentReview?: AgentReviewAgainRequest;
   tmTextUnitId: number | null;
   reportUrl?: string | null;
@@ -69,6 +71,7 @@ export type DecisionStateRequest = {
   textUnitId: number;
   clientContext?: ReviewProjectClientContext;
   agentReview?: AgentReviewDecision;
+  reviewFeedback?: ReviewerFeedback;
   decisionState: 'PENDING' | 'DECIDED';
   expectedCurrentTmTextUnitVariantId?: number | null;
   expectedReviewStateRevision?: string | null;
@@ -412,6 +415,7 @@ export function useReviewProjectMutations(
           overrideChangedCurrent: action.request.overrideChangedCurrent,
           decisionNotes: action.request.decisionNotes,
           agentReview: action.request.agentReview,
+          reviewFeedback: action.request.reviewFeedback,
           reopenAgentReview: action.request.reopenAgentReview,
         });
       }
@@ -432,6 +436,7 @@ export function useReviewProjectMutations(
           expectedCurrentTmTextUnitVariantId: action.request.expectedCurrentTmTextUnitVariantId,
           expectedReviewStateRevision: action.request.expectedReviewStateRevision,
           agentReview: action.request.agentReview,
+          reviewFeedback: action.request.reviewFeedback,
         });
       }
       return setReviewProjectTextUnitDecisionState({

@@ -6,6 +6,17 @@ import com.box.l10n.mojito.service.review.ReviewProjectClientContext;
 
 public class ReviewProjectTextUnitDecisionRequest {
 
+  private com.box.l10n.mojito.service.review.feedback.ReviewerFeedback reviewFeedback;
+
+  public com.box.l10n.mojito.service.review.feedback.ReviewerFeedback getReviewFeedback() {
+    return reviewFeedback;
+  }
+
+  public void setReviewFeedback(
+      com.box.l10n.mojito.service.review.feedback.ReviewerFeedback value) {
+    reviewFeedback = value;
+  }
+
   private String target;
   private String comment;
   private String status;
