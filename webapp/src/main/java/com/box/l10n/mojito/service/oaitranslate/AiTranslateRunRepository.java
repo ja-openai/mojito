@@ -90,4 +90,6 @@ public interface AiTranslateRunRepository extends JpaRepository<AiTranslateRun, 
       """)
   List<AiTranslateRunSummaryRow> findRecentRunRowsByRepositoryIds(
       @Param("repositoryIds") List<Long> repositoryIds, Pageable pageable);
+
+  boolean existsByPollableTask_Id(Long pollableTaskId);
 }

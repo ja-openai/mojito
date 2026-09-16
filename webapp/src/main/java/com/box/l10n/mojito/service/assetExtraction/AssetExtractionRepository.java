@@ -33,4 +33,6 @@ public interface AssetExtractionRepository extends JpaRepository<AssetExtraction
         and pt.finishedDate is not null
         """)
   List<Long> findFinishedAndOldAssetExtractions(Pageable pageable);
+
+  boolean existsByPollableTask_Id(Long pollableTaskId);
 }

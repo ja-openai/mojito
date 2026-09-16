@@ -61,6 +61,7 @@ public class StructuredBlobStorage {
 
   public enum Prefix {
     POLLABLE_TASK,
+    POLLABLE_TASK_ARCHIVE,
     IMAGE,
     MULTI_BRANCH_STATE,
     TEXT_UNIT_DTOS_CACHE,

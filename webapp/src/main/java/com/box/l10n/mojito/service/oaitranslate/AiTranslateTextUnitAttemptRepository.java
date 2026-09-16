@@ -182,4 +182,6 @@ public interface AiTranslateTextUnitAttemptRepository
       @Param("localeTag") String localeTag,
       @Param("model") String model,
       Pageable pageable);
+
+  boolean existsByPollableTask_Id(Long pollableTaskId);
 }

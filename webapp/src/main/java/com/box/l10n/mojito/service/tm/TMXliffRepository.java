@@ -12,4 +12,6 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 public interface TMXliffRepository extends JpaRepository<TMXliff, Long> {
 
   TMXliff findByPollableTask(PollableTask pollableTask);
+
+  boolean existsByPollableTask_Id(Long pollableTaskId);
 }

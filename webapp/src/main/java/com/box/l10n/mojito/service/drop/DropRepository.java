@@ -24,4 +24,8 @@ public interface DropRepository extends JpaRepository<Drop, Long>, JpaSpecificat
   @Override
   @EntityGraph(value = "Drop.legacy", type = EntityGraphType.FETCH)
   Optional<Drop> findById(Long aLong);
+
+  boolean existsByImportPollableTask_Id(Long pollableTaskId);
+
+  boolean existsByExportPollableTask_Id(Long pollableTaskId);
 }

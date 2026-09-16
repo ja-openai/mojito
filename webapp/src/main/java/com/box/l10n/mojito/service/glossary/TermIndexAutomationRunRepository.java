@@ -14,4 +14,6 @@ public interface TermIndexAutomationRunRepository
   List<TermIndexAutomationRun> findAllByOrderByIdDesc(Pageable pageable);
 
   Optional<TermIndexAutomationRun> findByPollableTaskId(Long pollableTaskId);
+
+  boolean existsByPollableTaskId(Long pollableTaskId);
 }

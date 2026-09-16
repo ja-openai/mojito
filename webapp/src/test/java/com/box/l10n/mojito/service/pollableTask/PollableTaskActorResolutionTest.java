@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.pollableTask;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -8,6 +9,8 @@ import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.security.user.User;
 import java.util.Optional;
 import org.junit.Test;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 public class PollableTaskActorResolutionTest {
 
@@ -28,6 +31,10 @@ public class PollableTaskActorResolutionTest {
     PollableTaskRepository repository = mock(PollableTaskRepository.class);
     when(repository.findById(childTask.getId())).thenReturn(Optional.of(childTask));
     PollableTaskService service = new PollableTaskService();
+    service.transactionManager = mock(PlatformTransactionManager.class);
+    when(service.transactionManager.getTransaction(any()))
+        .thenReturn(new SimpleTransactionStatus());
+    service.pollableTaskArchiveStorage = mock(PollableTaskArchiveStorage.class);
     service.pollableTaskRepository = repository;
 
     assertThat(service.getCreatedByUserIdWithAncestorFallback(childTask.getId()))

@@ -17,4 +17,6 @@ public interface BulkImportRunRepository extends JpaRepository<BulkImportRun, Lo
 
   @EntityGraph(attributePaths = {"repository", "asset", "locale", "pollableTask", "initiatingUser"})
   List<BulkImportRun> findAllByOrderByCreatedDateDescIdDesc(Pageable pageable);
+
+  boolean existsByPollableTask_Id(Long pollableTaskId);
 }

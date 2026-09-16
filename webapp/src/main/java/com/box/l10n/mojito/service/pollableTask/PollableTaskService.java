@@ -47,6 +47,8 @@ public class PollableTaskService {
 
   @Autowired PollableTaskRepository pollableTaskRepository;
 
+  @Autowired PollableTaskArchiveStorage pollableTaskArchiveStorage;
+
   @Autowired PlatformTransactionManager transactionManager;
 
   @PersistenceContext EntityManager entityManager;
@@ -54,6 +56,7 @@ public class PollableTaskService {
   /**
    * Reload a task for a decision that must not use request-cached state. This read does not lock
    * the task or fence a subsequent write; callers still need their own concurrency protocol.
+   * Archived tasks are deliberately excluded from this operational lookup.
    */
   public PollableTask getFreshPollableTask(long id) {
     TransactionTemplate read = new TransactionTemplate(transactionManager);
@@ -71,29 +74,69 @@ public class PollableTaskService {
         });
   }
 
-  @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
   public PollableTask getPollableTask(long id) {
-    final PollableTask pollableTask = pollableTaskRepository.findById(id).orElse(null);
-    if (pollableTask == null) {
-      return null;
+    PollableTask task = readTransaction().execute(status -> loadDatabaseTask(id));
+    if (task != null) {
+      return task;
     }
-    // Access all subtasks within the transaction to fetch all entities from the database since
-    // we don't use EAGER fetch on the entity anymore.
-    fetchSubTasks(pollableTask);
-    return pollableTask;
+    return findArchivedTaskOutsideTransaction(id);
   }
 
-  @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
   public Long getCreatedByUserIdWithAncestorFallback(long id) {
-    PollableTask candidate = pollableTaskRepository.findById(id).orElse(null);
-    Set<Long> visitedTaskIds = new HashSet<>();
-    while (candidate != null && visitedTaskIds.add(candidate.getId())) {
-      if (candidate.getCreatedByUser() != null) {
-        return candidate.getCreatedByUser().getId();
-      }
-      candidate = candidate.getParentTask();
+    TaskOwner owner =
+        readTransaction()
+            .execute(
+                status -> {
+                  PollableTask candidate = pollableTaskRepository.findById(id).orElse(null);
+                  boolean found = candidate != null;
+                  Set<Long> visitedTaskIds = new HashSet<>();
+                  while (candidate != null && visitedTaskIds.add(candidate.getId())) {
+                    if (candidate.getCreatedByUser() != null) {
+                      return new TaskOwner(true, candidate.getCreatedByUser().getId());
+                    }
+                    candidate = candidate.getParentTask();
+                  }
+                  return new TaskOwner(found, null);
+                });
+    if (owner.found()) {
+      return owner.userId();
     }
-    return null;
+    PollableTask archived = findArchivedTaskOutsideTransaction(id);
+    return archived == null || archived.getCreatedByUser() == null
+        ? null
+        : archived.getCreatedByUser().getId();
+  }
+
+  private record TaskOwner(boolean found, Long userId) {}
+
+  private TransactionTemplate readTransaction() {
+    TransactionTemplate read = new TransactionTemplate(transactionManager);
+    read.setReadOnly(true);
+    read.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    return read;
+  }
+
+  private PollableTask findArchivedTaskOutsideTransaction(long id) {
+    // Callers may already have an application transaction. Suspend it during remote I/O too.
+    TransactionTemplate remote = new TransactionTemplate(transactionManager);
+    remote.setPropagationBehavior(TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
+    return remote.execute(status -> pollableTaskArchiveStorage.findArchivedTask(id).orElse(null));
+  }
+
+  private PollableTask loadDatabaseTask(long id) {
+    PollableTask task = pollableTaskRepository.findById(id).orElse(null);
+    if (task != null) {
+      fetchSubTasks(task);
+    }
+    return task;
+  }
+
+  private PollableTask requireDatabaseTask(long id) {
+    PollableTask task = loadDatabaseTask(id);
+    if (task == null) {
+      throw new IllegalArgumentException("Pollable task not found in database: " + id);
+    }
+    return task;
   }
 
   public PollableTask createPollableTask(
@@ -139,7 +182,7 @@ public class PollableTaskService {
       ExceptionHolder exceptionHolder,
       Integer expectedSubTaskNumberOverride) {
 
-    PollableTask pollableTask = getPollableTask(id);
+    PollableTask pollableTask = requireDatabaseTask(id);
     pollableTask.setFinishedDate(ZonedDateTime.now());
 
     if (exceptionHolder != null && exceptionHolder.getException() != null) {
@@ -163,7 +206,7 @@ public class PollableTaskService {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public PollableTask updateExpectedSubTaskNumber(long id, int expectedSubTaskNumber) {
 
-    PollableTask pollableTask = getPollableTask(id);
+    PollableTask pollableTask = requireDatabaseTask(id);
     pollableTask.setExpectedSubTaskNumber(expectedSubTaskNumber);
 
     return pollableTaskRepository.save(pollableTask);
@@ -172,7 +215,7 @@ public class PollableTaskService {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public PollableTask updateMessage(long id, String message) {
 
-    PollableTask pollableTask = getPollableTask(id);
+    PollableTask pollableTask = requireDatabaseTask(id);
     pollableTask.setMessage(message);
 
     return pollableTaskRepository.save(pollableTask);

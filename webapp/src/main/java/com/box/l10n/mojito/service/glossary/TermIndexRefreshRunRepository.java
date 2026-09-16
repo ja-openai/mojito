@@ -10,4 +10,6 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 public interface TermIndexRefreshRunRepository extends JpaRepository<TermIndexRefreshRun, Long> {
 
   List<TermIndexRefreshRun> findAllByOrderByIdDesc(Pageable pageable);
+
+  boolean existsByPollableTaskId(Long pollableTaskId);
 }
