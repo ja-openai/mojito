@@ -1,0 +1,10 @@
+{
+  "spring.datasource.url": "${MOJITO_SECRET_DB_URL}",
+  "spring.datasource.username": "${MOJITO_SECRET_DB_USERNAME}",
+  "spring.datasource.password": "${MOJITO_SECRET_DB_PASSWORD}",
+  "spring.datasource.hikari.maximum-pool-size": "4",
+  "l10n.azure.blob-storage.enabled": "true",
+  "l10n.azure.blob-storage.connection-string": "${MOJITO_SECRET_AZURE_CONNECTION_STRING}",
+  "l10n.azure.blob-storage.container": "${MOJITO_SECRET_AZURE_CONTAINER}",
+  "l10n.blob-storage.azure.prefix": "${MOJITO_SECRET_AZURE_PREFIX}"
+}
