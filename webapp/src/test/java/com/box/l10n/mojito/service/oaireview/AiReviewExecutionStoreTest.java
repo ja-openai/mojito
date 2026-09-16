@@ -36,6 +36,7 @@ import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
 import com.box.l10n.mojito.service.oaireview.AiReviewCapacityStore.Admission;
 import com.box.l10n.mojito.service.oaireview.AiReviewExecutionStore.Claim;
 import com.box.l10n.mojito.service.oaireview.AiReviewExecutionStore.Disposition;
+import com.box.l10n.mojito.service.oaireview.AiReviewExecutionStore.TaskSnapshot;
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Settings;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskRepository;
@@ -60,6 +61,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import javax.sql.DataSource;
@@ -75,9 +77,9 @@ import org.springframework.orm.jpa.EntityManagerHolder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.server.ResponseStatusException;
 
 /** Exercises independent worker instances against the same real database transactions. */
 @TestPropertySource(properties = "l10n.org.quartz.scheduler.enabled=false")
@@ -100,9 +102,22 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   private AiReviewExecutionProperties configuration;
   private PollableTaskBlobStorage outputs;
   private AiReviewExecutionStore store;
+  private String previousHsqlTransactionControl;
 
   @Before
   public void setUpExecutionStore() {
+    if (dbUtils.isHsql()) {
+      JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+      previousHsqlTransactionControl =
+          jdbc.queryForObject(
+              """
+              select property_value from information_schema.system_properties
+              where property_name = 'hsqldb.tx'
+              """,
+              String.class);
+      // Let a competing transaction commit while the contender holds an older read snapshot.
+      jdbc.execute("SET DATABASE TRANSACTION CONTROL MVCC");
+    }
     removeCapacity();
     clock.set(Instant.parse("2026-09-10T22:00:00Z"));
     configuration = new AiReviewExecutionProperties();
@@ -115,11 +130,18 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
 
   @After
   public void removeExecutionRecords() {
-    removeCapacity();
-    tasks.deleteAllById(createdTasks.reversed());
-    createdTasks.clear();
-    users.deleteAllById(createdUsers);
-    createdUsers.clear();
+    try {
+      removeCapacity();
+      tasks.deleteAllById(createdTasks.reversed());
+      createdTasks.clear();
+      users.deleteAllById(createdUsers);
+      createdUsers.clear();
+    } finally {
+      if (previousHsqlTransactionControl != null) {
+        new JdbcTemplate(dataSource)
+            .execute("SET DATABASE TRANSACTION CONTROL " + previousHsqlTransactionControl);
+      }
+    }
   }
 
   @Test
@@ -299,7 +321,7 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   @Test
   public void mysqlAdmissionReturnsWhileAnotherConnectionStillHoldsTheCapacityLock()
       throws Exception {
-    assumeTrue("MySQL-specific NOWAIT semantics", dbUtils.isMysql());
+    assumeTrue("MySQL-specific lock timeout semantics", dbUtils.isMysql());
     initializeWorkers(store);
     long taskId = task(0, 3600);
     try (Connection locker = dataSource.getConnection();
@@ -336,30 +358,19 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   @Test
-  public void mysqlTaskRowContentionReturnsUnavailableWithoutReservingCapacity() throws Exception {
-    assumeTrue("MySQL-specific NOWAIT semantics", dbUtils.isMysql());
+  public void aConcurrentCompletedResultCannotBeOverwrittenByCancellation() {
     long taskId = task(0, 3600);
-    try (Connection locker = dataSource.getConnection();
-        var executor = Executors.newSingleThreadExecutor()) {
-      locker.setAutoCommit(false);
-      try {
-        lockTaskRow(locker, taskId);
-        ResponseStatusException error =
-            executor
-                .submit(
-                    () ->
-                        assertThrows(
-                            ResponseStatusException.class,
-                            () -> store.tryClaim(taskId, "contending-process")))
-                .get(5, TimeUnit.SECONDS);
-        assertEquals(503, error.getStatusCode().value());
-      } finally {
-        locker.rollback();
-      }
-    }
-    assertEquals(0, reservations());
-    assertNull(tasks.findById(taskId).orElseThrow().getMessage());
-    assertEquals(Disposition.START, store.tryClaim(taskId, "after-lock-release").disposition());
+    Claim claim = store.tryClaim(taskId, "provider-process");
+    AiReviewChatJob.Result completed = result("Completed before cancellation committed");
+    AiReviewExecutionStore cancelling =
+        beforeFirstTaskUpdate(
+            worker(outputs), () -> store.stageResult(taskId, claim.token(), completed));
+
+    cancelling.cancel(taskId);
+
+    assertEquals(completed, store.getStagedResult(taskId).orElseThrow());
+    assertTrue(cancelling.finishStaged(taskId));
+    verify(outputs).saveOutput(taskId, completed);
   }
 
   @Test
@@ -401,36 +412,19 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   @Test
-  public void mysqlTaskClaimFailureReleasesItsProvisionalCapacity() throws Exception {
-    assumeTrue("MySQL-specific NOWAIT semantics", dbUtils.isMysql());
+  public void aConcurrentCancellationCannotBeOverwrittenByProviderCompletion() {
     long taskId = task(0, 3600);
-    try (Connection locker = dataSource.getConnection()) {
-      locker.setAutoCommit(false);
-      try {
-        AiReviewCapacityStore capacity =
-            capacityWithAdmissionHook(
-                token -> {
-                  try {
-                    lockTaskRow(locker, taskId);
-                  } catch (java.sql.SQLException exception) {
-                    throw new IllegalStateException(exception);
-                  }
-                });
-        AiReviewExecutionStore contender = worker(outputs, capacity);
+    Claim claim = store.tryClaim(taskId, "provider-process");
+    AiReviewExecutionStore completing =
+        beforeFirstTaskUpdate(worker(outputs), () -> store.cancel(taskId));
 
-        ResponseStatusException error =
-            assertThrows(
-                ResponseStatusException.class,
-                () -> contender.tryClaim(taskId, "contending-process"));
+    completing.stageResult(taskId, claim.token(), result("Losing provider response"));
 
-        assertEquals(503, error.getStatusCode().value());
-        assertEquals(0, reservations());
-      } finally {
-        locker.rollback();
-      }
-    }
-    assertNull(tasks.findById(taskId).orElseThrow().getMessage());
-    assertEquals(Disposition.START, store.tryClaim(taskId, "after-lock-release").disposition());
+    AiReviewChatJob.Result cancellation = store.getStagedResult(taskId).orElseThrow();
+    assertEquals(409, cancellation.error().status());
+    assertFalse(store.isActive(taskId, claim.token()));
+    assertTrue(completing.finishStaged(taskId));
+    verify(outputs).saveOutput(taskId, cancellation);
   }
 
   @Test
@@ -566,14 +560,26 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
 
   @Test
   public void duplicateDispatchAndWorkerRestartNeverIssueAnotherAttempt() throws Exception {
-    AiReviewExecutionStore secondWorker = worker(outputs);
-    initializeWorkers(store, secondWorker);
+    configuration.setMaxInFlightPerUser(2);
+    initializeWorkers(store);
     long taskId = task(0, 3600);
+    CyclicBarrier reserved = new CyclicBarrier(2);
+    CyclicBarrier readBeforeClaim = new CyclicBarrier(2);
+    AiReviewExecutionStore firstWorker =
+        beforeFirstTaskUpdate(
+            worker(outputs, capacityWithAdmissionBarrier(reserved)), () -> await(readBeforeClaim));
+    AiReviewExecutionStore secondWorker =
+        beforeFirstTaskUpdate(
+            worker(outputs, capacityWithAdmissionBarrier(reserved)), () -> await(readBeforeClaim));
 
-    List<Claim> claims = concurrentClaims(store, taskId, secondWorker, taskId);
+    List<Claim> claims = concurrentClaims(firstWorker, taskId, secondWorker, taskId);
     Claim started =
         claims.stream().filter(c -> c.disposition() == Disposition.START).findFirst().orElseThrow();
     assertEquals(1, claims.stream().filter(c -> c.disposition() == Disposition.START).count());
+    Claim duplicate =
+        claims.stream().filter(c -> c.disposition() == Disposition.WAIT).findFirst().orElseThrow();
+    assertEquals(started.token(), duplicate.token());
+    assertEquals(started.deadline(), duplicate.deadline());
 
     Claim recovered = worker(outputs).tryClaim(taskId, "replacement-worker");
     assertEquals(Disposition.WAIT, recovered.disposition());
@@ -878,6 +884,30 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
   }
 
   @Test
+  public void aConcurrentShorterTimeoutCannotBeOverwrittenByPresetSelection() {
+    long taskId = task(0, 3600);
+    TransactionTemplate shortening = new TransactionTemplate(transactions);
+    shortening.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    AiReviewExecutionStore selecting =
+        beforeFirstTaskUpdate(
+            worker(outputs),
+            () ->
+                shortening.executeWithoutResult(
+                    status -> entityManager.find(PollableTask.class, taskId).setTimeout(12L)));
+
+    Claim claim =
+        selecting.tryClaim(
+            taskId,
+            "preset-process",
+            new Settings("balanced", "test-model", "low", "low", "priority"));
+
+    assertEquals(Disposition.START, claim.disposition());
+    assertEquals(Long.valueOf(12), tasks.findById(taskId).orElseThrow().getTimeout());
+    assertEquals(clock.instant().plusSeconds(12), claim.deadline());
+    assertEquals(claim.deadline(), capacity().reservations().get(claim.token()).deadline());
+  }
+
+  @Test
   public void anExistingAttemptKeepsItsPresetDeadlineAfterConfigurationChanges() {
     long taskId = task(0, 3600);
     Settings balanced = new Settings("balanced", "test-model", "low", "low", "priority");
@@ -1069,13 +1099,44 @@ public class AiReviewExecutionStoreTest extends ServiceTestBase {
     return capacity;
   }
 
-  private void lockTaskRow(Connection connection, long taskId) throws java.sql.SQLException {
-    try (var statement =
-        connection.prepareStatement("select id from pollable_task where id=? for update")) {
-      statement.setLong(1, taskId);
-      try (var rows = statement.executeQuery()) {
-        assertTrue(rows.next());
-      }
+  private AiReviewCapacityStore capacityWithAdmissionBarrier(CyclicBarrier barrier) {
+    AiReviewCapacityStore capacity = spy(capacityStore());
+    doAnswer(
+            invocation -> {
+              Admission admission = (Admission) invocation.callRealMethod();
+              assertEquals(Admission.RESERVED, admission);
+              await(barrier);
+              return admission;
+            })
+        .when(capacity)
+        .reserve(anyString(), nullable(Long.class), any(Instant.class), any(Instant.class));
+    return capacity;
+  }
+
+  private AiReviewExecutionStore beforeFirstTaskUpdate(
+      AiReviewExecutionStore worker, Runnable concurrentWrite) {
+    AiReviewExecutionStore contender = spy(worker);
+    AtomicBoolean first = new AtomicBoolean(true);
+    doAnswer(
+            invocation -> {
+              // Both the competing write and the stale conditional update hit the database.
+              if (first.getAndSet(false)) concurrentWrite.run();
+              return invocation.callRealMethod();
+            })
+        .when(contender)
+        .compareAndSet(
+            any(TaskSnapshot.class),
+            nullable(String.class),
+            nullable(Long.class),
+            nullable(ZonedDateTime.class));
+    return contender;
+  }
+
+  private static void await(CyclicBarrier barrier) {
+    try {
+      barrier.await(10, TimeUnit.SECONDS);
+    } catch (Exception exception) {
+      throw new AssertionError("Concurrent task operations did not meet", exception);
     }
   }
 

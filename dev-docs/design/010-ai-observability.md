@@ -245,12 +245,17 @@ The implementation separates task state in
 from accounting in
 [`AiReviewCapacityStore`](../../webapp/src/main/java/com/box/l10n/mojito/service/oaireview/AiReviewCapacityStore.java).
 
-The per-task lifecycle remains exact: claim, cancellation, and completion keep their row lock and
-explicit refresh to avoid stale request-scoped JPA state. No provider work starts before the durable
-task claim commits. Attempt tokens fence task result writes and reservation release. Completed output
-is materialized before its capacity release attempt, and failed releases retry independently of
-result persistence. These bounded accounting calls still share the completion executor, so sustained
-database contention can delay later completions.
+The per-task lifecycle uses conditional updates on the existing task row, without explicit locking
+reads. Claim, cancellation, timeout and completion only update an unfinished task whose message,
+timeout and error still match the snapshot used to make the decision. Scalar reads bypass stale
+request-scoped JPA entities. A competing update causes a fresh transaction to reread the winner;
+after three conflicting attempts the operation fails with a retryable 503. Ordinary updates still
+take brief database write locks, but cleanup does not lock or rewrite active tasks merely to check
+their deadline. No provider work starts before the durable task claim commits. Attempt tokens fence
+task result writes and reservation release, and a staged terminal result cannot be replaced.
+Completed output is materialized before its capacity release attempt, and failed releases retry
+independently of result persistence. These bounded accounting calls still share the completion
+executor, so sustained database contention can delay later completions.
 
 `AiReviewExecution.admission` records `reason={reserved|user_limit|best_effort}` for admission
 decisions, `reason=global_threshold` at most once per reservation check at/above the warning threshold,
