@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -905,11 +904,7 @@ public class OpenAIClientTest {
           public void onNext(ByteBuffer item) {
             byte[] buf = new byte[item.remaining()];
             item.get(buf);
-            try {
-              baos.write(buf);
-            } catch (IOException e) {
-              throw new UncheckedIOException(e);
-            }
+            baos.writeBytes(buf);
           }
 
           @Override
