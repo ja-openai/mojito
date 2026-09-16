@@ -638,7 +638,7 @@ final class AppleStringsdictParser {
         throw invalid("CDATA is not allowed between Apple plist container values");
       } else if (child.getNodeType() != Node.COMMENT_NODE
           && child.getNodeType() != Node.PROCESSING_INSTRUCTION_NODE
-          && !xmlWhitespace(child.getTextContent())) {
+          && !SecureXmlParser.xmlWhitespace(child.getTextContent())) {
         throw invalid("Unexpected text inside Apple plist container");
       }
     }
@@ -693,14 +693,6 @@ final class AppleStringsdictParser {
       }
       index = end;
     }
-  }
-
-  private static boolean xmlWhitespace(String value) {
-    return value
-        .chars()
-        .allMatch(
-            character ->
-                character == ' ' || character == '\t' || character == '\n' || character == '\r');
   }
 
   private static Element firstElement(Element parent) {

@@ -134,7 +134,7 @@ final class AppleStringsParser {
           comments.clear();
           key = null;
         }
-      } else if (!xmlWhitespace(child.getTextContent())) {
+      } else if (!SecureXmlParser.xmlWhitespace(child.getTextContent())) {
         throw invalid("Unexpected text inside Apple strings property-list dictionary");
       }
     }
@@ -158,7 +158,7 @@ final class AppleStringsParser {
         throw invalid("CDATA is not allowed between Apple property-list root values");
       } else if (!(child instanceof Comment)
           && child.getNodeType() != Node.PROCESSING_INSTRUCTION_NODE
-          && !xmlWhitespace(child.getTextContent())) {
+          && !SecureXmlParser.xmlWhitespace(child.getTextContent())) {
         throw invalid("Unexpected text inside Apple strings property-list element");
       }
     }
@@ -375,14 +375,6 @@ final class AppleStringsParser {
         || character == ' '
         || character == '\u2028'
         || character == '\u2029';
-  }
-
-  private static boolean xmlWhitespace(String value) {
-    return value
-        .chars()
-        .allMatch(
-            character ->
-                character == ' ' || character == '\t' || character == '\n' || character == '\r');
   }
 
   private static String normalizeComment(String comment) {

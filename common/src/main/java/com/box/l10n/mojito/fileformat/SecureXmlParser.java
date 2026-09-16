@@ -24,6 +24,14 @@ final class SecureXmlParser {
 
   private SecureXmlParser() {}
 
+  static boolean xmlWhitespace(String value) {
+    return value
+        .chars()
+        .allMatch(
+            character ->
+                character == ' ' || character == '\t' || character == '\n' || character == '\r');
+  }
+
   static Document parseApplePlist(String source) {
     String normalized = APPLE_PLIST_DOCTYPE.matcher(source).replaceFirst("$1");
     Document document = parse(normalized, false);
