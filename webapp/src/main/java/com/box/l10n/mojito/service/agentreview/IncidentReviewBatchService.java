@@ -677,14 +677,14 @@ public class IncidentReviewBatchService {
     if (request.reviewType() != null
         && !request.reviewType().isBlank()
         && !request.reviewType().equals(type)) return "Different review type";
-    if (c.unit() == null
-        || c.locale() == null
-        || (!scope.allRepositories()
-            && !scope.repositoryIds().contains(c.unit().getAsset().getRepository().getId()))
-        || !scope.localeIds().contains(c.locale().getId())
-        || c.unit().getAsset().getDeleted()
-        || c.unit().getAsset().getRepository().getDeleted())
-      return "String or locale is outside the current scope";
+    if (c.unit() == null) return "Incident has no resolved string";
+    if (c.locale() == null) return "Incident has no resolved locale";
+    if (!scope.allRepositories()
+        && !scope.repositoryIds().contains(c.unit().getAsset().getRepository().getId()))
+      return "String belongs to a repository outside this selection";
+    if (!scope.localeIds().contains(c.locale().getId())) return "Locale is outside this selection";
+    if (c.unit().getAsset().getDeleted()) return "String's asset was deleted";
+    if (c.unit().getAsset().getRepository().getDeleted()) return "String's repository was deleted";
     if (!"UNIQUE_MATCH".equals(i.getLookupResolutionStatus())
         || !"EXACT".equals(i.getLocaleResolutionStrategy())
         || i.isLocaleUsedFallback()) return "Incident needs an exact string and locale match";

@@ -135,6 +135,29 @@ function selectIncidentSource() {
 }
 
 describe('incident review project creation', () => {
+  it('summarizes exclusions in the preview without listing every incident', async () => {
+    previewIncidentsMock.mockResolvedValueOnce({
+      eligibleIncidentCount: 1,
+      skippedIncidentCount: 499,
+      projectCount: 1,
+      localeTags: ['fr'],
+      projectIds: [],
+      requestIds: [],
+      skipped: Array.from({ length: 499 }, (_, index) => ({
+        incidentId: index + 1,
+        reason: 'Locale match is unresolved',
+      })),
+    });
+    renderPage('REPOSITORIES');
+    selectIncidentSource();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+
+    await screen.findByText('499 incidents not included');
+    expect(screen.getByText('Locale match is unresolved · 499 incidents')).toBeInTheDocument();
+    expect(screen.queryByText('#4')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
+  });
+
   it('defaults to the incident queue across repositories and locales, with optional narrowing', async () => {
     renderPage('TEXT_UNITS', false);
     selectIncidentSource();
@@ -283,7 +306,8 @@ describe('incident review project creation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue to next batch' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Create next batch' }));
     await screen.findByRole('link', { name: 'Open review project #203' });
-    expect(screen.getByText(/Created 1 project\. 500 incidents skipped/)).toBeInTheDocument();
+    expect(screen.getByText('Created 1 project.')).toBeInTheDocument();
+    expect(screen.getByText('500 incidents not included')).toBeInTheDocument();
     expect(createIncidentsMock.mock.calls[1][0]).toEqual(createIncidentsMock.mock.calls[0][0]);
     expect(screen.queryByRole('button', { name: 'Create next batch' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();

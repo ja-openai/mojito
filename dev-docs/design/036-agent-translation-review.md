@@ -148,6 +148,12 @@ Both use `IncidentReviewBatchService`; manual HTTP endpoints are
   outside-scope IDs and contents are never returned. `hasMore` means this sweep
   has another slice. Counts describe that slice, not the entire backlog. The manual page keeps
   returned project links and offers **Create next batch**; a skipped-only slice can also advance.
+- Manual preview and creation reports summarize incidents not included by reason, with at most
+  three incident links per reason behind an expandable row. Opening an example in a new tab
+  preserves the creation form. When the creation report retains only the most recent 100 skipped
+  details across batches, reason counts are explicitly labeled as covering that retained sample;
+  the overall skipped count still covers all completed batches. Unresolved string/locale matches,
+  deleted assets/repositories, and selection mismatches have distinct eligibility explanations.
 - A durable cursor belongs to the owning team and canonical repository/locale/type selection.
   Assignment, name, deadline and word limits do not reset it. Creation commits progress and
   assignment together; preview never advances progress. A fixed upper incident ID makes each sweep

@@ -847,6 +847,30 @@
   font-size: var(--font-size-sm);
 }
 
+.review-create__skip-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.review-create__skip-summary p {
+  margin: 0;
+}
+
+.review-create__skip-summary summary {
+  cursor: pointer;
+}
+
+.review-create__skip-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0 var(--space-4);
+}
+
 .review-create__report-actions {
   display: flex;
   justify-content: flex-start;

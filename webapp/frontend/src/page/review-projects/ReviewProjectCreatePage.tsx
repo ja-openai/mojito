@@ -25,6 +25,7 @@ import { toDateTimeLocalInputValue } from '../../utils/dateTime';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
 import { useWorkbenchCollections } from '../workbench/useWorkbenchCollections';
+import { IncidentSkipSummary } from './IncidentSkipSummary';
 import type {
   ReviewProjectCreateFormValues,
   ReviewProjectSourceMode,
@@ -732,9 +733,7 @@ export function ReviewProjectCreatePage() {
                 <div className="review-create__report-title">Incident review projects</div>
                 <p>
                   Created {incidentCreationReport.projectCount} project
-                  {incidentCreationReport.projectCount === 1 ? '' : 's'}.{' '}
-                  {incidentCreationReport.skippedIncidentCount} incident
-                  {incidentCreationReport.skippedIncidentCount === 1 ? '' : 's'} skipped.
+                  {incidentCreationReport.projectCount === 1 ? '' : 's'}.
                 </p>
                 {incidentCreationReport.projectCount > incidentCreationReport.projectIds.length ? (
                   <p>Showing the most recent 100 projects.</p>
@@ -770,22 +769,10 @@ export function ReviewProjectCreatePage() {
                     </button>
                   </div>
                 ) : null}
-                {incidentCreationReport.skipped.length ? (
-                  <details>
-                    <summary>Skipped incidents</summary>
-                    {incidentCreationReport.skippedIncidentCount >
-                    incidentCreationReport.skipped.length ? (
-                      <p>Showing the most recent 100 skipped incidents.</p>
-                    ) : null}
-                    <ul>
-                      {incidentCreationReport.skipped.map((item) => (
-                        <li key={item.incidentId}>
-                          Incident #{item.incidentId}: {item.reason}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ) : null}
+                <IncidentSkipSummary
+                  skipped={incidentCreationReport.skipped}
+                  skippedIncidentCount={incidentCreationReport.skippedIncidentCount}
+                />
               </div>
             ) : null}
             {submissionReport ? (

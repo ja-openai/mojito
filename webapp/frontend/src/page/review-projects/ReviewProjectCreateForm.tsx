@@ -35,6 +35,7 @@ import {
   toDescriptionAttachmentMarkdown,
   uploadRequestAttachmentFile,
 } from '../../utils/request-attachments';
+import { IncidentSkipSummary } from './IncidentSkipSummary';
 
 export type ReviewProjectCreateFormValues = {
   reviewSource: ReviewSource;
@@ -713,21 +714,10 @@ export function ReviewProjectCreateForm({
             {currentPreview.localeTags.length} locale
             {currentPreview.localeTags.length === 1 ? '' : 's'}
           </div>
-          {currentPreview.skippedIncidentCount > 0 ? (
-            <details>
-              <summary>
-                {currentPreview.skippedIncidentCount} incident
-                {currentPreview.skippedIncidentCount === 1 ? '' : 's'} skipped
-              </summary>
-              <ul>
-                {currentPreview.skipped.map((item) => (
-                  <li key={item.incidentId}>
-                    Incident #{item.incidentId}: {item.reason}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
+          <IncidentSkipSummary
+            skipped={currentPreview.skipped}
+            skippedIncidentCount={currentPreview.skippedIncidentCount}
+          />
           <p className="review-create__hint">
             {currentPreview.hasMore
               ? 'This preview covers the next batch. More incidents remain to check for this selection; you can continue after creating it.'
