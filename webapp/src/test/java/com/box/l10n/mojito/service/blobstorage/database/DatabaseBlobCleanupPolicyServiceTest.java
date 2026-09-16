@@ -8,15 +8,27 @@ import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.entity.DatabaseBlobCleanupPolicy;
 import com.box.l10n.mojito.entity.MBlob;
+import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRepository;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
 
-  private static final String PREFIX = "pollable_task/";
+  private static final String PREFIX = "cleanup_test/";
+  private static final List<String> UNKNOWN_TASK_NAMES =
+      List.of(
+          "pollable_task/invalid-task/input",
+          "pollable_task/9223372036854775807/input",
+          "pollable_task/9999999999999999999/input",
+          "pollable_task/99999999999999999999/input",
+          "pollable_task/0/input");
 
   @Autowired DatabaseBlobCleanupPolicyRepository policyRepository;
 
@@ -24,24 +36,42 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
 
   @Autowired MBlobRepository mBlobRepository;
 
+  @Autowired PollableTaskRepository pollableTaskRepository;
+
+  private final List<Long> taskIds = new ArrayList<>();
+
   @Before
   public void cleanPoliciesAndBlobs() {
     policyRepository.deleteAll();
-    deleteBlob("pollable_task/expired-1/input");
-    deleteBlob("pollable_task/expired-2/input");
-    deleteBlob("pollable_task/expired-3/input");
-    deleteBlob("pollable_task/recent/input");
-    deleteBlob("pollable_task/permanent/input");
+    deleteBlob("cleanup_test/expired-1/input");
+    deleteBlob("cleanup_test/expired-2/input");
+    deleteBlob("cleanup_test/expired-3/input");
+    deleteBlob("cleanup_test/recent/input");
+    deleteBlob("cleanup_test/permanent/input");
+    deleteBlob("cleanup_test/long-ttl/input");
+    UNKNOWN_TASK_NAMES.forEach(this::deleteBlob);
     deleteBlob("other_cleanup/expired/input");
+  }
+
+  @After
+  public void cleanCreatedTasks() {
+    for (int i = taskIds.size() - 1; i >= 0; i--) {
+      Long taskId = taskIds.get(i);
+      deleteBlob("pollable_task/" + taskId + "/input");
+      deleteBlob("pollable_task/" + taskId + "/output");
+      pollableTaskRepository.deleteById(taskId);
+    }
+    UNKNOWN_TASK_NAMES.forEach(this::deleteBlob);
   }
 
   @Test
   public void drainsOnlyExpiredBlobsInTheConfiguredPrefix() {
-    saveBlob("pollable_task/expired-1/input", 10, 86_400L);
-    saveBlob("pollable_task/expired-2/input", 7, 86_400L);
-    saveBlob("pollable_task/expired-3/input", 4, 86_400L);
-    saveBlob("pollable_task/recent/input", 1, 86_400L);
-    saveBlob("pollable_task/permanent/input", 10, null);
+    saveBlob("cleanup_test/expired-1/input", 10, 86_400L);
+    saveBlob("cleanup_test/expired-2/input", 7, 86_400L);
+    saveBlob("cleanup_test/expired-3/input", 4, 86_400L);
+    saveBlob("cleanup_test/recent/input", 1, 86_400L);
+    saveBlob("cleanup_test/permanent/input", 10, null);
+    saveBlob("cleanup_test/long-ttl/input", 10, 30 * 86_400L);
     saveBlob("other_cleanup/expired/input", 10, 86_400L);
 
     DatabaseBlobCleanupPolicy policy = createPolicy(true, 2, 0);
@@ -54,19 +84,86 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
     assertEquals(3L, completed.getTotalDeletedCount());
     assertNotNull(completed.getLastStartedDate());
     assertNotNull(completed.getLastFinishedDate());
-    assertFalse(mBlobRepository.findByName("pollable_task/expired-1/input").isPresent());
-    assertFalse(mBlobRepository.findByName("pollable_task/expired-2/input").isPresent());
-    assertFalse(mBlobRepository.findByName("pollable_task/expired-3/input").isPresent());
-    assertTrue(mBlobRepository.findByName("pollable_task/recent/input").isPresent());
-    assertTrue(mBlobRepository.findByName("pollable_task/permanent/input").isPresent());
+    assertFalse(mBlobRepository.findByName("cleanup_test/expired-1/input").isPresent());
+    assertFalse(mBlobRepository.findByName("cleanup_test/expired-2/input").isPresent());
+    assertFalse(mBlobRepository.findByName("cleanup_test/expired-3/input").isPresent());
+    assertTrue(mBlobRepository.findByName("cleanup_test/recent/input").isPresent());
+    assertTrue(mBlobRepository.findByName("cleanup_test/permanent/input").isPresent());
+    assertTrue(mBlobRepository.findByName("cleanup_test/long-ttl/input").isPresent());
     assertTrue(mBlobRepository.findByName("other_cleanup/expired/input").isPresent());
   }
 
   @Test
+  public void preservesActiveTaskPayloadsAndCleansThemAfterCompletion() {
+    PollableTask active = saveTask(false, null, 0);
+    PollableTask completed = saveTask(true, null, 0);
+    String activeInput = "pollable_task/" + active.getId() + "/input";
+    String activeOutput = "pollable_task/" + active.getId() + "/output";
+    String completedInput = "pollable_task/" + completed.getId() + "/input";
+    String completedOutput = "pollable_task/" + completed.getId() + "/output";
+    saveBlob(activeInput, 10, 86_400L);
+    saveBlob(activeOutput, 10, 86_400L);
+    saveBlob(completedInput, 10, 86_400L);
+    saveBlob(completedOutput, 10, 86_400L);
+    DatabaseBlobCleanupPolicy policy =
+        policyService.createPolicy(
+            new DatabaseBlobCleanupPolicyService.PolicyUpdate(
+                "pollable_task/", true, 3, 1, 0, 0, 0));
+
+    policyService.runPolicy(policy.getId());
+
+    DatabaseBlobCleanupPolicy drained = policyRepository.findById(policy.getId()).orElseThrow();
+    assertEquals(DatabaseBlobCleanupPolicyService.STATUS_DRAINED, drained.getStatus());
+    assertEquals(2L, drained.getLastDeletedCount());
+    assertTrue(mBlobRepository.findByName(activeInput).isPresent());
+    assertTrue(mBlobRepository.findByName(activeOutput).isPresent());
+    assertFalse(mBlobRepository.findByName(completedInput).isPresent());
+    assertFalse(mBlobRepository.findByName(completedOutput).isPresent());
+
+    active.setFinishedDate(ZonedDateTime.now());
+    pollableTaskRepository.saveAndFlush(active);
+    policyService.runPolicy(policy.getId());
+
+    DatabaseBlobCleanupPolicy resumed = policyRepository.findById(policy.getId()).orElseThrow();
+    assertEquals(DatabaseBlobCleanupPolicyService.STATUS_DRAINED, resumed.getStatus());
+    assertEquals(2L, resumed.getLastDeletedCount());
+    assertEquals(4L, resumed.getTotalDeletedCount());
+    assertFalse(mBlobRepository.findByName(activeInput).isPresent());
+    assertFalse(mBlobRepository.findByName(activeOutput).isPresent());
+  }
+
+  @Test
+  public void preservesTaskGraphsAndUnrecognizedTaskPayloads() {
+    PollableTask activeParent = saveTask(false, null, 1);
+    saveTask(true, activeParent, 0);
+    PollableTask finishedParent = saveTask(true, null, 0);
+    saveTask(false, finishedParent, 0);
+    saveTask(true, null, 1);
+    for (Long taskId : taskIds) {
+      saveBlob("pollable_task/" + taskId + "/input", 10, 86_400L);
+    }
+    UNKNOWN_TASK_NAMES.forEach(name -> saveBlob(name, 10, 86_400L));
+    DatabaseBlobCleanupPolicy policy =
+        policyService.createPolicy(
+            new DatabaseBlobCleanupPolicyService.PolicyUpdate(
+                "pollable_task/", true, 3, 1, 0, 0, 0));
+
+    policyService.runPolicy(policy.getId());
+
+    DatabaseBlobCleanupPolicy drained = policyRepository.findById(policy.getId()).orElseThrow();
+    assertEquals(DatabaseBlobCleanupPolicyService.STATUS_DRAINED, drained.getStatus());
+    assertEquals(0L, drained.getLastDeletedCount());
+    for (Long taskId : taskIds) {
+      assertTrue(mBlobRepository.findByName("pollable_task/" + taskId + "/input").isPresent());
+    }
+    UNKNOWN_TASK_NAMES.forEach(name -> assertTrue(mBlobRepository.findByName(name).isPresent()));
+  }
+
+  @Test
   public void honorsOptionalBatchLimitAndResumesOnTheNextRun() {
-    saveBlob("pollable_task/expired-1/input", 10, 86_400L);
-    saveBlob("pollable_task/expired-2/input", 10, 86_400L);
-    saveBlob("pollable_task/expired-3/input", 10, 86_400L);
+    saveBlob("cleanup_test/expired-1/input", 10, 86_400L);
+    saveBlob("cleanup_test/expired-2/input", 10, 86_400L);
+    saveBlob("cleanup_test/expired-3/input", 10, 86_400L);
     DatabaseBlobCleanupPolicy policy = createPolicy(true, 1, 2);
 
     policyService.runPolicy(policy.getId());
@@ -88,7 +185,7 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
     try {
       policyService.createPolicy(
           new DatabaseBlobCleanupPolicyService.PolicyUpdate(
-              "pollable_task/%", false, 3, 250, 0, 0, 5));
+              "cleanup_test/%", false, 3, 250, 0, 0, 5));
     } catch (IllegalArgumentException e) {
       assertTrue(e.getMessage().contains("Prefix"));
       assertEquals(0L, policyRepository.count());
@@ -111,7 +208,7 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
 
   @Test
   public void startsManualCleanupWhenRecurringScheduleIsDisabled() throws InterruptedException {
-    saveBlob("pollable_task/expired-1/input", 10, 86_400L);
+    saveBlob("cleanup_test/expired-1/input", 10, 86_400L);
     DatabaseBlobCleanupPolicy policy = createPolicy(false, 250, 0);
 
     DatabaseBlobCleanupPolicy queued = policyService.startPolicy(policy.getId());
@@ -128,7 +225,7 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
 
     DatabaseBlobCleanupPolicy completed = policyRepository.findById(policy.getId()).orElseThrow();
     assertEquals(1L, completed.getLastDeletedCount());
-    assertFalse(mBlobRepository.findByName("pollable_task/expired-1/input").isPresent());
+    assertFalse(mBlobRepository.findByName("cleanup_test/expired-1/input").isPresent());
   }
 
   private DatabaseBlobCleanupPolicy createPolicy(
@@ -146,6 +243,19 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
       blob.setExpireAfterSeconds(expireAfterSeconds);
     }
     mBlobRepository.saveAndFlush(blob);
+  }
+
+  private PollableTask saveTask(boolean finished, PollableTask parent, int expectedChildren) {
+    PollableTask task = new PollableTask();
+    task.setName("blob-cleanup-safety-test");
+    task.setParentTask(parent);
+    task.setExpectedSubTaskNumber(expectedChildren);
+    if (finished) {
+      task.setFinishedDate(ZonedDateTime.now().minusDays(9));
+    }
+    task = pollableTaskRepository.saveAndFlush(task);
+    taskIds.add(task.getId());
+    return task;
   }
 
   private void deleteBlob(String name) {

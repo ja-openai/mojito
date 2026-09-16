@@ -245,9 +245,9 @@ public class DatabaseBlobCleanupPolicyService {
     return Objects.requireNonNull(
         transactionTemplate.execute(
             status -> {
+              ZonedDateTime now = ZonedDateTime.now();
               Timestamp cutoff =
-                  Timestamp.from(
-                      ZonedDateTime.now().minusDays(policy.getRetentionDays()).toInstant());
+                  Timestamp.from(now.minusDays(policy.getRetentionDays()).toInstant());
               String forceIndex = dbUtils.isMysql() ? " force index (UK__MBLOB__NAME)" : "";
               String skipLocked = dbUtils.isMysql() ? " for update skip locked" : "";
               String sql =
@@ -255,6 +255,8 @@ public class DatabaseBlobCleanupPolicyService {
                       + forceIndex
                       + " where name >= ? and name < ?"
                       + " and expire_after_seconds is not null and created_date < ?"
+                      + " and timestampadd(second, expire_after_seconds, created_date) < ? "
+                      + MBlobRepository.CLEANUP_TASK_SAFETY_PREDICATE
                       + " order by name limit ?"
                       + skipLocked;
               List<Long> ids =
@@ -264,23 +266,32 @@ public class DatabaseBlobCleanupPolicyService {
                       policy.getPrefix(),
                       prefixUpperBound(policy.getPrefix()),
                       cutoff,
+                      Timestamp.from(now.toInstant()),
                       policy.getBatchSize());
-              return ids.isEmpty() ? 0 : mBlobRepository.deleteByIds(ids);
+              return ids.isEmpty() ? 0 : mBlobRepository.deleteExpiredByIds(ids, now);
             }));
   }
 
   private boolean hasEligibleRows(DatabaseBlobCleanupPolicy policy) {
-    Timestamp cutoff =
-        Timestamp.from(ZonedDateTime.now().minusDays(policy.getRetentionDays()).toInstant());
+    ZonedDateTime now = ZonedDateTime.now();
+    Timestamp cutoff = Timestamp.from(now.minusDays(policy.getRetentionDays()).toInstant());
     String forceIndex = dbUtils.isMysql() ? " force index (UK__MBLOB__NAME)" : "";
     String sql =
         "select count(*) from (select id from mblob"
             + forceIndex
             + " where name >= ? and name < ?"
-            + " and expire_after_seconds is not null and created_date < ? limit 1) eligible";
+            + " and expire_after_seconds is not null and created_date < ?"
+            + " and timestampadd(second, expire_after_seconds, created_date) < ? "
+            + MBlobRepository.CLEANUP_TASK_SAFETY_PREDICATE
+            + " limit 1) eligible";
     Integer count =
         jdbcTemplate.queryForObject(
-            sql, Integer.class, policy.getPrefix(), prefixUpperBound(policy.getPrefix()), cutoff);
+            sql,
+            Integer.class,
+            policy.getPrefix(),
+            prefixUpperBound(policy.getPrefix()),
+            cutoff,
+            Timestamp.from(now.toInstant()));
     return count != null && count > 0;
   }
 

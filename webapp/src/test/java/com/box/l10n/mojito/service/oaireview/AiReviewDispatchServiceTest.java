@@ -17,6 +17,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.PollableTask;
@@ -59,6 +60,7 @@ import org.quartz.JobExecutionContext;
 import org.quartz.Scheduler;
 import org.quartz.TriggerBuilder;
 import org.quartz.impl.StdSchedulerFactory;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /** Direct asynchronous submission; database fencing is covered by AiReviewExecutionStoreTest. */
 public class AiReviewDispatchServiceTest {
@@ -365,6 +367,21 @@ public class AiReviewDispatchServiceTest {
     assertEquals(409, controller.get(task.id).error().status());
     verify(store).cancel(task.id);
     verify(store).stageResult(eq(task.id), eq(task.token), any());
+  }
+
+  @Test
+  public void disabledMaintenanceCleanupLeavesInterruptedRequestsUntouched() {
+    ControlledTask task = task(81);
+    task.claimed.set(true);
+    expireWithTimeout(task);
+    ReflectionTestUtils.setField(dispatcher, "cleanupEnabled", false);
+
+    dispatcher.cleanup();
+
+    assertNull(task.task.getFinishedDate());
+    verify(store, never()).unfinishedIds(anyLong(), anyInt());
+    verify(store, never()).expire(anyLong());
+    verifyNoInteractions(blobs);
   }
 
   @Test

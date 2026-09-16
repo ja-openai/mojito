@@ -25,6 +25,7 @@ import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -55,6 +56,9 @@ public class AiReviewDispatchService {
             return thread;
           });
   private long cleanupCursor;
+
+  @Value("${l10n.ai-review.cleanup-enabled:true}")
+  private boolean cleanupEnabled = true;
 
   public AiReviewDispatchService(
       AiReviewExecutionStore store,
@@ -193,6 +197,7 @@ public class AiReviewDispatchService {
   /** Keyset pagination avoids repeatedly scanning a still-active first page. */
   @Scheduled(initialDelayString = "5000", fixedDelayString = "5000")
   public void cleanup() {
+    if (!cleanupEnabled) return;
     try {
       List<Long> ids = store.unfinishedIds(cleanupCursor, 100);
       if (ids.isEmpty()) {

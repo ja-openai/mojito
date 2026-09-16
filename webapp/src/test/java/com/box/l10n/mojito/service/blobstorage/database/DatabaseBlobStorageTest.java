@@ -10,10 +10,12 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
 import com.box.l10n.mojito.entity.MBlob;
+import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.blobstorage.BlobStorage;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageTestShared;
 import com.box.l10n.mojito.service.blobstorage.Retention;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
@@ -23,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 public class DatabaseBlobStorageTest extends ServiceTestBase implements BlobStorageTestShared {
@@ -31,6 +34,8 @@ public class DatabaseBlobStorageTest extends ServiceTestBase implements BlobStor
   DatabaseBlobStorage databaseBlobStorage;
 
   @Autowired MBlobRepository mBlobRepository;
+
+  @Autowired PollableTaskRepository pollableTaskRepository;
 
   @Autowired MeterRegistry meterRegistry;
 
@@ -209,6 +214,64 @@ public class DatabaseBlobStorageTest extends ServiceTestBase implements BlobStor
     assertThat(mBlobRepository.findById(expired.getId())).isEmpty();
     assertThat(mBlobRepository.findById(boundary.getId())).isPresent();
     assertThat(mBlobRepository.findById(unselected.getId())).isPresent();
+  }
+
+  @Test
+  public void cleanupKeepsActiveTaskPayloadsAndResumesAfterCompletion() {
+    PollableTask task = new PollableTask();
+    task.setName("generic-cleanup-active-task");
+    task = pollableTaskRepository.saveAndFlush(task);
+    String name = "pollable_task/" + task.getId() + "/input";
+    MBlob blob = expiringBlob(name, ZonedDateTime.now().minusDays(2), 60);
+    try {
+      assertThat(
+              mBlobRepository.findExpiredBlobIdsWithNow(
+                  ZonedDateTime.now(), PageRequest.of(0, 500)))
+          .doesNotContain(blob.getId());
+      assertThat(mBlobRepository.deleteExpiredByIds(List.of(blob.getId()), ZonedDateTime.now()))
+          .isZero();
+      databaseBlobStorage.deleteExpired();
+      assertThat(mBlobRepository.findById(blob.getId())).isPresent();
+
+      task.setFinishedDate(ZonedDateTime.now());
+      pollableTaskRepository.saveAndFlush(task);
+      databaseBlobStorage.deleteExpired();
+
+      assertThat(mBlobRepository.findById(blob.getId())).isEmpty();
+    } finally {
+      mBlobRepository.findById(blob.getId()).ifPresent(mBlobRepository::delete);
+      pollableTaskRepository.deleteById(task.getId());
+    }
+  }
+
+  @Test
+  public void cleanupRechecksTaskGraphBeforeDeletingCandidate() {
+    PollableTask parent = new PollableTask();
+    parent.setName("generic-cleanup-finished-task");
+    parent.setFinishedDate(ZonedDateTime.now().minusDays(2));
+    parent = pollableTaskRepository.saveAndFlush(parent);
+    MBlob blob =
+        expiringBlob(
+            "pollable_task/" + parent.getId() + "/output", ZonedDateTime.now().minusDays(2), 60);
+    PollableTask child = null;
+    ZonedDateTime cutoff = ZonedDateTime.now();
+    try {
+      assertThat(mBlobRepository.findExpiredBlobIdsWithNow(cutoff, PageRequest.of(0, 500)))
+          .contains(blob.getId());
+      child = new PollableTask();
+      child.setName("generic-cleanup-new-child");
+      child.setParentTask(parent);
+      child = pollableTaskRepository.saveAndFlush(child);
+
+      assertThat(mBlobRepository.deleteExpiredByIds(List.of(blob.getId()), cutoff)).isZero();
+      assertThat(mBlobRepository.findById(blob.getId())).isPresent();
+    } finally {
+      if (child != null && child.getId() != null) {
+        pollableTaskRepository.deleteById(child.getId());
+      }
+      mBlobRepository.findById(blob.getId()).ifPresent(mBlobRepository::delete);
+      pollableTaskRepository.deleteById(parent.getId());
+    }
   }
 
   private MBlob expiringBlob(String name, ZonedDateTime createdDate, long ttlSeconds) {

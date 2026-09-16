@@ -23,16 +23,44 @@ public interface MBlobRepository
   Optional<MBlob> findByName(@Param("name") String name);
 
   /**
-   * Must pass "now" as parameter due to HSQL persisting ZonedDateTime without TZ info. Comparing
-   * ZonedDateTime against unix_timestamp() then fails because of the TZ difference.
+   * Task payloads can outlive their TTL while work is still running. Only completed standalone
+   * tasks are eligible: a completed child may still be needed by its parent, and a parent can
+   * finish its own work before its children finish. Keep unknown names and missing task metadata
+   * until their retention has been reconciled. The task and child checks use their ID indexes; they
+   * do not load payloads or traverse a task graph.
    *
-   * <p>This does not show if test are running in UTC like on CI
+   * <p>The guarded decimal cast accepts the full positive bigint range without throwing on unknown
+   * names or larger 19-digit numbers. Both MySQL and HSQL support these native SQL functions.
    */
-  @Query(
+  String CLEANUP_TASK_SAFETY_PREDICATE =
       """
-	      select mb.id from #{#entityName} mb
-	      where (cast(unix_timestamp(mb.createdDate) as long) + mb.expireAfterSeconds) < cast(unix_timestamp(:now) as long)
-	      """)
+      and (
+        mblob.name < 'pollable_task/' or mblob.name >= 'pollable_task0'
+        or exists (
+          select 1 from pollable_task task
+          where task.id = cast(
+            case when regexp_like(mblob.name, '^pollable_task/[1-9][0-9]{0,18}/(input|output)$')
+              then substring(mblob.name, 15, locate('/', mblob.name, 15) - 15)
+              else null end as decimal(19,0))
+            and task.finished_date is not null
+            and task.parent_task_id is null
+            and task.expected_sub_task_number = 0
+            and not exists (
+              select 1 from pollable_task child where child.parent_task_id = task.id
+            )
+        )
+      )
+      """;
+
+  /** Pass the cutoff explicitly so tests and both cleanup paths use the same timestamp binding. */
+  @Query(
+      value =
+          """
+          select id from mblob
+          where timestampadd(second, expire_after_seconds, created_date) < :now
+          """
+              + CLEANUP_TASK_SAFETY_PREDICATE,
+      nativeQuery = true)
   List<Long> findExpiredBlobIdsWithNow(@Param("now") ZonedDateTime now, Pageable pageable);
 
   /**
@@ -41,10 +69,13 @@ public interface MBlobRepository
   @Transactional
   @Modifying
   @Query(
-      """
-      delete from #{#entityName} mb where mb.id in :ids
-      and (cast(unix_timestamp(mb.createdDate) as long) + mb.expireAfterSeconds) < cast(unix_timestamp(:now) as long)
-      """)
+      value =
+          """
+          delete from mblob where id in :ids
+          and timestampadd(second, expire_after_seconds, created_date) < :now
+          """
+              + CLEANUP_TASK_SAFETY_PREDICATE,
+      nativeQuery = true)
   int deleteExpiredByIds(@Param("ids") List<Long> ids, @Param("now") ZonedDateTime now);
 
   @Transactional
