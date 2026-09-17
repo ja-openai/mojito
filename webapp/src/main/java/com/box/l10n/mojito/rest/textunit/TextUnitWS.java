@@ -32,6 +32,7 @@ import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantService;
 import com.box.l10n.mojito.service.tm.TMTextUnitHistoryService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
+import com.box.l10n.mojito.service.tm.TMTextUnitSaveGuardService;
 import com.box.l10n.mojito.service.tm.TMTextUnitStatisticService;
 import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
@@ -116,6 +117,8 @@ public class TextUnitWS {
   @Autowired UserService userService;
 
   @Autowired WorkbenchReviewFeedbackService reviewFeedback;
+
+  @Autowired TMTextUnitSaveGuardService saveGuard;
 
   @Autowired StructuredBlobStorage structuredBlobStorage;
 
@@ -460,13 +463,24 @@ public class TextUnitWS {
   @Transactional(isolation = Isolation.READ_COMMITTED)
   @RequestMapping(method = RequestMethod.POST, value = "/api/textunits")
   public TextUnitDTO saveTextUnit(@RequestBody TextUnitSaveRequest request) {
-    if (!request.hasReviewFeedbackMetadata()) return addTextUnit(request);
+    // Receipt lookup must happen before baseline validation: an exact feedback retry must not
+    // conflict merely because its successful first attempt (or a later edit) changed the target.
+    java.util.function.Supplier<TextUnitDTO> write =
+        () ->
+            request.hasExpectedVariantId()
+                ? saveGuard.save(
+                    request.getTmTextUnitId(),
+                    request.getLocaleId(),
+                    request.getExpectedVariantId(),
+                    () -> addTextUnit(request))
+                : addTextUnit(request);
+    if (!request.hasReviewFeedbackMetadata()) return write.get();
     return reviewFeedback.save(
         request,
         request.getReviewedVariantId(),
         request.getFeedbackOperationId(),
         request.getReviewFeedback(),
-        () -> addTextUnit(request));
+        write);
   }
 
   @RequestMapping(method = RequestMethod.GET, value = "/api/textunits/{id}/feedback-baseline")

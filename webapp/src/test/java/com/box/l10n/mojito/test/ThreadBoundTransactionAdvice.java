@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.test;
 
+import java.util.Set;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionManager;
@@ -9,11 +10,17 @@ import org.springframework.transaction.aspectj.AnnotationTransactionAspect;
 /** Uses a fixture manager on the current thread and preserves background transaction semantics. */
 public final class ThreadBoundTransactionAdvice
     implements PlatformTransactionManager, AutoCloseable {
-  private final Thread fixtureThread = Thread.currentThread();
+  private final Set<Thread> fixtureThreads;
   private final PlatformTransactionManager fixtureManager;
   private final TransactionManager previousManager;
 
   public ThreadBoundTransactionAdvice(PlatformTransactionManager manager) {
+    this(manager, Set.of(Thread.currentThread()));
+  }
+
+  /** Includes explicitly owned workers without changing unrelated background transactions. */
+  public ThreadBoundTransactionAdvice(PlatformTransactionManager manager, Set<Thread> threads) {
+    fixtureThreads = Set.copyOf(threads);
     fixtureManager = manager;
     AnnotationTransactionAspect aspect = AnnotationTransactionAspect.aspectOf();
     previousManager = aspect.getTransactionManager();
@@ -36,7 +43,7 @@ public final class ThreadBoundTransactionAdvice
   }
 
   private PlatformTransactionManager managerForCurrentThread() {
-    if (Thread.currentThread() == fixtureThread) {
+    if (fixtureThreads.contains(Thread.currentThread())) {
       return fixtureManager;
     }
     if (previousManager instanceof PlatformTransactionManager manager) {

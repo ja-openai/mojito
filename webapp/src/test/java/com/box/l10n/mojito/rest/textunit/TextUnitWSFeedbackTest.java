@@ -10,6 +10,7 @@ import com.box.l10n.mojito.service.review.feedback.ReviewerFeedback;
 import com.box.l10n.mojito.service.review.feedback.WorkbenchReviewFeedbackService;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMService;
+import com.box.l10n.mojito.service.tm.TMTextUnitSaveGuardService;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.test.ThreadBoundTransactionAdvice;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +35,7 @@ public class TextUnitWSFeedbackTest {
     when(controller.userService.isCurrentUserAdminOrPm()).thenReturn(true);
     controller.tmService = mock(TMService.class);
     controller.reviewFeedback = mock(WorkbenchReviewFeedbackService.class);
+    controller.saveGuard = mock(TMTextUnitSaveGuardService.class);
     var variant = new TMTextUnitVariant();
     variant.setId(9L);
     var current = new TMTextUnitCurrentVariant();
@@ -66,6 +68,49 @@ public class TextUnitWSFeedbackTest {
     assertEquals(Long.valueOf(9L), saved.getTmTextUnitVariantId());
     verify(controller.userService).checkUserCanEditLocale(2L);
     verifyNoInteractions(controller.reviewFeedback);
+    verifyNoInteractions(controller.saveGuard);
+  }
+
+  @Test
+  public void explicitAbsentAndExistingBaselinesUseGuardedNormalWriter() throws Exception {
+    for (String baseline : new String[] {"null", "3"}) {
+      var request =
+          new ObjectMapper()
+              .readValue(
+                  "{\"tmTextUnitId\":1,\"localeId\":2,\"target\":\"Bonjour\",\"expectedVariantId\":"
+                      + baseline
+                      + "}",
+                  TextUnitSaveRequest.class);
+      assertTrue(request.hasExpectedVariantId());
+      when(controller.saveGuard.save(eq(1L), eq(2L), eq(request.getExpectedVariantId()), any()))
+          .thenAnswer(invocation -> ((Supplier<TextUnitDTO>) invocation.getArgument(3)).get());
+      assertEquals(Long.valueOf(9L), controller.saveTextUnit(request).getTmTextUnitVariantId());
+      verify(controller.saveGuard).save(eq(1L), eq(2L), eq(request.getExpectedVariantId()), any());
+    }
+  }
+
+  @Test
+  public void absentBaselinePropertyRetainsLegacySemantics() throws Exception {
+    var request =
+        new ObjectMapper()
+            .readValue("{\"tmTextUnitId\":1,\"localeId\":2}", TextUnitSaveRequest.class);
+    assertFalse(request.hasExpectedVariantId());
+    assertNull(request.getExpectedVariantId());
+  }
+
+  @Test
+  public void receiptReplayDoesNotRecheckAnAlreadyAppliedBaseline() {
+    var request = request();
+    request.setExpectedVariantId(3L);
+    request.setReviewedVariantId(3L);
+    request.setFeedbackOperationId(UUID.randomUUID().toString());
+    var receipt = new TextUnitDTO();
+    receipt.setTmTextUnitVariantId(9L);
+    when(controller.reviewFeedback.save(
+            eq(request), eq(3L), eq(request.getFeedbackOperationId()), isNull(), any()))
+        .thenReturn(receipt);
+    assertSame(receipt, controller.saveTextUnit(request));
+    verifyNoInteractions(controller.saveGuard, controller.tmService);
   }
 
   @Test
