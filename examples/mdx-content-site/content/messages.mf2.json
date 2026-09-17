@@ -1,0 +1,4 @@
+{
+  "calendar.summary": ".input {$count :integer}\n.match $count\none {{You have {$count} learning session planned.}}\n* {{You have {$count} learning sessions planned.}}",
+  "calendar.date": "Your next session is on {$date :date dateStyle=long timeZone=UTC}."
+}

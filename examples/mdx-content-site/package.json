@@ -1,0 +1,36 @@
+{
+  "name": "mojito-mdx-content-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5190 --strictPort",
+    "dev:sample": "npm run content:sample && npm run dev",
+    "content:prepare": "node scripts/prepare-content.mjs",
+    "content:sample": "node scripts/prepare-content.mjs --sample",
+    "build": "npm run content:prepare && npm run build:site",
+    "build:site": "vite build && vite build --ssr src/entry-server.jsx --outDir .generated/ssr && node scripts/prerender.mjs",
+    "build:sample": "npm run content:sample && npm run build:site",
+    "preview": "vite preview --host 127.0.0.1 --port 5190 --strictPort",
+    "serve": "npm run preview",
+    "translate": "node scripts/translate.mjs",
+    "test": "node --test scripts/site.test.mjs scripts/mf2.test.mjs scripts/translate-worker.test.mjs",
+    "test:e2e": "bash scripts/e2e.sh"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "devDependencies": {
+    "@mdx-js/react": "3.1.1",
+    "@mdx-js/rollup": "3.1.1",
+    "@vitejs/plugin-react": "6.0.1",
+    "jsdom": "27.4.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-test-renderer": "18.3.1",
+    "vite": "8.2.2"
+  },
+  "dependencies": {
+    "@mojito-mf2/core": "file:../../mf2/javascript"
+  }
+}
