@@ -1,0 +1,31 @@
+import Welcome from './modules/Welcome.mdx';
+import SharedNote from './modules/SharedNote.mdx';
+import Individual from './modules/audience/Individual.mdx';
+import Team from './modules/audience/Team.mdx';
+
+{/* mojito-id: home.title */}
+# ゆったり学ぶために
+
+{/* mojito-id: home.intro */}
+好奇心のための時間を少し作ってみましょう。この短いノートが、気になるアイデアを役立つものに変えるお手伝いをします。
+
+<PreviewChoice>
+<Individual />
+<Team />
+</PreviewChoice>
+
+<SharedNote />
+
+<Welcome />
+
+{/* mojito-id: home.explore.title */}
+## 自分のペースで読む
+
+{/* mojito-id: home.explore.body */}
+まずは[小さな習慣づくりのガイド](guide.html)から始めましょう。新しいアプリも、完璧な計画も、午後まるごとの空き時間も必要ありません。
+
+<SharedNote />
+
+<PreviewMessage resource="./messages.mf2.json" name="calendar.summary" args='{"count":2}' />
+
+<PreviewMessage resource="./messages.mf2.json" name="calendar.date" args='{"date":"2026-09-16T12:00:00Z"}' />

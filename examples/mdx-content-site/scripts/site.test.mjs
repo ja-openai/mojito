@@ -259,6 +259,28 @@ test("stale extra exports fail instead of appearing in the site", async (t) => {
   );
 });
 
+test("other demo locales coexist with French but stale assets are still rejected", async (t) => {
+  const paths = await fixture(t);
+  const documents = await assembleContent(paths);
+  assert.equal(
+    documents.translated.get("index.mdx").match(/^# .+$/m)?.[0],
+    (
+      await readFile(
+        path.join(paths.translationDirectory, "index_fr.mdx"),
+        "utf8",
+      )
+    ).match(/^# .+$/m)?.[0],
+  );
+  await writeFile(
+    path.join(paths.translationDirectory, "removed_de.mdx"),
+    "# Old content",
+  );
+  await assert.rejects(
+    assembleContent(paths),
+    /Unexpected MDX export: removed_de.mdx/,
+  );
+});
+
 test("module cycles are rejected while sibling reuse remains allowed", async (t) => {
   const paths = await fixture(t);
   await writeFile(

@@ -2,6 +2,13 @@
 
 ## Scope
 
+The Java CLI exposes the small example as `mojito demo-create -n ContentDemo -t
+content`. It packages the canonical MDX/MF2 fixtures from `examples/mdx-content-site`
+and seeds English source with `fr`, `de`, `es`, `ja`, and `ar` targets through
+ordinary repository, push, and import commands. It needs no Node runtime and
+creates no review decisions. Nonempty output directories and existing repository
+names are rejected. The separate 180-asset generator remains a navigation fixture.
+
 An MDX asset can be pushed with its source template, translated as ordinary Mojito
 text units, and read as a localized page from repository Content or a Review
 Project. The preview is the main reading surface; selecting a passage opens the

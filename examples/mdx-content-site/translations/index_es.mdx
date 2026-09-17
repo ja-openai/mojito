@@ -1,0 +1,31 @@
+import Welcome from './modules/Welcome.mdx';
+import SharedNote from './modules/SharedNote.mdx';
+import Individual from './modules/audience/Individual.mdx';
+import Team from './modules/audience/Team.mdx';
+
+{/* mojito-id: home.title */}
+# Una forma más tranquila de aprender
+
+{/* mojito-id: home.intro */}
+Haz un poco de espacio para la curiosidad. Estas breves notas te ayudan a convertir una idea interesante en algo útil.
+
+<PreviewChoice>
+<Individual />
+<Team />
+</PreviewChoice>
+
+<SharedNote />
+
+<Welcome />
+
+{/* mojito-id: home.explore.title */}
+## Lee a tu ritmo
+
+{/* mojito-id: home.explore.body */}
+Empieza con nuestra [guía para crear una pequeña rutina](guide.html). No necesitas una aplicación nueva, un plan perfecto ni una tarde libre.
+
+<SharedNote />
+
+<PreviewMessage resource="./messages.mf2.json" name="calendar.summary" args='{"count":2}' />
+
+<PreviewMessage resource="./messages.mf2.json" name="calendar.date" args='{"date":"2026-09-16T12:00:00Z"}' />

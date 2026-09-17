@@ -31,7 +31,7 @@ import org.springframework.stereotype.Component;
 @Scope("prototype")
 @Parameters(
     commandNames = {"demo-create"},
-    commandDescription = "Creates a demo repository and local resource bundle")
+    commandDescription = "Creates a properties or MDX content demo repository")
 public class DemoCreateCommand extends RepoCommand {
 
   /** logger */
@@ -51,6 +51,14 @@ public class DemoCreateCommand extends RepoCommand {
       description = "Provide the name of the directory that will contain the resource bundle")
   String outputDirectoryParam;
 
+  @Parameter(
+      names = {"--type", "-t"},
+      arity = 1,
+      description = "Demo type: properties (default) or content (MDX and MF2)")
+  String typeParam = "properties";
+
+  @Autowired ContentDemo contentDemo;
+
   @Autowired CommandHelper commandHelper;
 
   CommandDirectories commandDirectories;
@@ -61,6 +69,14 @@ public class DemoCreateCommand extends RepoCommand {
 
   @Override
   public void execute() throws CommandException {
+    if ("content".equals(typeParam)) {
+      contentDemo.create(nameParam, outputDirectoryParam);
+      return;
+    }
+    if (!"properties".equals(typeParam)) {
+      throw new CommandException(
+          "Unknown demo type: " + typeParam + ". Use properties or content.");
+    }
     createDemoRepository();
     initOutputDirectory();
     addResourceBundleToDemoDirectory();

@@ -1,0 +1,4 @@
+{
+  "calendar.summary": ".input {$count :integer}\n.match $count\nzero {{ليس لديك أي جلسات تعلّم مخططة.}}\none {{لديك جلسة تعلّم واحدة مخططة.}}\ntwo {{لديك جلستا تعلّم مخططتان.}}\nfew {{لديك {$count} جلسات تعلّم مخططة.}}\nmany {{لديك {$count} جلسة تعلّم مخططة.}}\n* {{لديك {$count} جلسة تعلّم مخططة.}}",
+  "calendar.date": "جلسة التعلّم التالية يوم {$date :date dateStyle=long timeZone=UTC}."
+}

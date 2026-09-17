@@ -1,0 +1,4 @@
+{
+  "calendar.summary": ".input {$count :integer}\n.match $count\n* {{学習セッションを{$count}回予定しています。}}",
+  "calendar.date": "次の学習セッションは{$date :date dateStyle=long timeZone=UTC}です。"
+}

@@ -114,7 +114,16 @@ export async function assembleContent({
   const exportedFiles = await mdxFiles(translationDirectory);
   const expectedFiles = new Set(files.map(translationPath));
   for (const file of exportedFiles) {
-    if (!expectedFiles.has(file))
+    // The CLI demo includes more locales. They may share this export directory,
+    // while this website deliberately builds only French. Still reject stale assets.
+    const sourceFile = file.replace(
+      /_[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*\.mdx$/,
+      ".mdx",
+    );
+    if (
+      !expectedFiles.has(file) &&
+      (sourceFile === file || !source.has(sourceFile))
+    )
       throw new Error(
         `Unexpected MDX export: ${file}. Use a clean pull directory.`,
       );

@@ -11,9 +11,37 @@ build remain ordinary website code. The built website makes no Mojito API calls.
 
 Author each asset's source MDX once in `content/`. Mojito keeps its translations
 and reconstructs localized MDX on pull, preserving the authored module structure.
-The checked-in `translations/` files are French demonstration fixtures for seeding
-and tests; generated localized files are build inputs, not separately maintained
-page templates.
+The checked-in `translations/` files are demonstration fixtures for seeding and
+tests, including French for the website and four more languages for the CLI demo.
+Generated localized files are build inputs, not separately maintained page templates.
+
+## Create a content demo on your server
+
+Use a Java CLI and server built from this checkout:
+
+```sh
+mojito demo-create -n ContentDemo -t content -o ./content-demo
+```
+
+This creates a dedicated repository with English source and **French, German,
+Spanish, Japanese, and Arabic** targets (`fr`, `de`, `es`, `ja`, `ar`). It copies the
+small example's `content/` and `translations/` into the new or empty output
+directory, pushes all nine assets, imports the sample translations, and prints
+the Content URL. The CLI JAR bundles the canonical fixtures at build time; no
+source checkout, Node.js, website build, or model service is needed at runtime.
+The 180-asset catalogue is not included. A normal Review Project can be created
+separately with all nine assets to try the review Preview.
+
+The CLI uses your configured server and authentication. Configure external blob
+storage as described below before running it; the command does not start a
+server. Failed steps return a nonzero exit code and keep completed operations
+and files for inspection. Existing repository names are rejected, and nonempty
+output directories are never overwritten.
+
+Additional locale fixtures are included for the CLI demo. The Vite website below
+continues to publish English and French; its locale assembly selects French from
+the shared translation directory. These are sample translations, not reviewed
+or model-generated results.
 
 For directory browsing and page/module management with a larger library, use the
 [content catalogue demo](../content-catalogue-demo/README.md): 120 pages and 60

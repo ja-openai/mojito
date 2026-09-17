@@ -29,6 +29,19 @@ It creates a new repository called `Demo1` in the server with some translations.
 
 ![create demo repository](./images/create-demo.gif)
 
+For a small content demo with MDX pages, nested modules, and an MF2 catalogue, use
+a current Java CLI and server:
+
+    mojito demo-create -n ContentDemo -t content -o ./content-demo
+
+This demo uses English source and French, German, Spanish, Japanese, and Arabic
+targets (`fr`, `de`, `es`, `ja`, `ar`). It pushes the sources, imports sample
+translations, and prints the Content URL. The output directory must be new or
+empty. The server must route `asset-content` and `pollable-task` to configured
+external blob storage. No Node runtime or website build is needed by the CLI.
+Open the Content URL as an admin, or enable **My Settings → Admin features → Show
+Content tab**. The generated README explains editing, review, and pull commands.
+
 ### Generate the localized files
 
     cd Demo1
