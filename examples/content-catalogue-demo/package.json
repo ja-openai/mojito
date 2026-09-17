@@ -1,0 +1,13 @@
+{
+  "name": "mojito-content-catalogue-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "test": "node --test scripts/generate.test.mjs"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}
