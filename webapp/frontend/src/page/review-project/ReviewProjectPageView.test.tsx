@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { type ComponentProps } from 'react';
 import { flushSync } from 'react-dom';
 import type * as ReactRouterDom from 'react-router-dom';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as AgentReviewsApi from '../../api/agent-reviews';
@@ -12,10 +12,16 @@ import type { AiReviewRequest, AiReviewResponse } from '../../api/ai-review';
 import type * as GlossariesApi from '../../api/glossaries';
 import type * as ReviewFeedbackApi from '../../api/review-feedback';
 import type * as ReviewProjectsApi from '../../api/review-projects';
-import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
+import type {
+  ApiReviewProjectDetail,
+  ApiReviewProjectDocument,
+  ApiReviewProjectDocumentBlock,
+  ApiReviewProjectTextUnit,
+} from '../../api/review-projects';
 import type * as TextUnitsApi from '../../api/text-units';
 import type { ApiUserPreferences } from '../../api/userPreferences';
 import type { ApiUserProfile } from '../../api/users';
+import type * as FileTreeModule from '../../components/FileTree';
 import type * as Mf2TranslationEditorModule from '../../components/mf2/Mf2TranslationEditor';
 import type {
   Mf2TranslationEditorHandle,
@@ -55,6 +61,7 @@ const matchGlossaryTermsMock = vi.hoisted(() => vi.fn());
 const fetchPrecomputedAiReviewMock = vi.hoisted(() => vi.fn());
 const requestAiReviewMock = vi.hoisted(() => vi.fn());
 const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
+const fetchReviewProjectDocumentsMock = vi.hoisted(() => vi.fn());
 const visibleTextEditorEnabledMock = vi.hoisted(() => vi.fn(() => true));
 const mf2TranslationEditorHostMock = vi.hoisted(() => ({ enabled: false, errorCount: 0 }));
 const virtualRowsLimitMock = vi.hoisted(() => ({ value: 1 }));
@@ -116,6 +123,7 @@ vi.mock('../../api/review-projects', async (importActual) => {
   return {
     ...actual,
     saveReviewProjectTextUnitDecision: saveReviewProjectTextUnitDecisionMock,
+    fetchReviewProjectDocuments: fetchReviewProjectDocumentsMock,
   };
 });
 
@@ -202,6 +210,30 @@ vi.mock('../../components/mf2/Mf2TranslationEditor', async (importActual) => {
   return { ...actual, Mf2TranslationEditor };
 });
 
+// Review-list virtualization is controlled separately below; tree behavior should not
+// inherit its one-row viewport. FileTree tests exercise the real virtualizer.
+vi.mock('../../components/FileTree', async (importOriginal) => {
+  const actual = await importOriginal<typeof FileTreeModule>();
+  return {
+    ...actual,
+    FileTree: ({
+      items,
+      ariaLabel,
+    }: {
+      items: FileTreeModule.FileTreeItem[];
+      ariaLabel: string;
+    }) => (
+      <div role="list" aria-label={ariaLabel}>
+        {items.map((item) => (
+          <div role="listitem" key={item.key}>
+            {item.content}
+          </div>
+        ))}
+      </div>
+    ),
+  };
+});
+
 vi.mock('../../components/virtual/useVirtualRows', () => ({
   useVirtualRows: ({ count }: { count: number }) => ({
     scrollRef: { current: null },
@@ -250,7 +282,20 @@ afterEach(() => {
   // Retained-draft unload guards intentionally outlive a page, but not a test session.
   for (const queryClient of testQueryClients) queryClient.clear();
   testQueryClients.clear();
+  vi.unstubAllGlobals();
 });
+
+function mockViewport(narrow: boolean) {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((media: string) => ({
+      matches: narrow,
+      media,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  );
+}
 
 beforeAll(() => {
   Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
@@ -260,7 +305,10 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  // Most tests exercise the desktop preview and editor side by side.
+  mockViewport(false);
   virtualRowsLimitMock.value = 1;
+  fetchReviewProjectDocumentsMock.mockReset();
   fetchAgentReviewFeedbackMock.mockReset();
   saveAgentReviewOutcomeMock.mockReset();
   fetchAgentReviewFeedbackMock.mockResolvedValue([]);
@@ -482,7 +530,873 @@ function renderReviewProjectPageViewNode(
   );
 }
 
+function buildMdxProject() {
+  const row = {
+    ...textUnit,
+    tmTextUnit: { ...textUnit.tmTextUnit!, asset: { assetPath: 'checkout.mdx' } },
+  };
+  fetchReviewProjectDocumentsMock.mockResolvedValue({
+    documents: [
+      {
+        assetId: 1,
+        assetPath: 'checkout.mdx',
+        repositoryId: 1,
+        branchName: 'master',
+        sourceContentMd5: 'source-version',
+        warnings: [],
+        blocks: [
+          {
+            id: row.tmTextUnit.name,
+            type: 'paragraph',
+            depth: 0,
+            source: row.tmTextUnit.content,
+            line: 1,
+            translatable: true,
+            reviewProjectTextUnitId: row.id,
+            tmTextUnitId: row.tmTextUnit.id,
+            mappingStatus: 'MATCHED',
+          },
+        ],
+      },
+    ],
+    warnings: [],
+  });
+  return { ...project, reviewProjectTextUnits: [row] };
+}
+
+function buildNavigableMdxProject() {
+  const row = (
+    id: number,
+    name: string,
+    source: string,
+    target: string,
+    assetPath: string,
+  ): ApiReviewProjectTextUnit => ({
+    ...textUnit,
+    id,
+    tmTextUnit: { id: id + 1_000, name, content: source, asset: { assetPath } },
+    baselineTmTextUnitVariant: {
+      ...textUnit.baselineTmTextUnitVariant,
+      id: id + 2_000,
+      content: target,
+    },
+  });
+  const home = row(201, 'home.title', 'Start here', 'Comece aqui', 'index.mdx');
+  const guide = row(202, 'guide.title', 'Reading guide', 'Guia de leitura', 'guide.mdx');
+  const shared = row(203, 'shared.note', 'Shared advice', 'Conselho comum', 'modules/Shared.mdx');
+  const followUp = row(
+    204,
+    'shared.next',
+    'Try this next',
+    'Tente isto agora',
+    'modules/Shared.mdx',
+  );
+  const block = (
+    unit: ApiReviewProjectTextUnit,
+    assetId: number,
+    occurrenceId: string,
+    moduleDepth = 0,
+    type = 'paragraph',
+  ): ApiReviewProjectDocumentBlock => ({
+    id: String(unit.tmTextUnit!.name),
+    type,
+    depth: type === 'heading' ? 1 : 0,
+    source: unit.tmTextUnit!.content!,
+    line: 1,
+    translatable: true,
+    reviewProjectTextUnitId: unit.id,
+    tmTextUnitId: unit.tmTextUnit!.id,
+    mappingStatus: 'MATCHED',
+    assetId,
+    assetPath: String(unit.tmTextUnit!.asset!.assetPath),
+    moduleDepth,
+    occurrenceId,
+  });
+  const include = (occurrenceId: string): ApiReviewProjectDocumentBlock => ({
+    id: null,
+    type: 'component',
+    depth: 0,
+    source: '<Shared />',
+    line: 3,
+    translatable: false,
+    reviewProjectTextUnitId: null,
+    tmTextUnitId: null,
+    mappingStatus: 'CONTEXT',
+    assetId: 11,
+    assetPath: 'index.mdx',
+    moduleDepth: 0,
+    occurrenceId,
+    moduleStatus: 'EXPANDED',
+    modulePath: 'modules/Shared.mdx',
+  });
+  const document = (
+    assetId: number,
+    assetPath: string,
+    blocks: ApiReviewProjectDocumentBlock[],
+  ): ApiReviewProjectDocument => ({
+    assetId,
+    assetPath,
+    repositoryId: 1,
+    branchName: 'master',
+    sourceContentMd5: `source-${assetId}`,
+    warnings: [],
+    blocks,
+  });
+  fetchReviewProjectDocumentsMock.mockResolvedValue({
+    documents: [
+      document(11, 'index.mdx', [
+        block(home, 11, '11:3/0', 0, 'heading'),
+        include('11:3/1'),
+        block(shared, 13, '11:3/1/0', 1),
+        block(followUp, 13, '11:3/1/1', 1),
+        include('11:3/2'),
+        block(shared, 13, '11:3/2/0', 1),
+        block(followUp, 13, '11:3/2/1', 1),
+      ]),
+      document(12, 'guide.mdx', [block(guide, 12, '12:3/0', 0, 'heading')]),
+      document(13, 'modules/Shared.mdx', [
+        block(shared, 13, '13:3/0'),
+        block(followUp, 13, '13:3/1'),
+      ]),
+    ],
+    warnings: [],
+  });
+  return { ...project, textUnitCount: 4, reviewProjectTextUnits: [home, guide, shared, followUp] };
+}
+
 describe('ReviewProjectPageView', () => {
+  it('switches preview pages without losing a draft and resumes its original page', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const onRequestSaveDecision = vi.fn();
+    renderReviewProjectPageView({
+      project: buildNavigableMdxProject(),
+      mutations: buildMutations({ onRequestSaveDecision }),
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Review home.title' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Comece com uma pequena ideia' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Open Guia de leitura \(guide\.mdx\)/ }));
+
+    expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog', { name: 'Discard changes?' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.getByRole('article', { name: 'guide.mdx' })).toBeInTheDocument();
+    expect(screen.queryByRole('article', { name: 'index.mdx' })).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /Resume home.title · Unsaved changes/ }),
+    );
+
+    expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Comece com uma pequena ideia',
+    );
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.getByRole('article', { name: 'index.mdx' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^Open Comece aqui \(index\.mdx\)/ }),
+    ).toHaveAttribute('aria-current', 'page');
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+  });
+
+  it('keeps a shared passage in its current page when selecting another occurrence', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    renderReviewProjectPageView({ project: buildNavigableMdxProject() });
+    const passages = await screen.findAllByRole('button', {
+      name: 'Review shared.note in modules/Shared.mdx',
+    });
+    expect(passages).toHaveLength(2);
+    fireEvent.click(passages[1]);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Um conselho para todas as páginas' },
+    });
+
+    fireEvent.click(passages[0]);
+
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Um conselho para todas as páginas',
+    );
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.getByRole('article', { name: 'index.mdx' })).toBeInTheDocument();
+    expect(screen.queryByRole('article', { name: 'modules/Shared.mdx' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog', { name: 'Discard changes?' })).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Review shared.next in modules/Shared.mdx' })[0],
+    );
+    expect(screen.getByRole('alertdialog', { name: 'Discard changes?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Keep editing$/ }));
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Um conselho para todas as páginas',
+    );
+  });
+
+  it('opens the same shared row in a chosen module without jumping back to its parent page', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    renderReviewProjectPageView({ project: buildNavigableMdxProject() });
+    fireEvent.click(
+      (
+        await screen.findAllByRole('button', {
+          name: 'Review shared.note in modules/Shared.mdx',
+        })
+      )[1],
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Um conselho guardado no rascunho' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand modules' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /^Open Shared\.mdx \(modules\/Shared\.mdx\)/ }),
+    );
+
+    expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'modules/Shared.mdx' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Review shared.note' }));
+    expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Um conselho guardado no rascunho',
+    );
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.getByRole('article', { name: 'modules/Shared.mdx' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^Open Shared\.mdx \(modules\/Shared\.mdx\)/ }),
+    ).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('opens the next page automatically when passage navigation crosses a page boundary', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    renderReviewProjectPageView({ project: buildNavigableMdxProject() });
+    fireEvent.click(
+      (
+        await screen.findAllByRole('button', {
+          name: 'Review shared.next in modules/Shared.mdx',
+        })
+      )[1],
+    );
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Tente isto agora');
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Guia de leitura');
+      expect(screen.getByRole('article', { name: 'guide.mdx' })).toBeInTheDocument();
+    });
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.queryByRole('article', { name: 'index.mdx' })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^Open Guia de leitura \(guide\.mdx\)/ }),
+    ).toHaveAttribute('aria-current', 'page');
+  });
+
+  it.each(['button', 'shortcut', 'failed save'])(
+    'accepts and advances from preview only after a successful save: %s',
+    async (action) => {
+      visibleTextEditorEnabledMock.mockReturnValue(false);
+      const liveProject = buildNavigableMdxProject();
+      const first = liveProject.reviewProjectTextUnits[0];
+      const variant = { ...first.baselineTmTextUnitVariant!, status: 'APPROVED' };
+      let resolveSave!: (row: ApiReviewProjectTextUnit) => void;
+      let rejectSave!: (error: Error) => void;
+      saveReviewProjectTextUnitDecisionMock.mockImplementation(
+        () =>
+          new Promise((resolve, reject) => {
+            resolveSave = resolve;
+            rejectSave = reject;
+          }),
+      );
+      const queryClient = createQueryClient();
+      queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], liveProject);
+      function LivePreview() {
+        const { data } = useQuery({
+          queryKey: [...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id],
+          queryFn: () => Promise.resolve(liveProject),
+          staleTime: Infinity,
+        });
+        const mutations = useReviewProjectMutations(project.id);
+        return (
+          <ReviewProjectPageView
+            projectId={project.id}
+            project={data ?? null}
+            mutations={mutations}
+            selectedTextUnitQueryId={null}
+            onSelectedTextUnitIdChange={noop}
+            openRequestDetailsQuery={false}
+            requestDetailsSource={null}
+            onRequestDetailsQueryHandled={noop}
+            onRequestDetailsFlowFinished={noop}
+          />
+        );
+      }
+      render(
+        <QueryClientProvider client={queryClient}>
+          <UserContext.Provider value={user}>
+            <MemoryRouter>
+              <LivePreview />
+            </MemoryRouter>
+          </UserContext.Provider>
+        </QueryClientProvider>,
+      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Review home.title' }));
+      const editor = screen.getByRole('textbox', { name: 'Translation' });
+      const advance = screen.getByRole('button', { name: 'Accept & next' });
+      expect(advance).toHaveAttribute('aria-keyshortcuts', 'Meta+Shift+Enter Control+Shift+Enter');
+      if (action === 'shortcut') {
+        fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true, shiftKey: true });
+      } else {
+        fireEvent.click(advance);
+      }
+      await waitFor(() => expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce());
+      expect(editor).toHaveValue('Comece aqui');
+      expect(advance).toBeDisabled();
+      if (action === 'failed save') {
+        await act(() =>
+          Promise.resolve(rejectSave(Object.assign(new Error('Unable to save'), { status: 400 }))),
+        );
+        await waitFor(() => expect(advance).toBeEnabled());
+        expect(editor).toHaveValue('Comece aqui');
+        expect(
+          screen.getByRole('button', { name: 'Review home.title' }),
+        ).toHaveAccessibleDescription('Pending review');
+      } else {
+        await act(() =>
+          Promise.resolve(
+            resolveSave({
+              ...first,
+              currentTmTextUnitVariant: variant,
+              reviewProjectTextUnitDecision: {
+                decisionState: 'DECIDED',
+                decisionTmTextUnitVariant: variant,
+              },
+            }),
+          ),
+        );
+        await waitFor(() =>
+          expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+            'Conselho comum',
+          ),
+        );
+        expect(
+          screen.getByRole('button', { name: 'Review home.title' }),
+        ).toHaveAccessibleDescription('Reviewed');
+      }
+    },
+  );
+
+  it('uses the remaining count to cycle pending preview strings without a separate start action', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const mdxProject = buildNavigableMdxProject();
+    renderReviewProjectPageView({
+      project: {
+        ...mdxProject,
+        reviewProjectTextUnits: mdxProject.reviewProjectTextUnits.map((row) =>
+          row.id === 201
+            ? {
+                ...row,
+                // Legacy decisions can predate the explicit decision state.
+                reviewProjectTextUnitDecision: {
+                  decisionTmTextUnitVariant: row.baselineTmTextUnitVariant,
+                },
+              }
+            : row.id === 204
+              ? { ...row, reviewProjectTextUnitDecision: { decisionState: 'DECIDED' } }
+              : row,
+        ),
+      },
+    });
+    await screen.findByRole('button', { name: 'Review home.title' });
+    expect(screen.getByText('2 strings to review')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Start review' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '2 strings to review' }));
+    expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Conselho comum',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '2 strings to review' }));
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Guia de leitura');
+      expect(screen.getByRole('article', { name: 'guide.mdx' })).toBeVisible();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '2 strings to review' }));
+    expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Conselho comum',
+    );
+    expect(screen.getByRole('article', { name: 'index.mdx' })).toBeVisible();
+    expect(screen.getByText('2 strings to review')).toBeVisible();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Conselho em andamento' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '2 strings to review' }));
+    expect(screen.getByRole('alertdialog', { name: 'Discard changes?' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Conselho em andamento',
+    );
+  });
+
+  it('shows completion only when every project string is decided', async () => {
+    const mdxProject = buildMdxProject();
+    renderReviewProjectPageView({
+      project: {
+        ...mdxProject,
+        reviewProjectTextUnits: mdxProject.reviewProjectTextUnits.map((row) => ({
+          ...row,
+          reviewProjectTextUnitDecision: { decisionState: 'DECIDED' },
+        })),
+      },
+    });
+    await screen.findByRole('button', { name: 'Review checkout.pay' });
+    expect(screen.getByText('All strings reviewed')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Start review' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Review in list' })).not.toBeInTheDocument();
+  });
+
+  it('offers the list for pending strings unavailable in the preview and preserves the review session', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const mdxProject = buildMdxProject();
+    const changedProject = {
+      ...mdxProject,
+      reviewProjectTextUnits: mdxProject.reviewProjectTextUnits.map((row) => ({
+        ...row,
+        tmTextUnit: { ...row.tmTextUnit, content: 'Updated source' },
+      })),
+    };
+    function PendingPreview() {
+      const [params] = useSearchParams();
+      return (
+        <>
+          <output aria-label="Current route">{params.toString()}</output>
+          <ReviewProjectPageView
+            projectId={project.id}
+            project={changedProject}
+            mutations={buildMutations()}
+            selectedTextUnitQueryId={null}
+            onSelectedTextUnitIdChange={noop}
+            openRequestDetailsQuery={false}
+            requestDetailsSource={null}
+            onRequestDetailsQueryHandled={noop}
+            onRequestDetailsFlowFinished={noop}
+          />
+        </>
+      );
+    }
+    const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <UserContext.Provider value={user}>
+          <MemoryRouter initialEntries={['/review-projects/7?view=preview&rps=review-session']}>
+            <PendingPreview />
+          </MemoryRouter>
+        </UserContext.Provider>
+      </QueryClientProvider>,
+    );
+    const pendingCount = await screen.findByRole('button', { name: '1 string to review' });
+    await waitFor(() => expect(pendingCount).toBeEnabled());
+    expect(pendingCount).toHaveAttribute('title', 'Review pending strings in list');
+    expect(screen.getByText('1 string to review')).toBeVisible();
+    expect(screen.queryByText('All strings reviewed')).not.toBeInTheDocument();
+    fireEvent.click(pendingCount);
+    expect(await screen.findByRole('searchbox')).toBeVisible();
+    expect(screen.getByLabelText('Current route')).toHaveTextContent('view=list');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent('state=PENDING');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent('rps=review-session');
+    expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Pay {price} now',
+    );
+  });
+
+  it('does not navigate the pending preview scope while the inspector is busy', async () => {
+    renderReviewProjectPageView({
+      project: buildMdxProject(),
+      mutations: buildMutations({ isSaving: true }),
+    });
+    await screen.findByRole('button', { name: 'Review checkout.pay' });
+    expect(screen.getByRole('button', { name: '1 string to review' })).toBeDisabled();
+  });
+
+  it('starts with a full-page preview and retains a closed editor draft without hidden shortcuts', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const mdxProject = buildMdxProject();
+    const onRequestSaveDecision = vi.fn();
+    const onRequestDecisionState = vi.fn();
+    const mutations = buildMutations({ onRequestSaveDecision, onRequestDecisionState });
+    const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+    function RoutedPreview() {
+      const [params, setParams] = useSearchParams();
+      return (
+        <>
+          <output aria-label="Current route">{params.toString()}</output>
+          <ReviewProjectPageView
+            projectId={project.id}
+            project={mdxProject}
+            mutations={mutations}
+            selectedTextUnitQueryId={params.has('tu') ? Number(params.get('tu')) : null}
+            onSelectedTextUnitIdChange={(id, options) => {
+              const next = new URLSearchParams(params);
+              if (id == null) next.delete('tu');
+              else next.set('tu', String(id));
+              if (next.toString() !== params.toString()) setParams(next, options);
+            }}
+            openRequestDetailsQuery={false}
+            requestDetailsSource={null}
+            onRequestDetailsQueryHandled={noop}
+            onRequestDetailsFlowFinished={noop}
+          />
+        </>
+      );
+    }
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <UserContext.Provider value={user}>
+          <MemoryRouter initialEntries={['/review-projects/7']}>
+            <RoutedPreview />
+          </MemoryRouter>
+        </UserContext.Provider>
+      </QueryClientProvider>,
+    );
+    const passage = await screen.findByRole('button', { name: 'Review checkout.pay' });
+    expect(screen.getByRole('button', { name: /^Preview$/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(container.querySelector('.review-project-page__content--preview')).not.toBeNull();
+    expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+    expect(passage).toHaveAccessibleDescription('Pending review');
+    expect(within(passage).getByTitle('Pending review')).toBeVisible();
+    expect(screen.getByRole('checkbox', { name: 'Show review status' })).toBeChecked();
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'a' });
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true, shiftKey: true });
+    expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    expect(onRequestDecisionState).not.toHaveBeenCalled();
+    fireEvent.click(passage);
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(screen.getByLabelText('Current route')).toHaveTextContent('tu=3'));
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+    expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Current route')).toHaveTextContent(''));
+    expect(screen.getByLabelText('Current route')).not.toHaveTextContent('tu=');
+    expect(passage).toHaveTextContent('Pay {price} now');
+    expect(passage).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /Resume checkout.pay · Unsaved changes/ }));
+    expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Pague {price} agora',
+    );
+    expect(screen.getByLabelText('Current route')).toHaveTextContent('tu=3');
+  });
+
+  it('retains an unsaved translation when closing and resuming the narrow-screen drawer', async () => {
+    mockViewport(true);
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const onRequestSaveDecision = vi.fn();
+    renderReviewProjectPageView({
+      project: buildMdxProject(),
+      mutations: buildMutations({ onRequestSaveDecision }),
+    });
+    const passage = await screen.findByRole('button', { name: 'Review checkout.pay' });
+    act(() => passage.focus());
+    fireEvent.click(passage);
+    const drawer = await screen.findByRole('dialog', { name: 'Review translation editor' });
+    expect(drawer).toHaveAttribute('aria-modal', 'true');
+    fireEvent.change(within(drawer).getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Pague {price} agora' },
+    });
+
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Back to preview' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+    expect(passage).toHaveFocus();
+    expect(passage).toHaveTextContent('Pay {price} now');
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /Resume checkout.pay · Unsaved changes/ }));
+
+    const resumed = await screen.findByRole('dialog', { name: 'Review translation editor' });
+    expect(within(resumed).getByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Pague {price} agora',
+    );
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+  });
+
+  it('uses the shared resizer and retains a draft while collapsing and switching review views', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    localStorage.removeItem('mojito.review.previewWidth');
+    localStorage.removeItem('mojito.review.listWidth');
+    renderReviewProjectPageView({ project: buildMdxProject() });
+    const passage = await screen.findByRole('button', { name: 'Review checkout.pay' });
+    expect(
+      screen.queryByRole('separator', { name: 'Resize document preview' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(passage);
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    fireEvent.change(editor, { target: { value: 'Draft during resize' } });
+    const handle = screen.getByRole('separator', { name: 'Resize document preview' });
+    fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+    expect(handle).toHaveAttribute('aria-valuenow', '50');
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse document preview' }));
+    expect(passage).not.toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toBe(editor);
+    fireEvent.click(screen.getByRole('button', { name: 'Expand document preview' }));
+    expect(passage).toBeVisible();
+    expect(handle).toHaveAttribute('aria-valuenow', '50');
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
+    expect(screen.getByRole('separator', { name: 'Resize review list' })).toHaveAttribute(
+      'aria-valuenow',
+      '20',
+    );
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toBe(editor);
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    expect(screen.getByRole('separator', { name: 'Resize document preview' })).toHaveAttribute(
+      'aria-valuenow',
+      '50',
+    );
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toBe(editor);
+    expect(editor).toHaveValue('Draft during resize');
+    localStorage.removeItem('mojito.review.previewWidth');
+    localStorage.removeItem('mojito.review.listWidth');
+  });
+
+  it.each(['preview', 'document'])(
+    'opens an explicitly linked passage in %s mode',
+    async (view) => {
+      visibleTextEditorEnabledMock.mockReturnValue(false);
+      renderReviewProjectPageView(
+        { project: buildMdxProject(), selectedTextUnitQueryId: 3 },
+        user,
+        `/review-projects/7?view=${view}&tu=3`,
+      );
+      expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveValue(
+        'Pay {price} now',
+      );
+      expect(screen.getByRole('button', { name: 'Close editor' })).toBeInTheDocument();
+    },
+  );
+
+  it('defaults MDX and its MF2 catalogs to Preview', async () => {
+    const mdxProject = buildMdxProject();
+    const catalogRow = buildNextTextUnit();
+    renderReviewProjectPageView({
+      project: {
+        ...mdxProject,
+        reviewProjectTextUnits: [
+          ...mdxProject.reviewProjectTextUnits,
+          {
+            ...catalogRow,
+            tmTextUnit: { ...catalogRow.tmTextUnit!, asset: { assetPath: 'messages.mf2.json' } },
+          },
+        ],
+      },
+    });
+    expect(await screen.findByRole('button', { name: 'Review checkout.pay' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preview' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps the list default for mixed projects and respects explicit list links', () => {
+    const mdxProject = buildMdxProject();
+    const first = renderReviewProjectPageView({
+      project: {
+        ...mdxProject,
+        reviewProjectTextUnits: [...mdxProject.reviewProjectTextUnits, buildNextTextUnit()],
+      },
+    });
+    expect(screen.getByRole('searchbox')).toBeInTheDocument();
+    expect(fetchReviewProjectDocumentsMock).not.toHaveBeenCalled();
+    first.unmount();
+    renderReviewProjectPageView({ project: mdxProject }, user, '/review-projects/7?view=list');
+    expect(screen.getByRole('searchbox')).toBeInTheDocument();
+    expect(fetchReviewProjectDocumentsMock).not.toHaveBeenCalled();
+  });
+
+  it('does not close the preview editor during input composition', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    renderReviewProjectPageView({ project: buildMdxProject() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Review checkout.pay' }));
+    const editor = screen.getByRole('textbox', { name: 'Translation' });
+    fireEvent.compositionStart(editor);
+    fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+    expect(editor).toBeInTheDocument();
+    fireEvent.compositionEnd(editor);
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Accept$/ })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+    expect(editor).not.toBeInTheDocument();
+  });
+
+  it('refreshes the document passage after an acknowledged save through existing mutations', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const row = {
+      ...textUnit,
+      tmTextUnit: { ...textUnit.tmTextUnit!, asset: { assetPath: 'checkout.mdx' } },
+    };
+    const liveProject = { ...project, reviewProjectTextUnits: [row] };
+    fetchReviewProjectDocumentsMock.mockResolvedValue({
+      documents: [
+        {
+          assetId: 1,
+          assetPath: 'checkout.mdx',
+          repositoryId: 1,
+          branchName: 'master',
+          sourceContentMd5: 'source-version',
+          warnings: [],
+          blocks: [
+            {
+              id: row.tmTextUnit.name,
+              type: 'paragraph',
+              depth: 0,
+              source: row.tmTextUnit.content,
+              line: 1,
+              translatable: true,
+              reviewProjectTextUnitId: row.id,
+              tmTextUnitId: row.tmTextUnit.id,
+              mappingStatus: 'MATCHED',
+            },
+          ],
+        },
+      ],
+      warnings: [],
+    });
+    const acceptedVariant = {
+      ...textUnit.baselineTmTextUnitVariant!,
+      id: 31,
+      content: 'Pague {price} agora',
+      status: 'APPROVED',
+    };
+    saveReviewProjectTextUnitDecisionMock.mockResolvedValue({
+      ...row,
+      currentTmTextUnitVariant: acceptedVariant,
+      reviewProjectTextUnitDecision: {
+        decisionState: 'DECIDED',
+        notes: null,
+        decisionTmTextUnitVariant: acceptedVariant,
+      },
+    });
+    const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], liveProject);
+    function LiveDocumentReview() {
+      const { data: currentProject } = useQuery({
+        queryKey: [...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id],
+        queryFn: () => Promise.resolve(liveProject),
+        staleTime: Infinity,
+      });
+      const mutations = useReviewProjectMutations(project.id);
+      return (
+        <ReviewProjectPageView
+          projectId={project.id}
+          project={currentProject ?? null}
+          mutations={mutations}
+          selectedTextUnitQueryId={null}
+          onSelectedTextUnitIdChange={noop}
+          openRequestDetailsQuery={false}
+          requestDetailsSource={null}
+          onRequestDetailsQueryHandled={noop}
+          onRequestDetailsFlowFinished={noop}
+        />
+      );
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <UserContext.Provider value={user}>
+          <MemoryRouter initialEntries={['/review-projects/7?view=document']}>
+            <LiveDocumentReview />
+          </MemoryRouter>
+        </UserContext.Provider>
+      </QueryClientProvider>,
+    );
+    const passage = await screen.findByRole('button', { name: 'Review checkout.pay' });
+    expect(passage).toHaveTextContent('Pay {price} now');
+    expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+    fireEvent.click(passage);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Pague {price} agora' },
+    });
+    expect(passage).toHaveTextContent('Pay {price} now');
+    fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+    await waitFor(() => expect(passage).toHaveTextContent('Pague {price} agora'));
+    expect(passage).toHaveAccessibleDescription('Reviewed');
+    expect(within(passage).getByTitle('Reviewed')).toBeVisible();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Show review status' }));
+    expect(within(passage).queryByTitle('Reviewed')).not.toBeInTheDocument();
+    expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce();
+  });
+
+  it('reviews document passages through the existing editor despite retained list filters', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const first = {
+      ...textUnit,
+      tmTextUnit: { ...textUnit.tmTextUnit!, asset: { assetPath: 'checkout.mdx' } },
+    };
+    const second = {
+      ...buildNextTextUnit(),
+      tmTextUnit: { ...buildNextTextUnit().tmTextUnit!, asset: { assetPath: 'checkout.mdx' } },
+    };
+    fetchReviewProjectDocumentsMock.mockResolvedValue({
+      documents: [
+        {
+          assetId: 1,
+          assetPath: 'checkout.mdx',
+          repositoryId: 1,
+          branchName: 'master',
+          sourceContentMd5: 'source-version',
+          warnings: [],
+          blocks: [first, second].map((row) => ({
+            id: row.tmTextUnit.name,
+            type: 'paragraph',
+            depth: 0,
+            source: row.tmTextUnit.content,
+            line: 1,
+            translatable: true,
+            reviewProjectTextUnitId: row.id,
+            tmTextUnitId: row.tmTextUnit.id,
+            mappingStatus: 'MATCHED',
+          })),
+        },
+      ],
+      warnings: [],
+    });
+    const onRequestSaveDecision = vi.fn();
+    renderReviewProjectPageView(
+      {
+        project: { ...project, reviewProjectTextUnits: [first, second] },
+        mutations: buildMutations({ onRequestSaveDecision }),
+      },
+      user,
+      '/review-projects/7?view=list',
+    );
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Pay' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Preview$/ }));
+    const passage = await screen.findByRole('button', { name: 'Review checkout.cancel' });
+    fireEvent.click(passage);
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Cancel payment'),
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Cancelar pagamento' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^List$/ }));
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Cancelar pagamento');
+    fireEvent.click(screen.getByRole('button', { name: /^Preview$/ }));
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Cancelar pagamento');
+    fireEvent.click(screen.getByRole('button', { name: 'Review checkout.pay' }));
+    expect(screen.getByRole('alertdialog', { name: 'Discard changes?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Keep editing$/ }));
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+    expect(onRequestSaveDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        textUnitId: second.id,
+        tmTextUnitId: second.tmTextUnit.id,
+        target: 'Cancelar pagamento',
+      }),
+    );
+    expect(fetchReviewProjectDocumentsMock).toHaveBeenCalledWith(project.id);
+  });
+
   it('keeps the saved shortcut preference on a failed save and allows retrying', async () => {
     fetchUserPreferencesMock.mockResolvedValue({ ...preferences, shortcutHelp: 'header' });
     saveUserPreferencesMock.mockRejectedValueOnce(new Error('Network unavailable'));
@@ -2178,8 +3092,8 @@ one {{Você tem {$count} arquivo.}}
     const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
     fireEvent.click(screen.getByRole('button', { name: 'Review speed: Balanced' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic review' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled());
-    expect(oldSignal.aborted).toBe(true);
+    await waitFor(() => expect(oldSignal.aborted).toBe(true));
+    expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled();
     fireEvent.change(
       screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
       {

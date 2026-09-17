@@ -1,0 +1,67 @@
+.shortcut-bar {
+  min-height: 2.25rem;
+  flex-shrink: 0;
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 58%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.shortcut-bar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.shortcut-bar kbd,
+.shortcut-bar__button kbd {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface-muted) 65%, transparent);
+  color: var(--color-text-subtle);
+  padding: 0.03rem 0.3rem;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.35;
+}
+
+.shortcut-bar__item[aria-disabled='true'] {
+  opacity: 0.5;
+}
+
+.shortcut-bar__item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shortcut-bar__button {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.shortcut-bar__button:hover,
+.shortcut-bar__button:focus-visible {
+  text-decoration: underline;
+}
+
+@media (max-width: 90rem) {
+  .shortcut-bar {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+}

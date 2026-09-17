@@ -766,6 +766,61 @@ export const fetchReviewProjectDetail = async (
   return (await response.json()) as ApiReviewProjectDetail;
 };
 
+export type ApiReviewProjectDocumentBlock = {
+  id: string | null;
+  type: string;
+  depth: number;
+  marker?: string | null;
+  source: string;
+  line: number;
+  translatable: boolean;
+  reviewProjectTextUnitId: number | null;
+  tmTextUnitId: number | null;
+  mappingStatus: 'MATCHED' | 'NOT_IN_PROJECT' | 'SOURCE_CHANGED' | 'NOT_FOUND' | 'CONTEXT';
+  targetContent?: string | null;
+  tmTextUnitVariantId?: number | null;
+  targetStatus?: 'APPROVED' | 'REVIEW_NEEDED' | 'TRANSLATION_NEEDED' | null;
+  assetId?: number;
+  assetPath?: string;
+  moduleDepth?: number;
+  occurrenceId?: string;
+  moduleStatus?: 'EXPANDED' | 'UNAVAILABLE' | null;
+  modulePath?: string | null;
+  moduleWarning?: string | null;
+  previewArgs?: Record<string, string | number | boolean> | null;
+};
+
+export type ApiReviewProjectDocument = {
+  assetId: number;
+  assetPath: string;
+  repositoryId: number;
+  branchId?: number;
+  branchName: string | null;
+  sourceContentMd5: string;
+  sourceLocaleTag?: string | null;
+  blocks: ApiReviewProjectDocumentBlock[];
+  warnings: string[];
+};
+
+export type ApiReviewProjectDocuments = {
+  documents: ApiReviewProjectDocument[];
+  warnings: string[];
+};
+
+export async function fetchReviewProjectDocuments(
+  projectId: number,
+): Promise<ApiReviewProjectDocuments> {
+  const response = await fetch(`/api/review-projects/${projectId}/documents`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: jsonHeaders,
+  });
+  if (!response.ok) {
+    throw new Error('Failed to load document context. Try again.');
+  }
+  return (await response.json()) as ApiReviewProjectDocuments;
+}
+
 export const updateReviewProjectStatus = async (
   projectId: number,
   status: ApiReviewProjectStatus,

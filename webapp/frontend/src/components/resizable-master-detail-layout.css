@@ -25,6 +25,24 @@
   padding-left: var(--space-4);
 }
 
+.resizable-master-detail-layout.resizable-master-detail-layout--collapsed {
+  grid-template-columns: 0 var(--resizable-master-detail-resize-handle-size) minmax(0, 1fr);
+}
+.resizable-master-detail-layout--collapsed > .resizable-master-detail-layout__resize-handle {
+  grid-column: 2;
+}
+.resizable-master-detail-layout--collapsed > .resizable-master-detail-layout__detail {
+  grid-column: 3;
+}
+
+.resizable-master-detail-layout.resizable-master-detail-layout--detail-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.resizable-master-detail-layout > [hidden] {
+  display: none;
+}
+
 .resizable-master-detail-layout__resize-handle {
   position: relative;
   display: flex;
@@ -47,9 +65,15 @@
   background: color-mix(in srgb, var(--color-border) 55%, transparent);
   z-index: 0;
 }
+.resizable-master-detail-layout__separator {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  outline: none;
+}
 
 .resizable-master-detail-layout__resize-handle:hover,
-.resizable-master-detail-layout__resize-handle:focus-visible,
+.resizable-master-detail-layout__resize-handle:focus-within,
 .resizable-master-detail-layout__resize-handle.is-resizing {
   background: color-mix(in srgb, var(--color-accent) 6%, transparent);
   outline: none;
@@ -76,8 +100,20 @@
     color 0.2s ease;
 }
 
+button.resizable-master-detail-layout__handle-grip {
+  cursor: pointer;
+}
+span.resizable-master-detail-layout__handle-grip {
+  pointer-events: none;
+}
+
+button.resizable-master-detail-layout__handle-grip:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .resizable-master-detail-layout__resize-handle:hover .resizable-master-detail-layout__handle-grip,
-.resizable-master-detail-layout__resize-handle:focus-visible
+.resizable-master-detail-layout__resize-handle:focus-within
   .resizable-master-detail-layout__handle-grip,
 .resizable-master-detail-layout__resize-handle.is-resizing
   .resizable-master-detail-layout__handle-grip {
@@ -100,5 +136,8 @@
 
   .resizable-master-detail-layout__resize-handle {
     display: none;
+  }
+  .resizable-master-detail-layout--collapsed > .resizable-master-detail-layout__resize-handle {
+    display: flex;
   }
 }

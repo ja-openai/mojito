@@ -1,0 +1,81 @@
+.file-tree__row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-radius: var(--radius-2);
+}
+
+.file-tree__row:hover,
+.file-tree__row--selected {
+  background: var(--color-surface-selected);
+}
+
+.file-tree__toggle,
+.file-tree__label {
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  padding: var(--space-2) 0;
+  text-align: start;
+  cursor: pointer;
+}
+
+.file-tree__toggle:disabled,
+.file-tree__label:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.file-tree__toggle:focus-visible,
+.file-tree__label:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.file-tree__toggle {
+  flex: 0 0 1.5rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.file-tree__label {
+  flex: 1;
+  min-width: 0;
+  padding-inline-end: var(--space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.file-tree__label[aria-current] {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+}
+
+.file-tree__row--file {
+  padding-inline-start: 1.5rem;
+}
+
+.file-tree__row--file .file-tree__label {
+  color: var(--color-accent);
+}
+.file-tree {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overflow-anchor: none;
+}
+
+.file-tree__canvas {
+  position: relative;
+  width: 100%;
+}
+
+.file-tree__item {
+  position: absolute;
+  inset: 0 0 auto;
+  min-height: 32px;
+  box-sizing: border-box;
+}

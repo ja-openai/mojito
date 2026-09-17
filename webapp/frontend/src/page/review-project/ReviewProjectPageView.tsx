@@ -49,6 +49,7 @@ import type {
 } from '../../api/review-projects';
 import {
   fetchReviewProjectAssignmentHistory,
+  fetchReviewProjectDocuments,
   isTerminologyReviewProjectType,
   REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
@@ -89,6 +90,7 @@ import { mf2TranslationErrors } from '../../components/mf2/translationValidation
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
+import { ResizableMasterDetailLayout } from '../../components/ResizableMasterDetailLayout';
 import { isMaterialReviewEdit } from '../../components/review-feedback/review-edit-diff';
 import { ReviewEditFeedback } from '../../components/review-feedback/ReviewEditFeedback';
 import { useReviewFeedbackVisibility } from '../../components/review-feedback/useReviewFeedbackVisibility';
@@ -97,6 +99,7 @@ import {
   type RequestAttachmentUploadQueueItem,
 } from '../../components/review-request/RequestAttachmentsDropzone';
 import { RequestDescriptionEditor } from '../../components/review-request/RequestDescriptionEditor';
+import { ShortcutBar } from '../../components/ShortcutBar';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import {
   TextUnitHistoryTimeline,
@@ -144,6 +147,7 @@ import {
 } from '../../utils/glossaryTermLookup';
 import { hasIcuParameters } from '../../utils/icuPreview';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
+import { isMacPlatform } from '../../utils/keyboardShortcuts';
 import { toHtmlLangTag } from '../../utils/localeTag';
 import { canManageGlossaryTerms } from '../../utils/permissions';
 import {
@@ -161,6 +165,7 @@ import {
   buildReviewProjectTextUnitUrl,
   buildTextUnitDetailUrl,
 } from '../../utils/textUnitDetailUrl';
+import { ContentInspector } from '../content/ContentInspector';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
 import { buildAgentReviewChatContext, buildAgentReviewSuggestion } from './agent-review-chat';
 import {
@@ -173,8 +178,11 @@ import {
 } from './agent-review-status';
 import { AgentReviewContext, AgentReviewFeedbackDetails } from './AgentReviewContext';
 import { AgentReviewReport } from './AgentReviewReport';
+import { getDecisionState } from './review-project-decision';
+import { documentReviewRows } from './review-project-document';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
 import { getDefaultReviewProjectShortcutHelpPreference } from './review-project-preferences';
+import { ReviewProjectDocumentView } from './ReviewProjectDocumentView';
 import { useAgentReviewChat } from './useAgentReviewChat';
 import { useAgentReviewFeedback } from './useAgentReviewFeedback';
 import { useReviewEditFeedback } from './useReviewEditFeedback';
@@ -182,6 +190,7 @@ import {
   type ReviewProjectDecisionSnapshot as DecisionSnapshot,
   type ReviewProjectDraftStatus as StatusChoice,
   sameReviewProjectSource,
+  useRetainedReviewProjectDraftIds,
   useReviewProjectDraft,
 } from './useReviewProjectDraft';
 import { useReviewProjectFormDraft } from './useReviewProjectFormDraft';
@@ -382,14 +391,6 @@ function getEffectiveVariant(textUnit: ApiReviewProjectTextUnit): TextUnitVarian
   const variant = current?.id != null ? current : textUnit.baselineTmTextUnitVariant;
   const stagedTarget = textUnit.reviewProjectTextUnitSuggestion?.target;
   return stagedTarget != null ? { ...(variant ?? {}), content: stagedTarget } : variant;
-}
-
-function getDecisionState(textUnit: ApiReviewProjectTextUnit): DecisionStateChoice {
-  const decision = textUnit.reviewProjectTextUnitDecision;
-  if (decision?.decisionState === 'DECIDED' || decision?.decisionState === 'PENDING') {
-    return decision.decisionState;
-  }
-  return decision?.decisionTmTextUnitVariant?.id != null ? 'DECIDED' : 'PENDING';
 }
 
 function getStatusKey(variant: TextUnitVariant | null | undefined): string | null {
@@ -934,6 +935,34 @@ export function ReviewProjectPageView({
     [project?.reviewProjectTextUnits],
   );
   const isAgentProject = textUnits.some((row) => row.agentReview != null);
+  const hasDocumentAssets =
+    !isProjectTerminology &&
+    textUnits.some((row) => /\.mdx$/i.test(String(row.tmTextUnit?.asset?.assetPath ?? '')));
+  const isDocumentOnlyProject =
+    project?.type === 'NORMAL' &&
+    !isAgentProject &&
+    textUnits.length > 0 &&
+    textUnits.every((row) =>
+      /(?:\.mdx|\.mf2\.json)$/i.test(String(row.tmTextUnit?.asset?.assetPath ?? '')),
+    );
+  const viewParam = searchParams.get('view');
+  const isDocumentView =
+    hasDocumentAssets &&
+    (viewParam === 'preview' ||
+      viewParam === 'document' ||
+      (viewParam == null && isDocumentOnlyProject));
+  const [isPreviewEditorOpen, setIsPreviewEditorOpen] = useState(selectedTextUnitQueryId != null);
+  const [showReviewAnnotations, setShowReviewAnnotations] = useState(true);
+  const isInspectorVisible = !isDocumentView || isPreviewEditorOpen;
+  const retainedDraftIds = useRetainedReviewProjectDraftIds(user.username, projectId);
+  const isInspectorBusy =
+    mutations.isSaving || mutations.showValidationDialog || mutations.conflictTextUnit != null;
+  const documentsQuery = useQuery({
+    queryKey: ['review-project-documents', user.username, projectId],
+    queryFn: () => fetchReviewProjectDocuments(projectId),
+    enabled: isDocumentView,
+    staleTime: 30_000,
+  });
   const canStartFindReplace =
     project?.status === 'OPEN' && !isProjectTerminology && !isAgentProject && textUnits.length > 0;
   const findReplaceHref = useMemo(() => {
@@ -946,18 +975,7 @@ export function ReviewProjectPageView({
     return `${path}?${params.toString()}`;
   }, [projectId, reviewProjectsSessionKey]);
 
-  const layoutRef = useRef<HTMLDivElement>(null);
   const detailPaneRef = useRef<HTMLDivElement>(null);
-  const [listWidthPct, setListWidthPct] = useState(20);
-  const [lastListWidthPct, setLastListWidthPct] = useState(20);
-  const [isListCollapsed, setIsListCollapsed] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
-
-  useEffect(() => {
-    if (layoutRef.current) {
-      layoutRef.current.style.setProperty('--review-list-width', `${listWidthPct}%`);
-    }
-  }, [listWidthPct]);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -993,7 +1011,7 @@ export function ReviewProjectPageView({
   const [selectedScreenshotIdx, setSelectedScreenshotIdx] = useState<number>(0);
   const { onDismissValidationSave, showValidationDialog } = mutations;
 
-  const filtered = useMemo(() => {
+  const listFiltered = useMemo(() => {
     const term = search.trim().toLowerCase();
     const filteredRows = textUnits.filter((tu) => {
       if (!tu) return false;
@@ -1066,6 +1084,34 @@ export function ReviewProjectPageView({
     textUnits,
   ]);
 
+  // Document selection and save-and-advance follow the complete page, independent
+  // of retained list filters. The detail pane remains the sole draft/save owner.
+  const filtered = useMemo(
+    () =>
+      isDocumentView
+        ? documentsQuery.data
+          ? documentReviewRows(documentsQuery.data, textUnits)
+          : textUnits
+        : listFiltered,
+    [documentsQuery.data, isDocumentView, listFiltered, textUnits],
+  );
+
+  const pendingReviewCount = useMemo(
+    () => textUnits.filter((row) => getDecisionState(row) === 'PENDING').length,
+    [textUnits],
+  );
+  const nextPendingPreviewRow = useMemo(() => {
+    if (!isDocumentView || !documentsQuery.data) return null;
+    const currentIndex = isPreviewEditorOpen
+      ? filtered.findIndex((row) => row.id === selectedTextUnitId)
+      : -1;
+    return (
+      [...filtered.slice(currentIndex + 1), ...filtered.slice(0, currentIndex + 1)].find(
+        (row) => getDecisionState(row) === 'PENDING',
+      ) ?? null
+    );
+  }, [documentsQuery.data, filtered, isDocumentView, isPreviewEditorOpen, selectedTextUnitId]);
+
   const screenshotImages = useMemo(
     () => project?.reviewProjectRequest?.screenshotImageIds ?? [],
     [project?.reviewProjectRequest?.screenshotImageIds],
@@ -1120,6 +1166,7 @@ export function ReviewProjectPageView({
       setFocusTranslationKey(0);
     }
     setSelectedTextUnitId((current) => (current === matchedId ? current : matchedId));
+    setIsPreviewEditorOpen(true);
   }, [
     filtered,
     mutations.isSaving,
@@ -1142,7 +1189,7 @@ export function ReviewProjectPageView({
       setSelectedTextUnitId(null);
       return;
     }
-    const hasSearchTerm = search.trim().length > 0;
+    const hasSearchTerm = !isDocumentView && search.trim().length > 0;
     if (selectedTextUnitQueryId != null) {
       const hasQueryMatch = filtered.some(
         (tu) => tu.tmTextUnit?.id === selectedTextUnitQueryId || tu.id === selectedTextUnitQueryId,
@@ -1163,10 +1210,11 @@ export function ReviewProjectPageView({
     }
     if (selectedTextUnitId == null || !hasSelectedInFiltered) {
       setFocusTranslationKey(0);
-      setSelectedTextUnitId(filtered[0]?.id ?? null);
+      setSelectedTextUnitId(isDocumentView ? null : (filtered[0]?.id ?? null));
     }
   }, [
     filtered,
+    isDocumentView,
     search,
     selectedTextUnitId,
     selectedTextUnitQueryId,
@@ -1176,6 +1224,7 @@ export function ReviewProjectPageView({
   ]);
 
   useEffect(() => {
+    if (isDocumentView && !isPreviewEditorOpen) return;
     if (selectedTextUnitQueryId != null && !selectedTextUnit) {
       // Wait until we resolve the query-param selection before rewriting URL.
       return;
@@ -1194,7 +1243,13 @@ export function ReviewProjectPageView({
     const nextQueryId = selectedTextUnit?.tmTextUnit?.id ?? selectedTextUnit?.id ?? null;
     const shouldReplace = selectedTextUnitQueryId == null || nextQueryId == null;
     onSelectedTextUnitIdChange(nextQueryId, { replace: shouldReplace });
-  }, [onSelectedTextUnitIdChange, selectedTextUnit, selectedTextUnitQueryId]);
+  }, [
+    isDocumentView,
+    isPreviewEditorOpen,
+    onSelectedTextUnitIdChange,
+    selectedTextUnit,
+    selectedTextUnitQueryId,
+  ]);
 
   useEffect(() => {
     if (
@@ -1240,12 +1295,11 @@ export function ReviewProjectPageView({
 
   const attemptSelectTextUnit = useCallback(
     (nextId: number | null, nextIndex?: number) => {
-      if (
-        nextId == null ||
-        nextId === selectedTextUnitId ||
-        mutations.isSaving ||
-        detailGuardRef.current?.isComposing()
-      ) {
+      if (nextId == null || mutations.isSaving || detailGuardRef.current?.isComposing()) {
+        return;
+      }
+      if (nextId === selectedTextUnitId) {
+        setIsPreviewEditorOpen(true);
         return;
       }
       if (detailGuardRef.current?.isDirty()) {
@@ -1254,6 +1308,7 @@ export function ReviewProjectPageView({
       }
       setFocusTranslationKey(0);
       setSelectedTextUnitId(nextId);
+      setIsPreviewEditorOpen(true);
       if (nextIndex != null) {
         scrollToIndex(nextIndex, { align: 'center' });
       }
@@ -1263,6 +1318,7 @@ export function ReviewProjectPageView({
 
   const handleKeyNav = useCallback(
     (event: KeyboardEvent) => {
+      if (!isInspectorVisible) return;
       if (isComposingKeyEvent(event) || detailGuardRef.current?.isComposing()) return;
       if (isEditableKeyboardTarget(event.target)) {
         return;
@@ -1286,7 +1342,7 @@ export function ReviewProjectPageView({
         attemptSelectTextUnit(prevId, prevIndex);
       }
     },
-    [attemptSelectTextUnit, filtered, selectedTextUnitId],
+    [attemptSelectTextUnit, filtered, isInspectorVisible, selectedTextUnitId],
   );
 
   const handleFindReplaceShortcut = useCallback(
@@ -1392,6 +1448,7 @@ export function ReviewProjectPageView({
     setDetailIsDirty(false);
     setFocusTranslationKey(0);
     setSelectedTextUnitId(pendingSelection.id);
+    setIsPreviewEditorOpen(true);
     if (pendingSelection.index != null) {
       scrollToIndex(pendingSelection.index, { align: 'center' });
     }
@@ -1408,6 +1465,16 @@ export function ReviewProjectPageView({
     setPendingSelection(null);
   }, [onSelectedTextUnitIdChange, selectedTextUnit, selectedTextUnitId]);
 
+  const closePreviewEditor = () => {
+    if (isInspectorBusy || detailGuardRef.current?.isComposing()) return;
+    // useReviewProjectDraft already retains unsaved values and their source/base.
+    // Unmount the inspector so a hidden editor cannot receive save shortcuts.
+    setIsPreviewEditorOpen(false);
+    setPendingAdvance(null);
+    setFocusTranslationKey(0);
+    onSelectedTextUnitIdChange(null, { replace: true });
+  };
+
   const setDecisionStateFilter = useCallback(
     (next: DecisionStateFilter | AgentReviewStatusFilter) => {
       const nextParams = new URLSearchParams(searchParams);
@@ -1422,6 +1489,35 @@ export function ReviewProjectPageView({
     },
     [searchParams, setSearchParams],
   );
+
+  const reviewPending = () => {
+    if (
+      isInspectorBusy ||
+      (isDocumentView && documentsQuery.isPending) ||
+      detailGuardRef.current?.isComposing()
+    )
+      return;
+    if (!isDocumentView) {
+      setDecisionStateFilter('PENDING');
+    } else if (nextPendingPreviewRow) {
+      attemptSelectTextUnit(nextPendingPreviewRow.id);
+    } else {
+      // Some project strings have no current document mapping. Keep the existing
+      // editor mounted and make the complete pending scope available in the list.
+      setSearch('');
+      setStatusFilter('all');
+      setEditedFilter('all');
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.set('view', 'list');
+          next.set('state', 'PENDING');
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  };
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyNav);
@@ -1438,60 +1534,6 @@ export function ReviewProjectPageView({
       savePreference({ shortcutHelp: visible ? 'bottom' : 'header' });
     },
     [savePreference],
-  );
-
-  const collapseList = useCallback(() => {
-    setIsListCollapsed(true);
-    setListWidthPct(0);
-  }, []);
-
-  const expandList = useCallback(() => {
-    setIsListCollapsed(false);
-    setListWidthPct(lastListWidthPct || 20);
-  }, [lastListWidthPct]);
-
-  const toggleList = useCallback(() => {
-    if (isListCollapsed) {
-      expandList();
-    } else {
-      if (listWidthPct > 0) {
-        setLastListWidthPct(listWidthPct);
-      }
-      collapseList();
-    }
-  }, [collapseList, expandList, isListCollapsed, listWidthPct]);
-
-  const startResize = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      setIsResizing(true);
-      const onMove = (e: MouseEvent) => {
-        if (!layoutRef.current) return;
-        const rect = layoutRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const pct = Math.min(75, Math.max(0, (x / rect.width) * 100));
-        if (pct <= 8) {
-          if (listWidthPct > 0) {
-            setLastListWidthPct(listWidthPct);
-          }
-          collapseList();
-          return;
-        }
-        if (isListCollapsed) {
-          setIsListCollapsed(false);
-        }
-        setLastListWidthPct(pct);
-        setListWidthPct(pct);
-      };
-      const onUp = () => {
-        setIsResizing(false);
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-      };
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
-    },
-    [collapseList, isListCollapsed, listWidthPct],
   );
 
   if (!project) {
@@ -1511,7 +1553,7 @@ export function ReviewProjectPageView({
     : 'Accept and go to next text unit. If unchanged, mark decided and go to next.';
 
   return (
-    <div className="review-project-page">
+    <div className={`review-project-page${isDocumentView ? ' review-project-page--document' : ''}`}>
       <ReviewProjectHeader
         projectId={projectId}
         project={project}
@@ -1526,204 +1568,308 @@ export function ReviewProjectPageView({
         onRequestDetailsFlowFinished={onRequestDetailsFlowFinished}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         showShortcutsButton
-        onReviewPending={() => setDecisionStateFilter('PENDING')}
+        onReviewPending={reviewPending}
       />
 
-      <div
-        className={`review-project-page__content${isListCollapsed ? ' review-project-page__content--collapsed' : ''}`}
-        ref={layoutRef}
-      >
-        <section
-          className={`review-project-page__list-pane${
-            isListCollapsed ? ' review-project-page__list-pane--collapsed' : ''
-          }`}
-        >
-          <div className="review-project-page__controls">
-            <input
-              className="review-project-page__search-input"
-              type="search"
-              placeholder="Search source, translation, comments, or id"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <MultiSectionFilterChip
-              ariaLabel="Filter text units"
-              align="right"
-              className="review-project-page__filter-chip"
-              classNames={{
-                button: 'filter-chip__button',
-                panel: 'filter-chip__panel',
-                section: 'filter-chip__section',
-                label: 'filter-chip__label',
-                list: 'filter-chip__list',
-                option: 'filter-chip__option',
-                helper: 'filter-chip__helper',
+      {hasDocumentAssets ? (
+        <div className="review-project-page__view-switch" role="group" aria-label="Review view">
+          {(['preview', 'list'] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              aria-pressed={isDocumentView === (view === 'preview')}
+              onClick={() => {
+                if (detailGuardRef.current?.isComposing()) return;
+                const keepEditor = isInspectorBusy || Boolean(detailGuardRef.current?.isDirty());
+                if (view === 'preview') setIsPreviewEditorOpen(keepEditor);
+                setSearchParams(
+                  (current) => {
+                    const next = new URLSearchParams(current);
+                    next.set('view', view);
+                    if (view === 'preview' && !keepEditor) next.delete('tu');
+                    return next;
+                  },
+                  { replace: true },
+                );
               }}
-              sections={[
-                ...(isAgentProject
-                  ? [
-                      {
-                        kind: 'radio' as const,
-                        label: 'Review status',
-                        options: AGENT_REVIEW_STATUS_OPTIONS,
-                        value: stateFilter,
-                        onChange: (value: string | number) =>
-                          setDecisionStateFilter(value as AgentReviewStatusFilter),
-                      },
-                    ]
-                  : [
-                      {
-                        kind: 'radio' as const,
-                        label: 'State',
-                        options: DECISION_STATE_OPTIONS,
-                        value: stateFilter,
-                        onChange: (value: string | number) =>
-                          setDecisionStateFilter(value as DecisionStateFilter),
-                      },
-                      {
-                        kind: 'radio' as const,
-                        label: 'Status',
-                        options: STATUS_FILTER_OPTIONS,
-                        value: statusFilter,
-                        onChange: (value: string | number) =>
-                          setStatusFilter(value as StatusFilter),
-                      },
-                      {
-                        kind: 'radio' as const,
-                        label: 'Edited',
-                        options: EDITED_FILTER_OPTIONS,
-                        value: editedFilter,
-                        onChange: (value: string | number) =>
-                          setEditedFilter(value as EditedFilter),
-                      },
-                    ]),
-                {
-                  kind: 'radio',
-                  label: 'Sort by',
-                  options: SORT_BY_FILTER_OPTIONS,
-                  value: sortByFilter,
-                  onChange: (value) => setSortByFilter(value as SortByFilter),
-                },
-                {
-                  kind: 'radio',
-                  label: 'Order',
-                  options: SORT_ORDER_FILTER_OPTIONS,
-                  value: sortOrderFilter,
-                  onChange: (value) => setSortOrderFilter(value as SortOrderFilter),
-                },
-              ]}
-            />
-            {canStartFindReplace ? (
-              <Link
-                className="review-project-page__find-replace-link"
-                to={findReplaceHref}
-                aria-label="Find and replace"
-                title="Find and replace (Ctrl/Cmd+Shift+F)"
-              >
-                <svg
-                  className="review-project-page__find-replace-icon"
-                  viewBox="0 0 20 20"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path
-                    d="M8.25 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Zm3.15-1.1 3.8 3.8M13.75 4.25H16v2.25m0-2.25-3.25 3.25M5.75 15.75H3.5V13.5m0 2.25 3.25-3.25"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.55"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Link>
-            ) : null}
-          </div>
-          <VirtualList
-            scrollRef={scrollRef}
-            items={items}
-            totalSize={totalSize}
-            renderRow={(virtualItem: VirtualItem) => {
-              const textUnit = filtered[virtualItem.index] as ApiReviewProjectTextUnit | undefined;
-              if (!textUnit) {
-                return null;
-              }
-              const isDecided = textUnit.agentReview
-                ? getAgentReviewStatus(textUnit) === 'DECIDED'
-                : getDecisionState(textUnit) === 'DECIDED';
-              return {
-                key: virtualItem.key,
-                props: {
-                  ref: measureElement,
-                  onClick: () => attemptSelectTextUnit(textUnit.id, virtualItem.index),
-                  className:
-                    textUnit.id === selectedTextUnitId
-                      ? `review-project-row is-selected${
-                          isDecided ? ' review-project-row--decided' : ''
-                        }`
-                      : `review-project-row${isDecided ? ' review-project-row--decided' : ''}`,
-                },
-                content: (
-                  <TextUnitRow
-                    textUnit={textUnit}
-                    isSelected={textUnit.id === selectedTextUnitId}
-                    isDecided={isDecided}
-                  />
-                ),
-              };
-            }}
-          />
-        </section>
-        <div
-          className={`review-project-page__resize-handle${
-            isResizing ? ' is-resizing' : ''
-          }${isListCollapsed ? ' review-project-page__resize-handle--collapsed' : ''}`}
-          onMouseDown={startResize}
-          role="separator"
-          aria-label={isListCollapsed ? 'Expand review list' : 'Collapse review list'}
-          aria-orientation="vertical"
-          aria-expanded={!isListCollapsed}
-        >
-          <button
-            type="button"
-            className="review-project-handle-button review-project-page__collapse-toggle"
-            onClick={toggleList}
-            onMouseDown={(event) => event.stopPropagation()}
-            aria-label={isListCollapsed ? 'Expand review list' : 'Collapse review list'}
-            title={isListCollapsed ? 'Expand review list' : 'Collapse review list'}
-          >
-            <Chevron direction={isListCollapsed ? 'right' : 'left'} />
-          </button>
+            >
+              {view === 'list' ? 'List' : 'Preview'}
+            </button>
+          ))}
+          {isDocumentView ? (
+            <>
+              <span className="review-project-page__review-progress" role="status">
+                {pendingReviewCount === 0 ? (
+                  'All strings reviewed'
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isInspectorBusy || documentsQuery.isPending}
+                    title={
+                      nextPendingPreviewRow || documentsQuery.isPending
+                        ? 'Go to next pending string'
+                        : 'Review pending strings in list'
+                    }
+                    onClick={reviewPending}
+                  >
+                    {pendingReviewCount} string{pendingReviewCount === 1 ? '' : 's'} to review
+                  </button>
+                )}
+              </span>
+              <label className="review-project-page__annotations-toggle">
+                <input
+                  type="checkbox"
+                  checked={showReviewAnnotations}
+                  onChange={(event) => setShowReviewAnnotations(event.target.checked)}
+                />
+                Show review status
+              </label>
+              {isPreviewEditorOpen && selectedTextUnit ? (
+                <span className="review-project-page__editing-status">
+                  Editing {String(selectedTextUnit.tmTextUnit?.name ?? 'passage')}
+                  {detailIsDirty ? ' · Unsaved changes' : ''}
+                </span>
+              ) : selectedTextUnit && !retainedDraftIds.includes(selectedTextUnit.id) ? (
+                <button type="button" onClick={() => attemptSelectTextUnit(selectedTextUnit.id)}>
+                  Edit selected passage
+                </button>
+              ) : null}
+              {retainedDraftIds
+                .filter((id) => !isPreviewEditorOpen || id !== selectedTextUnitId)
+                .map((id) => {
+                  const row = textUnits.find((unit) => unit.id === id);
+                  return row ? (
+                    <button type="button" key={id} onClick={() => attemptSelectTextUnit(id)}>
+                      Resume {String(row.tmTextUnit?.name ?? 'passage')} · Unsaved changes
+                    </button>
+                  ) : null;
+                })}
+              {isPreviewEditorOpen ? (
+                <button type="button" disabled={isInspectorBusy} onClick={closePreviewEditor}>
+                  Close editor
+                </button>
+              ) : null}
+            </>
+          ) : null}
         </div>
-        <section className="review-project-page__detail-pane" ref={detailPaneRef}>
-          {selectedTextUnit ? (
-            <DetailPane
-              key={`${user.username}:${projectId}:${selectedTextUnit.id}`}
-              projectId={projectId}
-              projectType={project?.type ?? 'NORMAL'}
-              terminologyPhase={project?.terminologyPhase ?? null}
-              textUnit={selectedTextUnit}
+      ) : null}
+
+      <ResizableMasterDetailLayout
+        className={`review-project-page__content${isDocumentView ? ` review-project-page__content--document${!isPreviewEditorOpen ? ' review-project-page__content--preview' : ''}` : ''}`}
+        storageKey={isDocumentView ? 'mojito.review.previewWidth' : 'mojito.review.listWidth'}
+        sidebarLabel={isDocumentView ? 'Document preview' : 'Review list'}
+        detailLabel="Translation detail"
+        resizeLabel={isDocumentView ? 'Resize document preview' : 'Resize review list'}
+        sidebarClassName="review-project-page__list-pane"
+        detailClassName="review-project-page__editor-pane"
+        defaultSidebarWidthPercent={isDocumentView ? 52 : 20}
+        minSidebarWidthPercent={isDocumentView ? 25 : 10}
+        maxSidebarWidthPercent={75}
+        detailVisible={isInspectorVisible}
+        collapsible
+        sidebar={
+          isDocumentView ? (
+            <ReviewProjectDocumentView
+              data={documentsQuery.data}
+              textUnits={textUnits}
+              selectedTextUnitId={isPreviewEditorOpen ? selectedTextUnitId : null}
+              showReviewAnnotations={showReviewAnnotations}
+              unsavedTextUnitIds={retainedDraftIds}
               localeTag={localeTag}
-              mutations={mutations}
-              screenshotImages={screenshotImages}
-              currentScreenshotIdx={selectedScreenshotIdx}
-              onChangeScreenshotIdx={setSelectedScreenshotIdx}
-              onOpenGallery={(images) => {
-                setScreenshotModalImages(images);
-                setIsScreenshotModalOpen(true);
+              loading={documentsQuery.isPending}
+              error={documentsQuery.isError}
+              onRetry={() => void documentsQuery.refetch()}
+              onSelect={attemptSelectTextUnit}
+              navigationDisabled={isInspectorBusy}
+              onNavigate={() => {
+                if (isInspectorBusy || detailGuardRef.current?.isComposing()) return false;
+                closePreviewEditor();
+                return true;
               }}
-              detailPaneRef={detailPaneRef}
-              onDirtyChange={setDetailIsDirty}
-              onQueueAdvance={queueAdvance}
-              onAdvanceWithoutSave={advanceWithoutSave}
-              navigationGuardRef={detailGuardRef}
-              focusTranslationKey={focusTranslationKey}
             />
           ) : (
-            <div className="review-project-page__empty-detail">No text unit selected</div>
-          )}
-        </section>
-      </div>
-      {isShortcutBarVisible ? (
+            <>
+              <div className="review-project-page__controls">
+                <input
+                  className="review-project-page__search-input"
+                  type="search"
+                  placeholder="Search source, translation, comments, or id"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <MultiSectionFilterChip
+                  ariaLabel="Filter text units"
+                  align="right"
+                  className="review-project-page__filter-chip"
+                  classNames={{
+                    button: 'filter-chip__button',
+                    panel: 'filter-chip__panel',
+                    section: 'filter-chip__section',
+                    label: 'filter-chip__label',
+                    list: 'filter-chip__list',
+                    option: 'filter-chip__option',
+                    helper: 'filter-chip__helper',
+                  }}
+                  sections={[
+                    ...(isAgentProject
+                      ? [
+                          {
+                            kind: 'radio' as const,
+                            label: 'Review status',
+                            options: AGENT_REVIEW_STATUS_OPTIONS,
+                            value: stateFilter,
+                            onChange: (value: string | number) =>
+                              setDecisionStateFilter(value as AgentReviewStatusFilter),
+                          },
+                        ]
+                      : [
+                          {
+                            kind: 'radio' as const,
+                            label: 'State',
+                            options: DECISION_STATE_OPTIONS,
+                            value: stateFilter,
+                            onChange: (value: string | number) =>
+                              setDecisionStateFilter(value as DecisionStateFilter),
+                          },
+                          {
+                            kind: 'radio' as const,
+                            label: 'Status',
+                            options: STATUS_FILTER_OPTIONS,
+                            value: statusFilter,
+                            onChange: (value: string | number) =>
+                              setStatusFilter(value as StatusFilter),
+                          },
+                          {
+                            kind: 'radio' as const,
+                            label: 'Edited',
+                            options: EDITED_FILTER_OPTIONS,
+                            value: editedFilter,
+                            onChange: (value: string | number) =>
+                              setEditedFilter(value as EditedFilter),
+                          },
+                        ]),
+                    {
+                      kind: 'radio',
+                      label: 'Sort by',
+                      options: SORT_BY_FILTER_OPTIONS,
+                      value: sortByFilter,
+                      onChange: (value) => setSortByFilter(value as SortByFilter),
+                    },
+                    {
+                      kind: 'radio',
+                      label: 'Order',
+                      options: SORT_ORDER_FILTER_OPTIONS,
+                      value: sortOrderFilter,
+                      onChange: (value) => setSortOrderFilter(value as SortOrderFilter),
+                    },
+                  ]}
+                />
+                {canStartFindReplace ? (
+                  <Link
+                    className="review-project-page__find-replace-link"
+                    to={findReplaceHref}
+                    aria-label="Find and replace"
+                    title="Find and replace (Ctrl/Cmd+Shift+F)"
+                  >
+                    <svg
+                      className="review-project-page__find-replace-icon"
+                      viewBox="0 0 20 20"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        d="M8.25 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Zm3.15-1.1 3.8 3.8M13.75 4.25H16v2.25m0-2.25-3.25 3.25M5.75 15.75H3.5V13.5m0 2.25 3.25-3.25"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.55"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </Link>
+                ) : null}
+              </div>
+              <VirtualList
+                scrollRef={scrollRef}
+                items={items}
+                totalSize={totalSize}
+                renderRow={(virtualItem: VirtualItem) => {
+                  const textUnit = filtered[virtualItem.index] as
+                    | ApiReviewProjectTextUnit
+                    | undefined;
+                  if (!textUnit) {
+                    return null;
+                  }
+                  const isDecided = textUnit.agentReview
+                    ? getAgentReviewStatus(textUnit) === 'DECIDED'
+                    : getDecisionState(textUnit) === 'DECIDED';
+                  return {
+                    key: virtualItem.key,
+                    props: {
+                      ref: measureElement,
+                      onClick: () => attemptSelectTextUnit(textUnit.id, virtualItem.index),
+                      className:
+                        textUnit.id === selectedTextUnitId
+                          ? `review-project-row is-selected${
+                              isDecided ? ' review-project-row--decided' : ''
+                            }`
+                          : `review-project-row${isDecided ? ' review-project-row--decided' : ''}`,
+                    },
+                    content: (
+                      <TextUnitRow
+                        textUnit={textUnit}
+                        isSelected={textUnit.id === selectedTextUnitId}
+                        isDecided={isDecided}
+                      />
+                    ),
+                  };
+                }}
+              />
+            </>
+          )
+        }
+        detail={
+          isInspectorVisible ? (
+            <ContentInspector
+              className="review-project-page__detail-pane"
+              panelRef={detailPaneRef}
+              enabled={isDocumentView}
+              ariaLabel="Review translation editor"
+              onClose={closePreviewEditor}
+              closeDisabled={isInspectorBusy}
+            >
+              {selectedTextUnit ? (
+                <DetailPane
+                  key={`${user.username}:${projectId}:${selectedTextUnit.id}`}
+                  projectId={projectId}
+                  projectType={project?.type ?? 'NORMAL'}
+                  terminologyPhase={project?.terminologyPhase ?? null}
+                  textUnit={selectedTextUnit}
+                  localeTag={localeTag}
+                  mutations={mutations}
+                  screenshotImages={screenshotImages}
+                  currentScreenshotIdx={selectedScreenshotIdx}
+                  onChangeScreenshotIdx={setSelectedScreenshotIdx}
+                  onOpenGallery={(images) => {
+                    setScreenshotModalImages(images);
+                    setIsScreenshotModalOpen(true);
+                  }}
+                  detailPaneRef={detailPaneRef}
+                  onDirtyChange={setDetailIsDirty}
+                  onQueueAdvance={queueAdvance}
+                  onAdvanceWithoutSave={advanceWithoutSave}
+                  navigationGuardRef={detailGuardRef}
+                  focusTranslationKey={focusTranslationKey}
+                  showAdvanceAction={isDocumentView}
+                />
+              ) : (
+                <div className="review-project-page__empty-detail">No text unit selected</div>
+              )}
+            </ContentInspector>
+          ) : null
+        }
+      />
+      {isShortcutBarVisible && isInspectorVisible ? (
         <ReviewProjectShortcutBar
           primaryShortcutLabel={primaryShortcutLabel}
           primaryAdvanceShortcutLabel={primaryAdvanceShortcutLabel}
@@ -1796,6 +1942,20 @@ export function ReviewProjectPageView({
         </div>
         <div className="modal__body">
           <ul className="review-project-shortcuts__list">
+            {isDocumentView ? (
+              <>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">Click passage</span>
+                  <span>Edit translation in preview</span>
+                </li>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">
+                    {isMacPlatform() ? '⌘' : 'Ctrl'} + click
+                  </span>
+                  <span>Follow link in preview</span>
+                </li>
+              </>
+            ) : null}
             <li className="review-project-shortcuts__item">
               <span className="review-project-shortcuts__key">Esc</span>
               <span>Stop editing</span>
@@ -1944,6 +2104,7 @@ function DetailPane({
   onAdvanceWithoutSave,
   navigationGuardRef,
   focusTranslationKey,
+  showAdvanceAction,
 }: {
   projectId: number;
   projectType: ApiReviewProjectType;
@@ -1961,6 +2122,7 @@ function DetailPane({
   onAdvanceWithoutSave: (focusTranslation: boolean) => void;
   navigationGuardRef: React.MutableRefObject<DetailNavigationGuard | null>;
   focusTranslationKey: number;
+  showAdvanceAction: boolean;
 }) {
   const user = useUser();
   const aiSettings = useAiReviewPreferences();
@@ -3715,6 +3877,39 @@ function DetailPane({
     translationRef.current?.blur();
   }, [canAccept, handleAccept]);
 
+  const handleAcceptAndAdvance = useCallback(() => {
+    if (
+      compositionRef.current ||
+      mutations.showValidationDialog ||
+      mutations.isSaving ||
+      (sourceIsMf2 && mf2HasErrors && !canKeepAgentCurrent)
+    )
+      return;
+    const operationId = canRunPrimaryShortcut
+      ? handleAccept()
+      : !isTerminologyProject && snapshot.decisionState !== 'DECIDED'
+        ? requestDecisionState('DECIDED')
+        : undefined;
+    if (typeof operationId === 'number') {
+      onQueueAdvance(operationId, !isTerminologyProject);
+    } else if (!canRunPrimaryShortcut && snapshot.decisionState === 'DECIDED') {
+      onAdvanceWithoutSave(!isTerminologyProject);
+    }
+  }, [
+    mutations.showValidationDialog,
+    mutations.isSaving,
+    sourceIsMf2,
+    mf2HasErrors,
+    canKeepAgentCurrent,
+    canRunPrimaryShortcut,
+    handleAccept,
+    isTerminologyProject,
+    snapshot.decisionState,
+    requestDecisionState,
+    onQueueAdvance,
+    onAdvanceWithoutSave,
+  ]);
+
   const handleStatusChange = useCallback(
     (next: StatusChoice) => {
       if (sourceIsMf2 && mf2HasErrors && next === 'ACCEPTED') {
@@ -4163,19 +4358,8 @@ function DetailPane({
         return;
       }
       if (event.shiftKey) {
-        if (mutations.showValidationDialog || mutations.isSaving) {
-          return;
-        }
-        const operationId = canRunPrimaryShortcut
-          ? handleAccept()
-          : !isTerminologyProject && snapshot.decisionState !== 'DECIDED'
-            ? requestDecisionState('DECIDED')
-            : undefined;
-        if (typeof operationId === 'number') {
-          onQueueAdvance(operationId, !isTerminologyProject);
-        } else if (!canRunPrimaryShortcut && snapshot.decisionState === 'DECIDED') {
-          onAdvanceWithoutSave(!isTerminologyProject);
-        }
+        if (mutations.showValidationDialog || mutations.isSaving) return;
+        handleAcceptAndAdvance();
         focusedEditor?.blur();
         return;
       }
@@ -4195,6 +4379,7 @@ function DetailPane({
     canKeepAgentCurrent,
     getFocusedDetailEditor,
     handleAccept,
+    handleAcceptAndAdvance,
     openTranslationEditor,
     handleTerminologyStatusShortcut,
     isDirty,
@@ -5192,12 +5377,39 @@ function DetailPane({
 
                   <button
                     type="button"
-                    className="review-project-detail__actions-button review-project-detail__actions-button--primary"
+                    className={`review-project-detail__actions-button${showAdvanceAction ? '' : ' review-project-detail__actions-button--primary'}`}
                     onClick={handleAccept}
                     disabled={!canAccept}
+                    title={
+                      showAdvanceAction
+                        ? 'Accept (⌘/Ctrl+Enter, or A outside text fields)'
+                        : undefined
+                    }
+                    aria-keyshortcuts={showAdvanceAction ? 'Meta+Enter Control+Enter a' : undefined}
                   >
                     Accept
                   </button>
+                  {showAdvanceAction ? (
+                    <button
+                      type="button"
+                      className="review-project-detail__actions-button review-project-detail__actions-button--primary"
+                      onClick={handleAcceptAndAdvance}
+                      disabled={
+                        mutations.showValidationDialog ||
+                        (!canAccept &&
+                          (isSavingGlobal ||
+                            isComposing ||
+                            isDirty ||
+                            sourceChanged ||
+                            mf2HasErrors ||
+                            snapshot.decisionState !== 'DECIDED'))
+                      }
+                      title="Accept and next (⌘/Ctrl+Shift+Enter)"
+                      aria-keyshortcuts="Meta+Shift+Enter Control+Shift+Enter"
+                    >
+                      Accept &amp; next
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
@@ -5708,35 +5920,15 @@ function ReviewProjectShortcutBar({
       ];
 
   return (
-    <div className="review-project-shortcut-bar">
-      <span className="review-project-shortcut-bar__item">
-        <kbd>↑</kbd>
-        <kbd>↓</kbd>
-        <span>Next/Prev</span>
-      </span>
-      {decisionShortcuts.map((shortcut) => (
-        <span key={shortcut.keyLabel} className="review-project-shortcut-bar__item">
-          <kbd>{shortcut.keyLabel}</kbd>
-          <span>{shortcut.label}</span>
-        </span>
-      ))}
-      <span className="review-project-shortcut-bar__item">
-        <kbd>Cmd/Ctrl Enter</kbd>
-        <span>{primaryShortcutLabel}</span>
-      </span>
-      <span className="review-project-shortcut-bar__item">
-        <kbd>Cmd/Ctrl Shift Enter</kbd>
-        <span>{primaryAdvanceShortcutLabel}</span>
-      </span>
-      <button
-        type="button"
-        className="review-project-shortcut-bar__button"
-        onClick={onOpenShortcuts}
-      >
-        <kbd>/</kbd>
-        <span>Help</span>
-      </button>
-    </div>
+    <ShortcutBar
+      shortcuts={[
+        { keys: ['↑', '↓'], label: 'Next/Prev' },
+        ...decisionShortcuts.map(({ keyLabel, label }) => ({ keys: [keyLabel], label })),
+        { keys: ['Cmd/Ctrl Enter'], label: primaryShortcutLabel },
+        { keys: ['Cmd/Ctrl Shift Enter'], label: primaryAdvanceShortcutLabel },
+      ]}
+      onOpenShortcuts={onOpenShortcuts}
+    />
   );
 }
 

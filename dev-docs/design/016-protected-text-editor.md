@@ -66,6 +66,10 @@ canonical and the component is a focused text editing surface.
 
 ## Compact Controls
 
+Review Project translation editors size to their content with a `3rem` minimum
+editing surface. The shared editor's larger default minimum must not add empty
+space around short translations; longer translations expand naturally.
+
 Production surfaces use the shared editor control bar, not demo-specific
 controls:
 

@@ -1,5 +1,12 @@
 import { type QueryClient, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 import type { ReviewProjectTargetOrigin } from '../../api/review-project-client-context';
 
@@ -49,6 +56,32 @@ type DraftSession = {
 };
 
 const retainedDraftUnloadGuards = new WeakMap<QueryClient, () => void>();
+
+/** Read-only index of the existing retained drafts, including row feedback forms. */
+export function useRetainedReviewProjectDraftIds(username: string, projectId: number) {
+  const queryClient = useQueryClient();
+  const subscribe = useCallback(
+    (onChange: () => void) => queryClient.getQueryCache().subscribe(onChange),
+    [queryClient],
+  );
+  const getSnapshot = useCallback(
+    () =>
+      [
+        ...new Set(
+          queryClient
+            .getQueryCache()
+            .findAll({ queryKey: ['review-project-draft', username, projectId] })
+            .map((query) => query.queryKey[3])
+            .filter((id): id is number => typeof id === 'number'),
+        ),
+      ]
+        .sort((left, right) => left - right)
+        .join(','),
+    [projectId, queryClient, username],
+  );
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return useMemo(() => (snapshot ? snapshot.split(',').map(Number) : []), [snapshot]);
+}
 
 export function protectRetainedDrafts(queryClient: QueryClient) {
   if (retainedDraftUnloadGuards.has(queryClient)) return;
