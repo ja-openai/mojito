@@ -12,6 +12,12 @@ import type { ReviewEditFeedback } from '../components/review-feedback/ReviewEdi
 import { useReviewFeedbackVisibility } from '../components/review-feedback/useReviewFeedbackVisibility';
 
 export type TextUnitFeedbackWidget = ComponentProps<typeof ReviewEditFeedback>;
+export type TextUnitFeedbackDraft = {
+  reason: ReviewFeedbackReason | '';
+  note: string;
+  chatUsed: boolean;
+  aiSuggestionUsed: boolean;
+};
 
 const emptyFeedback = () => ({
   reason: '' as ReviewFeedbackReason | '',
@@ -30,6 +36,7 @@ export function useTextUnitReviewFeedback({
   target,
   enabled,
   problematic = false,
+  retainedDraft,
 }: {
   username: string;
   tmTextUnitId: number | null;
@@ -39,11 +46,17 @@ export function useTextUnitReviewFeedback({
   target: string;
   enabled: boolean;
   problematic?: boolean;
+  retainedDraft?: {
+    values: TextUnitFeedbackDraft;
+    onChange: (change: (values: TextUnitFeedbackDraft) => TextUnitFeedbackDraft) => void;
+  };
 }) {
   const owner = `${username}:${tmTextUnitId}:${localeId}:${variantId}`;
   const [draft, setDraft] = useState(() => ({ owner, values: emptyFeedback() }));
   if (draft.owner !== owner) setDraft({ owner, values: emptyFeedback() });
-  const values = draft.owner === owner ? draft.values : emptyFeedback();
+  const values = retainedDraft?.values ?? (draft.owner === owner ? draft.values : emptyFeedback());
+  const retainedDraftRef = useRef(retainedDraft);
+  retainedDraftRef.current = retainedDraft;
   const valuesRef = useRef({ owner, values, target });
   valuesRef.current = { owner, values, target };
   const lastRequest = useRef<{
@@ -62,6 +75,10 @@ export function useTextUnitReviewFeedback({
 
   const update = useCallback(
     (patch: Partial<ReturnType<typeof emptyFeedback>>) => {
+      if (retainedDraftRef.current) {
+        retainedDraftRef.current.onChange((current) => ({ ...current, ...patch }));
+        return;
+      }
       setDraft((current) =>
         current.owner === owner ? { owner, values: { ...current.values, ...patch } } : current,
       );
@@ -69,6 +86,7 @@ export function useTextUnitReviewFeedback({
     [owner],
   );
   const reset = useCallback(() => {
+    retainedDraftRef.current?.onChange(() => emptyFeedback());
     setDraft((current) => (current.owner === owner ? { owner, values: emptyFeedback() } : current));
     lastRequest.current = null;
   }, [owner]);
@@ -102,6 +120,18 @@ export function useTextUnitReviewFeedback({
     const recorded = lastRequest.current;
     if (recorded?.request.feedbackOperationId !== request.feedbackOperationId) return;
     const requestOwner = recorded.owner;
+    const currentValues = valuesRef.current;
+    if (
+      retainedDraftRef.current &&
+      currentValues.owner === requestOwner &&
+      currentValues.target === request.target &&
+      currentValues.values.reason === (request.reviewFeedback?.reason ?? '') &&
+      currentValues.values.note === (request.reviewFeedback?.note ?? '') &&
+      currentValues.values.chatUsed === (request.reviewFeedback?.chatUsed ?? false) &&
+      currentValues.values.aiSuggestionUsed === (request.reviewFeedback?.aiSuggestionUsed ?? false)
+    ) {
+      retainedDraftRef.current.onChange(() => emptyFeedback());
+    }
     setDraft((current) => {
       const feedback = request.reviewFeedback;
       if (

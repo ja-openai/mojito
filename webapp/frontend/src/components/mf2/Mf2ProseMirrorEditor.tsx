@@ -66,6 +66,7 @@ type Mf2ProseMirrorEditorProps = {
   marksMode?: VisibleTextMarksMode;
   minLines: number;
   onChange: (pattern: string) => void;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
   onNextForm: () => void;
   onPreviousForm: () => void;
   onSubmit?: () => void;
@@ -198,6 +199,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
     marksMode,
     minLines,
     onChange,
+    onEscapeKeyDown,
     onNextForm,
     onPreviousForm,
     onSubmit,
@@ -214,6 +216,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
   const completionRef = useRef<CompletionState | null>(null);
   const completionOptionsRef = useRef<CompletionOption[]>([]);
   const onChangeRef = useRef(onChange);
+  const onEscapeKeyDownRef = useRef(onEscapeKeyDown);
   const onNextFormRef = useRef(onNextForm);
   const onPreviousFormRef = useRef(onPreviousForm);
   const onSubmitRef = useRef(onSubmit);
@@ -262,6 +265,10 @@ export const Mf2ProseMirrorEditor = forwardRef<
   useLayoutEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  useLayoutEffect(() => {
+    onEscapeKeyDownRef.current = onEscapeKeyDown;
+  }, [onEscapeKeyDown]);
 
   useLayoutEffect(() => {
     onNextFormRef.current = onNextForm;
@@ -417,6 +424,10 @@ export const Mf2ProseMirrorEditor = forwardRef<
                 closeCompletion(currentCompletion.range.from);
                 return true;
               }
+            }
+            if (event.key === 'Escape') {
+              onEscapeKeyDownRef.current?.(event);
+              if (event.defaultPrevented) return true;
             }
             if (
               (event.key === 'Backspace' || event.key === 'Delete') &&

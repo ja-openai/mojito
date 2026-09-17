@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { type ComponentProps, StrictMode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as AiReviewApi from '../../api/ai-review';
 import type * as GlossariesApi from '../../api/glossaries';
@@ -29,7 +30,7 @@ const editorPreference = vi.hoisted(() => ({ enabled: true }));
 const fetchRepositoriesMock = vi.hoisted(() => vi.fn());
 const fetchUserPreferencesMock = vi.hoisted(() => vi.fn());
 const saveUserPreferencesMock = vi.hoisted(() => vi.fn());
-const currentUserRole = vi.hoisted(() => ({ role: 'ROLE_TRANSLATOR' }));
+const currentUserRole = vi.hoisted(() => ({ role: 'ROLE_TRANSLATOR', username: 'translator' }));
 const fetchTextUnitFeedbackBaselineMock = vi.hoisted(() => vi.fn());
 vi.mock('../../api/review-feedback', async (importActual) => ({
   ...(await importActual<typeof ReviewFeedbackApi>()),
@@ -44,7 +45,7 @@ vi.mock('../../api/repositories', () => ({ fetchRepositories: fetchRepositoriesM
 
 vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({
-    username: 'translator',
+    username: currentUserRole.username,
     role: currentUserRole.role,
     canTranslateAllLocales: true,
     userLocales: [],
@@ -121,6 +122,11 @@ function WorkbenchDestination() {
   );
 }
 
+function ContentDestination() {
+  const location = useLocation();
+  return <output data-testid="content-destination">{location.pathname + location.search}</output>;
+}
+
 function renderTextUnitDetailPage(
   path:
     | string
@@ -152,10 +158,51 @@ function renderTextUnitDetailPage(
           <Routes>
             <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
             <Route path="/workbench" element={<WorkbenchDestination />} />
+            <Route path="/content" element={<ContentDestination />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
     ),
+  };
+}
+
+const embeddedClients = new Set<QueryClient>();
+afterEach(() => {
+  embeddedClients.forEach((client) => client.clear());
+  embeddedClients.clear();
+});
+
+function renderEmbeddedEditor(
+  queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  }),
+  tmTextUnitId = 3,
+  localeTag = 'pt-PT',
+  onSaved = vi.fn(),
+  options: Partial<
+    NonNullable<NonNullable<ComponentProps<typeof TextUnitDetailPage>>['embedded']>
+  > = {},
+  strictMode = false,
+) {
+  embeddedClients.add(queryClient);
+  queryClient.setQueryData(userPreferencesQueryKey(currentUserRole.username), preferences);
+  const onClose = vi.fn();
+  const editor = (nextOptions = options) => (
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={['/content']}>
+        <TextUnitDetailPage
+          embedded={{ tmTextUnitId, localeTag, onClose, onSaved, ...nextOptions }}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  const rendered = render(editor(), strictMode ? { wrapper: StrictMode } : undefined);
+  return {
+    queryClient,
+    onSaved,
+    onClose,
+    ...rendered,
+    updateOptions: (nextOptions: typeof options) => rendered.rerender(editor(nextOptions)),
   };
 }
 
@@ -190,6 +237,7 @@ describe('TextUnitDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     currentUserRole.role = 'ROLE_TRANSLATOR';
+    currentUserRole.username = 'translator';
     requestAiReviewMock.mockReset();
     fetchUserPreferencesMock.mockReset();
     fetchUserPreferencesMock.mockResolvedValue(preferences);
@@ -239,6 +287,651 @@ describe('TextUnitDetailPage', () => {
       suggestions: [],
       review: null,
     });
+  });
+
+  it('edits compactly, keeps drafts through details and Escape, and focuses without scrolling', async () => {
+    editorPreference.enabled = false;
+    const onShowDetails = vi.fn();
+    const onShowCompact = vi.fn();
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus');
+    const first = renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, {
+      presentation: 'compact',
+      onShowDetails,
+    });
+    const field = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'AI Chat Review' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^History/ })).not.toBeInTheDocument();
+    fireEvent.change(field, { target: { value: 'Pague {price} agora' } });
+    (field as HTMLTextAreaElement).setSelectionRange(6, 13, 'backward');
+    fireEvent.click(screen.getByRole('button', { name: 'Open side panel' }));
+    expect(onShowDetails).toHaveBeenCalledOnce();
+    first.updateOptions({ presentation: 'full', onShowCompact });
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toBe(field);
+    expect(field).toHaveValue('Pague {price} agora');
+    expect(field).toHaveProperty('selectionStart', 6);
+    expect(field).toHaveProperty('selectionEnd', 13);
+    expect(field).toHaveProperty('selectionDirection', 'backward');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit inline' }));
+    expect(onShowCompact).toHaveBeenCalledOnce();
+    first.updateOptions({ presentation: 'compact' });
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toBe(field);
+    expect(field).toHaveProperty('selectionStart', 6);
+    expect(field).toHaveProperty('selectionEnd', 13);
+    expect(field).toHaveProperty('selectionDirection', 'backward');
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Translation' }), { key: 'Escape' });
+    expect(first.onClose).toHaveBeenCalledOnce();
+    first.unmount();
+    renderEmbeddedEditor(first.queryClient, 3, 'pt-PT', undefined, { presentation: 'compact' });
+    expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveValue(
+      'Pague {price} agora',
+    );
+    focus.mockRestore();
+  });
+
+  it('keeps AI conversation, pending reply and input when switching editor placement', async () => {
+    editorPreference.enabled = false;
+    const editor = renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, {
+      presentation: 'compact',
+    });
+    const field = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+    expect(requestAiReviewMock).not.toHaveBeenCalled();
+
+    editor.updateOptions({ presentation: 'full' });
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock).toHaveBeenCalledOnce();
+    fireEvent.change(field, { target: { value: 'Pague {price} agora' } });
+    const prompt = 'Make it more welcoming.';
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      { target: { value: prompt } },
+    );
+    let finishReply!: (response: unknown) => void;
+    requestAiReviewMock.mockImplementationOnce(
+      () => new Promise((resolve) => (finishReply = resolve)),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(2));
+    const signal = (requestAiReviewMock.mock.calls[1][1] as { signal: AbortSignal }).signal;
+
+    editor.updateOptions({ presentation: 'compact' });
+    expect(screen.queryByRole('button', { name: 'AI Chat Review' })).not.toBeInTheDocument();
+    expect(signal.aborted).toBe(false);
+    await act(async () => {
+      finishReply({
+        message: { role: 'assistant', content: 'Try a warmer opening.' },
+        suggestions: [],
+        review: null,
+      });
+      await Promise.resolve();
+    });
+    editor.updateOptions({ presentation: 'full' });
+    expect(await screen.findByText('Try a warmer opening.')).toBeVisible();
+    expect(screen.getByText(prompt)).toBeVisible();
+    expect(screen.getByText('No issues found.')).toBeVisible();
+    const chatInput = screen.getByPlaceholderText(
+      'Chat with AI: rephrase, adjust the tone, or ask a question…',
+    );
+    fireEvent.change(chatInput, { target: { value: 'Keep it concise.' } });
+
+    editor.updateOptions({ presentation: 'compact' });
+    editor.updateOptions({ presentation: 'full' });
+
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toBe(field);
+    expect(field).toHaveValue('Pague {price} agora');
+    expect(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+    ).toHaveValue('Keep it concise.');
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['close', 'save and next'] as const)(
+    'restores a cached passage after %s with StrictMode effect replay',
+    async (action) => {
+      editorPreference.enabled = false;
+      const onNext = vi.fn();
+      const first = renderEmbeddedEditor(
+        undefined,
+        3,
+        'pt-PT',
+        undefined,
+        { presentation: 'compact', onNext },
+        true,
+      );
+      const field = await screen.findByRole('textbox', { name: 'Translation' });
+      await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+      let expectedTarget = 'Pagar {price} agora';
+      if (action === 'save and next') {
+        expectedTarget = 'Pague {price} agora';
+        const saved = {
+          ...first.queryClient.getQueryData<TextUnitsApi.ApiTextUnit>([
+            'text-unit-detail',
+            3,
+            'pt-PT',
+          ]),
+          target: expectedTarget,
+          tmTextUnitVariantId: 31,
+        };
+        searchTextUnitsMock.mockResolvedValue([saved]);
+        saveTextUnitMock.mockResolvedValue(saved);
+        fireEvent.change(field, { target: { value: expectedTarget } });
+        fireEvent.click(screen.getByRole('button', { name: 'Save & next' }));
+        await waitFor(() => expect(onNext).toHaveBeenCalledOnce());
+        await waitFor(() =>
+          expect(
+            first.queryClient.getQueryData<TextUnitsApi.ApiTextUnit>([
+              'text-unit-detail',
+              3,
+              'pt-PT',
+            ])?.target,
+          ).toBe(expectedTarget),
+        );
+      }
+      first.unmount();
+      renderEmbeddedEditor(
+        first.queryClient,
+        3,
+        'pt-PT',
+        undefined,
+        { presentation: 'compact', onNext },
+        true,
+      );
+      await waitFor(() =>
+        expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(expectedTarget),
+      );
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+      onNext.mockClear();
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      expect(onNext).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('defers hidden context requests until the compact editor opens Open side panel', async () => {
+    editorPreference.enabled = false;
+    const editor = renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, {
+      presentation: 'compact',
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+        'Pagar {price} agora',
+      ),
+    );
+    expect(fetchGitBlameWithUsagesMock).not.toHaveBeenCalled();
+    expect(fetchGlossariesMock).not.toHaveBeenCalled();
+    expect(matchGlossaryTermsMock).not.toHaveBeenCalled();
+    expect(fetchTextUnitHistoryMock).not.toHaveBeenCalled();
+    expect(fetchAiTranslateTextUnitAttemptsMock).not.toHaveBeenCalled();
+
+    editor.updateOptions({ presentation: 'full' });
+    await waitFor(() => expect(fetchGitBlameWithUsagesMock).toHaveBeenCalledWith(3));
+    expect(fetchGlossariesMock).toHaveBeenCalledOnce();
+    expect(matchGlossaryTermsMock).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: /^History/ }));
+    await waitFor(() => expect(fetchTextUnitHistoryMock).toHaveBeenCalledWith(3, 'pt-PT'));
+    expect(fetchAiTranslateTextUnitAttemptsMock).toHaveBeenCalledWith(3, 'pt-PT');
+
+    editor.updateOptions({ presentation: 'compact' });
+    await act(async () => {
+      await editor.queryClient.invalidateQueries({ queryKey: ['text-unit-history'] });
+      await editor.queryClient.invalidateQueries({ queryKey: ['text-unit-ai-translate-attempts'] });
+    });
+    expect(fetchTextUnitHistoryMock).toHaveBeenCalledOnce();
+    expect(fetchAiTranslateTextUnitAttemptsMock).toHaveBeenCalledOnce();
+  });
+
+  it.each(['Save', 'Cancel'] as const)(
+    'requires finishing a target comment with %s before advancing',
+    async (action) => {
+      editorPreference.enabled = false;
+      const onNext = vi.fn();
+      renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, { presentation: 'full', onNext });
+      const field = await screen.findByRole('textbox', { name: 'Translation' });
+      await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+      fireEvent.click(screen.getByRole('button', { name: 'Metadata' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+      const comment = screen.getByRole('textbox', { name: 'Target comment' });
+      fireEvent.change(comment, { target: { value: 'Keep the checkout wording consistent.' } });
+
+      const next = screen.getByRole('button', { name: 'Next' });
+      expect(next).toBeDisabled();
+      expect(next).toHaveAttribute('title', 'Save or cancel the target comment before moving on.');
+      fireEvent.click(next);
+      fireEvent.keyDown(field, { key: 'Enter', ctrlKey: true, shiftKey: true });
+      expect(onNext).not.toHaveBeenCalled();
+      expect(saveTextUnitMock).not.toHaveBeenCalled();
+      expect(comment).toHaveValue('Keep the checkout wording consistent.');
+
+      fireEvent.click(within(comment.parentElement!).getByRole('button', { name: action }));
+      await waitFor(() => expect(next).toBeEnabled());
+      if (action === 'Save') {
+        expect(saveTextUnitMock).toHaveBeenCalledWith(
+          expect.objectContaining({ targetComment: 'Keep the checkout wording consistent.' }),
+        );
+      } else expect(saveTextUnitMock).not.toHaveBeenCalled();
+      fireEvent.click(next);
+      expect(onNext).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(['ctrlKey', 'metaKey'] as const)(
+    'saves compact drafts exactly once with %s + Enter',
+    async (modifier) => {
+      editorPreference.enabled = false;
+      const onNext = vi.fn();
+      const editor = renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, {
+        presentation: 'compact',
+        onNext,
+      });
+      const field = await screen.findByRole('textbox', { name: 'Translation' });
+      await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+      fireEvent.change(field, { target: { value: 'Pague {price} agora' } });
+      fireEvent.keyDown(field, { key: 'Enter', [modifier]: true });
+      fireEvent.keyDown(field, { key: 'Enter', [modifier]: true, repeat: true });
+      await waitFor(() => expect(editor.onSaved).toHaveBeenCalledOnce());
+      expect(saveTextUnitMock).toHaveBeenCalledOnce();
+      expect(checkTextUnitIntegrityMock).toHaveBeenCalledOnce();
+      expect(onNext).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['button', 'compact'],
+    ['button', 'full'],
+    ['ctrlKey', 'compact'],
+    ['metaKey', 'full'],
+  ] as const)(
+    'advances clean drafts and finishes Save & next across placement changes using %s in %s',
+    async (trigger, presentation) => {
+      editorPreference.enabled = false;
+      const onNext = vi.fn();
+      let finishSave!: (value: unknown) => void;
+      saveTextUnitMock.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishSave = resolve;
+          }),
+      );
+      const editor = renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, {
+        presentation,
+        onNext,
+      });
+      const field = await screen.findByRole('textbox', { name: 'Translation' });
+      await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+      const advance = () =>
+        trigger === 'button'
+          ? fireEvent.click(screen.getByRole('button', { name: /^(Save & next|Next)$/ }))
+          : fireEvent.keyDown(field, { key: 'Enter', [trigger]: true, shiftKey: true });
+      advance();
+      expect(onNext).toHaveBeenCalledOnce();
+      expect(saveTextUnitMock).not.toHaveBeenCalled();
+      onNext.mockClear();
+      fireEvent.change(field, { target: { value: 'Pague {price} agora' } });
+      advance();
+      await waitFor(() => expect(saveTextUnitMock).toHaveBeenCalledOnce());
+      expect(onNext).not.toHaveBeenCalled();
+      advance();
+      expect(saveTextUnitMock).toHaveBeenCalledOnce();
+      editor.updateOptions({
+        presentation: presentation === 'compact' ? 'full' : 'compact',
+        onNext,
+      });
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toBe(field);
+      await act(async () => {
+        finishSave({ target: 'Pague {price} agora' });
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(onNext).toHaveBeenCalledOnce());
+      expect(editor.onSaved).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(['ctrlKey', 'metaKey'] as const)(
+    'does not fall back to saving with %s + Shift + Enter at the last passage',
+    async (modifier) => {
+      editorPreference.enabled = false;
+      const editor = renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, {
+        presentation: 'compact',
+      });
+      const field = await screen.findByRole('textbox', { name: 'Translation' });
+      await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+      fireEvent.change(field, { target: { value: 'Pague {price} agora' } });
+
+      fireEvent.keyDown(field, { key: 'Enter', [modifier]: true, shiftKey: true });
+
+      expect(screen.getByRole('button', { name: 'Save & next' })).toBeDisabled();
+      expect(checkTextUnitIntegrityMock).not.toHaveBeenCalled();
+      expect(saveTextUnitMock).not.toHaveBeenCalled();
+      expect(editor.onSaved).not.toHaveBeenCalled();
+      expect(field).toHaveValue('Pague {price} agora');
+    },
+  );
+
+  it.each(['close', 'occurrence', 'unmount'] as const)(
+    'does not advance a completed save after %s',
+    async (action) => {
+      editorPreference.enabled = false;
+      const onNext = vi.fn();
+      let finishSave!: (value: unknown) => void;
+      saveTextUnitMock.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishSave = resolve;
+          }),
+      );
+      const editor = renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, {
+        presentation: 'compact',
+        onNext,
+        navigationKey: 1,
+      });
+      const field = await screen.findByRole('textbox', { name: 'Translation' });
+      await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+      fireEvent.change(field, { target: { value: 'Pague {price} agora' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save & next' }));
+      await waitFor(() => expect(saveTextUnitMock).toHaveBeenCalledOnce());
+      if (action === 'close') fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+      else if (action === 'occurrence')
+        editor.updateOptions({ presentation: 'compact', onNext, navigationKey: 2 });
+      else editor.unmount();
+      await act(async () => {
+        finishSave({ target: 'Pague {price} agora' });
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(editor.onSaved).toHaveBeenCalledOnce());
+      expect(onNext).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['bypass', 'retry'] as const)(
+    'retains Save & next intent through integrity %s',
+    async (action) => {
+      editorPreference.enabled = false;
+      currentUserRole.role = 'ROLE_ADMIN';
+      if (action === 'bypass')
+        checkTextUnitIntegrityMock.mockResolvedValueOnce({ checkResult: false });
+      else
+        checkTextUnitIntegrityMock.mockRejectedValueOnce(
+          Object.assign(new Error('Unavailable'), { status: 400 }),
+        );
+      const onNext = vi.fn();
+      renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, { presentation: 'compact', onNext });
+      const field = await screen.findByRole('textbox', { name: 'Translation' });
+      await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+      fireEvent.change(field, { target: { value: 'Pague {price} agora' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save & next' }));
+      const confirm = await screen.findByRole('button', {
+        name: action === 'bypass' ? 'Save anyway' : 'Try again',
+      });
+      expect(onNext).not.toHaveBeenCalled();
+      expect(saveTextUnitMock).not.toHaveBeenCalled();
+      fireEvent.click(confirm);
+      await waitFor(() => expect(onNext).toHaveBeenCalledOnce());
+      expect(saveTextUnitMock).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(['button', 'ctrlKey', 'metaKey'] as const)(
+    'retains a failed compact save without advancing using %s',
+    async (trigger) => {
+      editorPreference.enabled = false;
+      const onNext = vi.fn();
+      saveTextUnitMock.mockRejectedValueOnce(
+        Object.assign(new Error('Translation changed'), { status: 409 }),
+      );
+      const editor = renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, {
+        presentation: 'compact',
+        onNext,
+      });
+      const field = await screen.findByRole('textbox', { name: 'Translation' });
+      await waitFor(() => expect(field).toHaveValue('Pagar {price} agora'));
+      fireEvent.change(field, { target: { value: 'Pague {price} agora' } });
+      searchTextUnitsMock.mockResolvedValue([
+        {
+          tmTextUnitId: 3,
+          tmTextUnitVariantId: 31,
+          localeId: 17,
+          source: 'Pay {price} now',
+          target: 'Server correction',
+          targetLocale: 'pt-PT',
+          status: 'APPROVED',
+          includedInLocalizedFile: true,
+        },
+      ]);
+      if (trigger === 'button')
+        fireEvent.click(screen.getByRole('button', { name: 'Save & next' }));
+      else fireEvent.keyDown(field, { key: 'Enter', [trigger]: true, shiftKey: true });
+      await screen.findByText('Translation changed');
+      expect(saveTextUnitMock).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedVariantId: 30 }),
+      );
+      expect(onNext).not.toHaveBeenCalled();
+      expect(field).toHaveValue('Pague {price} agora');
+      await screen.findByText(/This translation changed while you had a draft/);
+      editor.unmount();
+      const reopened = renderEmbeddedEditor(editor.queryClient, 3, 'pt-PT', undefined, {
+        presentation: 'compact',
+      });
+      expect(await screen.findByRole('textbox', { name: 'Translation' })).toHaveValue(
+        'Pague {price} agora',
+      );
+      reopened.updateOptions({ presentation: 'full' });
+      fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+      await waitFor(() =>
+        expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+          'Server correction',
+        ),
+      );
+    },
+  );
+
+  it('requires an absent current variant when saving the first translation', async () => {
+    editorPreference.enabled = false;
+    searchTextUnitsMock.mockResolvedValue([
+      {
+        tmTextUnitId: 3,
+        tmTextUnitVariantId: null,
+        localeId: 17,
+        source: 'Pay now',
+        target: null,
+        targetLocale: 'pt-PT',
+        status: 'TRANSLATION_NEEDED',
+        includedInLocalizedFile: true,
+      },
+    ]);
+    const editor = renderEmbeddedEditor(undefined, 3, 'pt-PT', undefined, {
+      presentation: 'compact',
+    });
+    const field = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(field).toBeEnabled());
+    fireEvent.change(field, { target: { value: 'Pague agora' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(editor.onSaved).toHaveBeenCalledOnce());
+    expect(saveTextUnitMock).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedVariantId: null, target: 'Pague agora' }),
+    );
+  });
+
+  it('retains embedded translation and feedback drafts with their original variant after closing', async () => {
+    editorPreference.enabled = false;
+    fetchTextUnitFeedbackBaselineMock.mockResolvedValue({
+      target: 'Pagar {price} agora',
+      ai: true,
+      kind: 'AI_TRANSLATE',
+    });
+    const first = renderEmbeddedEditor();
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+        'Pagar {price} agora',
+      ),
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Pague {price} agora' },
+    });
+    const widget = await screen.findByRole('region', { name: 'AI translation feedback' });
+    fireEvent.click(within(widget).getByRole('button', { name: 'Tone/style' }));
+    fireEvent.change(within(widget).getByRole('textbox', { name: 'AI feedback note' }), {
+      target: { value: 'Keep this reviewer note.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+    expect(first.onClose).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('dialog', { name: 'Discard changes?' })).not.toBeInTheDocument();
+    first.unmount();
+    const unload = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(true);
+
+    const reopened = renderEmbeddedEditor(first.queryClient);
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+        'Pague {price} agora',
+      ),
+    );
+    expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(
+      'Keep this reviewer note.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(reopened.onSaved).toHaveBeenCalledOnce());
+    expect(saveTextUnitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: 'Pague {price} agora',
+        reviewedVariantId: 30,
+        reviewFeedback: expect.objectContaining({
+          reason: 'TONE_STYLE',
+          note: 'Keep this reviewer note.',
+        }) as unknown,
+      }),
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled());
+    reopened.unmount();
+    expect(
+      first.queryClient.getQueryCache().findAll({ queryKey: ['text-unit-detail-draft'] }),
+    ).toHaveLength(0);
+    const afterSave = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(afterSave);
+    expect(afterSave.defaultPrevented).toBe(false);
+  });
+
+  it('keeps embedded drafts isolated by text unit, locale and account', async () => {
+    editorPreference.enabled = false;
+    const first = renderEmbeddedEditor();
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+        'Pagar {price} agora',
+      ),
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'My private draft' },
+    });
+    first.unmount();
+    for (const [id, locale, username] of [
+      [4, 'pt-PT', 'translator'],
+      [3, 'fr', 'translator'],
+      [3, 'pt-PT', 'other-user'],
+    ] as const) {
+      currentUserRole.username = username;
+      const other = renderEmbeddedEditor(first.queryClient, id, locale);
+      await waitFor(() =>
+        expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+          'Pagar {price} agora',
+        ),
+      );
+      other.unmount();
+    }
+    currentUserRole.username = 'translator';
+    renderEmbeddedEditor(first.queryClient);
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('My private draft'),
+    );
+  });
+
+  it('keeps a stale embedded draft and requires Reset before saving a changed server version', async () => {
+    editorPreference.enabled = false;
+    const first = renderEmbeddedEditor();
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+        'Pagar {price} agora',
+      ),
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'My original draft' },
+    });
+    first.unmount();
+    first.queryClient.setQueryData(['text-unit-detail', 3, 'pt-PT'], {
+      tmTextUnitId: 3,
+      tmTextUnitVariantId: 31,
+      localeId: 17,
+      source: 'New source',
+      target: 'Server correction',
+      targetLocale: 'pt-PT',
+      status: 'APPROVED',
+      includedInLocalizedFile: true,
+    });
+    renderEmbeddedEditor(first.queryClient);
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('My original draft'),
+    );
+    expect(screen.getByText(/This translation changed while you had a draft/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(
+      first.queryClient.getQueryData(['text-unit-detail-draft', 'translator:3:pt-PT']),
+    ).toEqual(expect.objectContaining({ baselineVariantId: 30, source: 'Pay {price} now' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Server correction'),
+    );
+    expect(
+      screen.queryByText(/This translation changed while you had a draft/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('finishes an embedded save safely after the editor closes and reopens', async () => {
+    editorPreference.enabled = false;
+    let resolveSave!: (value: TextUnitsApi.ApiTextUnit) => void;
+    saveTextUnitMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+    const first = renderEmbeddedEditor();
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue(
+        'Pagar {price} agora',
+      ),
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Saved while away' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(saveTextUnitMock).toHaveBeenCalledOnce());
+    first.unmount();
+    const reopened = renderEmbeddedEditor(first.queryClient);
+    expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
+    const saved = {
+      tmTextUnitId: 3,
+      tmTextUnitVariantId: 31,
+      localeId: 17,
+      source: 'Pay {price} now',
+      target: 'Saved while away',
+      targetLocale: 'pt-PT',
+      status: 'APPROVED',
+      includedInLocalizedFile: true,
+    };
+    searchTextUnitsMock.mockResolvedValue([saved]);
+    await act(async () => {
+      resolveSave(saved as TextUnitsApi.ApiTextUnit);
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled());
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Saved while away');
+    expect(first.onSaved).toHaveBeenCalledOnce();
+    expect(reopened.onSaved).not.toHaveBeenCalled();
+    reopened.unmount();
+    expect(
+      first.queryClient.getQueryCache().findAll({ queryKey: ['text-unit-detail-draft'] }),
+    ).toHaveLength(0);
   });
 
   it('captures optional feedback on the translation save without requesting another AI review', async () => {
@@ -340,6 +1033,33 @@ describe('TextUnitDetailPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back to workbench' }));
     expect(await screen.findByTestId('workbench-destination')).toBeInTheDocument();
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('returns to the full content preview URL after guarding unsaved translation changes', async () => {
+    editorPreference.enabled = false;
+    const from = '/content?repoId=1&branchId=5&locale=pt-PT&assetId=11&q=guide';
+    renderTextUnitDetailPage({
+      pathname: '/text-units/3',
+      search: '?locale=pt-PT',
+      state: { from },
+    });
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue('Pagar {price} agora'));
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    const back = screen.getByRole('button', { name: 'Back to content' });
+    expect(back).toHaveAttribute('title', 'Back to content');
+    fireEvent.click(back);
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Discard unsaved changes?');
+    expect(screen.queryByTestId('content-destination')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(editor).toHaveValue('Pague {price} agora');
+    fireEvent.click(back);
+    fireEvent.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Discard changes',
+      }),
+    );
+    expect(await screen.findByTestId('content-destination')).toHaveTextContent(from);
   });
 
   it('freezes the feedback baseline when a refreshed current translation arrives during editing', async () => {
@@ -1112,6 +1832,51 @@ describe('TextUnitDetailPage', () => {
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     },
   );
+
+  it('keeps the MF2 editor, active form and selection when switching placement with assistance disabled', async () => {
+    const restoreDom = installProseMirrorDomMock();
+    editorPreference.enabled = false;
+    mockMf2TextUnit('MF2');
+    const editor = renderEmbeddedEditor(undefined, 3, 'fr', undefined, {
+      presentation: 'compact',
+    });
+    expect(
+      await screen.findByRole('textbox', { name: 'Target status: active / count: 0' }),
+    ).toHaveTextContent('La file est vide.');
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'status: active / count: fallback Queued jobs: {$count}.',
+      }),
+    );
+    const field = screen.getByRole('textbox', {
+      name: 'Target status: active / count: fallback',
+    });
+    expect(field).toHaveTextContent('Queued jobs:');
+    field.focus();
+    const text = field.querySelector('p')?.firstChild;
+    expect(text).toBeInstanceOf(Text);
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.setStart(text!, 2);
+    range.setEnd(text!, 6);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    fireEvent(document, new Event('selectionchange'));
+
+    for (const presentation of ['full', 'compact'] as const) {
+      editor.updateOptions({ presentation });
+      expect(screen.getByRole('textbox', { name: 'Target status: active / count: fallback' })).toBe(
+        field,
+      );
+      expect(selection?.anchorNode).toBe(text);
+      expect(selection?.anchorOffset).toBe(2);
+      expect(selection?.focusOffset).toBe(6);
+    }
+    expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    editor.unmount();
+    restoreDom();
+  });
 
   it('honors explicit non-MF2 metadata even when the source resembles MF2', async () => {
     mockMf2TextUnit(null);

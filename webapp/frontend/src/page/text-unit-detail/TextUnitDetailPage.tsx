@@ -73,6 +73,7 @@ import {
   TextUnitDetailPageView,
   type TextUnitDetailScreenshot,
 } from './TextUnitDetailPageView';
+import { isTextUnitDetailDraftDirty, useTextUnitDetailDraft } from './useTextUnitDetailDraft';
 
 type LocationState = {
   from?: string;
@@ -86,9 +87,23 @@ type LocationState = {
 const editorStatusOptions = ['Accepted', 'To review', 'To translate', 'Rejected'];
 const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
 
-export function TextUnitDetailPage() {
+type EmbeddedEditor = {
+  tmTextUnitId: number;
+  localeTag: string;
+  onClose: () => void;
+  onSaved: () => void;
+  presentation?: 'compact' | 'full';
+  onShowDetails?: () => void;
+  onShowCompact?: () => void;
+  onNext?: () => void;
+  navigationKey?: string | number;
+  autoFocus?: boolean;
+};
+
+export function TextUnitDetailPage({ embedded }: { embedded?: EmbeddedEditor } = {}) {
   const { tmTextUnitId: tmTextUnitIdParam } = useParams<{ tmTextUnitId: string }>();
-  const parsedTmTextUnitId = tmTextUnitIdParam ? Number(tmTextUnitIdParam) : NaN;
+  const parsedTmTextUnitId =
+    embedded?.tmTextUnitId ?? (tmTextUnitIdParam ? Number(tmTextUnitIdParam) : NaN);
   const tmTextUnitId =
     Number.isFinite(parsedTmTextUnitId) && parsedTmTextUnitId > 0 ? parsedTmTextUnitId : null;
 
@@ -104,9 +119,63 @@ export function TextUnitDetailPage() {
   const aiAutomaticDisabled = aiSettings.automaticDisabled;
   const queryClient = useQueryClient();
 
+  const localeTag = embedded?.localeTag ?? searchParams.get('locale')?.trim() ?? null;
+  const editorOwner = `${currentUser.username}:${tmTextUnitId}:${localeTag}`;
+  const isEmbedded = Boolean(embedded);
+  const isCompact = embedded?.presentation === 'compact';
+  const retainedEditor = useTextUnitDetailDraft(embedded ? editorOwner : null);
+  const { draft: editorDraft, setField: setDraftField, update: updateDraft } = retainedEditor;
+  const {
+    draftTarget,
+    baselineTarget,
+    baselineVariantId,
+    draftStatus,
+    baselineStatus,
+    targetCommentDraft,
+    isTargetCommentEditing,
+  } = editorDraft;
+  const setDraftTarget = useCallback(
+    (value: string) => setDraftField('draftTarget', value),
+    [setDraftField],
+  );
+  const setBaselineTarget = useCallback(
+    (value: string) => setDraftField('baselineTarget', value),
+    [setDraftField],
+  );
+  const setBaselineVariantId = useCallback(
+    (value: number | null) => setDraftField('baselineVariantId', value),
+    [setDraftField],
+  );
+  const setDraftStatus = useCallback(
+    (value: typeof draftStatus) => setDraftField('draftStatus', value),
+    [setDraftField],
+  );
+  const setBaselineStatus = useCallback(
+    (value: typeof baselineStatus) => setDraftField('baselineStatus', value),
+    [setDraftField],
+  );
+  const setTargetCommentDraft = useCallback(
+    (value: string) => setDraftField('targetCommentDraft', value),
+    [setDraftField],
+  );
+  const setIsTargetCommentEditing = useCallback(
+    (value: boolean) => setDraftField('isTargetCommentEditing', value),
+    [setDraftField],
+  );
+  const seededEditorRef = useRef<{ owner: string; version: string } | null>(
+    embedded && editorDraft.seedKey ? { owner: editorOwner, version: editorDraft.seedKey } : null,
+  );
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
   const [isMetaCollapsed, setIsMetaCollapsed] = useState(true);
-  const [isGlossaryCollapsed, setIsGlossaryCollapsed] = useState(false);
+  const [isGlossaryCollapsed, setIsGlossaryCollapsed] = useState(Boolean(embedded));
   const [isIcuPreviewCollapsed, setIsIcuPreviewCollapsed] = useState(true);
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
@@ -114,18 +183,6 @@ export function TextUnitDetailPage() {
   const isSearchEnabled = useReviewProjectSearchEnabled();
   const [translationMarksMode, setTranslationMarksMode] = useState<VisibleTextMarksMode>('auto');
 
-  const [draftTarget, setDraftTarget] = useState('');
-  const [baselineTarget, setBaselineTarget] = useState('');
-  const [baselineVariantId, setBaselineVariantId] = useState<number | null>(null);
-  const seededEditorRef = useRef<{ owner: string; version: string } | null>(null);
-  const [draftStatus, setDraftStatus] = useState<
-    'Accepted' | 'To review' | 'To translate' | 'Rejected'
-  >('To translate');
-  const [baselineStatus, setBaselineStatus] = useState<
-    'Accepted' | 'To review' | 'To translate' | 'Rejected'
-  >('To translate');
-  const [targetCommentDraft, setTargetCommentDraft] = useState('');
-  const [isTargetCommentEditing, setIsTargetCommentEditing] = useState(false);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [pendingValidationSave, setPendingValidationSave] = useState<{
     request: SaveTextUnitRequest;
@@ -141,26 +198,37 @@ export function TextUnitDetailPage() {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const [isValidatingSave, setIsValidatingSave] = useState(false);
   const saveAttemptRef = useRef(0);
+  const saveInFlightRef = useRef(false);
+  const navigationVersionRef = useRef(0);
+  const nextAfterSaveRef = useRef<{
+    request: SaveTextUnitRequest;
+    version: number;
+    onNext: () => void;
+  } | null>(null);
+  useEffect(() => {
+    navigationVersionRef.current += 1;
+    nextAfterSaveRef.current = null;
+  }, [editorOwner, embedded?.navigationKey]);
 
   const aiRequestAttemptRef = useRef(0);
   const aiRequestAbortControllerRef = useRef<AbortController | null>(null);
   const [aiInput, setAiInput] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
 
-  const localeTag = useMemo(() => searchParams.get('locale')?.trim() ?? null, [searchParams]);
   const isSourceOnly = !localeTag;
   const workbenchDetailContext = useMemo(
     () =>
-      locationState?.from !== '/workbench' && localeTag
+      !embedded && locationState?.from !== '/workbench' && localeTag
         ? readWorkbenchDetailContext(location.hash)
         : null,
-    [location.hash, locationState?.from, localeTag],
+    [embedded, location.hash, locationState?.from, localeTag],
   );
 
   const textUnitQuery = useQuery({
     queryKey: ['text-unit-detail', tmTextUnitId, localeTag ?? 'source'],
     enabled: tmTextUnitId !== null,
-    staleTime: 30_000,
+    staleTime: isEmbedded ? 0 : 30_000,
+    refetchOnMount: isEmbedded ? 'always' : true,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (tmTextUnitId === null) {
@@ -186,7 +254,7 @@ export function TextUnitDetailPage() {
 
   const historyQuery = useQuery({
     queryKey: ['text-unit-history', tmTextUnitId, localeTag],
-    enabled: tmTextUnitId !== null && Boolean(localeTag) && !isHistoryCollapsed,
+    enabled: !isCompact && tmTextUnitId !== null && Boolean(localeTag) && !isHistoryCollapsed,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     queryFn: () => {
@@ -199,7 +267,7 @@ export function TextUnitDetailPage() {
 
   const aiTranslateAttemptsQuery = useQuery({
     queryKey: ['text-unit-ai-translate-attempts', tmTextUnitId, localeTag],
-    enabled: tmTextUnitId !== null && Boolean(localeTag) && !isHistoryCollapsed,
+    enabled: !isCompact && tmTextUnitId !== null && Boolean(localeTag) && !isHistoryCollapsed,
     staleTime: 0,
     refetchOnWindowFocus: false,
     queryFn: () => {
@@ -212,7 +280,7 @@ export function TextUnitDetailPage() {
 
   const gitBlameQuery = useQuery({
     queryKey: ['text-unit-git-blame', tmTextUnitId],
-    enabled: tmTextUnitId !== null,
+    enabled: !isCompact && tmTextUnitId !== null,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     queryFn: () => {
@@ -229,7 +297,10 @@ export function TextUnitDetailPage() {
 
   const glossaryTargetsQuery = useQuery({
     queryKey: ['text-unit-detail-glossary-targets'],
-    enabled: Boolean(activeTextUnit?.repositoryName?.trim()) && Boolean(activeTextUnit?.assetPath),
+    enabled:
+      !isCompact &&
+      Boolean(activeTextUnit?.repositoryName?.trim()) &&
+      Boolean(activeTextUnit?.assetPath),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     queryFn: () => fetchGlossaries({ limit: 200 }),
@@ -255,6 +326,7 @@ export function TextUnitDetailPage() {
       localeForEditing,
     ],
     enabled:
+      !isCompact &&
       glossaryTermTarget != null &&
       activeTextUnit?.tmTextUnitId != null &&
       Boolean(activeTextUnit?.source?.trim()),
@@ -286,6 +358,7 @@ export function TextUnitDetailPage() {
       activeTextUnit?.tmTextUnitId ?? null,
     ],
     enabled:
+      !isCompact &&
       Boolean(activeTextUnit?.repositoryName?.trim()) &&
       Boolean(localeForEditing) &&
       Boolean(activeTextUnit?.source?.trim()),
@@ -313,7 +386,20 @@ export function TextUnitDetailPage() {
     },
   });
 
-  const canEdit = localeForEditing ? canEditLocaleForUser(currentUser, localeForEditing) : false;
+  const hasRetainedChanges = Boolean(embedded) && isTextUnitDetailDraftDirty(editorDraft);
+  const staleDraft =
+    hasRetainedChanges &&
+    editorDraft.seeded &&
+    activeTextUnit &&
+    (editorDraft.source !== (activeTextUnit.source ?? '') ||
+      editorDraft.messageFormat !== (activeTextUnit.messageFormat ?? null) ||
+      editorDraft.baselineVariantId !== (activeTextUnit.tmTextUnitVariantId ?? null));
+  const canEdit = Boolean(
+    (!isEmbedded || Boolean(activeTextUnit)) &&
+    !staleDraft &&
+    localeForEditing &&
+    canEditLocaleForUser(currentUser, localeForEditing),
+  );
   const feedback = useTextUnitReviewFeedback({
     username: currentUser.username,
     tmTextUnitId: activeTextUnit?.tmTextUnitId ?? null,
@@ -323,6 +409,16 @@ export function TextUnitDetailPage() {
     target: draftTarget,
     enabled: canEdit && !isSourceOnly,
     problematic: draftStatus === 'Rejected',
+    retainedDraft: embedded
+      ? {
+          values: editorDraft.feedback,
+          onChange: (change) =>
+            updateDraft((current) => ({
+              ...current,
+              feedback: change(current.feedback),
+            })),
+        }
+      : undefined,
   });
   const {
     decorateRequest: decorateFeedbackRequest,
@@ -331,7 +427,6 @@ export function TextUnitDetailPage() {
     recordChatUsed,
     recordSuggestionUsed,
   } = feedback;
-  const editorOwner = `${currentUser.username}:${tmTextUnitId}:${localeTag}`;
   const editorOwnerRef = useRef(editorOwner);
   editorOwnerRef.current = editorOwner;
   useEffect(() => {
@@ -345,9 +440,13 @@ export function TextUnitDetailPage() {
 
   const saveMutation = useMutation({
     mutationFn: (request: SaveTextUnitRequest) => saveTextUnit(request),
-    onMutate: () => ({ owner: editorOwner }),
+    onMutate: () => ({
+      owner: editorOwner,
+      operation: embedded ? retainedEditor.beginOperation() : null,
+      next: nextAfterSaveRef.current,
+    }),
     onSuccess: (saved, request, context) => {
-      feedbackSaved(request);
+      if (!embedded) feedbackSaved(request);
       if (editorOwnerRef.current !== context.owner) {
         return;
       }
@@ -356,19 +455,45 @@ export function TextUnitDetailPage() {
         formatStatus(saved.status ?? request.status, saved.includedInLocalizedFile),
       );
 
-      setBaselineTarget(nextTarget);
-      setBaselineVariantId(saved.tmTextUnitVariantId ?? request.reviewedVariantId ?? null);
-      setDraftTarget(nextTarget);
-      setBaselineStatus(nextStatus);
-      setDraftStatus(nextStatus);
-      setSaveErrorMessage(null);
-      setPendingValidationSave(null);
-      if ('targetComment' in request) {
-        setTargetCommentDraft(saved.targetComment ?? request.targetComment ?? '');
-        setIsTargetCommentEditing(false);
-        setIsMetaCollapsed(false);
+      if (embedded && context.operation) {
+        retainedEditor.finishOperation(context.operation, (current) => ({
+          ...current,
+          baselineTarget: nextTarget,
+          baselineVariantId: saved.tmTextUnitVariantId ?? request.reviewedVariantId ?? null,
+          draftTarget: nextTarget,
+          baselineStatus: nextStatus,
+          draftStatus: nextStatus,
+          baselineComment:
+            'targetComment' in request
+              ? (saved.targetComment ?? request.targetComment ?? '')
+              : current.baselineComment,
+          targetCommentDraft:
+            'targetComment' in request
+              ? (saved.targetComment ?? request.targetComment ?? '')
+              : current.targetCommentDraft,
+          isTargetCommentEditing:
+            'targetComment' in request ? false : current.isTargetCommentEditing,
+          feedback: { reason: '', note: '', chatUsed: false, aiSuggestionUsed: false },
+          operationError: null,
+        }));
+        embedded.onSaved();
       } else {
-        setIsHistoryCollapsed(false);
+        setBaselineTarget(nextTarget);
+        setBaselineVariantId(saved.tmTextUnitVariantId ?? request.reviewedVariantId ?? null);
+        setDraftTarget(nextTarget);
+        setBaselineStatus(nextStatus);
+        setDraftStatus(nextStatus);
+      }
+      if (mountedRef.current) {
+        setSaveErrorMessage(null);
+        setPendingValidationSave(null);
+        if ('targetComment' in request) {
+          setTargetCommentDraft(saved.targetComment ?? request.targetComment ?? '');
+          setIsTargetCommentEditing(false);
+          setIsMetaCollapsed(false);
+        } else if (!embedded) {
+          setIsHistoryCollapsed(false);
+        }
       }
 
       void queryClient.invalidateQueries({
@@ -378,12 +503,33 @@ export function TextUnitDetailPage() {
         queryKey: ['text-unit-history', tmTextUnitId, localeTag],
       });
       void queryClient.invalidateQueries({ queryKey: ['workbench-search'] });
+      if (
+        mountedRef.current &&
+        context.next?.request === request &&
+        context.next.version === navigationVersionRef.current
+      ) {
+        nextAfterSaveRef.current = null;
+        context.next.onNext();
+      }
     },
     onError: (error: unknown, _request, context) => {
+      if (embedded && context?.operation) {
+        retainedEditor.finishOperation(context.operation, (current) => ({
+          ...current,
+          operationError: error instanceof Error ? error.message : 'Unable to save translation.',
+        }));
+      }
+      if (!mountedRef.current) return;
       if (context && editorOwnerRef.current !== context.owner) {
         return;
       }
       const status = (error as { status?: number })?.status;
+      if (status === 409) {
+        // Refresh the baseline for explicit Reset; retained edits stay owned by the draft.
+        void queryClient.invalidateQueries({
+          queryKey: ['text-unit-detail', tmTextUnitId, localeTag],
+        });
+      }
       if (status === 403) {
         setSaveErrorMessage('You cannot edit this locale.');
         return;
@@ -395,7 +541,27 @@ export function TextUnitDetailPage() {
   const deleteMutation = useMutation({
     mutationFn: (textUnitCurrentVariantId: number) =>
       deleteTextUnitCurrentVariant(textUnitCurrentVariantId),
-    onSuccess: () => {
+    onMutate: () => ({ operation: embedded ? retainedEditor.beginOperation() : null }),
+    onSuccess: (_result, _request, context) => {
+      if (embedded && context.operation) {
+        retainedEditor.finishOperation(context.operation, (current) => ({
+          ...current,
+          baselineTarget: '',
+          baselineVariantId: null,
+          draftTarget: '',
+          baselineStatus: 'To translate',
+          draftStatus: 'To translate',
+          feedback: { reason: '', note: '', chatUsed: false, aiSuggestionUsed: false },
+          operationError: null,
+        }));
+        embedded.onSaved();
+      }
+      if (!mountedRef.current) {
+        void queryClient.invalidateQueries({
+          queryKey: ['text-unit-detail', tmTextUnitId, localeTag],
+        });
+        return;
+      }
       resetFeedback();
       setBaselineTarget('');
       setBaselineVariantId(null);
@@ -415,7 +581,14 @@ export function TextUnitDetailPage() {
       });
       void queryClient.invalidateQueries({ queryKey: ['workbench-search'] });
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, _request, context) => {
+      if (embedded && context?.operation) {
+        retainedEditor.finishOperation(context.operation, (current) => ({
+          ...current,
+          operationError: error instanceof Error ? error.message : 'Unable to delete translation.',
+        }));
+      }
+      if (!mountedRef.current) return;
       setShowDeleteDialog(false);
       const status = (error as { status?: number })?.status;
       if (status === 403) {
@@ -478,14 +651,25 @@ export function TextUnitDetailPage() {
     const sameOwner = seededEditorRef.current?.owner === editorOwner;
     if (
       sameOwner &&
+      // Effect replay can clear a clean retained draft while preserving this ref.
+      editorDraft.seeded &&
       (seededEditorRef.current?.version === editorSeedKey ||
         draftTarget !== baselineTarget ||
         draftStatus !== baselineStatus ||
-        feedback.dirty)
+        feedback.dirty ||
+        (isEmbedded && (isTextUnitDetailDraftDirty(editorDraft) || editorDraft.pendingOperation)))
     ) {
       return;
     }
     seededEditorRef.current = { owner: editorOwner, version: editorSeedKey };
+    updateDraft((current) => ({
+      ...current,
+      seeded: true,
+      source: activeTextUnit.source ?? '',
+      messageFormat: activeTextUnit.messageFormat ?? null,
+      seedKey: editorSeedKey,
+      baselineComment: activeTextUnit.targetComment ?? '',
+    }));
 
     const nextTarget = isSourceOnly ? (activeTextUnit.source ?? '') : (activeTextUnit.target ?? '');
     const nextStatus = normalizeEditorStatus(
@@ -513,17 +697,25 @@ export function TextUnitDetailPage() {
     draftTarget,
     feedback.dirty,
     isSourceOnly,
+    isEmbedded,
+    editorDraft,
+    updateDraft,
+    setBaselineStatus,
+    setBaselineTarget,
+    setBaselineVariantId,
+    setDraftStatus,
+    setDraftTarget,
   ]);
 
   useEffect(() => {
-    setIsTargetCommentEditing(false);
-  }, [activeTextUnit?.tmTextUnitId, displayLocale]);
+    if (!embedded) setIsTargetCommentEditing(false);
+  }, [activeTextUnit?.tmTextUnitId, displayLocale, embedded, setIsTargetCommentEditing]);
 
   useEffect(() => {
     if (!isTargetCommentEditing) {
       setTargetCommentDraft(activeTextUnit?.targetComment ?? '');
     }
-  }, [activeTextUnit?.targetComment, isTargetCommentEditing]);
+  }, [activeTextUnit?.targetComment, isTargetCommentEditing, setTargetCommentDraft]);
 
   const aiContextKey = useMemo(() => {
     if (!activeTextUnit || !localeForEditing) {
@@ -533,6 +725,13 @@ export function TextUnitDetailPage() {
       activeTextUnit.tmTextUnitVariantId ?? activeTextUnit.tmTextUnitCurrentVariantId;
     return `${currentUser.username}:${activeTextUnit.tmTextUnitId}:${localeForEditing}:${variantId ?? 'none'}:${aiPreset}:${aiReviewStyle}`;
   }, [activeTextUnit, localeForEditing, currentUser.username, aiPreset, aiReviewStyle]);
+
+  const [openedAiContextKey, setOpenedAiContextKey] = useState<string | null>(null);
+  // Keep an opened conversation active when the same editor moves back inline.
+  useEffect(() => {
+    if (!isCompact && !isAiCollapsed) setOpenedAiContextKey(aiContextKey);
+  }, [aiContextKey, isCompact, isAiCollapsed]);
+  const isAiContextOpen = !isEmbedded || openedAiContextKey === aiContextKey;
 
   const [storedAiConversation, setStoredAiConversation] = useState<{
     contextKey: string | null;
@@ -573,6 +772,7 @@ export function TextUnitDetailPage() {
     if (
       !aiPreferencesReady ||
       aiAutomaticDisabled ||
+      !isAiContextOpen ||
       glossaryMatchesQuery.isLoading ||
       !activeTextUnit ||
       !localeForEditing ||
@@ -669,6 +869,7 @@ export function TextUnitDetailPage() {
     aiReviewStyle,
     aiPreferencesReady,
     aiAutomaticDisabled,
+    isAiContextOpen,
     glossaryMatchesQuery.data,
     glossaryMatchesQuery.isLoading,
     localeForEditing,
@@ -850,6 +1051,12 @@ export function TextUnitDetailPage() {
   }, [activeTextUnit?.targetLocale, aiTranslateTimelineData, localeTag, sortedHistoryItems]);
 
   const navigateBack = () => {
+    if (embedded) {
+      navigationVersionRef.current += 1;
+      nextAfterSaveRef.current = null;
+      embedded.onClose();
+      return;
+    }
     if (workbenchDetailContext) {
       void navigate('/workbench', {
         state: {
@@ -890,10 +1097,15 @@ export function TextUnitDetailPage() {
 
   const isEditorDirty =
     draftTarget !== baselineTarget || draftStatus !== baselineStatus || feedback.dirty;
-  const isEditorSaving = saveMutation.isPending || isValidatingSave;
+  const isEditorSaving =
+    saveMutation.isPending || isValidatingSave || Boolean(editorDraft.pendingOperation);
   const hasUnsavedComment =
     isTargetCommentEditing && targetCommentDraft !== (activeTextUnit?.targetComment ?? '');
   const handleBack = () => {
+    if (embedded) {
+      navigateBack();
+      return;
+    }
     if (isEditorSaving || deleteMutation.isPending) {
       setSaveErrorMessage('Wait for the current save to finish before leaving.');
       return;
@@ -942,16 +1154,19 @@ export function TextUnitDetailPage() {
       return {
         tmTextUnitId: activeTextUnit.tmTextUnitId,
         localeId: activeTextUnit.localeId,
+        expectedVariantId: baselineVariantId,
         target: targetValue,
         status: statusUpdate.status,
         includedInLocalizedFile: statusUpdate.includedInLocalizedFile,
       };
     },
-    [activeTextUnit, draftStatus],
+    [activeTextUnit, baselineVariantId, draftStatus],
   );
 
   const saveRequestWithIntegrityCheck = useCallback(
     async (request: SaveTextUnitRequest) => {
+      if (saveInFlightRef.current) return;
+      saveInFlightRef.current = true;
       const attemptId = (saveAttemptRef.current += 1);
       const owner = editorOwnerRef.current;
       const isCurrentAttempt = () =>
@@ -967,6 +1182,7 @@ export function TextUnitDetailPage() {
         }) > 0
       ) {
         setSaveErrorMessage('Fix the MF2 errors before saving.');
+        saveInFlightRef.current = false;
         return;
       }
 
@@ -1011,18 +1227,29 @@ export function TextUnitDetailPage() {
         });
         return;
       } finally {
+        saveInFlightRef.current = false;
         if (isCurrentAttempt()) {
           setIsValidatingSave(false);
         }
       }
 
-      await saveMutation.mutateAsync(request).catch(() => undefined);
+      saveInFlightRef.current = true;
+      try {
+        await saveMutation.mutateAsync(request).catch(() => undefined);
+      } finally {
+        saveInFlightRef.current = false;
+      }
     },
     [activeTextUnit?.source, currentUser.role, isMf2Translation, localeForEditing, saveMutation],
   );
 
   const saveDraft = useCallback(
-    async (targetOverride?: string) => {
+    async (targetOverride?: string, advance = false) => {
+      if (saveInFlightRef.current || isEditorSaving || deleteMutation.isPending) return;
+      if (advance && !isEditorDirty && !hasUnsavedComment) {
+        embedded?.onNext?.();
+        return;
+      }
       if (!canEdit) {
         setSaveErrorMessage('You cannot edit this locale.');
         return;
@@ -1042,7 +1269,16 @@ export function TextUnitDetailPage() {
         return;
       }
 
-      await saveRequestWithIntegrityCheck(decorateFeedbackRequest(request));
+      const decoratedRequest = decorateFeedbackRequest(request);
+      nextAfterSaveRef.current =
+        advance && embedded?.onNext
+          ? {
+              request: decoratedRequest,
+              version: navigationVersionRef.current,
+              onNext: embedded.onNext,
+            }
+          : null;
+      await saveRequestWithIntegrityCheck(decoratedRequest);
     },
     [
       baselineStatus,
@@ -1054,6 +1290,11 @@ export function TextUnitDetailPage() {
       feedback.activeDirty,
       decorateFeedbackRequest,
       saveRequestWithIntegrityCheck,
+      isEditorSaving,
+      isEditorDirty,
+      hasUnsavedComment,
+      deleteMutation.isPending,
+      embedded,
     ],
   );
 
@@ -1062,23 +1303,52 @@ export function TextUnitDetailPage() {
   }, [saveDraft]);
 
   const handleResetEditor = useCallback(() => {
+    nextAfterSaveRef.current = null;
     saveAttemptRef.current += 1;
     resetFeedback();
     setDraftTarget(baselineTarget);
     setDraftStatus(baselineStatus);
     setSaveErrorMessage(null);
     setPendingValidationSave(null);
-  }, [baselineStatus, baselineTarget, resetFeedback]);
+    if (embedded && activeTextUnit) {
+      const status = normalizeEditorStatus(
+        formatStatus(activeTextUnit.status, activeTextUnit.includedInLocalizedFile),
+      );
+      updateDraft((current) => ({
+        ...current,
+        source: activeTextUnit.source ?? '',
+        messageFormat: activeTextUnit.messageFormat ?? null,
+        baselineTarget: activeTextUnit.target ?? '',
+        draftTarget: activeTextUnit.target ?? '',
+        baselineStatus: status,
+        draftStatus: status,
+        baselineVariantId: activeTextUnit.tmTextUnitVariantId ?? null,
+        baselineComment: activeTextUnit.targetComment ?? '',
+        targetCommentDraft: activeTextUnit.targetComment ?? '',
+        isTargetCommentEditing: false,
+        operationError: null,
+      }));
+    }
+  }, [
+    baselineStatus,
+    baselineTarget,
+    resetFeedback,
+    embedded,
+    activeTextUnit,
+    updateDraft,
+    setDraftTarget,
+    setDraftStatus,
+  ]);
 
   const handleStartTargetCommentEditing = useCallback(() => {
     setTargetCommentDraft(activeTextUnit?.targetComment ?? '');
     setIsTargetCommentEditing(true);
-  }, [activeTextUnit?.targetComment]);
+  }, [activeTextUnit?.targetComment, setTargetCommentDraft, setIsTargetCommentEditing]);
 
   const handleCancelTargetCommentEditing = useCallback(() => {
     setTargetCommentDraft(activeTextUnit?.targetComment ?? '');
     setIsTargetCommentEditing(false);
-  }, [activeTextUnit?.targetComment]);
+  }, [activeTextUnit?.targetComment, setTargetCommentDraft, setIsTargetCommentEditing]);
 
   const handleSaveTargetComment = useCallback(async () => {
     if (!canEdit) {
@@ -1159,7 +1429,8 @@ export function TextUnitDetailPage() {
     if (
       !pendingValidationSave ||
       pendingValidationSave.canRetry ||
-      !pendingValidationSave.canBypass
+      !pendingValidationSave.canBypass ||
+      saveInFlightRef.current
     ) {
       return;
     }
@@ -1167,7 +1438,13 @@ export function TextUnitDetailPage() {
     const request = pendingValidationSave.request;
     setPendingValidationSave(null);
     setSaveErrorMessage(null);
-    void saveMutation.mutateAsync(request).catch(() => undefined);
+    saveInFlightRef.current = true;
+    void saveMutation
+      .mutateAsync(request)
+      .catch(() => undefined)
+      .finally(() => {
+        saveInFlightRef.current = false;
+      });
   }, [pendingValidationSave, saveMutation]);
 
   const handleRetryValidationSave = useCallback(() => {
@@ -1182,6 +1459,7 @@ export function TextUnitDetailPage() {
   }, [pendingValidationSave, saveRequestWithIntegrityCheck]);
 
   const handleDismissValidationDialog = useCallback(() => {
+    nextAfterSaveRef.current = null;
     setPendingValidationSave(null);
   }, []);
 
@@ -1410,16 +1688,24 @@ export function TextUnitDetailPage() {
       recordSuggestionUsed();
       setSaveErrorMessage(null);
     },
-    [deleteMutation.isPending, getAiSuggestionError, isEditorSaving, recordSuggestionUsed],
+    [
+      deleteMutation.isPending,
+      getAiSuggestionError,
+      isEditorSaving,
+      recordSuggestionUsed,
+      setDraftTarget,
+    ],
   );
 
-  const editorWarningMessage = isSourceOnly
-    ? 'Open this page with a target locale to edit a translation or view translation history.'
-    : !localeForEditing || !activeTextUnit
-      ? 'Missing locale. Open this page from a workbench row to enable editing.'
-      : !canEdit
-        ? 'You do not have permission to edit this locale.'
-        : null;
+  const editorWarningMessage = staleDraft
+    ? 'This translation changed while you had a draft. Your edits are retained. Copy them if needed, then Reset to load the current translation before saving.'
+    : isSourceOnly
+      ? 'Open this page with a target locale to edit a translation or view translation history.'
+      : !localeForEditing || !activeTextUnit
+        ? 'Missing locale. Open this page from a workbench row to enable editing.'
+        : !canEdit
+          ? 'You do not have permission to edit this locale.'
+          : null;
 
   if (tmTextUnitId === null) {
     return (
@@ -1433,8 +1719,20 @@ export function TextUnitDetailPage() {
     <TextUnitDetailPageView
       key={currentUser.username}
       tmTextUnitId={tmTextUnitId}
+      embedded={Boolean(embedded)}
+      presentation={embedded?.presentation}
+      navigationKey={embedded?.navigationKey}
+      autoFocus={embedded?.autoFocus}
+      onShowDetails={embedded?.onShowDetails}
+      onShowCompact={embedded?.onShowCompact}
+      onSaveAndNext={embedded?.onNext ? () => void saveDraft(undefined, true) : undefined}
       isSearchEnabled={isSearchEnabled}
       onBack={handleBack}
+      backLabel={
+        locationState?.from === '/content' || locationState?.from?.startsWith('/content?')
+          ? 'Back to content'
+          : undefined
+      }
       openInWorkbench={workbenchDetailContext !== null}
       editorInfo={{
         target: draftTarget,
@@ -1449,7 +1747,7 @@ export function TextUnitDetailPage() {
         isSaving: isEditorSaving,
         isDeleting: deleteMutation.isPending,
         mf2ErrorCount,
-        errorMessage: saveErrorMessage,
+        errorMessage: saveErrorMessage ?? editorDraft.operationError,
         warningMessage: editorWarningMessage,
       }}
       visibleTextEditor={{

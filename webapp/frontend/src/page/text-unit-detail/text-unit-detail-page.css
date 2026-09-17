@@ -2,6 +2,102 @@
   background: var(--color-surface);
 }
 
+.text-unit-detail-page--embedded {
+  min-width: 0;
+  height: 100%;
+}
+
+.text-unit-detail-page--embedded .review-project-page__header {
+  padding-inline: var(--space-4);
+}
+
+.text-unit-detail-page--embedded .review-project-page__header-row {
+  display: flex;
+}
+
+.text-unit-detail-page--embedded .review-project-page__header-group--left {
+  width: 100%;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+
+.text-unit-detail-page__header-actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.text-unit-detail-page__header-action {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-2);
+}
+
+.text-unit-detail-page--embedded .review-project-page__header-group--stats,
+.text-unit-detail-page--embedded .review-project-page__header-group--meta,
+.text-unit-detail-page--embedded .text-unit-detail-page__header-context,
+.text-unit-detail-page--embedded
+  .text-unit-detail-page__side
+  .text-unit-detail-page__key-info-row:first-child {
+  display: none;
+}
+
+.text-unit-detail-page--embedded .text-unit-detail-page__content {
+  padding: var(--space-4);
+}
+
+.text-unit-detail-page--embedded .text-unit-detail-page__layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.text-unit-detail-page__embedded-source {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.text-unit-detail-page__draft-hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.text-unit-detail-page--compact {
+  min-height: 0;
+}
+
+.text-unit-detail-page--embedded .review-project-page__header {
+  padding: var(--space-3) var(--space-4);
+}
+
+.text-unit-detail-page--embedded .review-project-page__header-name {
+  height: auto;
+  box-shadow: none;
+  font-size: var(--font-size-sm);
+}
+
+.text-unit-detail-page--embedded .text-unit-detail-page__editor-actions {
+  flex-wrap: wrap;
+}
+
+.text-unit-detail-page--compact .text-unit-detail-page__button {
+  min-height: 2rem;
+}
+
+.text-unit-detail-page__embedded-source .text-unit-detail-page__key-info-text {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.text-unit-detail-page--embedded .text-unit-detail-page__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  letter-spacing: normal;
+}
+
 .text-unit-detail-page__open-workbench {
   width: auto;
   padding-inline: var(--space-4);

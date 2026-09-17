@@ -100,6 +100,7 @@ export type Mf2TranslationEditorProps = {
   onLocaleChange?: (locale: string) => void;
   onModeChange?: (mode: Mf2EditorMode) => void;
   onKeyDown?: (event: ReactKeyboardEvent<HTMLElement>) => void;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
   onSubmit?: () => void;
   onTargetChange?: (target: string) => void;
   readOnly?: boolean;
@@ -149,6 +150,7 @@ export const Mf2TranslationEditor = forwardRef<
     onLocaleChange,
     onModeChange,
     onKeyDown,
+    onEscapeKeyDown,
     onSubmit,
     onTargetChange,
     readOnly = false,
@@ -638,6 +640,7 @@ export const Mf2TranslationEditor = forwardRef<
                           marksMode={marksMode}
                           minLines={activeEditorMinLines}
                           onChange={updateActivePattern}
+                          onEscapeKeyDown={onEscapeKeyDown}
                           onNextForm={() => moveActiveForm(1)}
                           onPreviousForm={() => moveActiveForm(-1)}
                           onSubmit={onSubmit}
@@ -1029,15 +1032,16 @@ function EditorControlDisclosure({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
+      event.stopPropagation();
       onOpenChange(false);
       onRestoreFocus();
     };
 
     window.addEventListener('pointerdown', handlePointerDown, true);
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
     return () => {
       window.removeEventListener('pointerdown', handlePointerDown, true);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [onOpenChange, onRestoreFocus, open]);
 

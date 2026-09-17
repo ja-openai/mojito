@@ -92,6 +92,8 @@ export type TextUnitSearchRequest = {
 };
 
 export type SaveTextUnitRequest = {
+  // Omission preserves legacy writes; null requires that no current translation exists.
+  expectedVariantId?: number | null;
   reviewedVariantId?: number;
   feedbackOperationId?: string;
   reviewFeedback?: ReviewerFeedback;

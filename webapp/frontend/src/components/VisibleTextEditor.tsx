@@ -2557,18 +2557,21 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       };
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
           setActiveIcuFormGroupKey(null);
           setExactValueInsertionId(null);
           setExactValueDraft('');
           setExactValueError(null);
+          viewRef.current?.focus();
         }
       };
 
       window.addEventListener('pointerdown', handlePointerDown, true);
-      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keydown', handleKeyDown, true);
       return () => {
         window.removeEventListener('pointerdown', handlePointerDown, true);
-        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keydown', handleKeyDown, true);
       };
     }, [activeIcuFormGroupKey]);
     useEffect(() => {

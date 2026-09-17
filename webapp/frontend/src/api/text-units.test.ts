@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { importTextUnitsBatch, searchTextUnits } from './text-units';
+import { importTextUnitsBatch, saveTextUnit, searchTextUnits } from './text-units';
 
 function mockSearchResponse() {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -24,6 +24,36 @@ function getPostedBody(fetchMock: ReturnType<typeof vi.fn>) {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+});
+
+describe('saveTextUnit', () => {
+  it.each([null, 30])(
+    'preserves the explicit expected variant %s in the JSON request',
+    async (id) => {
+      const fetchMock = mockSearchResponse();
+      await saveTextUnit({
+        tmTextUnitId: 3,
+        localeId: 17,
+        target: 'Translation',
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+        expectedVariantId: id,
+      });
+      expect(getPostedBody(fetchMock)).toHaveProperty('expectedVariantId', id);
+    },
+  );
+
+  it('omits expectedVariantId for unchanged legacy callers', async () => {
+    const fetchMock = mockSearchResponse();
+    await saveTextUnit({
+      tmTextUnitId: 3,
+      localeId: 17,
+      target: 'Translation',
+      status: 'APPROVED',
+      includedInLocalizedFile: true,
+    });
+    expect(getPostedBody(fetchMock)).not.toHaveProperty('expectedVariantId');
+  });
 });
 
 describe('searchTextUnits', () => {

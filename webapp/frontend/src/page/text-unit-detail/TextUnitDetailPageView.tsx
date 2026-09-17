@@ -1,7 +1,15 @@
 import '../review-project/review-project-page.css';
 import './text-unit-detail-page.css';
 
-import { type ComponentProps, type ReactNode, useEffect, useState } from 'react';
+import {
+  type ComponentProps,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Link } from 'react-router-dom';
 
 import type { AiReviewSuggestion } from '../../api/ai-review';
@@ -25,6 +33,7 @@ import {
   type TextUnitHistoryTimelineComment as TextUnitDetailHistoryComment,
   type TextUnitHistoryTimelineEntry as TextUnitDetailHistoryRow,
 } from '../../components/TextUnitHistoryTimeline';
+import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
 import { TranslationSearchPanel } from '../../components/TranslationSearchPanel';
 import { TranslationTextEditor } from '../../components/TranslationTextEditor';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
@@ -71,8 +80,16 @@ const formatGlossaryMetadataValue = (value?: string | null) =>
 
 type TextUnitDetailPageViewProps = {
   tmTextUnitId: number;
+  embedded?: boolean;
+  presentation?: 'compact' | 'full';
+  onShowDetails?: () => void;
+  onShowCompact?: () => void;
+  onSaveAndNext?: () => void;
+  navigationKey?: string | number;
+  autoFocus?: boolean;
   isSearchEnabled: boolean;
   onBack: () => void;
+  backLabel?: string;
   openInWorkbench?: boolean;
   editorInfo: {
     target: string;
@@ -180,8 +197,16 @@ type TextUnitDetailPageViewProps = {
 
 export function TextUnitDetailPageView({
   tmTextUnitId,
+  embedded = false,
+  presentation = 'full',
+  onShowDetails,
+  onShowCompact,
+  onSaveAndNext,
+  navigationKey,
+  autoFocus = true,
   isSearchEnabled,
   onBack,
+  backLabel = 'Back to workbench',
   openInWorkbench = false,
   editorInfo,
   visibleTextEditor,
@@ -251,6 +276,25 @@ export function TextUnitDetailPageView({
   onConfirmDiscard,
   onDismissDiscardDialog,
 }: TextUnitDetailPageViewProps) {
+  const isCompact = embedded && presentation === 'compact';
+  const editorRootRef = useRef<HTMLDivElement>(null);
+  const editorHandleRef = useRef<TranslationEditorHandle | null>(null);
+  const setEditorHandle = useCallback((editor: TranslationEditorHandle | null) => {
+    editorHandleRef.current = editor;
+  }, []);
+  const focusedEditorRef = useRef<string | null>(null);
+  const focusKey = `${tmTextUnitId}:${previewLocale}:${navigationKey ?? ''}`;
+  useEffect(() => {
+    if (!autoFocus || !embedded || !editorInfo.canEdit || focusedEditorRef.current === focusKey)
+      return;
+    const control = editorRootRef.current?.querySelector<HTMLElement>(
+      '.text-unit-detail-page__editor-field textarea:not(:disabled), .text-unit-detail-page__editor-field [contenteditable="true"]',
+    );
+    if (control) {
+      control.focus({ preventScroll: true });
+      if (document.activeElement === control) focusedEditorRef.current = focusKey;
+    }
+  }, [autoFocus, embedded, editorInfo.canEdit, focusKey]);
   const isMf2 = !editorInfo.isSourceOnly && isMf2Message(keyInfo);
   const canSaveEditor =
     editorInfo.canEdit &&
@@ -258,6 +302,23 @@ export function TextUnitDetailPageView({
     !editorInfo.isSaving &&
     !editorInfo.isDeleting &&
     editorInfo.mf2ErrorCount === 0;
+  const canSaveAndNext =
+    onSaveAndNext != null &&
+    !targetCommentEditor.isEditing &&
+    !editorInfo.isSourceOnly &&
+    !editorInfo.isSaving &&
+    !editorInfo.isDeleting &&
+    (!editorInfo.isDirty || canSaveEditor);
+  const handleEmbeddedEscape = (event: KeyboardEvent | ReactKeyboardEvent<HTMLElement>) => {
+    const nativeEvent = 'nativeEvent' in event ? event.nativeEvent : event;
+    if (!embedded || nativeEvent.isComposing || event.repeat || event.defaultPrevented) return;
+    if (showValidationDialog || showDeleteDialog || showDiscardDialog) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      onBack();
+    }
+  };
   const glossaryTerm = glossaryTermMetadata?.term ?? null;
   const glossaryTermHref = glossaryTermMetadata
     ? `/glossaries/${glossaryTermMetadata.glossaryId}${
@@ -283,36 +344,77 @@ export function TextUnitDetailPageView({
     setIsSourceScreenshotsCollapsed(false);
   }, [tmTextUnitId, sourceScreenshots.length]);
 
+  const headerNavigationButton = (
+    <button
+      type="button"
+      className={`review-project-page__header-back-link${embedded ? ' text-unit-detail-page__header-action' : openInWorkbench ? ' text-unit-detail-page__open-workbench' : ''}`}
+      onClick={onBack}
+      aria-label={embedded ? 'Close editor' : openInWorkbench ? 'Open in Workbench' : backLabel}
+      title={embedded ? 'Close editor' : openInWorkbench ? 'Open in Workbench' : backLabel}
+    >
+      <svg
+        className="review-project-page__header-back-icon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d={embedded ? 'M6 6l12 12M18 6L6 18' : 'M20 12H6m0 0l5-5m-5 5l5 5'}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {!embedded && openInWorkbench ? <span>Open in Workbench</span> : null}
+    </button>
+  );
+
+  const changePlacement = isCompact ? onShowDetails : onShowCompact;
+  const placementLabel = isCompact ? 'Open side panel' : 'Edit inline';
+
+  const icuPreview =
+    !isCompact && !editorInfo.isSourceOnly && !isMf2 ? (
+      <IcuPreviewSection
+        sourceMessage={keyInfo.source}
+        targetMessage={editorInfo.target}
+        targetLocale={previewLocale}
+        mode={icuPreviewMode}
+        isCollapsed={isIcuPreviewCollapsed}
+        onToggleCollapsed={onToggleIcuPreviewCollapsed}
+        onChangeMode={onChangeIcuPreviewMode}
+        className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--icu-inline"
+        titleClassName="text-unit-detail-page__section-title"
+      />
+    ) : null;
+
   return (
-    <div className="review-project-page text-unit-detail-page">
+    <div
+      ref={editorRootRef}
+      className={`review-project-page text-unit-detail-page${embedded ? ' text-unit-detail-page--embedded' : ''}${isCompact ? ' text-unit-detail-page--compact' : ''}`}
+      onKeyDownCapture={(event) => {
+        if (!embedded || event.nativeEvent.isComposing || event.repeat) return;
+        if (showValidationDialog || showDeleteDialog || showDiscardDialog) return;
+        if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+          event.preventDefault();
+          event.stopPropagation();
+          if (event.shiftKey) {
+            if (canSaveAndNext) onSaveAndNext?.();
+          } else if (canSaveEditor) onSaveEditor();
+        }
+      }}
+      onKeyDown={handleEmbeddedEscape}
+    >
       <header className="review-project-page__header">
         <div className="review-project-page__header-row">
           <div className="review-project-page__header-group review-project-page__header-group--left">
-            <button
-              type="button"
-              className={`review-project-page__header-back-link${openInWorkbench ? ' text-unit-detail-page__open-workbench' : ''}`}
-              onClick={onBack}
-              aria-label={openInWorkbench ? 'Open in Workbench' : 'Back to workbench'}
-              title={openInWorkbench ? 'Open in Workbench' : 'Back to workbench'}
-            >
-              <svg
-                className="review-project-page__header-back-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  d="M20 12H6m0 0l5-5m-5 5l5 5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {openInWorkbench ? <span>Open in Workbench</span> : null}
-            </button>
-            <span className="review-project-page__header-name">Text unit #{tmTextUnitId}</span>
+            {!embedded ? headerNavigationButton : null}
+            <span className="review-project-page__header-name">
+              {embedded
+                ? `${isCompact ? 'Quick edit' : 'Translation'} · ${keyInfo.locale}`
+                : `Text unit #${tmTextUnitId}`}
+            </span>
             <div className="text-unit-detail-page__header-context">
               <Pill>{keyInfo.locale}</Pill>
               <span
@@ -322,6 +424,44 @@ export function TextUnitDetailPageView({
                 {keyInfo.repositoryName}
               </span>
             </div>
+            {embedded ? (
+              <div className="text-unit-detail-page__header-actions">
+                {changePlacement ? (
+                  <button
+                    type="button"
+                    className="review-project-page__header-back-link text-unit-detail-page__header-action"
+                    aria-label={placementLabel}
+                    title={placementLabel}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      changePlacement();
+                      editorHandleRef.current?.focus();
+                    }}
+                  >
+                    <svg
+                      className="review-project-page__header-back-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        d={
+                          isCompact
+                            ? 'M14 4h6v6m0-6-7 7M10 20H4v-6m0 6 7-7'
+                            : 'M20 4l-7 7m0-6v6h6M4 20l7-7m-6 0h6v6'
+                        }
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                ) : null}
+                {headerNavigationButton}
+              </div>
+            ) : null}
           </div>
           <div className="review-project-page__header-group review-project-page__header-group--stats" />
           <div className="review-project-page__header-group review-project-page__header-group--meta" />
@@ -331,17 +471,25 @@ export function TextUnitDetailPageView({
       <div className="text-unit-detail-page__content">
         <div className="text-unit-detail-page__layout">
           <section className="text-unit-detail-page__panel text-unit-detail-page__panel--editor">
+            {embedded ? (
+              <div className="text-unit-detail-page__embedded-source">
+                <h2 className="text-unit-detail-page__title">Source</h2>
+                <pre className="text-unit-detail-page__key-info-text">{keyInfo.source}</pre>
+              </div>
+            ) : null}
             <h1 className="text-unit-detail-page__title">
               {editorInfo.isSourceOnly ? 'Source' : 'Translation'}
             </h1>
 
             <div className="text-unit-detail-page__editor-field">
-              {isMf2 && visibleTextEditor.enabled ? (
+              {isMf2 && (embedded || visibleTextEditor.enabled) ? (
                 <Mf2TranslationEditor
+                  ref={setEditorHandle}
                   documentKey={`${tmTextUnitId}:${previewLocale}`}
                   locale={previewLocale}
                   marksMode={visibleTextEditor.marksMode}
                   onChangeMarksMode={visibleTextEditor.onChangeMarksMode}
+                  onEscapeKeyDown={handleEmbeddedEscape}
                   onSubmit={canSaveEditor ? onSaveEditor : undefined}
                   onTargetChange={onChangeTarget}
                   readOnly={!editorInfo.canEdit || editorInfo.isSaving || editorInfo.isDeleting}
@@ -354,12 +502,14 @@ export function TextUnitDetailPageView({
                 />
               ) : (
                 <TranslationTextEditor
+                  ref={setEditorHandle}
                   assisted={visibleTextEditor.enabled && !isMf2}
                   ariaLabel={editorInfo.isSourceOnly ? 'Source text' : 'Translation'}
                   className="text-unit-detail-page__editor-textarea"
                   source={keyInfo.source}
                   value={editorInfo.target}
                   onChange={onChangeTarget}
+                  onKeyDown={handleEmbeddedEscape}
                   controlBar={{
                     marksMode: visibleTextEditor.marksMode,
                     onChangeMarksMode: visibleTextEditor.onChangeMarksMode,
@@ -407,27 +557,33 @@ export function TextUnitDetailPageView({
                   />
                 </div>
                 <div className="text-unit-detail-page__editor-actions">
-                  <button
-                    type="button"
-                    className="text-unit-detail-page__button"
-                    onClick={onRequestDeleteEditor}
-                    disabled={
-                      !editorInfo.canDelete ||
-                      editorInfo.isSaving ||
-                      editorInfo.isDeleting ||
-                      !editorInfo.canEdit
-                    }
-                  >
-                    {editorInfo.isDeleting ? 'Deleting…' : 'Delete'}
-                  </button>
-                  <button
-                    type="button"
-                    className="text-unit-detail-page__button"
-                    onClick={onResetEditor}
-                    disabled={!editorInfo.isDirty || editorInfo.isSaving || editorInfo.isDeleting}
-                  >
-                    Reset
-                  </button>
+                  {!isCompact ? (
+                    <>
+                      <button
+                        type="button"
+                        className="text-unit-detail-page__button"
+                        onClick={onRequestDeleteEditor}
+                        disabled={
+                          !editorInfo.canDelete ||
+                          editorInfo.isSaving ||
+                          editorInfo.isDeleting ||
+                          !editorInfo.canEdit
+                        }
+                      >
+                        {editorInfo.isDeleting ? 'Deleting…' : 'Delete'}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-unit-detail-page__button"
+                        onClick={onResetEditor}
+                        disabled={
+                          !editorInfo.isDirty || editorInfo.isSaving || editorInfo.isDeleting
+                        }
+                      >
+                        Reset
+                      </button>
+                    </>
+                  ) : null}
                   <button
                     type="button"
                     className="text-unit-detail-page__button text-unit-detail-page__button--primary"
@@ -436,25 +592,35 @@ export function TextUnitDetailPageView({
                   >
                     {editorInfo.isSaving ? 'Saving…' : 'Save'}
                   </button>
+                  {embedded ? (
+                    <button
+                      type="button"
+                      className="text-unit-detail-page__button"
+                      onClick={onSaveAndNext}
+                      disabled={!canSaveAndNext}
+                      title={
+                        targetCommentEditor.isEditing
+                          ? 'Save or cancel the target comment before moving on.'
+                          : onSaveAndNext == null
+                            ? 'No next passage in this file'
+                            : undefined
+                      }
+                    >
+                      {editorInfo.isDirty ? 'Save & next' : 'Next'}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             ) : null}
-
-            {!editorInfo.isSourceOnly && !isMf2 ? (
-              <IcuPreviewSection
-                sourceMessage={keyInfo.source}
-                targetMessage={editorInfo.target}
-                targetLocale={previewLocale}
-                mode={icuPreviewMode}
-                isCollapsed={isIcuPreviewCollapsed}
-                onToggleCollapsed={onToggleIcuPreviewCollapsed}
-                onChangeMode={onChangeIcuPreviewMode}
-                className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--icu-inline"
-                titleClassName="text-unit-detail-page__section-title"
-              />
+            {embedded && editorInfo.isDirty ? (
+              <p className="text-unit-detail-page__draft-hint" role="status">
+                Unsaved draft · kept when you close or switch passages.
+              </p>
             ) : null}
 
-            {!editorInfo.isSourceOnly ? (
+            {!embedded ? icuPreview : null}
+
+            {!isCompact && !editorInfo.isSourceOnly ? (
               <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--ai-inline">
                 <SectionHeader
                   title="AI Chat Review"
@@ -497,7 +663,9 @@ export function TextUnitDetailPageView({
               </section>
             ) : null}
 
-            {editFeedback && !editorInfo.isSourceOnly ? (
+            {embedded ? icuPreview : null}
+
+            {!isCompact && editFeedback && !editorInfo.isSourceOnly ? (
               <ReviewEditFeedback
                 {...editFeedback}
                 disabled={
@@ -521,192 +689,198 @@ export function TextUnitDetailPageView({
             ) : null}
           </section>
 
-          <div className="text-unit-detail-page__side">
-            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
-              <dl className="text-unit-detail-page__key-info">
-                <div className="text-unit-detail-page__key-info-row">
-                  <dt className="text-unit-detail-page__key-info-label">
-                    <span>Source</span>
-                    {glossaryTermHref ? (
-                      <Link
-                        className="text-unit-detail-page__source-affordance"
-                        to={glossaryTermHref}
-                      >
-                        <Pill>Glossary term</Pill>
-                      </Link>
-                    ) : null}
-                  </dt>
-                  <dd>
-                    {isMf2 && visibleTextEditor.enabled ? (
-                      <Mf2DocumentPreview
-                        marksMode={visibleTextEditor.marksMode}
-                        value={keyInfo.source}
-                      />
-                    ) : (
+          {!isCompact ? (
+            <div className="text-unit-detail-page__side">
+              <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+                <dl className="text-unit-detail-page__key-info">
+                  <div className="text-unit-detail-page__key-info-row">
+                    <dt className="text-unit-detail-page__key-info-label">
+                      <span>Source</span>
+                      {glossaryTermHref ? (
+                        <Link
+                          className="text-unit-detail-page__source-affordance"
+                          to={glossaryTermHref}
+                        >
+                          <Pill>Glossary term</Pill>
+                        </Link>
+                      ) : null}
+                    </dt>
+                    <dd>
+                      {isMf2 && visibleTextEditor.enabled ? (
+                        <Mf2DocumentPreview
+                          marksMode={visibleTextEditor.marksMode}
+                          value={keyInfo.source}
+                        />
+                      ) : (
+                        <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
+                          {keyInfo.source}
+                        </pre>
+                      )}
+                    </dd>
+                  </div>
+                  <div className="text-unit-detail-page__key-info-row">
+                    <dt>Comment</dt>
+                    <dd>
                       <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
-                        {keyInfo.source}
-                      </pre>
-                    )}
-                  </dd>
-                </div>
-                <div className="text-unit-detail-page__key-info-row">
-                  <dt>Comment</dt>
-                  <dd>
-                    <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
-                      {glossaryTermComment}
-                    </pre>
-                  </dd>
-                </div>
-                {sourceScreenshots.length > 0 ? (
-                  <div className="text-unit-detail-page__key-info-row">
-                    <dt className="text-unit-detail-page__key-info-label">
-                      <span>Screenshots</span>
-                      <button
-                        type="button"
-                        className="text-unit-detail-page__inline-toggle"
-                        onClick={() => setIsSourceScreenshotsCollapsed((current) => !current)}
-                        aria-expanded={!isSourceScreenshotsCollapsed}
-                      >
-                        {isSourceScreenshotsCollapsed ? 'Show' : 'Hide'}
-                      </button>
-                    </dt>
-                    <dd>
-                      {isSourceScreenshotsCollapsed ? null : (
-                        <TextUnitScreenshotThumbnails screenshots={sourceScreenshots} />
-                      )}
-                    </dd>
-                  </div>
-                ) : null}
-                {glossaryPartOfSpeech ? (
-                  <div className="text-unit-detail-page__key-info-row">
-                    <dt>POS</dt>
-                    <dd>
-                      <pre className="text-unit-detail-page__key-info-text">
-                        {glossaryPartOfSpeech}
+                        {glossaryTermComment}
                       </pre>
                     </dd>
                   </div>
-                ) : null}
-                {glossaryTermType ? (
-                  <div className="text-unit-detail-page__key-info-row">
-                    <dt>Type</dt>
-                    <dd>
-                      <pre className="text-unit-detail-page__key-info-text">{glossaryTermType}</pre>
-                    </dd>
-                  </div>
-                ) : null}
-                {glossaryTermScreenshots.length > 0 ? (
-                  <div className="text-unit-detail-page__key-info-row">
-                    <dt className="text-unit-detail-page__key-info-label">
-                      <span>Glossary screenshots</span>
-                      <button
-                        type="button"
-                        className="text-unit-detail-page__inline-toggle"
-                        onClick={() => setIsGlossaryScreenshotsCollapsed((current) => !current)}
-                        aria-expanded={!isGlossaryScreenshotsCollapsed}
-                      >
-                        {isGlossaryScreenshotsCollapsed ? 'Show' : 'Hide'}
-                      </button>
-                    </dt>
-                    <dd>
-                      {isGlossaryScreenshotsCollapsed ? null : (
-                        <GlossaryTermEvidenceThumbnails evidence={glossaryTermScreenshots} />
-                      )}
-                    </dd>
-                  </div>
-                ) : null}
-                {!glossaryTermMetadata ? (
-                  <div className="text-unit-detail-page__key-info-row">
-                    <dt>Id</dt>
-                    <dd>
-                      <pre className="text-unit-detail-page__key-info-text">{keyInfo.stringId}</pre>
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
-            </section>
+                  {sourceScreenshots.length > 0 ? (
+                    <div className="text-unit-detail-page__key-info-row">
+                      <dt className="text-unit-detail-page__key-info-label">
+                        <span>Screenshots</span>
+                        <button
+                          type="button"
+                          className="text-unit-detail-page__inline-toggle"
+                          onClick={() => setIsSourceScreenshotsCollapsed((current) => !current)}
+                          aria-expanded={!isSourceScreenshotsCollapsed}
+                        >
+                          {isSourceScreenshotsCollapsed ? 'Show' : 'Hide'}
+                        </button>
+                      </dt>
+                      <dd>
+                        {isSourceScreenshotsCollapsed ? null : (
+                          <TextUnitScreenshotThumbnails screenshots={sourceScreenshots} />
+                        )}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {glossaryPartOfSpeech ? (
+                    <div className="text-unit-detail-page__key-info-row">
+                      <dt>POS</dt>
+                      <dd>
+                        <pre className="text-unit-detail-page__key-info-text">
+                          {glossaryPartOfSpeech}
+                        </pre>
+                      </dd>
+                    </div>
+                  ) : null}
+                  {glossaryTermType ? (
+                    <div className="text-unit-detail-page__key-info-row">
+                      <dt>Type</dt>
+                      <dd>
+                        <pre className="text-unit-detail-page__key-info-text">
+                          {glossaryTermType}
+                        </pre>
+                      </dd>
+                    </div>
+                  ) : null}
+                  {glossaryTermScreenshots.length > 0 ? (
+                    <div className="text-unit-detail-page__key-info-row">
+                      <dt className="text-unit-detail-page__key-info-label">
+                        <span>Glossary screenshots</span>
+                        <button
+                          type="button"
+                          className="text-unit-detail-page__inline-toggle"
+                          onClick={() => setIsGlossaryScreenshotsCollapsed((current) => !current)}
+                          aria-expanded={!isGlossaryScreenshotsCollapsed}
+                        >
+                          {isGlossaryScreenshotsCollapsed ? 'Show' : 'Hide'}
+                        </button>
+                      </dt>
+                      <dd>
+                        {isGlossaryScreenshotsCollapsed ? null : (
+                          <GlossaryTermEvidenceThumbnails evidence={glossaryTermScreenshots} />
+                        )}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {!glossaryTermMetadata ? (
+                    <div className="text-unit-detail-page__key-info-row">
+                      <dt>Id</dt>
+                      <dd>
+                        <pre className="text-unit-detail-page__key-info-text">
+                          {keyInfo.stringId}
+                        </pre>
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </section>
 
-            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
-              <SectionHeader
-                title="Glossary"
-                expanded={!isGlossaryCollapsed}
-                onToggle={onToggleGlossaryCollapsed}
-                summary={isGlossaryLoading ? 'Loading…' : null}
-              />
-              {!isGlossaryCollapsed ? (
-                <GlossaryMatchesPanel
-                  matches={glossaryMatches}
-                  isLoading={isGlossaryLoading}
-                  errorMessage={glossaryErrorMessage}
-                  currentTarget={editorInfo.target}
-                  showHeader={false}
+              <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+                <SectionHeader
+                  title="Glossary"
+                  expanded={!isGlossaryCollapsed}
+                  onToggle={onToggleGlossaryCollapsed}
+                  summary={isGlossaryLoading ? 'Loading…' : null}
+                />
+                {!isGlossaryCollapsed ? (
+                  <GlossaryMatchesPanel
+                    matches={glossaryMatches}
+                    isLoading={isGlossaryLoading}
+                    errorMessage={glossaryErrorMessage}
+                    currentTarget={editorInfo.target}
+                    showHeader={false}
+                  />
+                ) : null}
+              </section>
+
+              {isSearchEnabled && !editorInfo.isSourceOnly ? (
+                <TextUnitSearchSection
+                  key={`${tmTextUnitId}:${keyInfo.locale}`}
+                  localeTag={keyInfo.locale}
                 />
               ) : null}
-            </section>
 
-            {isSearchEnabled && !editorInfo.isSourceOnly ? (
-              <TextUnitSearchSection
-                key={`${tmTextUnitId}:${keyInfo.locale}`}
-                localeTag={keyInfo.locale}
-              />
-            ) : null}
-
-            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
-              <SectionHeader
-                title={historyTitle}
-                expanded={!isHistoryCollapsed}
-                onToggle={onToggleHistoryCollapsed}
-              />
-              {!isHistoryCollapsed ? (
-                <TextUnitHistoryTimeline
-                  isLoading={isHistoryLoading}
-                  errorMessage={historyErrorMessage}
-                  missingLocale={historyMissingLocale}
-                  entries={historyRows}
-                  showDeletedEntry={showDeletedHistoryEntry}
-                  initialDate={historyInitialDate}
+              <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+                <SectionHeader
+                  title={historyTitle}
+                  expanded={!isHistoryCollapsed}
+                  onToggle={onToggleHistoryCollapsed}
                 />
-              ) : null}
-            </section>
+                {!isHistoryCollapsed ? (
+                  <TextUnitHistoryTimeline
+                    isLoading={isHistoryLoading}
+                    errorMessage={historyErrorMessage}
+                    missingLocale={historyMissingLocale}
+                    entries={historyRows}
+                    showDeletedEntry={showDeletedHistoryEntry}
+                    initialDate={historyInitialDate}
+                  />
+                ) : null}
+              </section>
 
-            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
-              <SectionHeader
-                title="Metadata"
-                expanded={!isMetaCollapsed}
-                onToggle={onToggleMetaCollapsed}
-              />
+              <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+                <SectionHeader
+                  title="Metadata"
+                  expanded={!isMetaCollapsed}
+                  onToggle={onToggleMetaCollapsed}
+                />
 
-              {!isMetaCollapsed ? (
-                isMetaLoading ? (
-                  <div className="text-unit-detail-page__state">
-                    <span className="spinner spinner--md" aria-hidden />
-                    <span>Loading text unit details…</span>
-                  </div>
-                ) : metaErrorMessage ? (
-                  <div className="text-unit-detail-page__state text-unit-detail-page__state--error">
-                    {metaErrorMessage}
-                  </div>
-                ) : (
-                  <div className="text-unit-detail-page__sections">
-                    {metaSections.map((section) => (
-                      <MetaSection
-                        key={section.title}
-                        title={section.title}
-                        rows={section.rows}
-                        targetCommentEditor={targetCommentEditor}
-                      />
-                    ))}
+                {!isMetaCollapsed ? (
+                  isMetaLoading ? (
+                    <div className="text-unit-detail-page__state">
+                      <span className="spinner spinner--md" aria-hidden />
+                      <span>Loading text unit details…</span>
+                    </div>
+                  ) : metaErrorMessage ? (
+                    <div className="text-unit-detail-page__state text-unit-detail-page__state--error">
+                      {metaErrorMessage}
+                    </div>
+                  ) : (
+                    <div className="text-unit-detail-page__sections">
+                      {metaSections.map((section) => (
+                        <MetaSection
+                          key={section.title}
+                          title={section.title}
+                          rows={section.rows}
+                          targetCommentEditor={targetCommentEditor}
+                        />
+                      ))}
 
-                    {metaWarningMessage ? (
-                      <div className="text-unit-detail-page__state text-unit-detail-page__state--warning">
-                        {metaWarningMessage}
-                      </div>
-                    ) : null}
-                  </div>
-                )
-              ) : null}
-            </section>
-          </div>
+                      {metaWarningMessage ? (
+                        <div className="text-unit-detail-page__state text-unit-detail-page__state--warning">
+                          {metaWarningMessage}
+                        </div>
+                      ) : null}
+                    </div>
+                  )
+                ) : null}
+              </section>
+            </div>
+          ) : null}
         </div>
       </div>
 
