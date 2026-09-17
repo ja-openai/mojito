@@ -55,6 +55,27 @@ l10n.blob-storage.routing.prefixes.bulk-import-lineage=azure
 
 `StructuredBlobStorage` uses semantic prefixes, not repository shape, to choose a backend. This lets control-plane data such as `pollable-task` remain DB-backed while large artifact-like prefixes use Azure or S3.
 
+### MDX source payloads
+
+MDX document uploads use the `asset-content` route with permanent retention.
+`AssetContentBlobStorage` requires an external backend: Azure, S3, or the composite
+Azure migration backend whose writes go exclusively to Azure. A database route
+is rejected before writing. Provider failures propagate without a database-write
+fallback. Configure the route explicitly when the default backend is database:
+
+```properties
+l10n.blob-storage.routing.prefixes.asset-content=azure
+```
+
+The key convention is
+`asset_content/v1/{assetId}/{branchId}/{source|catalog}/{contentMd5}`. Review derives
+the source key from the successful branch extraction, without retaining or querying
+an `AssetContent` row. The existing upload metadata still supports extraction jobs,
+with `content` empty for MDX. No new locator field or schema migration is needed.
+Segmentation still produces ordinary Mojito text units. This is not a migration of
+older inline payloads for other asset formats. See
+[MDX preview and document review](038-mdx-document-review.md) for lookup and retention.
+
 ### AI translation report prefix compatibility
 
 New no-batch AI translation report indexes and locale reports use the correctly spelled

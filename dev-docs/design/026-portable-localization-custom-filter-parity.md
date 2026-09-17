@@ -472,7 +472,9 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
 ## Compatibility boundary
 
 Existing `push`, `pull`, localized-asset `import`, and client-side `extract`
-support an explicit, default-Okapi `--converter portable`. `push`, `pull`, and
+support an explicit, default-Okapi `--converter portable`. Static MDX is the
+exception: its explicit `-ft MDX` file type uses portable conversion automatically;
+see [MDX document review](038-mdx-document-review.md). `push`, `pull`, and
 `import` select the current backend extraction and translated-output services;
 `extract` selects the independent converter inside the CLI process, with
 `extract-diff` and `extraction-check` consuming the resulting local extraction
