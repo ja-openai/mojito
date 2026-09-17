@@ -21,7 +21,9 @@ public final class MessageFormatDetector {
   }
 
   public static String detect(String source, String assetPath) {
-    if (assetPath != null && assetPath.trim().toLowerCase(Locale.ROOT).endsWith(".mf2")) {
+    if (assetPath != null
+        && (assetPath.trim().toLowerCase(Locale.ROOT).endsWith(".mf2")
+            || assetPath.trim().toLowerCase(Locale.ROOT).endsWith(".mf2.json"))) {
       return MF2;
     }
     if (source == null) {

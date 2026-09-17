@@ -6,6 +6,7 @@ import com.box.l10n.mojito.service.badtranslation.BadTranslationReviewProjectMat
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -16,6 +17,24 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 @RepositoryRestResource(exported = false)
 public interface ReviewProjectTextUnitRepository
     extends JpaRepository<ReviewProjectTextUnit, Long> {
+
+  @Query(
+      """
+      select new com.box.l10n.mojito.service.review.ReviewProjectDocumentTextUnit(
+        rptu.id, unit.id, unit.name,
+        case when length(unit.content) <= :maxSourceCharacters then unit.content else null end,
+        asset.id, asset.path, asset.repository.id)
+      from ReviewProjectTextUnit rptu
+      join rptu.tmTextUnit unit
+      join unit.asset asset
+      where rptu.reviewProject.id = :projectId
+        and (lower(asset.path) like '%.mdx' or lower(asset.path) like '%.mf2.json')
+      order by asset.path, rptu.id
+      """)
+  List<ReviewProjectDocumentTextUnit> findDocumentTextUnitsByProjectId(
+      @Param("projectId") Long projectId,
+      @Param("maxSourceCharacters") int maxSourceCharacters,
+      Pageable pageable);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(

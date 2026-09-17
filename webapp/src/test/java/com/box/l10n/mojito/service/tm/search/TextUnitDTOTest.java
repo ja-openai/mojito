@@ -70,12 +70,12 @@ public class TextUnitDTOTest {
   }
 
   @Test
-  public void doesNotInferMf2FromSimilarAssetSuffixes() {
+  public void recognizesExplicitMf2JsonCatalogsButNotSimilarSuffixes() {
     TextUnitDTO textUnitDTO = new TextUnitDTO();
 
     textUnitDTO.setSource("Hello");
     textUnitDTO.setAssetPath("catalogs/messages.mf2.json");
-    assertThat(textUnitDTO.getMessageFormat()).isNull();
+    assertThat(textUnitDTO.getMessageFormat()).isEqualTo("MF2");
 
     textUnitDTO.setAssetPath("catalogs/messages.mf20");
     assertThat(textUnitDTO.getMessageFormat()).isNull();
