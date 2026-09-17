@@ -27,15 +27,20 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.aspectj.AnnotationBeanConfigurerAspect;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.OutputCaptureRule;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.aspectj.AnnotationTransactionAspect;
 
 /**
  * Base class for CLI integration tests. Creates an in-memory instance of tomcat and setup the REST
@@ -70,9 +75,22 @@ public class CLITestBase extends IOTestBase {
 
   @Autowired TextUnitSearcher textUnitSearcher;
 
+  @Autowired private PlatformTransactionManager transactionManager;
+
+  @Autowired private ApplicationContext applicationContext;
+
   @Rule public OutputCaptureRule outputCapture = new OutputCaptureRule();
 
   @LocalServerPort int port;
+
+  @Before
+  public void useCurrentContextForAspects() {
+    // AspectJ aspects are singletons, while tests with different bean overrides have separate
+    // cached Spring contexts. Rebind the aspects before using this context's services.
+    AnnotationTransactionAspect.aspectOf().setTransactionManager(transactionManager);
+    AnnotationBeanConfigurerAspect.aspectOf()
+        .setBeanFactory(applicationContext.getAutowireCapableBeanFactory());
+  }
 
   @PostConstruct
   public void setPort() {

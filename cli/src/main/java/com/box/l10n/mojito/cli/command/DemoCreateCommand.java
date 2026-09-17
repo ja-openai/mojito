@@ -4,6 +4,8 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.Parameters;
 import com.box.l10n.mojito.cli.command.param.Param;
+import com.box.l10n.mojito.rest.client.LocaleClient;
+import com.box.l10n.mojito.rest.client.exception.LocaleNotFoundException;
 import com.box.l10n.mojito.rest.client.exception.ResourceNotCreatedException;
 import com.box.l10n.mojito.rest.entity.Repository;
 import com.box.l10n.mojito.rest.entity.RepositoryLocale;
@@ -60,6 +62,8 @@ public class DemoCreateCommand extends RepoCommand {
   @Autowired ContentDemo contentDemo;
 
   @Autowired CommandHelper commandHelper;
+
+  @Autowired LocaleClient localeClient;
 
   CommandDirectories commandDirectories;
 
@@ -161,12 +165,12 @@ public class DemoCreateCommand extends RepoCommand {
           repositoryClient.createRepository(
               nameParam,
               "",
-              null,
+              localeClient.getLocaleByBcp47Tag("en"),
               getRepositoryLocales(),
               extractIntegrityCheckersFromInput("properties:MESSAGE_FORMAT", false),
               null);
 
-    } catch (ParameterException | ResourceNotCreatedException rnce) {
+    } catch (ParameterException | ResourceNotCreatedException | LocaleNotFoundException rnce) {
       throw new CommandException(rnce.getMessage(), rnce);
     }
   }
@@ -175,27 +179,27 @@ public class DemoCreateCommand extends RepoCommand {
 
     List<String> encodedBcp47Tags = new ArrayList<>();
 
-    encodedBcp47Tags.add("da-DK");
-    encodedBcp47Tags.add("de-DE");
+    encodedBcp47Tags.add("da");
+    encodedBcp47Tags.add("de");
     encodedBcp47Tags.add("(en-GB)");
     encodedBcp47Tags.add("(en-CA)->en-GB");
     encodedBcp47Tags.add("(en-AU)->en-GB");
-    encodedBcp47Tags.add("es-ES");
-    encodedBcp47Tags.add("fi-FI");
-    encodedBcp47Tags.add("fr-FR");
-    encodedBcp47Tags.add("(fr-CA)->fr-FR");
-    encodedBcp47Tags.add("it-IT");
-    encodedBcp47Tags.add("ja-JP");
-    encodedBcp47Tags.add("ko-KR");
-    encodedBcp47Tags.add("nb-NO");
-    encodedBcp47Tags.add("nl-NL");
-    encodedBcp47Tags.add("pl-PL");
+    encodedBcp47Tags.add("es");
+    encodedBcp47Tags.add("fi");
+    encodedBcp47Tags.add("fr");
+    encodedBcp47Tags.add("(fr-CA)->fr");
+    encodedBcp47Tags.add("it");
+    encodedBcp47Tags.add("ja");
+    encodedBcp47Tags.add("ko");
+    encodedBcp47Tags.add("nb");
+    encodedBcp47Tags.add("nl");
+    encodedBcp47Tags.add("pl");
     encodedBcp47Tags.add("pt-BR");
-    encodedBcp47Tags.add("ru-RU");
-    encodedBcp47Tags.add("sv-SE");
-    encodedBcp47Tags.add("tr-TR");
-    encodedBcp47Tags.add("zh-CN");
-    encodedBcp47Tags.add("zh-TW");
+    encodedBcp47Tags.add("ru");
+    encodedBcp47Tags.add("sv");
+    encodedBcp47Tags.add("tr");
+    encodedBcp47Tags.add("zh-Hans");
+    encodedBcp47Tags.add("zh-Hant");
 
     return localeHelper.extractRepositoryLocalesFromInput(encodedBcp47Tags, false);
   }

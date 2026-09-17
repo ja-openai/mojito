@@ -27,6 +27,15 @@ This starts the server on [http://localhost:8080](http://localhost:8080).  You c
 
 It creates a new repository called `Demo1` in the server with some translations.  A resource bundle `demo.properties` is copied on the local directory `Demo1`.
 
+The original properties demo uses English source and language-only targets where
+appropriate: `da`, `de`, `es`, `fi`, `fr`, `it`, `ja`, `ko`, `nb`, `nl`, `pl`, `ru`,
+`sv`, and `tr`. It retains `pt-BR` for its Brazilian Portuguese translations,
+`zh-Hans`/`zh-Hant` for the two Chinese scripts, and the `en-GB`, `en-CA`, `en-AU`,
+and `fr-CA` variants to demonstrate locale inheritance. Canadian French inherits
+from `fr`; Canadian and Australian English inherit from `en-GB`.
+These defaults apply to newly created demo repositories; existing repositories
+are not changed.
+
 ![create demo repository](./images/create-demo.gif)
 
 For a small content demo with MDX pages, nested modules, and an MF2 catalogue, use
@@ -47,7 +56,7 @@ Content tab**. The generated README explains editing, review, and pull commands.
     cd Demo1
     mojito pull -r Demo1
 
-It goes into `Demo1` directory and generates the localized files. You can see the generated file with `cat demo_fr-FR.properties`.
+It goes into `Demo1` directory and generates the localized files. You can see the generated file with `cat demo_fr.properties`.
 
 ![create demo repository](./images/generate-localized.gif)
 
