@@ -16,6 +16,7 @@ import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.localtm.merger.BranchStateTextUnit;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractor;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractorTextUnit;
+import com.box.l10n.mojito.service.assetcontent.AssetContentService;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
@@ -31,7 +32,7 @@ public class AssetExtractionServicePortableSelectionTest {
 
   @Test
   public void portableMarkerIsStrippedBeforeParsingAssetContent() throws Exception {
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
 
     List<AssetExtractorTextUnit> textUnits =
         assetExtractionService.getExtractorTextUnitsForAssetContent(
@@ -47,7 +48,7 @@ public class AssetExtractionServicePortableSelectionTest {
 
   @Test
   public void portableExtractionAcceptsUtf16XmlAfterStringTransport() throws Exception {
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
     String utf16Declaration = ANDROID_STRINGS.replace("UTF-8", "UTF-16");
 
     List<AssetExtractorTextUnit> textUnits =
@@ -62,7 +63,7 @@ public class AssetExtractionServicePortableSelectionTest {
 
   @Test
   public void backendDefaultSelectsPortableWithoutChangingFilterOptions() throws Exception {
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
     assetExtractionService.portableConverter = true;
 
     List<AssetExtractorTextUnit> textUnits =
@@ -77,7 +78,7 @@ public class AssetExtractionServicePortableSelectionTest {
 
   @Test
   public void portableJsonDescriptionsContainDecodedJsonCharacters() throws Exception {
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
     String content =
         "{\"quoted\":{\"defaultMessage\":\"Hello\",\"description\":\"A \\\"quoted\\\" label\\nnext line\"}}";
 
@@ -98,7 +99,7 @@ public class AssetExtractionServicePortableSelectionTest {
 
   @Test
   public void legacyJsonCommentMigrationRequiresExactNameSourceAndEscapedComment() {
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
     assetExtractionService.objectMapper = new ObjectMapper();
     BranchStateTextUnit corrected =
         BranchStateTextUnit.builder()
@@ -121,7 +122,7 @@ public class AssetExtractionServicePortableSelectionTest {
 
   @Test
   public void legacyJsonCommentMigrationCanRetryAfterLegacyIdentityBecomesUnused() {
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
     assetExtractionService.objectMapper = new ObjectMapper();
     BranchStateTextUnit corrected =
         BranchStateTextUnit.builder()
@@ -143,7 +144,7 @@ public class AssetExtractionServicePortableSelectionTest {
 
   @Test
   public void legacyJsonCommentMigrationRejectsChangedSourceAmbiguousAndOrdinaryComments() {
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
     assetExtractionService.objectMapper = new ObjectMapper();
     BranchStateTextUnit corrected =
         BranchStateTextUnit.builder()
@@ -187,7 +188,7 @@ public class AssetExtractionServicePortableSelectionTest {
             "path/to/fake/source.xliff", "<xliff/>", null, null))
         .thenReturn(List.of());
 
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
     assetExtractionService.portableConverter = true;
     assetExtractionService.assetExtractor = assetExtractor;
 
@@ -202,7 +203,7 @@ public class AssetExtractionServicePortableSelectionTest {
   @Test
   public void extractedContentBypassesPortableAndOkapiExtraction() throws Exception {
     AssetExtractor assetExtractor = mock(AssetExtractor.class);
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
     assetExtractionService.portableConverter = true;
     assetExtractionService.assetExtractor = assetExtractor;
     assetExtractionService.objectMapper = new ObjectMapper();
@@ -227,7 +228,7 @@ public class AssetExtractionServicePortableSelectionTest {
 
   @Test
   public void explicitPortableUnsupportedFormatFailsBeforeOkapiExtraction() throws Exception {
-    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    AssetExtractionService assetExtractionService = extractionService();
 
     try {
       assetExtractionService.getExtractorTextUnitsForAssetContent(
@@ -239,6 +240,12 @@ public class AssetExtractionServicePortableSelectionTest {
       return;
     }
     fail("Expected unsupported portable format");
+  }
+
+  private static AssetExtractionService extractionService() {
+    AssetExtractionService service = new AssetExtractionService();
+    service.assetContentService = new AssetContentService();
+    return service;
   }
 
   private static AssetContent assetContent(String path, String content) {

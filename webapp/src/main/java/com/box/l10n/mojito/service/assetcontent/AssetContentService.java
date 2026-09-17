@@ -6,6 +6,7 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetContent;
 import com.box.l10n.mojito.entity.Branch;
 import com.box.l10n.mojito.service.branch.BranchService;
+import java.util.Locale;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,8 @@ public class AssetContentService {
   @Autowired BranchService branchService;
 
   @Autowired AssetContentRepository assetContentRepository;
+
+  @Autowired AssetContentBlobStorage assetContentBlobStorage;
 
   /**
    * Creates an {@link AssetContent} with no branch name specified. This will create a {@link
@@ -63,14 +66,40 @@ public class AssetContentService {
     AssetContent assetContent = new AssetContent();
 
     assetContent.setAsset(asset);
-    assetContent.setContent(content);
     assetContent.setContentMd5(DigestUtils.md5Hex(content));
     assetContent.setBranch(branch);
     assetContent.setExtractedContent(extractedContent);
+    if (requiresExternalStorage(asset)) {
+      // The upload must succeed before the metadata row can be scheduled for extraction.
+      // Catalog-only MDX pushes use this same external path, without retaining a preview.
+      assetContentBlobStorage.put(
+          asset.getId(), branch.getId(), assetContent.getContentMd5(), extractedContent, content);
+      assetContent.setContent("");
+    } else {
+      assetContent.setContent(content);
+    }
 
     assetContent = assetContentRepository.save(assetContent);
 
     return assetContent;
+  }
+
+  public String readContent(AssetContent assetContent) {
+    if (requiresExternalStorage(assetContent.getAsset())) {
+      return assetContentBlobStorage
+          .get(
+              assetContent.getAsset().getId(),
+              assetContent.getBranch().getId(),
+              assetContent.getContentMd5(),
+              assetContent.isExtractedContent())
+          .orElseThrow(() -> new IllegalStateException("Asset content blob is unavailable"));
+    }
+    return assetContent.getContent();
+  }
+
+  private boolean requiresExternalStorage(Asset asset) {
+    String path = asset.getPath().toLowerCase(Locale.ROOT);
+    return path.endsWith(".mdx") || path.endsWith(".mf2.json");
   }
 
   /**

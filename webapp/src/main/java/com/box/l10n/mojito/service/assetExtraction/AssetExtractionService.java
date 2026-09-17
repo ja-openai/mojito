@@ -1456,11 +1456,12 @@ public class AssetExtractionService {
       FilterConfigIdOverride filterConfigIdOverride)
       throws UnsupportedAssetFilterTypeException {
     List<AssetExtractorTextUnit> assetExtractorTextUnits;
+    String content = assetContentService.readContent(assetContent);
 
     if (assetContent.isExtractedContent()) {
       assetExtractorTextUnits =
           objectMapper.readValueUnchecked(
-              assetContent.getContent(), new TypeReference<List<AssetExtractorTextUnit>>() {});
+              content, new TypeReference<List<AssetExtractorTextUnit>>() {});
       assetExtractorTextUnits = assetExtractorTextUnits.stream().collect(Collectors.toList());
 
     } else {
@@ -1472,16 +1473,13 @@ public class AssetExtractionService {
         LocalizationCatalog catalog =
             LocalizationFileConverters.parseForMojito(
                 format,
-                LocalizationFileConverters.encodeStringTransport(format, assetContent.getContent()),
+                LocalizationFileConverters.encodeStringTransport(format, content),
                 LocalizationConverterSelection.platformOptions(filterOptions));
         assetExtractorTextUnits = LocalizationShadowComparator.projectTextUnits(catalog);
       } else {
         assetExtractorTextUnits =
             assetExtractor.getAssetExtractorTextUnitsForAsset(
-                assetContent.getAsset().getPath(),
-                assetContent.getContent(),
-                filterConfigIdOverride,
-                filterOptions);
+                assetContent.getAsset().getPath(), content, filterConfigIdOverride, filterOptions);
       }
     }
     return assetExtractorTextUnits;
