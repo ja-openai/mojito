@@ -13,6 +13,7 @@ type Props = {
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
   inputId?: string;
+  maxLength?: number;
 };
 
 export function SearchControl({
@@ -26,6 +27,7 @@ export function SearchControl({
   leading,
   trailing,
   inputId,
+  maxLength,
 }: Props) {
   const showClear = value.length > 0 && !disabled;
   const hasLeading = Boolean(leading);
@@ -59,6 +61,7 @@ export function SearchControl({
             id={inputId}
             className="search-control__input"
             type="search"
+            maxLength={maxLength}
             value={value}
             placeholder={placeholder}
             onChange={(event) => onChange(event.target.value)}

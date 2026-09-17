@@ -16,6 +16,7 @@ public class NewFrontendController {
     "/login",
     "/auth/callback",
     "/repositories",
+    "/content",
     "/project-requests",
     "/review-projects",
     "/review-projects/{path:[^.]*}",

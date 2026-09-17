@@ -1,10 +1,12 @@
 import './chip-dropdown.css';
 import './multi-select-chip.css';
+import './single-select-dropdown.css';
 
 import {
   type CSSProperties,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -39,6 +41,7 @@ export type MultiSelectChipProps<T extends string | number> = {
   options: Array<MultiSelectOption<T>>;
   selectedValues: T[];
   onChange: (next: T[]) => void;
+  selectionMode?: 'multiple' | 'single';
   placeholder: string;
   emptyOptionsLabel: string;
   className?: string;
@@ -60,6 +63,7 @@ export function MultiSelectChip<T extends string | number>({
   options,
   selectedValues,
   onChange,
+  selectionMode = 'multiple',
   placeholder,
   emptyOptionsLabel,
   className,
@@ -75,6 +79,8 @@ export function MultiSelectChip<T extends string | number>({
   customActions,
   quickActions,
 }: MultiSelectChipProps<T>) {
+  const singleSelection = selectionMode === 'single';
+  const radioGroupName = useId();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -186,6 +192,9 @@ export function MultiSelectChip<T extends string | number>({
         if (!selectedValues.length) {
           return placeholder;
         }
+        if (singleSelection) {
+          return options.find((option) => selectedSet.has(option.value))?.label ?? placeholder;
+        }
         if (selectedValues.length === options.length) {
           return `All ${label.toLowerCase()}`;
         }
@@ -201,6 +210,12 @@ export function MultiSelectChip<T extends string | number>({
   const isPlaceholder = options.length > 0 && selectedValues.length === 0;
 
   const toggleValue = (value: T) => {
+    if (singleSelection) {
+      onChange([value]);
+      setIsOpen(false);
+      buttonRef.current?.focus();
+      return;
+    }
     if (selectedSet.has(value)) {
       onChange(selectedValues.filter((item) => item !== value));
       return;
@@ -246,8 +261,8 @@ export function MultiSelectChip<T extends string | number>({
   const selectAllText = selectAllLabel ?? 'Select all';
   const clearAllText = clearAllLabel ?? 'Clear';
   const onlyText = onlyLabel ?? 'Only';
-  const resolvedCustomActions = customActions ?? [];
-  const resolvedQuickActions = quickActions ?? [];
+  const resolvedCustomActions = singleSelection ? [] : (customActions ?? []);
+  const resolvedQuickActions = singleSelection ? [] : (quickActions ?? []);
   const quickActionStrip = resolvedQuickActions.length ? (
     <div className="multi-select-chip__actions multi-select-chip__actions--strip">
       {resolvedQuickActions.map((action) => (
@@ -276,6 +291,14 @@ export function MultiSelectChip<T extends string | number>({
       className={resolvedClassName}
       ref={containerRef}
       data-align={align === 'right' ? 'right' : undefined}
+      onKeyDown={(event) => {
+        if (singleSelection && isOpen && event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          setIsOpen(false);
+          buttonRef.current?.focus();
+        }
+      }}
     >
       <button
         type="button"
@@ -316,26 +339,27 @@ export function MultiSelectChip<T extends string | number>({
                     placeholder={filterInputPlaceholder}
                     className="multi-select-chip__search"
                   />
-                  {quickActionStrip ?? (
-                    <div className="multi-select-chip__actions">
-                      <button
-                        type="button"
-                        className="multi-select-chip__action-button"
-                        onClick={selectAll}
-                        disabled={allVisibleSelected}
-                      >
-                        {selectAllText}
-                      </button>
-                      <button
-                        type="button"
-                        className="multi-select-chip__action-button"
-                        onClick={clearAll}
-                        disabled={selectedValues.length === 0}
-                      >
-                        {clearAllText}
-                      </button>
-                    </div>
-                  )}
+                  {!singleSelection &&
+                    (quickActionStrip ?? (
+                      <div className="multi-select-chip__actions">
+                        <button
+                          type="button"
+                          className="multi-select-chip__action-button"
+                          onClick={selectAll}
+                          disabled={allVisibleSelected}
+                        >
+                          {selectAllText}
+                        </button>
+                        <button
+                          type="button"
+                          className="multi-select-chip__action-button"
+                          onClick={clearAll}
+                          disabled={selectedValues.length === 0}
+                        >
+                          {clearAllText}
+                        </button>
+                      </div>
+                    ))}
                   {resolvedCustomActions.length ? (
                     <div className="multi-select-chip__actions multi-select-chip__actions--secondary">
                       {resolvedCustomActions.map((action) => (
@@ -352,14 +376,34 @@ export function MultiSelectChip<T extends string | number>({
                       ))}
                     </div>
                   ) : null}
-                  <div className="multi-select-chip__options">
+                  <div
+                    className="multi-select-chip__options"
+                    role={singleSelection ? 'radiogroup' : undefined}
+                    aria-label={singleSelection ? label : undefined}
+                  >
                     {visibleOptions.length ? (
                       visibleOptions.map((option) => {
                         const checked = selectedSet.has(option.value);
                         return (
-                          <label key={String(option.value)} className="multi-select-chip__option">
+                          <label
+                            key={String(option.value)}
+                            className={[
+                              'multi-select-chip__option',
+                              singleSelection &&
+                                'multi-select-chip__option--single single-select-dropdown__option',
+                              singleSelection && checked && 'is-selected',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                          >
                             <input
-                              type="checkbox"
+                              type={singleSelection ? 'radio' : 'checkbox'}
+                              name={singleSelection ? radioGroupName : undefined}
+                              aria-label={
+                                singleSelection
+                                  ? [option.label, option.secondaryLabel].filter(Boolean).join(' ')
+                                  : undefined
+                              }
                               checked={checked}
                               onChange={() => toggleValue(option.value)}
                             />
@@ -373,17 +417,19 @@ export function MultiSelectChip<T extends string | number>({
                                 </span>
                               ) : null}
                             </span>
-                            <button
-                              type="button"
-                              className="multi-select-chip__only"
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                onChange([option.value]);
-                              }}
-                            >
-                              {onlyText}
-                            </button>
+                            {!singleSelection && (
+                              <button
+                                type="button"
+                                className="multi-select-chip__only"
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  onChange([option.value]);
+                                }}
+                              >
+                                {onlyText}
+                              </button>
+                            )}
                           </label>
                         );
                       })

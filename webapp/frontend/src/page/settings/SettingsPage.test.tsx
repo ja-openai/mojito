@@ -14,6 +14,7 @@ import { savePreferredLocales, savePreferredWorksetSize } from '../workbench/wor
 import { SettingsPage } from './SettingsPage';
 
 let currentUsername = 'translator';
+let currentRole = 'ROLE_TRANSLATOR';
 let accounts: Record<string, ApiUserPreferences>;
 const defaults = (): ApiUserPreferences => ({
   initialized: true,
@@ -32,10 +33,11 @@ vi.mock('../../api/userPreferences', () => ({
   saveUserPreferences: vi.fn(),
 }));
 vi.mock('../../hooks/useRepositories', () => ({ useRepositories: () => ({ data: [] }) }));
+vi.mock('../../api/teams', () => ({ fetchTeams: vi.fn().mockResolvedValue([]) }));
 vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({
     username: currentUsername,
-    role: 'ROLE_TRANSLATOR',
+    role: currentRole,
     canTranslateAllLocales: false,
     userLocales: ['fr'],
   }),
@@ -68,6 +70,7 @@ const worksetInput = () => screen.getByRole('spinbutton', { name: 'Result size l
 beforeEach(() => {
   window.localStorage.clear();
   currentUsername = 'translator';
+  currentRole = 'ROLE_TRANSLATOR';
   accounts = { translator: defaults(), 'other-user': defaults() };
   vi.mocked(fetchUserPreferences).mockImplementation(() =>
     Promise.resolve(accounts[currentUsername]),
@@ -81,6 +84,106 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('SettingsPage account preferences', () => {
+  it.each([true, false])(
+    'defaults the admin Content checkbox off for existing and uninitialized responses (initialized=%s)',
+    async (initialized) => {
+      currentRole = 'ROLE_ADMIN';
+      accounts.translator = { ...defaults(), initialized };
+      const user = userEvent.setup();
+      renderSettingsPage();
+      const toggle = screen.getByRole('checkbox', { name: 'Show Content tab' });
+      expect(toggle).not.toBeChecked();
+      expect(toggle).toHaveAccessibleDescription('Show the Content workspace in your navigation.');
+      expect(saveButton()).toBeDisabled();
+      await user.click(toggle);
+      expect(saveButton()).toBeEnabled();
+      expect(saveUserPreferences).not.toHaveBeenCalled();
+      await user.click(discardButton());
+      expect(toggle).not.toBeChecked();
+      expect(saveButton()).toBeDisabled();
+      await user.click(toggle);
+      await user.click(saveButton());
+      await screen.findByText('Changes saved');
+      expect(saveUserPreferences).toHaveBeenCalledExactlyOnceWith(
+        { contentNavigationEnabled: true },
+        expect.anything(),
+      );
+      expect(saveButton()).toBeDisabled();
+      expect(window.localStorage.length).toBe(0);
+    },
+  );
+
+  it('restores the saved admin Content opt-in as a draft until Save or Discard', async () => {
+    currentRole = 'ROLE_ADMIN';
+    accounts.translator = { ...defaults(), contentNavigationEnabled: true };
+    const user = userEvent.setup();
+    renderSettingsPage();
+    const toggle = screen.getByRole('checkbox', { name: 'Show Content tab' });
+    expect(toggle).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
+    expect(toggle).not.toBeChecked();
+    expect(saveUserPreferences).not.toHaveBeenCalled();
+    await user.click(discardButton());
+    expect(toggle).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    expect(saveUserPreferences).toHaveBeenCalledExactlyOnceWith(
+      { contentNavigationEnabled: false },
+      expect.anything(),
+    );
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Restore defaults' })).toBeDisabled();
+  });
+
+  it('loads the saved Content choice from a fresh account cache and isolates other accounts', async () => {
+    currentRole = 'ROLE_ADMIN';
+    const user = userEvent.setup();
+    const first = renderSettingsPage();
+    await user.click(screen.getByRole('checkbox', { name: 'Show Content tab' }));
+    await user.click(saveButton());
+    await screen.findByText('Changes saved');
+    first.unmount();
+    const next = renderSettingsPage(false);
+    expect(await screen.findByRole('checkbox', { name: 'Show Content tab' })).toBeChecked();
+    currentUsername = 'other-user';
+    next.rerender(<SettingsPage />);
+    expect(await screen.findByRole('checkbox', { name: 'Show Content tab' })).not.toBeChecked();
+    expect(saveButton()).toBeDisabled();
+    currentUsername = 'translator';
+    next.rerender(<SettingsPage />);
+    expect(await screen.findByRole('checkbox', { name: 'Show Content tab' })).toBeChecked();
+    expect(window.localStorage.length).toBe(0);
+  });
+
+  it.each(['ROLE_PM', 'ROLE_TRANSLATOR'])(
+    'hides a former admin Content preference from %s and excludes it from Save and Restore defaults',
+    async (role) => {
+      currentRole = role;
+      accounts.translator = { ...defaults(), contentNavigationEnabled: true };
+      const user = userEvent.setup();
+      renderSettingsPage();
+      expect(screen.queryByRole('heading', { name: 'Admin features' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('checkbox', { name: 'Show Content tab' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Restore defaults' })).toBeDisabled();
+      await user.click(editorToggle());
+      await user.click(saveButton());
+      await screen.findByText('Changes saved');
+      expect(saveUserPreferences).toHaveBeenLastCalledWith(
+        { visibleTextEditorEnabled: true },
+        expect.anything(),
+      );
+      await user.click(screen.getByRole('button', { name: 'Restore defaults' }));
+      await user.click(saveButton());
+      await screen.findByText('Changes saved');
+      expect(saveUserPreferences).toHaveBeenLastCalledWith(
+        { visibleTextEditorEnabled: false },
+        expect.anything(),
+      );
+      expect(accounts.translator.contentNavigationEnabled).toBe(true);
+    },
+  );
+
   it('stages all sections and sends one patch only after Save changes', async () => {
     const user = userEvent.setup();
     renderSettingsPage();

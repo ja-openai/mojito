@@ -10,14 +10,17 @@ import {
 } from './page/review-projects/review-projects-session-state';
 import { saveWorkbenchSessionSearch } from './page/workbench/workbench-session-state';
 
-const mockUserState = vi.hoisted((): { currentUser: ApiUserProfile } => ({
-  currentUser: {
-    username: 'admin',
-    role: 'ROLE_ADMIN',
-    canTranslateAllLocales: true,
-    userLocales: [],
-  },
-}));
+const mockUserState = vi.hoisted(
+  (): { currentUser: ApiUserProfile; contentNavigationEnabled?: boolean } => ({
+    contentNavigationEnabled: false,
+    currentUser: {
+      username: 'admin',
+      role: 'ROLE_ADMIN',
+      canTranslateAllLocales: true,
+      userLocales: [],
+    },
+  }),
+);
 
 vi.mock('./hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
@@ -37,6 +40,7 @@ vi.mock('./hooks/useUserPreferences', async (importActual) => ({
       shortcutHelp: null,
       visibleTextEditorEnabled: false,
       reviewProjectSearchEnabled: false,
+      contentNavigationEnabled: mockUserState.contentNavigationEnabled,
       defaultReviewTeamIds: [],
       aiReviewProfile: 'version_b',
       aiReviewAutomaticDisabled: false,
@@ -50,6 +54,10 @@ vi.mock('./page/settings/AdminStringAuthoringPage', () => ({
   AdminStringAuthoringPage: () => <div>String authoring page</div>,
 }));
 
+vi.mock('./page/content/ContentPage', () => ({
+  ContentPage: () => <div>Repository content page</div>,
+}));
+
 function setUserRole(role: ApiUserProfile['role']) {
   mockUserState.currentUser = {
     ...mockUserState.currentUser,
@@ -61,6 +69,7 @@ function setUserRole(role: ApiUserProfile['role']) {
 describe('App', () => {
   beforeEach(() => {
     setUserRole('ROLE_ADMIN');
+    mockUserState.contentNavigationEnabled = false;
     window.sessionStorage.clear();
     window.history.pushState({}, '', '/');
   });
@@ -94,6 +103,71 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.queryByRole('link', { name: 'String Authoring' })).not.toBeInTheDocument();
+  });
+
+  it('opens the repository Content route with its own active navigation for opted-in admins', () => {
+    mockUserState.contentNavigationEnabled = true;
+    window.history.pushState({}, '', '/content?repoId=7');
+
+    render(<App />);
+
+    const nav = screen.getByRole('navigation');
+    const contentLink = within(nav).getByRole('link', { name: 'Content' });
+    expect(contentLink).toHaveAttribute('href', '/content');
+    expect(contentLink).toHaveClass('is-active');
+    expect(within(nav).getByRole('link', { name: 'Repositories' })).not.toHaveClass('is-active');
+    expect(within(nav).getByRole('link', { name: 'Review Projects' })).not.toHaveClass('is-active');
+    expect(within(nav).getByRole('link', { name: 'Settings' })).not.toHaveClass('is-active');
+    expect(screen.getByText('Repository content page')).toBeInTheDocument();
+    expect(window.location.search).toBe('?repoId=7');
+  });
+
+  it('opens Content from the global navigation without a review project', async () => {
+    mockUserState.contentNavigationEnabled = true;
+    window.history.pushState({}, '', '/repositories');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Content' }));
+    await waitFor(() => expect(window.location.pathname).toBe('/content'));
+    expect(screen.getByText('Repository content page')).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+  });
+
+  it.each(['ROLE_PM', 'ROLE_TRANSLATOR', 'ROLE_USER'] as const)(
+    'hides the Content navigation entry from %s',
+    (role) => {
+      setUserRole(role);
+      mockUserState.contentNavigationEnabled = true;
+      window.history.pushState({}, '', '/repositories');
+
+      render(<App />);
+
+      expect(screen.queryByRole('link', { name: 'Content' })).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Repositories' })).toBeInTheDocument();
+    },
+  );
+
+  it.each([false, undefined])(
+    'hides Content without an admin opt-in (%s) while keeping direct links usable',
+    (enabled) => {
+      mockUserState.contentNavigationEnabled = enabled;
+      window.history.pushState({}, '', '/content?repoId=7');
+      render(<App />);
+      expect(screen.queryByRole('link', { name: 'Content' })).not.toBeInTheDocument();
+      expect(screen.getByText('Repository content page')).toBeInTheDocument();
+    },
+  );
+
+  it('updates Content visibility when the saved preference changes', () => {
+    const view = render(<App />);
+    expect(screen.queryByRole('link', { name: 'Content' })).not.toBeInTheDocument();
+    mockUserState.contentNavigationEnabled = true;
+    view.rerender(<App />);
+    expect(screen.getByRole('link', { name: 'Content' })).toBeInTheDocument();
+    mockUserState.contentNavigationEnabled = false;
+    view.rerender(<App />);
+    expect(screen.queryByRole('link', { name: 'Content' })).not.toBeInTheDocument();
   });
 
   it('hides global linguist reporting from project managers', () => {

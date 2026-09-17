@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,6 +9,109 @@ describe('MultiSelectChip', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('replaces a single selection and keeps the shared search and option metadata', async () => {
+    const user = userEvent.setup();
+    const handleChange = vi.fn();
+    render(
+      <MultiSelectChip
+        label="Repository"
+        options={[
+          { value: 1, label: 'Website' },
+          {
+            value: 2,
+            label: 'Help center',
+            secondaryLabel: 'Documentation',
+            searchText: 'support',
+          },
+        ]}
+        selectedValues={[1]}
+        onChange={handleChange}
+        selectionMode="single"
+        placeholder="Repository"
+        emptyOptionsLabel="No repositories"
+        quickActions={[{ label: 'All', onClick: vi.fn() }]}
+        customActions={[{ label: 'Favorites', onClick: vi.fn() }]}
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Repository' });
+    await user.click(trigger);
+    const search = screen.getByRole('searchbox');
+    expect(search).toHaveFocus();
+    expect(within(screen.getByRole('menu')).queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    await user.type(search, 'support');
+    expect(screen.queryByRole('radio', { name: 'Website' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Help center Documentation' }));
+
+    expect(handleChange).toHaveBeenCalledExactlyOnceWith([2]);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('supports keyboard access to single-choice radios and Escape without changing selection', async () => {
+    const user = userEvent.setup();
+    const handleChange = vi.fn();
+    render(
+      <MultiSelectChip
+        label="Repository"
+        options={[{ value: 1, label: 'Website' }]}
+        selectedValues={[]}
+        onChange={handleChange}
+        selectionMode="single"
+        placeholder="Repository"
+        emptyOptionsLabel="No repositories"
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Repository' });
+    await user.tab();
+    expect(trigger).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('searchbox')).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('radio', { name: 'Website' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(handleChange).not.toHaveBeenCalled();
+
+    await user.keyboard('{Enter}');
+    await user.tab();
+    await user.keyboard(' ');
+    expect(handleChange).toHaveBeenCalledExactlyOnceWith([1]);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('retains checkbox toggles and bulk actions by default', () => {
+    const handleChange = vi.fn();
+    render(
+      <MultiSelectChip
+        label="Repositories"
+        options={[
+          { value: 1, label: 'Website' },
+          { value: 2, label: 'Help center' },
+        ]}
+        selectedValues={[1]}
+        onChange={handleChange}
+        placeholder="Repositories"
+        emptyOptionsLabel="No repositories"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Repositories' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Help center Only' }));
+    expect(handleChange).toHaveBeenLastCalledWith([1, 2]);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(handleChange).toHaveBeenLastCalledWith([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    expect(handleChange).toHaveBeenLastCalledWith([1, 2]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Only' })[1]);
+    expect(handleChange).toHaveBeenLastCalledWith([2]);
   });
 
   it('repositions an upward-opening panel when its contents grow', () => {

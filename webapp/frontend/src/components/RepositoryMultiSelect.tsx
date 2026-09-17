@@ -9,6 +9,7 @@ type Props = {
   options: RepositorySelectionOption[];
   selectedIds: number[];
   onChange: (next: number[]) => void;
+  selectionMode?: 'multiple' | 'single';
   className?: string;
   disabled?: boolean;
   align?: 'left' | 'right';
@@ -28,6 +29,7 @@ export function RepositoryMultiSelect({
   options,
   selectedIds,
   onChange,
+  selectionMode = 'multiple',
   className,
   disabled = false,
   align = 'left',
@@ -96,6 +98,7 @@ export function RepositoryMultiSelect({
       options={multiOptions}
       selectedValues={selectedIds}
       onChange={onChange}
+      selectionMode={selectionMode}
       placeholder={resolvedLabel}
       emptyOptionsLabel={resolvedLabel}
       align={align}
@@ -109,10 +112,16 @@ export function RepositoryMultiSelect({
             return resolvedLabel;
           }
           if (!selectedValues.length) {
+            if (selectionMode === 'single') return resolvedLabel;
             if (showSelectionPresets) {
               return 'No repositories';
             }
             return resolvedLabel;
+          }
+          if (selectionMode === 'single') {
+            return (
+              opts.find((option) => option.value === selectedValues[0])?.label ?? resolvedLabel
+            );
           }
           if (selectedValues.length === opts.length) {
             return 'All repositories';

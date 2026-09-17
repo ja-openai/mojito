@@ -16,7 +16,9 @@ import {
 import { RequireUser } from './components/RequireUser';
 import { UserMenu } from './components/UserMenu';
 import { useUser } from './hooks/useUser';
+import { useUserPreferences } from './hooks/useUserPreferences';
 import { AiTranslatePage } from './page/ai-translate/AiTranslatePage';
+import { ContentPage } from './page/content/ContentPage';
 import { GlossariesPage } from './page/glossaries/GlossariesPage';
 import { GlossaryWorkspacePage } from './page/glossaries/GlossaryWorkspacePage';
 import { AuthCallbackPage } from './page/login/AuthCallbackPage';
@@ -130,6 +132,7 @@ function buildNavTarget(path: string, queryKey: string, token: string | null) {
 
 function AppLayout({ showHeader }: { showHeader: boolean }) {
   const user = useUser();
+  const { data: preferences } = useUserPreferences();
   const location = useLocation();
   const currentSearchParams = new URLSearchParams(location.search);
   const [filterSessionTokens, setFilterSessionTokens] = useState<FilterSessionTokens>({
@@ -168,8 +171,11 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
 
   const canAccessIncidents = user.role === 'ROLE_ADMIN' || user.role === 'ROLE_PM';
   const canAccessStringAuthoring = user.role === 'ROLE_ADMIN';
+  const showContentNavigation =
+    user.role === 'ROLE_ADMIN' && preferences?.contentNavigationEnabled === true;
   const headerNavItems = [
     ...navItems.map(({ to, label }) => ({ to, label })),
+    ...(showContentNavigation ? [{ to: '/content', label: 'Content' }] : []),
     ...(canAccessStringAuthoring ? [{ to: '/string-authoring', label: 'String Authoring' }] : []),
     ...(canAccessIncidents ? [{ to: '/translation-incidents', label: 'Incidents' }] : []),
     ...(canAccessGlossaries(user) ? [{ to: '/glossaries', label: 'Glossaries' }] : []),
@@ -234,6 +240,7 @@ export function App() {
             {navItems.map(({ to, element }) => (
               <Route key={to} path={to} element={element} />
             ))}
+            <Route path="/content" element={<ContentPage />} />
             <Route path="/string-authoring" element={<AdminStringAuthoringPage />} />
             <Route path="/glossaries" element={<GlossariesPage />} />
             <Route path="/glossaries/:glossaryId/settings" element={<AdminGlossaryDetailPage />} />

@@ -40,9 +40,11 @@ type SettingsDraft = Omit<
   | 'aiReviewAutomaticDisabled'
   | 'aiReviewReasoningEffort'
   | 'aiReviewPreset'
+  | 'contentNavigationEnabled'
 > & {
   worksetSize: string;
   shortcutHelp: ReviewProjectShortcutHelpPreference;
+  contentNavigationEnabled: boolean;
 };
 
 function toDraft(
@@ -54,6 +56,7 @@ function toDraft(
     defaultReviewTeamIds: preferences.defaultReviewTeamIds,
     visibleTextEditorEnabled: preferences.visibleTextEditorEnabled,
     reviewProjectSearchEnabled: preferences.reviewProjectSearchEnabled,
+    contentNavigationEnabled: preferences.contentNavigationEnabled ?? false,
     worksetSize: preferences.worksetSize == null ? '' : String(preferences.worksetSize),
     shortcutHelp: preferences.shortcutHelp ?? defaultShortcut,
   };
@@ -66,6 +69,7 @@ function sameDraft(a: SettingsDraft, b: SettingsDraft) {
     a.shortcutHelp === b.shortcutHelp &&
     a.visibleTextEditorEnabled === b.visibleTextEditorEnabled &&
     a.reviewProjectSearchEnabled === b.reviewProjectSearchEnabled &&
+    a.contentNavigationEnabled === b.contentNavigationEnabled &&
     hasSameSet(a.defaultReviewTeamIds, b.defaultReviewTeamIds)
   );
 }
@@ -93,6 +97,7 @@ function SettingsForm({ preferences }: { preferences: ApiUserPreferences }) {
   const username = user.username;
   const defaultShortcutHelpPreference = getDefaultReviewProjectShortcutHelpPreference(user.role);
   const canConfigureDefaultReviewTeams = user.role === 'ROLE_ADMIN' || user.role === 'ROLE_PM';
+  const canConfigureAdminFeatures = user.role === 'ROLE_ADMIN';
   const { data: repositories } = useRepositories();
   const teamsQuery = useQuery({
     queryKey: ['teams', 'settings-default-review-teams', username],
@@ -114,6 +119,7 @@ function SettingsForm({ preferences }: { preferences: ApiUserPreferences }) {
           shortcutHelp: loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
           visibleTextEditorEnabled: loadVisibleTextEditorEnabled(username),
           reviewProjectSearchEnabled: loadReviewProjectSearchEnabled(username),
+          contentNavigationEnabled: saved.contentNavigationEnabled,
           defaultReviewTeamIds: canConfigureDefaultReviewTeams
             ? loadDefaultReviewProjectTeamIds(username)
             : [],
@@ -232,6 +238,7 @@ function SettingsForm({ preferences }: { preferences: ApiUserPreferences }) {
     shortcutHelpDraft !== defaultShortcutHelpPreference ||
     visibleTextEditorDraft ||
     reviewProjectSearchDraft ||
+    (canConfigureAdminFeatures && draft.contentNavigationEnabled) ||
     (canConfigureDefaultReviewTeams && defaultReviewTeamDraft.length > 0);
   const isSaving = savePreferences.isPending;
 
@@ -248,6 +255,11 @@ function SettingsForm({ preferences }: { preferences: ApiUserPreferences }) {
       patch.visibleTextEditorEnabled = draft.visibleTextEditorEnabled;
     if (draft.reviewProjectSearchEnabled !== saved.reviewProjectSearchEnabled)
       patch.reviewProjectSearchEnabled = draft.reviewProjectSearchEnabled;
+    if (
+      canConfigureAdminFeatures &&
+      draft.contentNavigationEnabled !== saved.contentNavigationEnabled
+    )
+      patch.contentNavigationEnabled = draft.contentNavigationEnabled;
     if (
       canConfigureDefaultReviewTeams &&
       !hasSameSet(draft.defaultReviewTeamIds, saved.defaultReviewTeamIds)
@@ -279,6 +291,9 @@ function SettingsForm({ preferences }: { preferences: ApiUserPreferences }) {
         shortcutHelp: defaultShortcutHelpPreference,
         visibleTextEditorEnabled: false,
         reviewProjectSearchEnabled: false,
+        contentNavigationEnabled: canConfigureAdminFeatures
+          ? false
+          : current.draft.contentNavigationEnabled,
         defaultReviewTeamIds: canConfigureDefaultReviewTeams
           ? []
           : current.draft.defaultReviewTeamIds,
@@ -485,6 +500,36 @@ function SettingsForm({ preferences }: { preferences: ApiUserPreferences }) {
               ) : null}
             </div>
           </section>
+          {canConfigureAdminFeatures ? (
+            <section className="settings-card" aria-labelledby="settings-admin-features">
+              <div className="settings-card__header">
+                <h2 id="settings-admin-features">Admin features</h2>
+              </div>
+              <div className="settings-field">
+                <label className="settings-radio-option">
+                  <input
+                    type="checkbox"
+                    disabled={isSaving}
+                    checked={draft.contentNavigationEnabled}
+                    aria-labelledby="settings-content-navigation-label"
+                    aria-describedby="settings-content-navigation-hint"
+                    onChange={(event) => setDraft('contentNavigationEnabled', event.target.checked)}
+                  />
+                  <span className="settings-radio-option__body">
+                    <span
+                      id="settings-content-navigation-label"
+                      className="settings-radio-option__label"
+                    >
+                      Show Content tab
+                    </span>
+                    <span id="settings-content-navigation-hint" className="settings-hint">
+                      Show the Content workspace in your navigation.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </section>
+          ) : null}
           <div className="personal-settings-page__defaults">
             <button
               type="button"

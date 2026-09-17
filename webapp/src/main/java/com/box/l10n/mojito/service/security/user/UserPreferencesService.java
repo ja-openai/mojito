@@ -36,6 +36,7 @@ public class UserPreferencesService {
           "shortcutHelp",
           "visibleTextEditorEnabled",
           "reviewProjectSearchEnabled",
+          "contentNavigationEnabled",
           "defaultReviewTeamIds",
           "aiReviewProfile",
           "aiReviewAutomaticDisabled",
@@ -88,6 +89,10 @@ public class UserPreferencesService {
               }
             });
 
+    if (patch.has("contentNavigationEnabled") && !userService.isCurrentUserAdmin()) {
+      throw new AccessDeniedException("Only administrators can change Content navigation");
+    }
+
     User user = currentUser();
     // Lock the user before loading preferences, including the first save when no row exists.
     entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
@@ -138,6 +143,7 @@ public class UserPreferencesService {
         List.of(
             "visibleTextEditorEnabled",
             "reviewProjectSearchEnabled",
+            "contentNavigationEnabled",
             "aiReviewAutomaticDisabled",
             "aiReviewShowScore")) {
       if (!merged.get(field).isBoolean()) {

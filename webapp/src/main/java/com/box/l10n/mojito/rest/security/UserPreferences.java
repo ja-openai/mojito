@@ -17,7 +17,8 @@ public record UserPreferences(
     String aiReviewReasoningEffort,
     String aiReviewPreset,
     String aiReviewStyle,
-    Boolean aiReviewShowScore) {
+    Boolean aiReviewShowScore,
+    boolean contentNavigationEnabled) {
 
   public UserPreferences {
     aiReviewStyle = aiReviewStyle == null ? "corrections_and_alternatives" : aiReviewStyle;
@@ -34,6 +35,37 @@ public record UserPreferences(
                 default -> "balanced";
               };
     }
+  }
+
+  public UserPreferences(
+      boolean initialized,
+      Integer worksetSize,
+      List<String> preferredLocales,
+      String shortcutHelp,
+      boolean visibleTextEditorEnabled,
+      boolean reviewProjectSearchEnabled,
+      List<Long> defaultReviewTeamIds,
+      String aiReviewProfile,
+      boolean aiReviewAutomaticDisabled,
+      String aiReviewReasoningEffort,
+      String aiReviewPreset,
+      String aiReviewStyle,
+      Boolean aiReviewShowScore) {
+    this(
+        initialized,
+        worksetSize,
+        preferredLocales,
+        shortcutHelp,
+        visibleTextEditorEnabled,
+        reviewProjectSearchEnabled,
+        defaultReviewTeamIds,
+        aiReviewProfile,
+        aiReviewAutomaticDisabled,
+        aiReviewReasoningEffort,
+        aiReviewPreset,
+        aiReviewStyle,
+        aiReviewShowScore,
+        false);
   }
 
   public UserPreferences(

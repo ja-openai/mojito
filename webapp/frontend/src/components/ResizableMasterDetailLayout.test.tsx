@@ -119,6 +119,69 @@ describe('ResizableMasterDetailLayout', () => {
     expect(translation).toHaveValue('Keep this draft');
   });
 
+  it('uses controlled collapse requests for the button and keyboard without remounting content', () => {
+    const onCollapsedChange = vi.fn();
+    const props = { collapsible: true, collapsed: false, onCollapsedChange };
+    const { rerender } = render(layout(props));
+    const search = screen.getByRole('textbox', { name: 'Page search' });
+    const handle = screen.getByRole('separator', { name: 'Resize pages' });
+    fireEvent.change(search, { target: { value: 'guides' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse pages' }));
+    expect(onCollapsedChange).toHaveBeenLastCalledWith(true);
+    expect(search).toBeVisible();
+
+    rerender(layout({ ...props, collapsed: true }));
+    expect(search).not.toBeVisible();
+    expect(handle).toHaveAttribute('aria-valuenow', '0');
+    fireEvent.keyDown(handle, { key: 'ArrowRight' });
+    expect(onCollapsedChange).toHaveBeenLastCalledWith(false);
+    expect(search).not.toBeVisible();
+
+    rerender(layout(props));
+    expect(screen.getByRole('textbox', { name: 'Page search' })).toBe(search);
+    expect(search).toHaveValue('guides');
+    expect(handle).toHaveAttribute('aria-valuenow', '34');
+  });
+
+  it('reports controlled collapse and restoration during the same pointer resize', () => {
+    const onCollapsedChange = vi.fn();
+    const props = { collapsible: true, collapsed: false, onCollapsedChange };
+    const { container, rerender } = render(layout(props));
+    const root = container.firstElementChild as HTMLElement;
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 1000, 600));
+    const handle = screen.getByRole('separator', { name: 'Resize pages' });
+    pointer(handle, 'pointerdown', 440);
+    pointer(window, 'pointermove', 140);
+    expect(onCollapsedChange).toHaveBeenLastCalledWith(true);
+    rerender(layout({ ...props, collapsed: true }));
+    expect(handle).toHaveAttribute('aria-valuenow', '0');
+    pointer(window, 'pointermove', 500);
+    expect(onCollapsedChange).toHaveBeenLastCalledWith(false);
+    rerender(layout(props));
+    expect(handle).toHaveAttribute('aria-valuenow', '40');
+    pointer(window, 'pointerup', 500);
+  });
+
+  it('keeps the sidebar visible when detail is closed even if controlled collapse is requested', () => {
+    const onCollapsedChange = vi.fn();
+    const props = { collapsible: true, collapsed: true, onCollapsedChange };
+    const { rerender } = render(layout(props));
+    const search = screen.getByRole('textbox', { name: 'Page search', hidden: true });
+    expect(search).not.toBeVisible();
+    rerender(layout({ ...props, detailVisible: false }));
+    expect(search).toBeVisible();
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /pages/ })).not.toBeInTheDocument();
+    expect(onCollapsedChange).not.toHaveBeenCalled();
+    rerender(layout(props));
+    expect(search).not.toBeVisible();
+    expect(screen.getByRole('button', { name: 'Expand pages' })).toBeVisible();
+
+    rerender(layout({ ...props, collapsible: false }));
+    expect(search).toBeVisible();
+    expect(screen.queryByRole('button', { name: /pages/ })).not.toBeInTheDocument();
+  });
+
   it('bounds pointer resizing, stops at pointer release, and removes listeners on unmount', () => {
     const { container, unmount } = render(layout());
     const root = container.firstElementChild as HTMLElement;

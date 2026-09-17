@@ -10,6 +10,7 @@ export type ApiUserPreferences = {
   shortcutHelp: 'header' | 'bottom' | 'hidden' | null;
   visibleTextEditorEnabled: boolean;
   reviewProjectSearchEnabled: boolean;
+  contentNavigationEnabled?: boolean;
   defaultReviewTeamIds: number[];
   aiReviewProfile: AiReviewProfile;
   aiReviewReasoningEffort?: AiReviewReasoningEffort;

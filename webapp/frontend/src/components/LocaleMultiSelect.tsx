@@ -12,6 +12,7 @@ type Props = {
   options: LocaleOption[];
   selectedTags: string[];
   onChange: (next: string[]) => void;
+  selectionMode?: 'multiple' | 'single';
   className?: string;
   disabled?: boolean;
   align?: 'left' | 'right';
@@ -29,6 +30,7 @@ export function LocaleMultiSelect({
   options,
   selectedTags,
   onChange,
+  selectionMode = 'multiple',
   className,
   disabled = false,
   align = 'left',
@@ -105,6 +107,7 @@ export function LocaleMultiSelect({
       options={multiOptions}
       selectedValues={selectedTags}
       onChange={onChange}
+      selectionMode={selectionMode}
       placeholder={label}
       emptyOptionsLabel={label}
       className={className}
@@ -118,10 +121,14 @@ export function LocaleMultiSelect({
           return label ?? 'Locales';
         }
         if (!selectedValues.length) {
+          if (selectionMode === 'single') return label;
           if (showSelectionPresets) {
             return 'No locales';
           }
           return label ?? 'Locales';
+        }
+        if (selectionMode === 'single') {
+          return opts.find((option) => option.value === selectedValues[0])?.label ?? label;
         }
         if (isMyLocaleSelectionActive) {
           return myLocalesLabel;

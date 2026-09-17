@@ -74,6 +74,7 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
     assertEquals("low", preferencesService.getCurrentUserPreferences().aiReviewReasoningEffort());
     assertEquals("balanced", preferencesService.getCurrentUserPreferences().aiReviewPreset());
     assertFalse(preferencesService.getCurrentUserPreferences().aiReviewAutomaticDisabled());
+    assertFalse(preferencesService.getCurrentUserPreferences().contentNavigationEnabled());
     assertEquals(
         "corrections_and_alternatives",
         preferencesService.getCurrentUserPreferences().aiReviewStyle());
@@ -153,6 +154,7 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
       assertEquals(List.of("uk"), restored.preferredLocales());
       assertEquals("hidden", restored.shortcutHelp());
       assertTrue(restored.visibleTextEditorEnabled());
+      assertFalse(restored.contentNavigationEnabled());
       assertEquals(
           historicalJson,
           preferencesRepository.findByUserId(firstUser.getId()).orElseThrow().getPreferencesJson());
@@ -167,6 +169,78 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
       assertEquals(List.of("uk"), updated.preferredLocales());
       assertEquals(updated, preferencesService.getCurrentUserPreferences());
     }
+  }
+
+  @Test
+  public void contentNavigationIsAnIndependentAdminPreferenceAndCanBeDisabledAgain()
+      throws Exception {
+    authenticateNewAdmin();
+    assertFalse(preferencesService.getCurrentUserPreferences().contentNavigationEnabled());
+    UserPreferences enabled = patch("{\"contentNavigationEnabled\":true,\"worksetSize\":75}");
+    assertTrue(enabled.contentNavigationEnabled());
+    assertEquals(enabled, preferencesService.getCurrentUserPreferences());
+    UserPreferences other = patch("{\"shortcutHelp\":\"bottom\"}");
+    assertTrue(other.contentNavigationEnabled());
+    assertEquals(Integer.valueOf(75), other.worksetSize());
+    UserPreferences disabled = patch("{\"contentNavigationEnabled\":false}");
+    assertFalse(disabled.contentNavigationEnabled());
+    assertEquals("bottom", disabled.shortcutHelp());
+    assertEquals(Integer.valueOf(75), disabled.worksetSize());
+    assertEquals(disabled, preferencesService.getCurrentUserPreferences());
+    assertTrue(objectMapper.valueToTree(disabled).has("contentNavigationEnabled"));
+  }
+
+  @Test
+  public void nonAdminsCannotPatchContentNavigationEvenToFalseAndCannotPartiallySave()
+      throws Exception {
+    restoreAuthentication();
+    User pm =
+        userService.createUserWithRole(
+            "preferences-content-pm-" + UUID.randomUUID(), "test", Role.ROLE_PM);
+    for (User user : List.of(firstUser, secondUser, pm)) {
+      authenticate(user);
+      UserPreferences saved = patch("{\"worksetSize\":50}");
+      String savedJson =
+          preferencesRepository.findByUserId(user.getId()).orElseThrow().getPreferencesJson();
+      for (boolean value : List.of(true, false)) {
+        assertThrows(
+            AccessDeniedException.class,
+            () -> patch("{\"worksetSize\":100,\"contentNavigationEnabled\":" + value + "}"));
+        assertEquals(saved, preferencesService.getCurrentUserPreferences());
+        assertEquals(
+            savedJson,
+            preferencesRepository.findByUserId(user.getId()).orElseThrow().getPreferencesJson());
+      }
+      assertEquals(Integer.valueOf(75), patch("{\"worksetSize\":75}").worksetSize());
+    }
+  }
+
+  @Test
+  public void adminContentNavigationRequiresABoolean() throws Exception {
+    authenticateNewAdmin();
+    UserPreferences saved = patch("{\"contentNavigationEnabled\":true}");
+    for (String value : List.of("null", "1", "\"false\"", "[]")) {
+      ResponseStatusException error =
+          assertThrows(
+              ResponseStatusException.class,
+              () -> patch("{\"worksetSize\":100,\"contentNavigationEnabled\":" + value + "}"));
+      assertEquals(HttpStatus.BAD_REQUEST, error.getStatusCode());
+      assertEquals(saved, preferencesService.getCurrentUserPreferences());
+    }
+  }
+
+  @Test
+  public void formerlyAdminContentPreferenceDoesNotPreventOrdinaryPreferencesUpdates()
+      throws Exception {
+    UserPreferencesEntity entity = new UserPreferencesEntity();
+    entity.setUser(firstUser);
+    entity.setPreferencesJson(
+        "{\"preferredLocales\":[],\"defaultReviewTeamIds\":[],\"contentNavigationEnabled\":true}");
+    preferencesRepository.saveAndFlush(entity);
+    assertTrue(preferencesService.getCurrentUserPreferences().contentNavigationEnabled());
+    UserPreferences updated = patch("{\"worksetSize\":75}");
+    assertTrue(updated.contentNavigationEnabled());
+    assertEquals(Integer.valueOf(75), updated.worksetSize());
   }
 
   @Test
@@ -476,6 +550,13 @@ public class UserPreferencesServiceTest extends ServiceTestBase {
 
   private UserPreferences patch(String body) throws Exception {
     return preferencesService.patchCurrentUserPreferences(objectMapper.readTree(body));
+  }
+
+  private void authenticateNewAdmin() {
+    restoreAuthentication();
+    authenticate(
+        userService.createUserWithRole(
+            "preferences-content-admin-" + UUID.randomUUID(), "test", Role.ROLE_ADMIN));
   }
 
   private void authenticate(User user) {

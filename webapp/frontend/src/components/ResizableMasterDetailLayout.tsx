@@ -26,6 +26,8 @@ type ResizableMasterDetailLayoutProps = {
   maxSidebarWidthPercent?: number;
   detailVisible?: boolean;
   collapsible?: boolean;
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 };
 
 const DEFAULT_SIDEBAR_WIDTH_PERCENT = 34;
@@ -47,6 +49,8 @@ export function ResizableMasterDetailLayout({
   maxSidebarWidthPercent = MAX_SIDEBAR_WIDTH_PERCENT,
   detailVisible = true,
   collapsible = false,
+  collapsed: controlledCollapsed,
+  onCollapsedChange,
 }: ResizableMasterDetailLayoutProps) {
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const [widths, setWidths] = useState<Record<string, number>>({});
@@ -56,7 +60,8 @@ export function ResizableMasterDetailLayout({
     minSidebarWidthPercent,
     maxSidebarWidthPercent,
   );
-  const collapsed = collapsible && detailVisible && Boolean(collapsedPanels[storageKey]);
+  const collapsed =
+    collapsible && detailVisible && (controlledCollapsed ?? Boolean(collapsedPanels[storageKey]));
   const [isResizing, setIsResizing] = useState(false);
   const resizeCleanup = useRef<(() => void) | null>(null);
   useEffect(() => () => resizeCleanup.current?.(), []);
@@ -66,8 +71,13 @@ export function ResizableMasterDetailLayout({
   }, [detailVisible, storageKey]);
 
   const setCollapsed = useCallback(
-    (value: boolean) => setCollapsedPanels((previous) => ({ ...previous, [storageKey]: value })),
-    [storageKey],
+    (value: boolean) => {
+      if (controlledCollapsed === undefined) {
+        setCollapsedPanels((previous) => ({ ...previous, [storageKey]: value }));
+      }
+      onCollapsedChange?.(value);
+    },
+    [controlledCollapsed, onCollapsedChange, storageKey],
   );
 
   const setSidebarWidthPercent = useCallback(

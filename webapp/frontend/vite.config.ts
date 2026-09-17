@@ -15,7 +15,7 @@ export default defineConfig({
     proxy: {
       // Forward API calls to the Spring Boot backend
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_BACKEND_URL ?? 'http://localhost:8080',
         changeOrigin: true,
         headers: {
           // Login as the configured dev user (defaults to admin), requires backend to have HEADER auth on

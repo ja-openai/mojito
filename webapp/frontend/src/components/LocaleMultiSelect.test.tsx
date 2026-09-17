@@ -4,6 +4,26 @@ import { describe, expect, it, vi } from 'vitest';
 import { LocaleMultiSelect } from './LocaleMultiSelect';
 
 describe('LocaleMultiSelect', () => {
+  it('uses the locale name and code for a single selection without locale presets', () => {
+    render(
+      <LocaleMultiSelect
+        options={[{ tag: 'fr', label: 'French' }]}
+        selectedTags={['fr']}
+        onChange={vi.fn()}
+        selectionMode="single"
+        myLocaleTags={['fr']}
+        showSelectionPresets
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Locales' });
+    expect(trigger).toHaveTextContent('French');
+    fireEvent.click(trigger);
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('radio', { name: 'French fr' })).toBeChecked();
+    expect(within(menu).queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('shows locale presets instead of legacy bulk action links', () => {
     const handleChange = vi.fn();
 
