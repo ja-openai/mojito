@@ -341,3 +341,27 @@ a.review-project-document__link {
   color: var(--color-danger);
   font-size: var(--font-size-sm);
 }
+
+.review-project-document__page--email {
+  max-width: 40rem;
+}
+.review-project-document__email-part {
+  padding-block: var(--space-3);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+.review-project-document__email-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  margin-bottom: var(--space-1);
+}
+.review-project-document__email-part--subject .review-project-document__block {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.review-project-document__email-part--preheader .review-project-document__block {
+  color: var(--color-text-muted);
+}
+.review-project-document__email-part--body {
+  border-bottom: 0;
+  padding-top: var(--space-5);
+}

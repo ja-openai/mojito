@@ -1,3 +1,4 @@
+import { emailCompanionPaths } from '../utils/emailAssetPaths';
 import type { ApiReviewProjectDocument } from './review-projects';
 
 export type ApiContentAsset = {
@@ -130,4 +131,29 @@ export function fetchContentPreview(
   return readContent<ApiContentPreview>(
     `/api/repositories/${repositoryId}/content/${assetId}?${params}`,
   );
+}
+
+export async function fetchContentEmailParts(
+  repositoryId: number,
+  branchId: number,
+  locale: string,
+  bodyPath: string,
+) {
+  const previews = await Promise.all(
+    emailCompanionPaths(bodyPath).map(async (path) => {
+      const index = await fetchContentAssets(repositoryId, {
+        branchId,
+        query: path,
+        searchMode: 'exact',
+      });
+      const asset = index.assets.find(
+        (asset) => asset.assetPath === path && asset.branchId === branchId,
+      );
+      return asset ? fetchContentPreview(repositoryId, asset.assetId, branchId, locale) : null;
+    }),
+  );
+  return {
+    documents: previews.flatMap((preview) => (preview?.document ? [preview.document] : [])),
+    warnings: previews.flatMap((preview) => preview?.warnings ?? []),
+  };
 }

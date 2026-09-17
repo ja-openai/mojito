@@ -9,6 +9,7 @@ import {
   contentAssetsQueryKey,
   type ContentSearchMode,
   fetchContentAssets,
+  fetchContentEmailParts,
   fetchContentPreview,
   normalizedDirectory,
 } from '../../api/content';
@@ -280,6 +281,19 @@ function RepositoryContentPage() {
     refetchOnMount: 'always',
   });
   const preview = previewQuery.data;
+  const emailPartsQuery = useQuery({
+    queryKey: ['content-preview', repositoryId, 'email-parts', preview?.branchId, assetId, locale],
+    queryFn: () =>
+      fetchContentEmailParts(
+        repositoryId!,
+        preview!.branchId,
+        locale,
+        preview!.document!.assetPath,
+      ),
+    enabled: validLocale && preview?.document?.assetPath.endsWith('_body.mdx') === true,
+    staleTime: 0,
+  });
+  const isEmail = preview?.document?.assetPath.endsWith('_body.mdx') === true;
   const editorOpen =
     selectedTextUnitId != null && editorSelection != null && assetId != null && validLocale;
   const docked = editorOpen && editorDocked;
@@ -545,17 +559,36 @@ function RepositoryContentPage() {
                         data={
                           preview
                             ? {
-                                documents: preview.document ? [preview.document] : [],
-                                warnings: preview.warnings,
+                                documents: preview.document
+                                  ? [
+                                      preview.document,
+                                      ...(isEmail ? (emailPartsQuery.data?.documents ?? []) : []),
+                                    ]
+                                  : [],
+                                warnings: [
+                                  ...preview.warnings,
+                                  ...(isEmail ? (emailPartsQuery.data?.warnings ?? []) : []),
+                                  ...(isEmail &&
+                                  !emailPartsQuery.isPending &&
+                                  !emailPartsQuery.isError &&
+                                  emailPartsQuery.data?.documents.length !== 2
+                                    ? [
+                                        'Email subject or preheader is missing. Showing the body on its own.',
+                                      ]
+                                    : []),
+                                ],
                               }
                             : undefined
                         }
                         textUnits={[]}
                         selectedTextUnitId={selectedTextUnitId}
                         localeTag={locale}
-                        loading={previewQuery.isPending}
-                        error={previewQuery.isError}
-                        onRetry={() => void previewQuery.refetch()}
+                        loading={previewQuery.isPending || (isEmail && emailPartsQuery.isPending)}
+                        error={previewQuery.isError || (isEmail && emailPartsQuery.isError)}
+                        onRetry={() => {
+                          void previewQuery.refetch();
+                          if (isEmail) void emailPartsQuery.refetch();
+                        }}
                         onSelect={() => undefined}
                         onNavigate={() => {
                           setEditorSelection(null);

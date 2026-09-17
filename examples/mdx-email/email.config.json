@@ -1,0 +1,5 @@
+{
+  "sourceLocale": "en",
+  "targetLocales": ["fr", "de", "es", "ja", "ar"],
+  "emails": ["welcome", "digest"]
+}

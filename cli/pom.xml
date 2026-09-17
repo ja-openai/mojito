@@ -120,6 +120,20 @@
                     <include>translations/**/*.json</include>
                 </includes>
             </resource>
+            <resource>
+                <directory>${project.basedir}/../examples/mdx-email</directory>
+                <targetPath>email-demo</targetPath>
+                <includes>
+                    <include>content/**/*.mdx</include>
+                    <include>translations/**/*.mdx</include>
+                    <include>scripts/*</include>
+                    <include>README.md</include>
+                    <include>package*.json</include>
+                    <include>email.config.json</include>
+                    <include>vite.config.mjs</include>
+                    <include>render.jsx</include>
+                </includes>
+            </resource>
         </resources>
         <plugins>
 

@@ -3,6 +3,7 @@ package com.box.l10n.mojito.cli.command;
 import com.box.l10n.mojito.cli.console.ConsoleWriter;
 import com.box.l10n.mojito.rest.resttemplate.AuthenticatedRestTemplate;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -29,6 +30,28 @@ public class ContentDemo {
           "modules/routine/Tip.mdx",
           "messages.mf2.json");
   private static final String RESOURCE_ROOT = "/content-demo/";
+  private static final List<String> EMAIL_ASSETS =
+      List.of(
+          "welcome_subject.mdx",
+          "welcome_preheader.mdx",
+          "welcome_body.mdx",
+          "digest_subject.mdx",
+          "digest_preheader.mdx",
+          "digest_body.mdx",
+          "modules/Header.mdx",
+          "modules/Footer.mdx");
+  private static final List<String> EMAIL_BUILD_FILES =
+      List.of(
+          "package.json",
+          "package-lock.json",
+          "email.config.json",
+          "vite.config.mjs",
+          "render.jsx",
+          "scripts/prepare.mjs",
+          "scripts/validate.mjs",
+          "scripts/export.mjs",
+          "scripts/mojito.sh",
+          "scripts/email.test.mjs");
 
   private final ConsoleWriter console;
   private final CommandHelper commandHelper;
@@ -41,11 +64,11 @@ public class ContentDemo {
     this.client = client;
   }
 
-  public void create(String name, String outputDirectory) {
+  public void create(String name, String outputDirectory, boolean email) {
     Path output =
         Path.of(outputDirectory == null ? name : outputDirectory).toAbsolutePath().normalize();
     // Fail before creating a repository when local output or bundled fixtures cannot be used.
-    Map<String, byte[]> resources = readResources();
+    Map<String, byte[]> resources = readResources(email);
     writeResources(output, resources);
 
     var createArgs = new ArrayList<>(List.of("repo-create", "-n", name, "-sl", "en", "-l"));
@@ -77,7 +100,7 @@ public class ContentDemo {
 
     console
         .newLine()
-        .a("Content demo repository is ready: ")
+        .a(email ? "Email demo repository is ready: " : "Content demo repository is ready: ")
         .a(name)
         .println()
         .a("English source; target languages: ")
@@ -93,22 +116,33 @@ public class ContentDemo {
         .println();
   }
 
-  private Map<String, byte[]> readResources() {
+  private Map<String, byte[]> readResources(boolean email) {
+    String root = email ? "/email-demo/" : RESOURCE_ROOT;
     Map<String, byte[]> resources = new LinkedHashMap<>();
-    resources.put("README.md", readResource("README.md"));
-    for (String asset : ASSETS) {
-      resources.put("content/" + asset, readResource("content/" + asset));
+    resources.put("README.md", readResource(root, "README.md"));
+    for (String file : email ? EMAIL_BUILD_FILES : List.<String>of()) {
+      resources.put(file, readResource(root, file));
+    }
+    if (email) {
+      // JAR packaging excludes .gitignore resources, so generate the output-only ignore file.
+      resources.put(
+          ".gitignore",
+          "/node_modules/\n/.generated/\n/dist/\n/localized/\n/.test-*/\n"
+              .getBytes(StandardCharsets.UTF_8));
+    }
+    for (String asset : email ? EMAIL_ASSETS : ASSETS) {
+      resources.put("content/" + asset, readResource(root, "content/" + asset));
       for (String locale : LOCALES) {
         int extension = asset.lastIndexOf('.');
         String target = asset.substring(0, extension) + "_" + locale + asset.substring(extension);
-        resources.put("translations/" + target, readResource("translations/" + target));
+        resources.put("translations/" + target, readResource(root, "translations/" + target));
       }
     }
     return resources;
   }
 
-  private byte[] readResource(String name) {
-    try (var input = getClass().getResourceAsStream(RESOURCE_ROOT + name)) {
+  private byte[] readResource(String root, String name) {
+    try (var input = getClass().getResourceAsStream(root + name)) {
       if (input == null) {
         throw new CommandException("Missing bundled content demo resource: " + name);
       }

@@ -221,6 +221,69 @@ public class ContentDemoCreateCommandTest extends CLITestBase {
   }
 
   @Test
+  public void createsEmailDemoWithSeparatePartsAndRunnableRenderer() throws Exception {
+    String name = testIdWatcher.getEntityName("email");
+    Path output = temporaryFolder.getRoot().toPath().resolve("email");
+    L10nJCommander command = getL10nJCommander();
+    command.run("demo-create", "-n", name, "-t", "email", "-o", output.toString());
+    assertThat(command.getExitCode()).as("email demo creation").isZero();
+    Repository repository = repositories.findByName(name);
+    assertThat(repository).isNotNull();
+    assertThat(files(output.resolve("content"))).hasSize(8);
+    assertThat(files(output.resolve("translations"))).hasSize(40);
+    for (String file :
+        List.of(
+            "package.json",
+            "package-lock.json",
+            "render.jsx",
+            ".gitignore",
+            "scripts/prepare.mjs",
+            "scripts/validate.mjs",
+            "scripts/export.mjs")) {
+      assertThat(output.resolve(file)).isRegularFile();
+    }
+    Path pulled = temporaryFolder.newFolder("email-pulled").toPath();
+    L10nJCommander pull = getL10nJCommander();
+    pull.run(
+        "pull",
+        "-r",
+        name,
+        "-s",
+        output.resolve("content").toString(),
+        "-t",
+        pulled.toString(),
+        "-ft",
+        "MDX",
+        "-lm",
+        "fr:fr",
+        "-lmt",
+        "MAP_ONLY");
+    assertThat(pull.getExitCode()).isZero();
+    for (Path source : files(output.resolve("content"))) {
+      Path relative = output.resolve("content").relativize(source);
+      Path target =
+          relative.resolveSibling(relative.getFileName().toString().replace(".mdx", "_fr.mdx"));
+      assertThat(Files.readString(pulled.resolve(target)))
+          .isEqualTo(Files.readString(output.resolve("translations").resolve(target)));
+    }
+    String endpoint = "api/repositories/" + repository.getId() + "/content";
+    var index = client.getForObject(endpoint, RepositoryContentIndex.class);
+    assertThat(index.assets()).hasSize(8);
+    for (var asset : index.assets()) {
+      var preview =
+          client.getForObject(
+              endpoint + "/" + asset.assetId() + "?locale=fr", RepositoryContentPreview.class);
+      assertThat(preview.warnings()).isEmpty();
+      assertThat(preview.document().warnings()).isEmpty();
+      assertThat(
+              preview.document().blocks().stream()
+                  .filter(ReviewProjectDocumentView.Block::translatable))
+          .allSatisfy(block -> assertThat(block.targetContent()).isNotEmpty());
+    }
+    assertThat(jdbc.queryForObject("select count(*) from mblob", Integer.class)).isZero();
+  }
+
+  @Test
   public void rejectsUnknownDemoTypeBeforeCreatingRepositoryOrFiles() {
     String name = testIdWatcher.getEntityName("unknown");
     Path output = temporaryFolder.getRoot().toPath().resolve("site");

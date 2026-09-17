@@ -12,6 +12,7 @@ import {
   type ApiContentPreview,
   fetchContentAssets,
   fetchContentDirectories,
+  fetchContentEmailParts,
   fetchContentPreview,
 } from '../../api/content';
 import { type ApiRepository, fetchRepositories } from '../../api/repositories';
@@ -26,6 +27,7 @@ vi.mock('../../api/content', async (importOriginal) => ({
   fetchContentAssets: vi.fn(),
   fetchContentDirectories: vi.fn(),
   fetchContentPreview: vi.fn(),
+  fetchContentEmailParts: vi.fn(),
 }));
 // Exercise page navigation independently from the shared tree's viewport measurements.
 vi.mock('../../components/FileTree', async (importOriginal) => ({
@@ -384,6 +386,47 @@ describe('ContentPage', () => {
     await screen.findByRole('heading', { name: 'Repositories destination' });
     await act(() => Promise.resolve(resolveLink(assetPage([{ ...asset, assetId: 12 }]))));
     expect(screen.getByTestId('location-url')).toHaveTextContent(/^\/repositories$/);
+  });
+
+  it('edits an email subject and refreshes the grouped preview after saving', async () => {
+    const body = preview();
+    body.document!.assetPath = 'welcome_body.mdx';
+    const companions = ['subject', 'preheader'].map((part, index) => ({
+      ...body.document!,
+      assetId: index + 20,
+      assetPath: `welcome_${part}.mdx`,
+      blocks: [
+        {
+          ...body.document!.blocks[0],
+          type: 'paragraph',
+          id: `welcome.${part}`,
+          tmTextUnitId: index + 1001,
+          targetContent: `Email ${part}`,
+        },
+      ],
+    }));
+    vi.mocked(fetchContentPreview).mockResolvedValue(body);
+    vi.mocked(fetchContentEmailParts).mockResolvedValue({ documents: companions, warnings: [] });
+    renderPage('/content?repoId=1&branchId=5&assetId=11&locale=fr-FR');
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Edit welcome.subject in welcome_subject.mdx' }),
+    );
+    expect(screen.getByText('Editing 1001 in fr-FR')).toBeVisible();
+    vi.mocked(fetchContentEmailParts).mockResolvedValue({
+      documents: companions.map((document) => ({
+        ...document,
+        blocks: document.blocks.map((block) => ({
+          ...block,
+          targetContent: 'Updated email field',
+        })),
+      })),
+      warnings: [],
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Save embedded translation' }));
+    expect(await screen.findAllByText('Updated email field')).toHaveLength(2);
+    expect(fetchContentEmailParts).toHaveBeenCalledWith(1, 5, 'fr-FR', 'welcome_body.mdx');
+    await userEvent.click(screen.getByRole('button', { name: 'Next passage' }));
+    expect(screen.getByText('Editing 1002 in fr-FR')).toBeVisible();
   });
 
   it('shows the repository selector before loading any content', async () => {

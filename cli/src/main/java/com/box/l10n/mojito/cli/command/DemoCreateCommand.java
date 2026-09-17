@@ -33,7 +33,7 @@ import org.springframework.stereotype.Component;
 @Scope("prototype")
 @Parameters(
     commandNames = {"demo-create"},
-    commandDescription = "Creates a properties or MDX content demo repository")
+    commandDescription = "Creates a properties, MDX content, or email demo repository")
 public class DemoCreateCommand extends RepoCommand {
 
   /** logger */
@@ -56,7 +56,7 @@ public class DemoCreateCommand extends RepoCommand {
   @Parameter(
       names = {"--type", "-t"},
       arity = 1,
-      description = "Demo type: properties (default) or content (MDX and MF2)")
+      description = "Demo type: properties (default), content (MDX and MF2), or email (MDX)")
   String typeParam = "properties";
 
   @Autowired ContentDemo contentDemo;
@@ -73,13 +73,13 @@ public class DemoCreateCommand extends RepoCommand {
 
   @Override
   public void execute() throws CommandException {
-    if ("content".equals(typeParam)) {
-      contentDemo.create(nameParam, outputDirectoryParam);
+    if ("content".equals(typeParam) || "email".equals(typeParam)) {
+      contentDemo.create(nameParam, outputDirectoryParam, "email".equals(typeParam));
       return;
     }
     if (!"properties".equals(typeParam)) {
       throw new CommandException(
-          "Unknown demo type: " + typeParam + ". Use properties or content.");
+          "Unknown demo type: " + typeParam + ". Use properties, content, or email.");
     }
     createDemoRepository();
     initOutputDirectory();

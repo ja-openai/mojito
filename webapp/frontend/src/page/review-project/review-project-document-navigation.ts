@@ -117,9 +117,10 @@ export function buildDocumentNavigation(
       }
     }
     for (const child of candidates) {
+      if (parent.key === child.key) continue;
       if (!included.has(child.key)) continue;
       child.isModule = true;
-      if (parent.key !== child.key && !child.parentKeys.includes(parent.key)) {
+      if (!child.parentKeys.includes(parent.key)) {
         child.parentKeys.push(parent.key);
       }
     }

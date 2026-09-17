@@ -11,6 +11,7 @@ import { ResizableMasterDetailLayout } from '../../components/ResizableMasterDet
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import type { DocumentPreviewLink as PreviewLink } from './document-preview-link';
 import { DocumentPreviewLink } from './DocumentPreviewLink';
+import { groupEmailDocuments } from './email-document';
 import { MdxMessagePreview } from './MdxMessagePreview';
 import { getDecisionState } from './review-project-decision';
 import { documentBlockRow } from './review-project-document';
@@ -62,7 +63,13 @@ export function ReviewProjectDocumentView({
   const repositoryMode = repositoryPreview != null;
   const sourceLocale = repositoryPreview?.sourceLocaleTag === localeTag;
   const entries = useMemo(
-    () => (data ? buildDocumentNavigation(data, textUnits) : []),
+    () =>
+      data
+        ? buildDocumentNavigation(
+            { ...data, documents: groupEmailDocuments(data.documents) },
+            textUnits,
+          )
+        : [],
     [data, textUnits],
   );
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -252,6 +259,18 @@ export function ReviewProjectDocumentView({
 
         const renderNode = (node: DocumentNode): ReactNode => {
           const { block, occurrenceId, children } = node;
+          if (block.type === 'email-part') {
+            return (
+              <section
+                key={occurrenceId}
+                className={`review-project-document__email-part review-project-document__email-part--${block.source.toLowerCase()}`}
+                aria-label={`Email ${block.source.toLowerCase()}`}
+              >
+                <div className="review-project-document__email-label">{block.source}</div>
+                {children.map(renderNode)}
+              </section>
+            );
+          }
           if (node.choice) {
             if (!node.choiceComplete) {
               return (
@@ -515,7 +534,7 @@ export function ReviewProjectDocumentView({
         };
         return (
           <article
-            className="review-project-document__page"
+            className={`review-project-document__page${nodes.some((node) => node.block.type === 'email-part') ? ' review-project-document__page--email' : ''}`}
             key={`${currentDocumentKey}:${document.sourceContentMd5}`}
             data-document-key={currentDocumentKey}
             aria-label={document.assetPath}
@@ -688,7 +707,10 @@ function documentNodes(blocks: ApiReviewProjectDocumentBlock[]): DocumentNode[] 
       children: [],
     };
     parents[parents.length - 1].children.push(node);
-    if (block.type === 'component' && block.moduleStatus === 'EXPANDED') {
+    if (
+      (block.type === 'component' || block.type === 'email-part') &&
+      block.moduleStatus === 'EXPANDED'
+    ) {
       parents.push({ depth, children: node.children });
     }
   });
