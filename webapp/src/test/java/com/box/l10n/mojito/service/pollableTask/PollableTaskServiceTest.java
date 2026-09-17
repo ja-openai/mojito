@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * @author jaurambault
@@ -29,6 +31,8 @@ public class PollableTaskServiceTest extends ServiceTestBase {
   @Autowired PollableTaskService pollableTaskService;
 
   @Autowired ObjectMapper objectMapper;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
 
@@ -168,6 +172,27 @@ public class PollableTaskServiceTest extends ServiceTestBase {
     PollableTask finishTask =
         pollableTaskService.finishTask(createParentTask.getId(), null, null, null);
     assertTrue(finishTask.isAllFinished());
+  }
+
+  @Test
+  public void testFinishNewTaskInTheCreatingPersistenceContext() {
+    new TransactionTemplate(transactionManager)
+        .executeWithoutResult(
+            status -> {
+              PollableTask task =
+                  pollableTaskService.createPollableTask(
+                      null, testIdWatcher.getEntityName("new-task"), null, 0);
+              PollableTask finished =
+                  pollableTaskService.finishTask(task.getId(), null, null, null);
+              assertTrue(finished.isAllFinished());
+              assertTrue(pollableTaskService.getAllPollableTasksWithError(finished).isEmpty());
+
+              PollableTask parent =
+                  pollableTaskService.createPollableTask(
+                      null, testIdWatcher.getEntityName("waiting-parent"), null, 1);
+              assertFalse(
+                  pollableTaskService.finishTask(parent.getId(), null, null, null).isAllFinished());
+            });
   }
 
   @Test
