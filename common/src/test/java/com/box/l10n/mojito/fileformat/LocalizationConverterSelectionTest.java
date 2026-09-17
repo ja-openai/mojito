@@ -97,6 +97,17 @@ public class LocalizationConverterSelectionTest {
   }
 
   @Test
+  public void mdxUsesItsNativeConverterWithoutChangingOtherDefaults() {
+    assertTrue(LocalizationConverterSelection.isPortable(null, false, "page.MDX"));
+    assertEquals(
+        LocalizationFileFormat.MDX, LocalizationConverterSelection.format("page.MDX", null));
+    assertFalse(
+        LocalizationConverterSelection.isPortable(
+            LocalizationConverterSelection.useOkapi(null), false, "page.mdx"));
+    assertFalse(LocalizationConverterSelection.isPortable(null, false, "page.html"));
+  }
+
+  @Test
   public void backendDefaultOnlySelectsSupportedPortableFormats() {
     assertFalse(LocalizationConverterSelection.isPortable(null, false, "messages.json"));
     assertFalse(LocalizationConverterSelection.isPortable(null, true, null));

@@ -113,7 +113,7 @@ public class Param {
 
   public static final String CONVERTER_LONG = "--converter";
   public static final String CONVERTER_DESCRIPTION =
-      "Localization converter: okapi (default) or portable. Values are case-insensitive.";
+      "Localization converter: okapi (default) or portable. MDX uses portable by default. Values are case-insensitive.";
 
   public static final String SOURCE_REGEX_LONG = "--source-regex";
   public static final String SOURCE_REGEX_SHORT = "-sr";

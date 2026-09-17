@@ -28,6 +28,7 @@ public enum FileTypes {
   VSCODE_EXTENSION_JSON(VSCodeFileType.class),
   I18NEXT_PARSER_JSON(I18NextFileType.class),
   TS(TSFileType.class),
+  MDX(MdxFileType.class),
   YAML(YamlFileType.class),
   HTML_ALPHA(HtmlAlphaFileType.class);
 

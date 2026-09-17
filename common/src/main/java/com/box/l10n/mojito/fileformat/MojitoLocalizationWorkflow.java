@@ -99,6 +99,12 @@ final class MojitoLocalizationWorkflow {
       List<String> filterOptions,
       String targetLocale,
       boolean copyFormsOnImport) {
+    if (format == LocalizationFileFormat.MDX
+        && !MdxDocument.parse(source).hasOnlyExplicitIdentities()) {
+      throw new LocalizationParseException(
+          "UNSUPPORTED_IMPORT_POLICY",
+          "Localized MDX import requires a mojito-id annotation on every text block so target text keeps its source identity");
+    }
     List<String> extractionOptions = new ArrayList<>();
     String targetComment = null;
     if (filterOptions != null) {
@@ -452,6 +458,11 @@ final class MojitoLocalizationWorkflow {
       boolean removeUntranslated,
       String targetLocale) {
     LocalizationFilterOptions options = LocalizationFilterOptions.parse(format, filterOptions);
+    if (format == LocalizationFileFormat.MDX && removeUntranslated) {
+      throw new LocalizationParseException(
+          "UNSUPPORTED_OUTPUT_POLICY",
+          "MDX pages retain untranslated source blocks; removing them is not supported");
+    }
     if (format == LocalizationFileFormat.FORMATJS_JSON) {
       return localizeJson(
           source,

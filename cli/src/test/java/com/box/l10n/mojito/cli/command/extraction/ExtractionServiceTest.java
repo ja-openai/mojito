@@ -49,6 +49,25 @@ public class ExtractionServiceTest {
   }
 
   @Test
+  public void mdxExtractionPreservesParagraphBoundariesAndExplicitIds() {
+    when(sourceFileMatch.getSourcePath()).thenReturn("help/invite.mdx");
+    when(commandHelper.getFileContentWithXcodePatch(sourceFileMatch))
+        .thenReturn(
+            "{/* mojito-id: invite.title */}\n# Invite your team\n\n"
+                + "{/* mojito-id: invite.body */}\nShare **ideas** and [projects](/projects).\n");
+
+    List<AssetExtractorTextUnit> extracted =
+        extractionService.getExtractionTextUnitsForSourceFileMatch(sourceFileMatch, null);
+
+    assertEquals(
+        List.of("invite.title", "invite.body"),
+        extracted.stream().map(AssetExtractorTextUnit::getName).toList());
+    assertEquals("Invite your team", extracted.get(0).getSource());
+    assertEquals("Share **ideas** and [projects](/projects).", extracted.get(1).getSource());
+    verifyNoInteractions(assetExtractor);
+  }
+
+  @Test
   public void backendPropertyAlsoSelectsPortableLocalCliExtraction() {
     extractionService.portableConverter = true;
 

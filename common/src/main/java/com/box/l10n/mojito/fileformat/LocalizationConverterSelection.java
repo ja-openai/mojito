@@ -62,7 +62,7 @@ public final class LocalizationConverterSelection {
   public static boolean isPortable(
       List<String> filterOptions, boolean portableByDefault, String assetPath) {
     return isPortable(filterOptions)
-        || (portableByDefault
+        || ((portableByDefault || supportedFormat(assetPath) == LocalizationFileFormat.MDX)
             && (filterOptions == null || !filterOptions.contains(OKAPI_OPTION))
             && supportedFormat(assetPath) != null);
   }
@@ -139,6 +139,9 @@ public final class LocalizationConverterSelection {
     }
     if (path.endsWith(".html") || path.endsWith(".htm")) {
       return LocalizationFileFormat.HTML;
+    }
+    if (path.endsWith(".mdx")) {
+      return LocalizationFileFormat.MDX;
     }
     return null;
   }

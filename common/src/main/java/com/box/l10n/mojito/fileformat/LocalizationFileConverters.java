@@ -249,6 +249,7 @@ public final class LocalizationFileConverters {
       case JAVASCRIPT, TYPESCRIPT -> JavaScriptSourceFormat.parse(format, decoded);
       case RESX, XTB -> XmlResourceParser.parse(format, decoded);
       case HTML -> HtmlSourceFormat.parse(decoded, false, true);
+      case MDX -> MdxSourceFormat.parse(decoded);
     };
   }
 
@@ -425,6 +426,7 @@ public final class LocalizationFileConverters {
       case JAVASCRIPT, TYPESCRIPT -> JavaScriptSourceFormat.extract(format, source);
       case RESX, XTB -> XmlResourceSourceSkeleton.extract(format, source);
       case HTML -> HtmlSourceFormat.extract(source, false, true);
+      case MDX -> MdxSourceFormat.extract(source);
       default ->
           throw new LocalizationParseException(
               "UNSUPPORTED_SKELETON_FORMAT",
@@ -486,6 +488,7 @@ public final class LocalizationFileConverters {
       case "javascript", "typescript" -> JavaScriptSourceFormat.render(skeleton, translations);
       case "resx", "xtb" -> XmlResourceSourceSkeleton.render(skeleton, translations);
       case "html" -> HtmlSourceFormat.render(skeleton, translations);
+      case "mdx" -> MdxSourceFormat.render(skeleton, translations);
       default ->
           throw new LocalizationParseException(
               "UNSUPPORTED_SKELETON_FORMAT", "Unsupported source-preserving skeleton format");

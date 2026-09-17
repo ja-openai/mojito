@@ -16,7 +16,8 @@ public enum LocalizationFileFormat {
   TYPESCRIPT("typescript"),
   RESX("resx"),
   XTB("xtb"),
-  HTML("html");
+  HTML("html"),
+  MDX("mdx");
 
   private final String id;
 
