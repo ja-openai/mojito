@@ -3,12 +3,8 @@ package com.box.l10n.mojito.shell;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class Shell {
-
-  static Logger logger = LoggerFactory.getLogger(Shell.class);
 
   public Result exec(String... command) {
     try {

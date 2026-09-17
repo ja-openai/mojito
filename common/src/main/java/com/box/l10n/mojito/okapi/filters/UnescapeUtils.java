@@ -1,8 +1,6 @@
 package com.box.l10n.mojito.okapi.filters;
 
 import java.util.regex.Pattern;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -10,9 +8,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class UnescapeUtils {
-
-  /** Logger */
-  static Logger logger = LoggerFactory.getLogger(UnescapeUtils.class);
 
   private static final Pattern ESCAPED_CARIAGE_RETURN = Pattern.compile("\\\\r");
   private static final Pattern ESCAPED_LINE_FEED = Pattern.compile("\\\\n");

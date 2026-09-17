@@ -34,12 +34,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class OpenAIClient {
-
-  static Logger logger = LoggerFactory.getLogger(OpenAIClient.class);
 
   final String apiKey;
 
