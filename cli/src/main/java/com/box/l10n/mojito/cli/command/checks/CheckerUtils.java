@@ -63,8 +63,8 @@ public class CheckerUtils {
     List<String> words = new ArrayList<>();
     BreakIterator wordBreakIterator = BreakIterator.getWordInstance(Locale.ENGLISH);
     str = removeHtmlTagsAndKeepWishedAttribute(str);
-    str = str.replaceAll(PLACEHOLDER_PATTERN.pattern(), "");
-    str = str.replaceAll(EMAIL_PATTERN.pattern(), "");
+    str = PLACEHOLDER_PATTERN.matcher(str).replaceAll("");
+    str = EMAIL_PATTERN.matcher(str).replaceAll("");
     wordBreakIterator.setText(str);
     int start = wordBreakIterator.first();
     for (int end = wordBreakIterator.next();
@@ -97,7 +97,7 @@ public class CheckerUtils {
     if (matcher.find()) {
       wishedHtmlAttValue = matcher.group(1);
     }
-    str = str.replaceAll(HTML_TAGS_PATTERN.pattern(), " ");
+    str = HTML_TAGS_PATTERN.matcher(str).replaceAll(" ");
 
     return wishedHtmlAttValue != null ? str + " " + wishedHtmlAttValue : str;
   }
