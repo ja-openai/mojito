@@ -3056,6 +3056,7 @@ function DetailPane({
             content: response.message.content,
             suggestions: ownReviewProjectAiSuggestions(response.suggestions, suggestionOrigin),
             review: response.review,
+            reviewedTarget: snapshot.target,
           },
         ]);
       } catch (error: unknown) {
@@ -4008,6 +4009,7 @@ function DetailPane({
           content: response.message.content,
           suggestions: ownReviewProjectAiSuggestions(response.suggestions, suggestionOrigin),
           review: response.review,
+          reviewedTarget: draftTarget,
         };
 
         setAiMessages((previous) => [...previous, assistantMessage]);
@@ -4112,6 +4114,7 @@ function DetailPane({
             content: response.message.content,
             suggestions: ownReviewProjectAiSuggestions(response.suggestions, suggestionOrigin),
             review: response.review,
+            reviewedTarget: retryTarget,
           };
           setAiMessages((previous) => [
             ...previous.filter((message) => !message.isError),

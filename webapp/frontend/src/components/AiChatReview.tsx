@@ -10,6 +10,7 @@ export type AiChatReviewMessage = {
   id: string;
   sender: 'user' | 'assistant';
   content: string;
+  reviewedTarget?: string;
   suggestions?: AiReviewSuggestion[];
   review?: AiReviewReview;
   isError?: boolean;
@@ -89,8 +90,12 @@ export function AiChatReview({
           const review = message.review;
           const reviewSummary = review?.explanation?.trim() || message.content;
           const allSuggestions = message.suggestions ?? [];
+          const originalSuggestion = allSuggestions.find(
+            (suggestion) => suggestion.content === message.reviewedTarget,
+          );
+          const reviewConfidence = originalSuggestion?.confidenceLevel ?? review?.confidenceLevel;
           const suggestions = allSuggestions.filter(
-            (suggestion) => suggestion.content !== currentTarget,
+            (suggestion) => suggestion.content !== message.reviewedTarget,
           );
           const hasCorrection = suggestions.some((suggestion) => suggestion.kind !== 'alternative');
           const hasOnlyAlternatives = suggestions.length > 0 && !hasCorrection;
@@ -130,17 +135,17 @@ export function AiChatReview({
             >
               {showResult ? (
                 <>
-                  <p className="ai-chat-review__result-status">{resultStatus}</p>
+                  <div className="ai-chat-review__result-heading">
+                    <p className="ai-chat-review__result-status">{resultStatus}</p>
+                    {showScore && reviewConfidence != null ? (
+                      <span className="ai-chat-review__review-confidence">
+                        Reviewed wording
+                        <AiReviewConfidence value={reviewConfidence} />
+                      </span>
+                    ) : null}
+                  </div>
                   {(suggestions.length === 0 || hasOnlyAlternatives) && resultExplanation ? (
                     <p className="ai-chat-review__message-content">{resultExplanation}</p>
-                  ) : null}
-                  {showScore && suggestions.length === 0 ? (
-                    <AiReviewConfidence
-                      value={
-                        allSuggestions.find((suggestion) => suggestion.content === currentTarget)
-                          ?.confidenceLevel ?? review?.confidenceLevel
-                      }
-                    />
                   ) : null}
                 </>
               ) : (
@@ -210,19 +215,23 @@ export function AiChatReview({
                           ) : null}
                         </div>
                         <div className="ai-chat-review__suggestion-actions">
-                          <button
-                            type="button"
-                            className="ai-chat-review__button"
-                            disabled={readOnly || Boolean(suggestionErrors.get(suggestion))}
-                            aria-describedby={
-                              suggestionErrors.get(suggestion)
-                                ? `${validationId}-${index}-${suggestionIndex}`
-                                : undefined
-                            }
-                            onClick={() => onUseSuggestion(suggestion)}
-                          >
-                            Use
-                          </button>
+                          {suggestion.content === currentTarget ? (
+                            <span className="ai-chat-review__suggestion-selected">Selected</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="ai-chat-review__button"
+                              disabled={readOnly || Boolean(suggestionErrors.get(suggestion))}
+                              aria-describedby={
+                                suggestionErrors.get(suggestion)
+                                  ? `${validationId}-${index}-${suggestionIndex}`
+                                  : undefined
+                              }
+                              onClick={() => onUseSuggestion(suggestion)}
+                            >
+                              Use
+                            </button>
+                          )}
                         </div>
                       </div>
                     );

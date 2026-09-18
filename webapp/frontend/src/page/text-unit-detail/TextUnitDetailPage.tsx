@@ -826,6 +826,7 @@ export function TextUnitDetailPage({ embedded }: { embedded?: EmbeddedEditor } =
             content: response.message.content,
             suggestions: response.suggestions,
             review: response.review,
+            reviewedTarget: activeTextUnit.target ?? '',
           },
         ]);
       } catch (error: unknown) {
@@ -1524,6 +1525,7 @@ export function TextUnitDetailPage({ embedded }: { embedded?: EmbeddedEditor } =
           content: response.message.content,
           suggestions: response.suggestions,
           review: response.review,
+          reviewedTarget: draftTarget,
         };
 
         setAiMessages((previous) => [...previous, assistantMessage]);
@@ -1617,6 +1619,7 @@ export function TextUnitDetailPage({ embedded }: { embedded?: EmbeddedEditor } =
             content: response.message.content,
             suggestions: response.suggestions,
             review: response.review,
+            reviewedTarget: retryTarget,
           };
           setAiMessages((previous) => [
             ...previous.filter((message) => !message.isError),

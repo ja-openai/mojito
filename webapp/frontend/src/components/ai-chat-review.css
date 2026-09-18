@@ -114,11 +114,22 @@
 
 .ai-chat-review__suggestion-actions {
   align-self: start;
+  width: 5rem;
 }
 
 .ai-chat-review__suggestion-actions .ai-chat-review__button {
+  width: 100%;
   min-height: 2rem;
   padding: 0 var(--space-3);
+  font-size: var(--font-size-md);
+}
+
+.ai-chat-review__suggestion-selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  color: var(--color-text-muted);
   font-size: var(--font-size-md);
 }
 
@@ -196,6 +207,21 @@
   color: var(--color-text);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
+}
+
+.ai-chat-review__result-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
+.ai-chat-review__review-confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .ai-chat-review__suggestion-meta {

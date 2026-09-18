@@ -24,6 +24,7 @@ function renderReview(
       sender: 'assistant',
       content: 'The existing translation preserves the meaning.',
       review: { score: 2, explanation: 'No concrete defect was found.' },
+      reviewedTarget: currentTarget,
       suggestions,
       ...messageOverrides,
     },
@@ -90,6 +91,11 @@ describe('AiChatReview', () => {
     expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Use' }));
     expect(props.onUseSuggestion).not.toHaveBeenCalled();
+    rerender(<AiChatReview {...props} currentTarget="Votre compte" readOnly />);
+    expect(screen.getByText('Selected')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Selected' })).not.toBeInTheDocument();
+    rerender(<AiChatReview {...props} currentTarget="Mon compte" readOnly />);
+    expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
   });
 
   it('offers one Review CTA for the first empty round with automatic review off', async () => {
@@ -209,6 +215,7 @@ describe('AiChatReview', () => {
             sender: 'assistant',
             content: 'Makes the owner explicit.',
             review: { score: 2, explanation: 'A wording alternative.' },
+            reviewedTarget: 'Compte',
             suggestions: [
               {
                 content: 'Votre compte',
@@ -312,7 +319,8 @@ describe('AiChatReview', () => {
     const { props } = renderReview('Compte', [{ content: 'Compte', confidenceLevel: 94 }, changed]);
 
     expect(screen.queryByText('Compte')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Model confidence: 94 out of 100')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model confidence: 94 out of 100')).toBeVisible();
+    expect(screen.getByText('Reviewed wording')).toBeVisible();
     expect(screen.queryByText('No change suggested')).toBeNull();
     expect(screen.getByText('Votre compte')).toBeVisible();
     expect(screen.getByText('Clarifies whose account is shown.')).toBeVisible();
@@ -323,6 +331,7 @@ describe('AiChatReview', () => {
     expect(useButtons).toHaveLength(1);
     fireEvent.click(useButtons[0]);
     expect(props.onUseSuggestion).toHaveBeenCalledExactlyOnceWith(changed);
+    expect(props.onUseSuggestion.mock.calls[0][0]).toBe(changed);
   });
 
   it.each([
@@ -330,7 +339,7 @@ describe('AiChatReview', () => {
     { name: 'non-breaking space', currentTarget: '10 EUR', suggestedTarget: '10\u00a0EUR' },
   ])('preserves a $name change exactly', ({ currentTarget, suggestedTarget }) => {
     const suggestion = { content: suggestedTarget, confidenceLevel: 94 };
-    const { props } = renderReview(currentTarget, [suggestion]);
+    const { props, rerender } = renderReview(currentTarget, [suggestion]);
 
     expect(screen.queryByText('No change suggested')).toBeNull();
     const useButton = screen.getByRole('button', { name: 'Use' });
@@ -338,23 +347,154 @@ describe('AiChatReview', () => {
     expect(useButton.closest('details')).toBeNull();
     fireEvent.click(useButton);
     expect(props.onUseSuggestion).toHaveBeenCalledExactlyOnceWith(suggestion);
+    expect(props.onUseSuggestion.mock.calls[0][0]).toBe(suggestion);
+    rerender(<AiChatReview {...props} currentTarget={suggestedTarget} />);
+    expect(screen.getByText('Selected')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Use' })).not.toBeInTheDocument();
+    rerender(<AiChatReview {...props} />);
+    expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
   });
 
-  it('updates suggestion visibility when the current draft changes', () => {
-    const suggestion = { content: 'Votre compte', confidenceLevel: 94 };
+  it('keeps a candidate and its assessment mounted when selected, edited, and reset', () => {
+    const suggestion = Object.freeze({ content: 'Votre compte', confidenceLevel: 94 });
     const { rerender, props } = renderReview('Compte', [suggestion]);
+    const candidate = screen.getByText('Votre compte');
+    const row = candidate.closest('.ai-chat-review__suggestion');
+    const status = screen.getByText('Change suggested');
+    const explanation = screen.getByText('The existing translation preserves the meaning.');
+    const confidence = screen.getByLabelText('Model confidence: 94 out of 100');
     expect(screen.getByRole('button', { name: 'Use' })).toBeInTheDocument();
 
     rerender(<AiChatReview {...props} currentTarget="Votre compte" />);
     expect(screen.queryByRole('button', { name: 'Use' })).not.toBeInTheDocument();
-    expect(screen.getByText('No change suggested')).toBeVisible();
-    expect(screen.getByLabelText('Model confidence: 94 out of 100')).toHaveTextContent('94');
-    expect(screen.getByText('The existing translation preserves the meaning.')).toBeVisible();
-    expect(screen.queryByText('Votre compte')).not.toBeInTheDocument();
+    expect(screen.getByText('Selected')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Selected' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Selected'));
+    expect(props.onUseSuggestion).not.toHaveBeenCalled();
 
-    rerender(<AiChatReview {...props} currentTarget="Compte" />);
-    expect(screen.queryByText('No change suggested')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
+    for (const target of ['Votre compte!', 'Compte']) {
+      rerender(<AiChatReview {...props} currentTarget={target} />);
+      expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
+      expect(screen.queryByText('Selected')).not.toBeInTheDocument();
+      expect(screen.getByText('Votre compte')).toBe(candidate);
+      expect(candidate.closest('.ai-chat-review__suggestion')).toBe(row);
+      expect(screen.getByText('Change suggested')).toBe(status);
+      expect(screen.getByText('The existing translation preserves the meaning.')).toBe(explanation);
+      expect(screen.getByLabelText('Model confidence: 94 out of 100')).toBe(confidence);
+      expect(screen.queryByText('No change suggested')).not.toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    expect(props.onUseSuggestion.mock.calls[0][0]).toBe(suggestion);
+  });
+
+  it('retains the reviewed wording rating and explanation without adding its text during editing', () => {
+    const { rerender, props } = renderReview('Compte', [
+      {
+        content: 'Compte',
+        confidenceLevel: 94,
+        explanation: 'The wording correctly preserves the account label.',
+      },
+    ]);
+    const status = screen.getByText('No change suggested');
+    const explanation = screen.getByText('The wording correctly preserves the account label.');
+    const confidence = screen.getByLabelText('Model confidence: 94 out of 100');
+    const label = screen.getByText('Reviewed wording');
+
+    for (const target of ['Comp', 'Votre compte', 'Compte']) {
+      rerender(<AiChatReview {...props} currentTarget={target} />);
+      expect(screen.getByText('No change suggested')).toBe(status);
+      expect(screen.getByText('The wording correctly preserves the account label.')).toBe(
+        explanation,
+      );
+      expect(screen.getByLabelText('Model confidence: 94 out of 100')).toBe(confidence);
+      expect(screen.getByText('Reviewed wording')).toBe(label);
+      expect(screen.queryByText('Compte')).not.toBeInTheDocument();
+      expect(screen.queryByText('Change suggested')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Use' })).not.toBeInTheDocument();
+    }
+    expect(props.onUseSuggestion).not.toHaveBeenCalled();
+    expect(props.onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('uses the request target when a review arrives after the draft has changed', () => {
+    const original = Object.freeze({ content: 'Compte', confidenceLevel: 94 });
+    const alternative = Object.freeze({
+      content: 'Votre compte',
+      kind: 'alternative' as const,
+      confidenceLevel: 91,
+    });
+    const { props, rerender } = renderComposer({ isResponding: true });
+    rerender(<AiChatReview {...props} currentTarget="Votre compte" />);
+    const messages: AiChatReviewMessage[] = [
+      {
+        id: 'delayed-review',
+        sender: 'assistant',
+        content: 'No issue identified.',
+        reviewedTarget: 'Compte',
+        review: { score: 2, explanation: 'No issue identified.' },
+        suggestions: [original, alternative],
+      },
+    ];
+    rerender(
+      <AiChatReview
+        {...props}
+        messages={messages}
+        currentTarget="Votre compte"
+        isResponding={false}
+      />,
+    );
+    expect(screen.queryByText('Compte')).not.toBeInTheDocument();
+    expect(screen.getByText('No correction suggested')).toBeVisible();
+    expect(screen.queryByText('Change suggested')).not.toBeInTheDocument();
+    expect(screen.getByText('Reviewed wording')).toBeVisible();
+    expect(screen.getByLabelText('Model confidence: 94 out of 100')).toBeVisible();
+    expect(screen.getByLabelText('Model confidence: 91 out of 100')).toBeVisible();
+    expect(screen.getByText('Selected')).toBeVisible();
+    const candidate = screen.getByText('Votre compte');
+
+    rerender(
+      <AiChatReview {...props} messages={messages} currentTarget="Compte" isResponding={false} />,
+    );
+    expect(screen.getByText('Votre compte')).toBe(candidate);
+    expect(screen.getByText('No correction suggested')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    expect(vi.mocked(props.onUseSuggestion).mock.calls[0][0]).toBe(alternative);
+    expect(props.onReview).not.toHaveBeenCalled();
+    expect(props.onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('keeps invalid or stale candidates blocked after selecting and editing their text', async () => {
+    const suggestion = Object.freeze({ content: 'Votre compte', kind: 'correction' as const });
+    const error =
+      'The source or translation changed. Request a new review before using this suggestion.';
+    const getSuggestionError = vi.fn<(suggestion: AiReviewSuggestion) => string>(() => error);
+    const { props, rerender } = renderReview('Compte', [suggestion]);
+    rerender(<AiChatReview {...props} getSuggestionError={getSuggestionError} />);
+    const candidate = screen.getByText('Votre compte');
+    expect(getSuggestionError.mock.calls[0][0]).toBe(suggestion);
+    expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Use' }));
+    expect(props.onUseSuggestion).not.toHaveBeenCalled();
+
+    rerender(
+      <AiChatReview
+        {...props}
+        currentTarget="Votre compte"
+        getSuggestionError={getSuggestionError}
+      />,
+    );
+    expect(screen.getByText('Selected')).toBeVisible();
+    expect(screen.getByText(`Cannot use this suggestion: ${error}`)).toBeVisible();
+    rerender(
+      <AiChatReview
+        {...props}
+        currentTarget="Votre compte!"
+        getSuggestionError={getSuggestionError}
+      />,
+    );
+    expect(screen.getByText('Votre compte')).toBe(candidate);
+    expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+    expect(props.onUseSuggestion).not.toHaveBeenCalled();
   });
 
   it('keeps review failures and their retry action visible', () => {
@@ -467,6 +607,7 @@ describe('AiChatReview', () => {
           sender: 'assistant',
           content: 'A useful alternative.',
           review: { score: 2, explanation: 'No issue identified.' },
+          reviewedTarget: 'Compte',
           suggestions: [{ content: 'Votre compte', kind: 'alternative', confidenceLevel: 91 }],
         },
       ],

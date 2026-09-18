@@ -195,10 +195,15 @@ When only optional alternatives accompany a valid original, the heading is **No 
 and the original assessment remains visible. Candidate labels distinguish
 **Suggested correction** from **Alternative wording**. Corrections show the specific explanation
 once; no-change results use the original-target explanation, falling back to the message or review.
-Proposed translations and **Use** remain visible, including whitespace-only changes; text identical
-to the current target is never repeated. **Show score** defaults on and displays the model's
-`confidenceLevel` (0-100) as a compact numeric pill beside each candidate, or beside an unchanged
-result when available. An accessible label identifies the value as model confidence; the visible pill
+Each response retains the exact target submitted for review. Its assessment, explanation, and
+candidate list stay fixed while the draft changes. A returned copy of that reviewed wording is
+omitted from the candidate list; Reset already restores the saved translation. Its confidence stays
+in the result heading under **Reviewed wording**, so edits do not appear to receive a new rating.
+Other proposed translations remain visible, including whitespace-only changes. A candidate matching
+the current draft shows **Selected** in the same space as **Use**, avoiding layout changes when
+applying or undoing a suggestion. **Show score** defaults on and displays the model's
+`confidenceLevel` (0-100) as a compact numeric pill beside each candidate and beside the reviewed
+wording when available. An accessible label identifies the value as model confidence; the visible pill
 contains only the number. The information icon beside **Show score** in the settings dropdown explains
 on hover, focus, or click that this is self-reported model confidence, not a translation quality rating
 or a calibrated probability. The separate 0-2 defect rating is not displayed as confidence.
