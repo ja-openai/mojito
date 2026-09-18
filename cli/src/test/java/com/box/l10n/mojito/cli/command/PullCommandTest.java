@@ -3859,24 +3859,6 @@ public class PullCommandTest extends CLITestBase {
         "pull-run-name.txt");
   }
 
-  private void printDelta(DeltaResponseDTO delta) {
-    delta
-        .getTranslationsPerLocale()
-        .forEach(
-            (locale, deltaLocaleDataDTO) -> {
-              deltaLocaleDataDTO
-                  .getTranslationsByTextUnitName()
-                  .forEach(
-                      (textUnitName, deltaTranslationDTO) -> {
-                        logger.info(locale);
-                        logger.info(textUnitName);
-                        logger.info(deltaTranslationDTO.getText());
-                        logger.info(deltaTranslationDTO.getDeltaType().toString());
-                        logger.info("---");
-                      });
-            });
-  }
-
   private void checkJapaneseTranslationsInDelta(DeltaResponseDTO delta) {
     Assertions.assertThat(
             delta.getTranslationsPerLocale().get("ja-JP").getTranslationsByTextUnitName())
