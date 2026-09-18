@@ -673,19 +673,7 @@ final class AppleStringsdictParser {
         index = source.indexOf("?>", index + 2) + 1;
         continue;
       }
-      int end = index + 1;
-      char quote = 0;
-      while (end < source.length()) {
-        char character = source.charAt(end);
-        if (quote == 0 && (character == '\'' || character == '"')) {
-          quote = character;
-        } else if (character == quote) {
-          quote = 0;
-        } else if (character == '>' && quote == 0) {
-          break;
-        }
-        end++;
-      }
+      int end = SecureXmlParser.appleTagEnd(source, index + 1);
       String tag = source.substring(index + 1, end).strip();
       if (tag.endsWith("/")
           && tag.substring(0, tag.length() - 1).strip().matches("(?s)data(?:\\s.*)?")) {
