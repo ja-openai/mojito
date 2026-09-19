@@ -194,10 +194,7 @@ public class AssetLocalizeAsyncJobServiceConfigurationTest {
       boolean globalEnabled,
       boolean assetEnabled,
       boolean producerEnabled) {
-    for (Object producer :
-        List.of(
-            context.getBean(AssetWS.class),
-            context.getBean(GenerateMultiLocalizedAssetJob.class))) {
+    for (Object producer : List.of(context.getBean(AssetWS.class))) {
       assertThat(producer)
           .hasFieldOrPropertyWithValue("asyncJobQueueEnabled", globalEnabled)
           .hasFieldOrPropertyWithValue("asyncJobQueueAssetLocalizeEnabled", assetEnabled)

@@ -26,6 +26,7 @@ import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobEligibility;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobSubmissionService;
+import com.box.l10n.mojito.service.tm.AssetLocalizeFanoutService;
 import com.box.l10n.mojito.service.tm.GenerateLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.GenerateMultiLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -87,6 +88,9 @@ public class AssetWS {
   @Autowired(required = false)
   AssetLocalizeAsyncJobSubmissionService assetLocalizeAsyncJobSubmissionService;
 
+  @Autowired(required = false)
+  AssetLocalizeFanoutService assetLocalizeFanoutService;
+
   @Autowired MeterRegistry meterRegistry;
 
   @Value("${l10n.assetWS.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
@@ -100,6 +104,9 @@ public class AssetWS {
 
   @Value("${l10n.org.async-job-queue.asset-localize.producer-enabled:true}")
   boolean asyncJobQueueAssetLocalizeProducerEnabled = true;
+
+  @Value("${l10n.org.async-job-queue.asset-localize.fanout-enabled:false}")
+  boolean asyncJobQueueAssetLocalizeFanoutEnabled;
 
   /**
    * Gets the list of {@link Asset} for a given {@link Repository} and other optional filters
@@ -406,6 +413,15 @@ public class AssetWS {
                 "repositoryName",
                 asset.getRepository().getName()))
         .increment();
+
+    if (isAssetLocalizeAsyncQueueEnabled()
+        && asyncJobQueueAssetLocalizeFanoutEnabled
+        && multiLocalizedAssetBody.getPullRunName() == null) {
+      if (assetLocalizeFanoutService == null) {
+        throw new IllegalStateException("Durable asset fanout service is unavailable");
+      }
+      return assetLocalizeFanoutService.schedule(multiLocalizedAssetBody);
+    }
 
     QuartzJobInfo<MultiLocalizedAssetBody, MultiLocalizedAssetBody> quartzJobInfo =
         QuartzJobInfo.newBuilder(GenerateMultiLocalizedAssetJob.class)

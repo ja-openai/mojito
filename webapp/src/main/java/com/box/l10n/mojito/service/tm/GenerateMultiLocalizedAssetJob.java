@@ -14,7 +14,6 @@ import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,9 +26,6 @@ public class GenerateMultiLocalizedAssetJob
       LoggerFactory.getLogger(GenerateMultiLocalizedAssetJob.class);
 
   @Autowired QuartzPollableTaskScheduler quartzPollableTaskScheduler;
-
-  @Autowired(required = false)
-  AssetLocalizeAsyncJobSubmissionService assetLocalizeAsyncJobSubmissionService;
 
   @Autowired AssetRepository assetRepository;
 
@@ -46,18 +42,8 @@ public class GenerateMultiLocalizedAssetJob
   @Value("${l10n.assetWS.quartz.childSchedulerName:}")
   String childSchedulerName;
 
-  @Value("${l10n.org.async-job-queue.enabled:false}")
-  boolean asyncJobQueueEnabled;
-
-  @Value("${l10n.org.async-job-queue.asset-localize.enabled:false}")
-  boolean asyncJobQueueAssetLocalizeEnabled;
-
-  @Value("${l10n.org.async-job-queue.asset-localize.producer-enabled:true}")
-  boolean asyncJobQueueAssetLocalizeProducerEnabled = true;
-
-  // Parallel admission still needs durable child reconciliation; direct rollout must not opt it in.
-  @Value("${l10n.org.async-job-queue.asset-localize.fanout-enabled:false}")
-  boolean asyncJobQueueAssetLocalizeFanoutEnabled;
+  // Legacy Quartz parents always remain on Quartz, including parents queued before flag changes.
+  // New JDBC fanout is admitted durably by AssetWS before any runnable children exist.
 
   @Override
   public MultiLocalizedAssetBody call(MultiLocalizedAssetBody multiLocalizedAssetBody)
@@ -73,16 +59,8 @@ public class GenerateMultiLocalizedAssetJob
     long startNanos = System.nanoTime();
     try {
 
-      boolean preflightQueue =
-          isAssetLocalizeAsyncQueueEnabled() && multiLocalizedAssetBody.getPullRunName() == null;
-      Stream<ResolvedLocale> resolved =
-          multiLocalizedAssetBody.getLocaleInfos().stream()
-              .map(
-                  localeInfo ->
-                      resolveLocale(asset.getRepository().getId(), localeInfo, preflightQueue));
-      // Resolve all queue children before accepting any. Quartz keeps its legacy lazy order.
-      Iterable<ResolvedLocale> locales = preflightQueue ? resolved.toList() : resolved::iterator;
-      for (ResolvedLocale locale : locales) {
+      for (LocaleInfo localeInfo : multiLocalizedAssetBody.getLocaleInfos()) {
+        ResolvedLocale locale = resolveLocale(asset.getRepository().getId(), localeInfo);
         QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo =
             QuartzJobInfo.newBuilder(GenerateLocalizedAssetJob.class)
                 .withInlineInput(false)
@@ -114,22 +92,11 @@ public class GenerateMultiLocalizedAssetJob
     return getCurrentPollableTask().getId();
   }
 
-  private ResolvedLocale resolveLocale(
-      long repositoryId, LocaleInfo localeInfo, boolean preflightQueue) {
-    if (preflightQueue
-        && (localeInfo == null
-            || localeInfo.getLocaleId() == null
-            || localeInfo.getLocaleId() <= 0)) {
-      throw new IllegalArgumentException("Locale id must be positive");
-    }
+  private ResolvedLocale resolveLocale(long repositoryId, LocaleInfo localeInfo) {
     Long localeId = localeInfo.getLocaleId();
     String outputOverride = localeInfo.getOutputBcp47tag();
     RepositoryLocale repositoryLocale =
         repositoryLocaleRepository.findByRepositoryIdAndLocaleId(repositoryId, localeId);
-    if (preflightQueue && repositoryLocale == null) {
-      throw new IllegalArgumentException(
-          "Locale " + localeId + " is not configured for repository " + repositoryId);
-    }
     String outputTag =
         outputOverride != null ? outputOverride : repositoryLocale.getLocale().getBcp47Tag();
     return new ResolvedLocale(localeId, outputTag, outputOverride);
@@ -146,34 +113,16 @@ public class GenerateMultiLocalizedAssetJob
 
   PollableFuture<LocalizedAssetBody> scheduleLocalizedAssetJob(
       QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo) {
-    boolean useAsyncQueue =
-        isAssetLocalizeAsyncQueueEnabled()
-            && AssetLocalizeAsyncJobEligibility.isEligible(quartzJobInfo.getInput());
-    String route = useAsyncQueue ? "assetlocalize" : "quartz";
+    String route = "quartz";
     try {
-      PollableFuture<LocalizedAssetBody> pollableFuture;
-      if (useAsyncQueue) {
-        if (assetLocalizeAsyncJobSubmissionService == null) {
-          throw new IllegalStateException(
-              "Asset localize async queue is enabled but the submission service is unavailable");
-        }
-        pollableFuture = assetLocalizeAsyncJobSubmissionService.scheduleJob(quartzJobInfo);
-      } else {
-        pollableFuture = quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
-      }
+      PollableFuture<LocalizedAssetBody> pollableFuture =
+          quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
       recordLocalizedAssetSchedule(route, "succeeded");
       return pollableFuture;
     } catch (RuntimeException e) {
       recordLocalizedAssetSchedule(route, "failed");
       throw e;
     }
-  }
-
-  private boolean isAssetLocalizeAsyncQueueEnabled() {
-    return asyncJobQueueEnabled
-        && asyncJobQueueAssetLocalizeEnabled
-        && asyncJobQueueAssetLocalizeProducerEnabled
-        && asyncJobQueueAssetLocalizeFanoutEnabled;
   }
 
   private void recordLocalizedAssetSchedule(String route, String result) {

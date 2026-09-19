@@ -21,7 +21,7 @@ APPLICATION = {
         "POSTGRESQL, serverPrepared=true": 7,
     },
     "AsyncJobQueueJpaTransactionIntegrationTest": {
-        "HSQL": 35, "MYSQL": 35, "POSTGRESQL": 35,
+        "HSQL": 45, "MYSQL": 45, "POSTGRESQL": 45,
     },
     "JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest": {"": 3},
     "AsyncJobQueueProcessCrashIntegrationTest": {"MYSQL": 2, "POSTGRESQL": 2},
