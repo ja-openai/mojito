@@ -687,13 +687,16 @@ The output-retry integration fixture now covers ordinary database cleanup after
 queue DONE and a failed completion callback, both before canonical publication and
 after publication but before task finish. It ages only the private winner beyond
 its stored TTL and runs the real cleaner against an isolated HSQL database with
-scheduled cleanup disabled. Repair must repeatedly
-refuse the missing winner without finishing the task, changing the DONE row,
-regenerating, or trusting a surviving canonical copy. Restoring the exact original
+scheduled cleanup disabled. The cleaner must retain the private winner's exact bytes
+and leave the pending task unchanged. The fixture then directly deletes only that
+winner to inject a separate data-loss fault. Repair must repeatedly refuse the missing
+winner without finishing the task, changing the DONE row, regenerating, or trusting
+a surviving canonical copy. Restoring the exact original
 bytes/key from a test-held backup allows idempotent repair; this is not an operator
 restoration API or automatic recovery. The queue uses the in-memory store in these
-two cases. They demonstrate the lifetime gap, not durable pins, cloud/prefix-policy
-coverage, a naturally elapsed day, or real-MySQL cleanup verification.
+two cases. They cover database cleanup protection and repair after explicit loss,
+not durable queue pins, cloud/prefix-policy coverage, a naturally elapsed day, or
+real-MySQL cleanup verification.
 
 Source review adds several constraints; these are not live storage-policy measurements:
 
@@ -709,10 +712,12 @@ Source review adds several constraints; these are not live storage-policy measur
   pinning, a creation-time reset, or a backfill of existing rows. See
   [TTL configuration](../../webapp/src/main/java/com/box/l10n/mojito/service/blobstorage/database/DatabaseBlobStorageConfigurationProperties.java)
   and [database writes](../../webapp/src/main/java/com/box/l10n/mojito/service/blobstorage/database/DatabaseBlobStorage.java).
-- Ordinary expiration and optional prefix-policy cleanup are independent of queue
-  state. Prefix policy uses its configured age for any non-permanent row, regardless
-  of the row's TTL duration. A longer TTL or disabled queue-row retention does not pin
-  input/winning output against both cleaners.
+- Ordinary expiration and optional prefix-policy cleanup both recheck the row's TTL
+  and protect task payloads. Under `pollable_task/`, only canonical input/output keys
+  with completed standalone task metadata are eligible; unfinished tasks, task graphs,
+  missing metadata and private attempt-output keys are retained. Prefix cleanup also
+  requires its configured age. These conservative database guards do not implement
+  queue-owned references or prove retention on other backends.
 - Azure/S3 retention is a tag interpreted by external lifecycle policy; do not assume
   `PERMANENT` overrides every bucket/container-wide rule. The Azure/database fallback
   deletes only the Azure copy, so a surviving database copy can resurrect data on read.

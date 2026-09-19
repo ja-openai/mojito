@@ -5174,6 +5174,12 @@ performance/soak, independent-JAR and hosted CI results were not refreshed.
 
 ## Winning Output Expiry And Terminal Repair (2026-09-10)
 
+**2026-09-19 follow-up:** Current database cleanup guards retain the expired private
+winner while its task is unfinished. The fixture now verifies that retention first,
+then directly deletes only the fixture winner to preserve missing-source repair and
+exact-backup recovery coverage. The historical evidence below describes the earlier
+cleanup behavior; see the [current storage contract](async-job-queue-quartz-migration.md).
+
 Two cross-component regressions in `AssetLocalizeAsyncJobOutputRetryIntegrationTest`
 now combine real generation, HSQL PollableTask/blob persistence and the ordinary
 `DatabaseBlobStorage.deleteExpired` cleaner with the real queue runtime over an

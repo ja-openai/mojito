@@ -18,7 +18,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.TestPropertySource;
 
+@TestPropertySource(
+    properties = {
+      "spring.datasource.url=jdbc:hsqldb:mem:blob_cleanup_policy;DB_CLOSE_DELAY=-1",
+      "l10n.blob-storage.database.cleanup-enabled=false",
+      "l10n.blob-storage.database.policy-cleanup-enabled=false"
+    })
 public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
 
   private static final String PREFIX = "cleanup_test/";
@@ -37,6 +45,8 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
   @Autowired MBlobRepository mBlobRepository;
 
   @Autowired PollableTaskRepository pollableTaskRepository;
+
+  @Autowired ApplicationContext applicationContext;
 
   private final List<Long> taskIds = new ArrayList<>();
 
@@ -208,6 +218,9 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
 
   @Test
   public void startsManualCleanupWhenRecurringScheduleIsDisabled() throws InterruptedException {
+    // Keep the manual Quartz path live without another cleaner consuming this fixture's row.
+    assertFalse(applicationContext.containsBean("triggerExpiringBlobCleanup"));
+    assertFalse(applicationContext.containsBean("triggerDatabaseBlobPolicyCleanupJob"));
     saveBlob("cleanup_test/expired-1/input", 10, 86_400L);
     DatabaseBlobCleanupPolicy policy = createPolicy(false, 250, 0);
 

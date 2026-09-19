@@ -193,18 +193,20 @@ public class AssetLocalizeAsyncJobOutputRetryIntegrationTest extends ServiceTest
   }
 
   @Test
-  public void cleanupOfUnpublishedWinnerBlocksRepairUntilOriginalBytesAreRestored()
-      throws Exception {
+  public void cleanupRetainsUnpublishedWinnerButExplicitLossBlocksRepair() throws Exception {
     assertPublicationFault(
         new InMemoryAsyncJobStore(),
         PublicationFault.BEFORE_CANONICAL_WRITE,
-        WinnerCondition.EXPIRED);
+        WinnerCondition.EXPIRED_THEN_REMOVED);
   }
 
   @Test
-  public void cleanupOfWinnerBlocksRepairEvenWhenCanonicalOutputSurvives() throws Exception {
+  public void cleanupRetainsWinnerButExplicitLossBlocksRepairDespiteCanonicalCopy()
+      throws Exception {
     assertPublicationFault(
-        new InMemoryAsyncJobStore(), PublicationFault.BEFORE_TASK_FINISH, WinnerCondition.EXPIRED);
+        new InMemoryAsyncJobStore(),
+        PublicationFault.BEFORE_TASK_FINISH,
+        WinnerCondition.EXPIRED_THEN_REMOVED);
   }
 
   @Test
@@ -760,7 +762,7 @@ public class AssetLocalizeAsyncJobOutputRetryIntegrationTest extends ServiceTest
                 metrics,
                 new AssetLocalizeAsyncJobOutputStorage(
                     structuredBlobStorage, recoveredPublication, objectMapper));
-        if (winnerCondition == WinnerCondition.EXPIRED) {
+        if (winnerCondition == WinnerCondition.EXPIRED_THEN_REMOVED) {
           assertThat(applicationContext.containsBean("triggerExpiringBlobCleanup")).isFalse();
           assertThat(taskCommitted).isFalse();
           String privateOutputName = outputName(payload(done));
@@ -780,6 +782,15 @@ public class AssetLocalizeAsyncJobOutputRetryIntegrationTest extends ServiceTest
           assertNoTransaction();
           assertThat(structuredBlobStorage.getBytes(POLLABLE_TASK, privateOutputName)).isPresent();
           databaseBlobStorage.deleteExpired();
+          assertThat(mBlobRepository.findByName(fullName)).isPresent();
+          assertThat(structuredBlobStorage.getBytes(POLLABLE_TASK, privateOutputName).orElseThrow())
+              .containsExactly(originalBytes);
+          assertThat(jdbc.queryForMap("SELECT * FROM pollable_task WHERE id = ?", taskId))
+              .isEqualTo(pendingTask);
+
+          // Cleanup protects this unfinished task's private winner. Inject loss separately to
+          // preserve the missing-source repair contract, deleting only this fixture's winner.
+          databaseBlobStorage.delete(fullName);
           assertThat(mBlobRepository.findByName(fullName)).isEmpty();
           assertThat(structuredBlobStorage.getBytes(POLLABLE_TASK, privateOutputName)).isEmpty();
 
@@ -915,7 +926,7 @@ public class AssetLocalizeAsyncJobOutputRetryIntegrationTest extends ServiceTest
   private enum WinnerCondition {
     INTACT,
     MALFORMED,
-    EXPIRED
+    EXPIRED_THEN_REMOVED
   }
 
   private void assertCompletionCommitFault(
