@@ -11,6 +11,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -27,11 +28,21 @@ import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.queue.CommitFaultDataSource.CommitFault;
 import com.box.l10n.mojito.rest.asset.LocalizedAssetBody;
+import com.box.l10n.mojito.rest.asset.MultiLocalizedAssetBody;
+import com.box.l10n.mojito.service.asset.AssetRepository;
+import com.box.l10n.mojito.service.blobstorage.Retention;
+import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskExceptionUtils;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRepository;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
+import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobOutputStorage;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobPayload;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobSubmissionService;
+import com.box.l10n.mojito.service.tm.AssetLocalizeFanoutInput;
+import com.box.l10n.mojito.service.tm.AssetLocalizeFanoutService;
 import com.box.l10n.mojito.service.tm.GenerateLocalizedAssetJob;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
@@ -46,7 +57,9 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -64,6 +77,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -80,19 +94,23 @@ import org.springframework.orm.jpa.DefaultJpaDialect;
 import org.springframework.orm.jpa.EntityManagerHolder;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
 import org.springframework.orm.jpa.vendor.HibernateJpaDialect;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
+import org.springframework.transaction.interceptor.TransactionInterceptor;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-/** JPA/JDBC enlistment and runtime fault contracts, not schema upgrades or durable admission. */
+/** JPA/JDBC enlistment, runtime faults and durable legacy fanout contracts; not schema upgrades. */
 @RunWith(Parameterized.class)
 public class AsyncJobQueueJpaTransactionIntegrationTest {
 
@@ -1331,6 +1349,406 @@ public class AsyncJobQueueJpaTransactionIntegrationTest {
         "The real JDBC commit failure must reach the caller", fixture.dataSource.failure, failure);
   }
 
+  @Test
+  public void fanoutAcceptsOneAtomicBatchWithReadableFrozenInputs() throws Exception {
+    FanoutFixture fanout = new FanoutFixture();
+    long parent = fanout.register();
+    long owner =
+        fixture
+            .businessTransaction()
+            .execute(
+                status -> {
+                  User actor = new User();
+                  actor.setUsername("fanout-owner-" + UUID.randomUUID());
+                  fixture.entityManager().persist(actor);
+                  fixture.entityManager().find(PollableTask.class, parent).setCreatedByUser(actor);
+                  fixture.entityManager().flush();
+                  return actor.getId();
+                });
+    fanout.service.resume(parent);
+    Map<String, Long> mappings = fanout.store.mappings(fanout.store.find(parent).orElseThrow());
+    assertEquals(3, mappings.size());
+    assertEquals("FINISHED", fanout.store.find(parent).orElseThrow().state());
+    for (long child : mappings.values()) {
+      LocalizedAssetBody input =
+          fanout.mapper.readValueUnchecked(
+              fanout.inputs.findInputJson(child).orElseThrow(), LocalizedAssetBody.class);
+      assertEquals("frozen source", input.getContent());
+      assertEquals(Long.valueOf(10), input.getAssetId());
+      assertNull(input.getPullRunName());
+      assertEquals(
+          owner,
+          fixture
+              .jdbc
+              .queryForObject(
+                  "SELECT created_by_user_id FROM pollable_task WHERE id = ?", Long.class, child)
+              .longValue());
+      assertEquals(
+          1,
+          fixture
+              .jdbc
+              .queryForObject(
+                  "SELECT COUNT(*) FROM async_job_queue q JOIN asset_localize_fanout_child c ON c.queue_job_id = q.id WHERE c.child_task_id = ?",
+                  Integer.class,
+                  child)
+              .intValue());
+    }
+    assertEquals(
+        3,
+        fixture
+            .jdbc
+            .queryForObject(
+                "SELECT expected_sub_task_number FROM pollable_task WHERE id = ?",
+                Integer.class,
+                parent)
+            .intValue());
+    assertNull(
+        fixture.jdbc.queryForObject(
+            "SELECT timeout FROM pollable_task WHERE id = ?", Long.class, parent));
+  }
+
+  @Test
+  public void fanoutCommitThenThrowResumesOriginalChildIds() throws Exception {
+    FanoutFixture fanout = new FanoutFixture();
+    long parent = fanout.register();
+    fixture.dataSource.failNextCommit(CommitFault.AFTER_COMMIT);
+    assertThrows(RuntimeException.class, () -> fanout.service.resume(parent));
+    Map<String, Long> original = fanout.store.mappings(fanout.store.find(parent).orElseThrow());
+    assertEquals(3, original.size());
+    assertEquals("ACCEPTED", fanout.store.find(parent).orElseThrow().state());
+    fanout.newService().resume(parent);
+    assertEquals(original, fanout.store.mappings(fanout.store.find(parent).orElseThrow()));
+    assertEquals(3, fanout.childCount(parent));
+  }
+
+  @Test
+  public void fanoutRollbackThenThrowLeavesNoOrphanOrExecutableChild() throws Exception {
+    FanoutFixture fanout = new FanoutFixture();
+    long parent = fanout.register();
+    int before = fixture.jdbc.queryForObject("SELECT COUNT(*) FROM async_job_queue", Integer.class);
+    fixture.dataSource.failNextCommit(CommitFault.ROLLBACK_BEFORE_COMMIT);
+    assertThrows(RuntimeException.class, () -> fanout.service.resume(parent));
+    assertEquals(0, fanout.childCount(parent));
+    assertEquals(
+        before,
+        fixture
+            .jdbc
+            .queryForObject("SELECT COUNT(*) FROM async_job_queue", Integer.class)
+            .intValue());
+    assertEquals("PENDING", fanout.store.find(parent).orElseThrow().state());
+    fanout.newService().resume(parent);
+    assertEquals(3, fanout.childCount(parent));
+  }
+
+  @Test
+  public void fanoutFailureAfterSecondInsertRollsBackWholeBatch() throws Exception {
+    FanoutFixture fanout = new FanoutFixture();
+    long parent = fanout.register();
+    AtomicInteger count = new AtomicInteger();
+    fixture.afterInsert =
+        connection -> {
+          if (count.incrementAndGet() == 2) throw new IllegalStateException("second child failed");
+        };
+    assertThrows(RuntimeException.class, () -> fanout.service.resume(parent));
+    assertEquals(0, fanout.childCount(parent));
+    assertEquals(
+        0,
+        fixture
+            .jdbc
+            .queryForObject(
+                "SELECT COUNT(*) FROM asset_localize_fanout_child WHERE parent_task_id = ?",
+                Integer.class,
+                parent)
+            .intValue());
+    fixture.afterInsert = connection -> {};
+    fanout.newService().resume(parent);
+    assertEquals(3, fanout.childCount(parent));
+  }
+
+  @Test
+  public void fanoutConcurrentResumesPublishSameMappingWithoutDuplicateJobs() throws Exception {
+    FanoutFixture fanout = new FanoutFixture();
+    long parent = fanout.register();
+    try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+      Future<?> first = executor.submit(() -> fanout.service.resume(parent));
+      Future<?> second = executor.submit(() -> fanout.newService().resume(parent));
+      first.get(20, TimeUnit.SECONDS);
+      second.get(20, TimeUnit.SECONDS);
+    }
+    assertEquals(3, fanout.childCount(parent));
+    assertEquals(
+        3,
+        fixture
+            .jdbc
+            .queryForObject(
+                "SELECT COUNT(*) FROM asset_localize_fanout_child WHERE parent_task_id = ?",
+                Integer.class,
+                parent)
+            .intValue());
+    assertEquals("FINISHED", fanout.store.find(parent).orElseThrow().state());
+  }
+
+  @Test
+  public void fanoutOutputWriteThenThrowKeepsParentPendingAndRetriesPublicationOnly()
+      throws Exception {
+    FanoutFixture fanout = new FanoutFixture();
+    long parent = fanout.register();
+    AtomicInteger publications = new AtomicInteger();
+    AtomicReference<Map<String, Long>> first = new AtomicReference<>();
+    doAnswer(
+            invocation -> {
+              MultiLocalizedAssetBody output = invocation.getArgument(1);
+              Map<String, Long> map = Map.copyOf(output.getGenerateLocalizedAssetJobIds());
+              if (publications.incrementAndGet() == 1) {
+                first.set(map);
+                throw new IllegalStateException("output reply lost");
+              }
+              assertEquals(first.get(), map);
+              return null;
+            })
+        .when(fanout.taskBlobs)
+        .saveOutput(any(), any());
+    assertThrows(RuntimeException.class, () -> fanout.service.resume(parent));
+    assertEquals("ACCEPTED", fanout.store.find(parent).orElseThrow().state());
+    assertNull(
+        fixture.jdbc.queryForObject(
+            "SELECT finished_date FROM pollable_task WHERE id = ?",
+            java.sql.Timestamp.class,
+            parent));
+    fanout.newService().resume(parent);
+    assertEquals(3, fanout.childCount(parent));
+    assertEquals(2, publications.get());
+  }
+
+  @Test
+  public void fanoutFinishCommitUncertaintyNeverRecreatesChildren() throws Exception {
+    for (CommitFault fault :
+        List.of(CommitFault.AFTER_COMMIT, CommitFault.ROLLBACK_BEFORE_COMMIT)) {
+      FanoutFixture fanout = new FanoutFixture();
+      long parent = fanout.register();
+      AtomicInteger publications = new AtomicInteger();
+      doAnswer(
+              invocation -> {
+                if (publications.incrementAndGet() == 1) fixture.dataSource.failNextCommit(fault);
+                return null;
+              })
+          .when(fanout.taskBlobs)
+          .saveOutput(any(), any());
+      assertThrows(RuntimeException.class, () -> fanout.service.resume(parent));
+      Map<String, Long> original = fanout.store.mappings(fanout.store.find(parent).orElseThrow());
+      fanout.newService().resume(parent);
+      assertEquals(original, fanout.store.mappings(fanout.store.find(parent).orElseThrow()));
+      assertEquals(3, fanout.childCount(parent));
+      assertEquals("FINISHED", fanout.store.find(parent).orElseThrow().state());
+    }
+  }
+
+  @Test
+  public void fanoutRegistrationCommitUncertaintyHasUniqueDurableReceipt() throws Exception {
+    for (CommitFault fault :
+        List.of(CommitFault.AFTER_COMMIT, CommitFault.ROLLBACK_BEFORE_COMMIT)) {
+      FanoutFixture fanout = new FanoutFixture();
+      AssetLocalizeFanoutInput.Reference reference = fanout.inputs.stage(fanout.manifest());
+      fixture.dataSource.failNextCommit(fault);
+      assertThrows(RuntimeException.class, () -> fanout.store.register(reference));
+      Optional<AssetLocalizeFanoutStore.Parent> accepted =
+          fanout.store.findByInputName(reference.name());
+      assertEquals(fault == CommitFault.AFTER_COMMIT, accepted.isPresent());
+      if (accepted.isPresent()) {
+        fanout.newService().resume(accepted.get().taskId());
+        assertEquals(3, fanout.childCount(accepted.get().taskId()));
+      }
+    }
+  }
+
+  @Test
+  public void fanoutCorruptManifestFailsClosedBeforeChildrenAndOnInputReads() throws Exception {
+    FanoutFixture fanout = new FanoutFixture();
+    long parent = fanout.register();
+    String name = fanout.store.find(parent).orElseThrow().input().name();
+    byte[] original = fanout.objects.get(name);
+    fanout.objects.put(name, new byte[] {1, 2, 3});
+    assertThrows(IllegalStateException.class, () -> fanout.service.resume(parent));
+    assertEquals(0, fanout.childCount(parent));
+    assertThrows(IllegalStateException.class, () -> fanout.inputs.findInputJson(parent));
+    fanout.objects.put(name, original);
+    fanout.service.resume(parent);
+    long child =
+        fanout.store.mappings(fanout.store.find(parent).orElseThrow()).values().iterator().next();
+    fanout.objects.remove(name);
+    assertThrows(IllegalStateException.class, () -> fanout.inputs.findInputJson(child));
+  }
+
+  @Test
+  public void fanoutLostTerminalCallbackRepairsRecordedChildrenWithoutReenqueue() throws Exception {
+    FanoutFixture fanout = new FanoutFixture();
+    // Real task service and transaction advice; repository operations enlist the production entity
+    // in the same fixture manager, without requiring the full application or security context.
+    EntityManager shared = SharedEntityManagerCreator.createSharedEntityManager(fixture.factory);
+    PollableTaskRepository repository = mock(PollableTaskRepository.class);
+    when(repository.findById(any(Long.class)))
+        .thenAnswer(
+            invocation ->
+                Optional.ofNullable(shared.find(PollableTask.class, invocation.getArgument(0))));
+    when(repository.save(any(PollableTask.class)))
+        .thenAnswer(invocation -> shared.merge(invocation.getArgument(0)));
+    PollableTaskService targetTasks = new PollableTaskService();
+    ReflectionTestUtils.setField(targetTasks, "objectMapper", fanout.mapper);
+    ReflectionTestUtils.setField(targetTasks, "pollableTaskRepository", repository);
+    ReflectionTestUtils.setField(targetTasks, "transactionManager", fixture.transactionManager);
+    ReflectionTestUtils.setField(targetTasks, "entityManager", shared);
+    ProxyFactory proxy = new ProxyFactory(targetTasks);
+    proxy.addAdvice(
+        new TransactionInterceptor(
+            fixture.transactionManager, new AnnotationTransactionAttributeSource()));
+    PollableTaskService tasks = (PollableTaskService) proxy.getProxy();
+    PollableTaskBlobStorage taskBlobs = new PollableTaskBlobStorage();
+    ReflectionTestUtils.setField(taskBlobs, "structuredBlobStorage", fanout.blobs);
+    ReflectionTestUtils.setField(taskBlobs, "objectMapper", fanout.mapper);
+    ReflectionTestUtils.setField(taskBlobs, "meterRegistry", new SimpleMeterRegistry());
+    ReflectionTestUtils.setField(taskBlobs, "inputSources", List.of(fanout.inputs));
+    AssetLocalizeAsyncJobOutputStorage outputs =
+        new AssetLocalizeAsyncJobOutputStorage(fanout.blobs, taskBlobs, fanout.mapper);
+    AssetLocalizeAsyncJobRepairService repair =
+        new AssetLocalizeAsyncJobRepairService(
+            fixture.store, tasks, new SimpleMeterRegistry(), outputs);
+    AssetLocalizeFanoutService initial =
+        new AssetLocalizeFanoutService(
+            fanout.store,
+            fanout.inputs,
+            tasks,
+            taskBlobs,
+            mock(AssetRepository.class),
+            mock(RepositoryLocaleRepository.class),
+            repair);
+    long parent = fanout.register();
+    initial.resume(parent);
+    Map<String, Long> original = fanout.store.mappings(fanout.store.find(parent).orElseThrow());
+    Map<Long, byte[]> expected = new java.util.HashMap<>();
+    for (long child : original.values()) {
+      LocalizedAssetBody output = new LocalizedAssetBody();
+      output.setAssetId(10L);
+      output.setContent("stored winning output " + child);
+      AssetLocalizeAsyncJobPayload winner = outputs.saveAttemptOutput(child, output);
+      expected.put(
+          child,
+          fanout
+              .mapper
+              .writeValueAsStringUnchecked(output)
+              .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      fixture.jdbc.update(
+          "UPDATE async_job_queue SET status = 'done', job_data = ? WHERE id = (SELECT queue_job_id FROM asset_localize_fanout_child WHERE child_task_id = ?)",
+          fanout.mapper.writeValueAsStringUnchecked(winner),
+          child);
+      assertNull(tasks.getFreshPollableTask(child).getFinishedDate());
+      assertFalse(taskBlobs.findOutputJson(child).isPresent());
+    }
+    int queuedRows =
+        fixture.jdbc.queryForObject("SELECT COUNT(*) FROM async_job_queue", Integer.class);
+    AssetLocalizeFanoutService restarted =
+        new AssetLocalizeFanoutService(
+            fanout.store,
+            fanout.inputs,
+            tasks,
+            taskBlobs,
+            mock(AssetRepository.class),
+            mock(RepositoryLocaleRepository.class),
+            repair);
+    restarted.resume(parent);
+    assertEquals("COMPLETED", fanout.store.find(parent).orElseThrow().state());
+    assertEquals(original, fanout.store.mappings(fanout.store.find(parent).orElseThrow()));
+    assertEquals(
+        queuedRows,
+        fixture
+            .jdbc
+            .queryForObject("SELECT COUNT(*) FROM async_job_queue", Integer.class)
+            .intValue());
+    for (long child : original.values()) {
+      org.junit.Assert.assertArrayEquals(expected.get(child), taskBlobs.getOutputBytes(child));
+      assertNotNull(tasks.getFreshPollableTask(child).getFinishedDate());
+      assertNull(tasks.getFreshPollableTask(child).getErrorMessage());
+    }
+    restarted.resume(parent);
+    assertEquals(3, fanout.childCount(parent));
+  }
+
+  private final class FanoutFixture {
+    final ObjectMapper mapper = new ObjectMapper();
+    final Map<String, byte[]> objects = new ConcurrentHashMap<>();
+    final AssetLocalizeFanoutStore store =
+        new AssetLocalizeFanoutStore(
+            fixture.jdbc, fixture.factory, fixture.transactionManager, fixture.store, mapper);
+    final PollableTaskBlobStorage taskBlobs = mock(PollableTaskBlobStorage.class);
+    final AssetLocalizeAsyncJobRepairService repair =
+        mock(AssetLocalizeAsyncJobRepairService.class);
+    final StructuredBlobStorage blobs = mock(StructuredBlobStorage.class);
+    final AssetLocalizeFanoutInput inputs;
+    final AssetLocalizeFanoutService service;
+
+    FanoutFixture() {
+      doAnswer(
+              invocation -> {
+                objects.put(
+                    invocation.getArgument(1), ((byte[]) invocation.getArgument(2)).clone());
+                return null;
+              })
+          .when(blobs)
+          .putBytes(any(), any(), any(), eq(Retention.PERMANENT));
+      when(blobs.getBytes(any(), any()))
+          .thenAnswer(invocation -> Optional.ofNullable(objects.get(invocation.getArgument(1))));
+      doAnswer(
+              invocation -> {
+                objects.put(
+                    invocation.getArgument(1),
+                    ((String) invocation.getArgument(2))
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                return null;
+              })
+          .when(blobs)
+          .put(any(), any(), any(), any());
+      when(blobs.getString(any(), any()))
+          .thenAnswer(
+              invocation ->
+                  Optional.ofNullable(objects.get(invocation.getArgument(1)))
+                      .map(bytes -> new String(bytes, java.nio.charset.StandardCharsets.UTF_8)));
+      inputs = new AssetLocalizeFanoutInput(fixture.jdbc, blobs, mapper);
+      service = newService();
+    }
+
+    AssetLocalizeFanoutService newService() {
+      return new AssetLocalizeFanoutService(
+          store,
+          inputs,
+          mock(PollableTaskService.class),
+          taskBlobs,
+          mock(AssetRepository.class),
+          mock(RepositoryLocaleRepository.class),
+          repair);
+    }
+
+    AssetLocalizeFanoutInput.Manifest manifest() {
+      MultiLocalizedAssetBody input = new MultiLocalizedAssetBody();
+      input.setAssetId(10L);
+      input.setSourceContent("frozen source");
+      return new AssetLocalizeFanoutInput.Manifest(
+          1,
+          input,
+          List.of(
+              new AssetLocalizeFanoutInput.Slot(11L, "de", null),
+              new AssetLocalizeFanoutInput.Slot(12L, "fr", "fr"),
+              new AssetLocalizeFanoutInput.Slot(13L, "ja", null)));
+    }
+
+    long register() {
+      return store.register(inputs.stage(manifest()));
+    }
+
+    int childCount(long parent) {
+      return fixture.jdbc.queryForObject(
+          "SELECT COUNT(*) FROM pollable_task WHERE parent_task_id = ?", Integer.class, parent);
+    }
+  }
+
   private static final class Fixture implements AutoCloseable {
     private final AsyncJobQueueJdbcDialect dialect;
     private final AtomicInteger inserts = new AtomicInteger();
@@ -1400,6 +1818,17 @@ public class AsyncJobQueueJpaTransactionIntegrationTest {
               updated_date TIMESTAMP(6) NOT NULL
             )
             """);
+      }
+
+      try (Connection connection = dataSource.getConnection()) {
+        ScriptUtils.executeSqlScript(
+            connection,
+            new ClassPathResource(
+                dialect == AsyncJobQueueJdbcDialect.POSTGRESQL
+                    ? "db/postgresql/migration/V123__Asset_Localize_Fanout.sql"
+                    : dialect == AsyncJobQueueJdbcDialect.HSQL
+                        ? "asset-localize-fanout-hsql.sql"
+                        : "db/migration/V123__Asset_Localize_Fanout.sql"));
       }
 
       factoryBean = new LocalContainerEntityManagerFactoryBean();

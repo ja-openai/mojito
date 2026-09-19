@@ -47,7 +47,7 @@ class QueueReportGateTest(unittest.TestCase):
         case.set("name", name)
         ET.SubElement(case, "skipped")
         self.write(root)
-        self.assertEqual((198, 1), verify_reports(self.path, "application"))
+        self.assertEqual((228, 1), verify_reports(self.path, "application"))
         case.set("name", "requiredContract")
         self.write(root)
         with self.assertRaisesRegex(ValueError, "required test skipped"):
@@ -70,7 +70,7 @@ class QueueReportGateTest(unittest.TestCase):
     def test_missing_database_group_fails_even_when_other_group_has_extra_tests(self):
         suite = "com.box.l10n.mojito.queue.AsyncJobQueueJpaTransactionIntegrationTest"
         self.populate()
-        self.report(suite, {"HSQL": 70, "MYSQL": 35})
+        self.report(suite, {"HSQL": 90, "MYSQL": 45})
         with self.assertRaisesRegex(ValueError, "POSTGRESQL.*has 0 tests"):
             verify_reports(self.path, "application")
 

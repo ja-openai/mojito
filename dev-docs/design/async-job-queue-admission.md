@@ -9,6 +9,14 @@ Source links identify methods/inspected lines, not immutable commits; telemetry 
 Extend the [migration plan](async-job-queue-quartz-migration.md): JDBC `assetlocalize` admission, not global Quartz replacement or exactly-once effects.
 
 ## Implemented Today
+
+The existing unkeyed parallel endpoint now has a separate [durable legacy fanout
+implementation](async-job-queue-legacy-fanout.md): immutable shared manifests,
+atomic all-child admission, parent publication and bounded terminal child repair.
+The keyed v1 protocol proposed below remains unimplemented. The historical
+sequential parent behavior described below applies only to the Quartz path; it
+cannot be switched to JDBC by changing flags.
+
 | Path | Source-backed behavior |
 | --- | --- |
 | Direct async API | [AssetWS](../../webapp/src/main/java/com/box/l10n/mojito/rest/asset/AssetWS.java) accepts `POST /api/assets/{assetId}/localized`, returns a PollableTask, and selects queue or Quartz using flags. Both this endpoint and `/localized/parallel` reject a conflicting non-null body asset ID with HTTP 400 before asset lookup, metrics, input mutation or scheduling. Omitted/null IDs still use the URL asset. This also applies with the queue disabled. There is no client request key. |

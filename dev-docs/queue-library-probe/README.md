@@ -5,6 +5,9 @@ Neither POM inherits Mojito's parent or participates in its reactor. Nothing is
 moved, copied into a second maintained implementation, deployed or enabled.
 The engine compiles the original queue source directory directly with javac,
 without webapp output, AspectJ, frontend build or Mojito application dependencies.
+The compiler excludes `AssetLocalizeFanoutStore`, which is the Mojito application
+adapter that enlists child tasks and queue rows in the same transaction; the
+generic engine's transaction primitive remains package-private.
 
 Run from the repository root in **two separate Maven invocations**:
 

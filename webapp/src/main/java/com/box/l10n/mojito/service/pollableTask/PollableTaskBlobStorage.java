@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +37,9 @@ public class PollableTaskBlobStorage {
   ObjectMapper objectMapper;
 
   @Autowired MeterRegistry meterRegistry;
+
+  @Autowired(required = false)
+  List<PollableTaskInputSource> inputSources = List.of();
 
   public void saveInput(Long pollableTaskId, Object input) {
     long startNanos = System.nanoTime();
@@ -153,12 +157,7 @@ public class PollableTaskBlobStorage {
   }
 
   public <T> T getInput(Long pollableTaskId, Class<T> clazz) {
-    String inputName = getInputName(pollableTaskId);
-    String inputJson =
-        structuredBlobStorage
-            .getString(POLLABLE_TASK, inputName)
-            .orElseThrow(
-                () -> new RuntimeException("Can't get the input json for: " + pollableTaskId));
+    String inputJson = getInputJson(pollableTaskId);
     T t = objectMapper.readValueUnchecked(inputJson, clazz);
     return t;
   }
@@ -184,6 +183,10 @@ public class PollableTaskBlobStorage {
 
   /** Raw stored input for consumers that must validate encoding before JSON binding. */
   public byte[] getInputBytes(Long pollableTaskId) {
+    Optional<String> referenced = findReferencedInput(pollableTaskId);
+    if (referenced.isPresent()) {
+      return referenced.get().getBytes(StandardCharsets.UTF_8);
+    }
     return structuredBlobStorage
         .getBytes(POLLABLE_TASK, getInputName(pollableTaskId))
         .orElseThrow(() -> new RuntimeException("Can't get the input json for: " + pollableTaskId));
@@ -204,8 +207,22 @@ public class PollableTaskBlobStorage {
   }
 
   public Optional<String> findInputJson(Long pollableTaskId) {
+    Optional<String> referenced = findReferencedInput(pollableTaskId);
+    if (referenced.isPresent()) {
+      return referenced;
+    }
     String inputName = getInputName(pollableTaskId);
     return structuredBlobStorage.getString(POLLABLE_TASK, inputName);
+  }
+
+  private Optional<String> findReferencedInput(long taskId) {
+    for (PollableTaskInputSource source : inputSources) {
+      Optional<String> input = source.findInputJson(taskId);
+      if (input.isPresent()) {
+        return input;
+      }
+    }
+    return Optional.empty();
   }
 
   public Optional<String> findOutputJson(Long pollableTaskId) {

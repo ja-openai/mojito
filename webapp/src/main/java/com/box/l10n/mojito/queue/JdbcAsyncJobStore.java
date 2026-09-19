@@ -1002,6 +1002,10 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     return (statement, index, sqlType, typeName) -> statement.setObject(index, timestamp);
   }
 
+  Object databaseTimestampAfterSeconds(long seconds) {
+    return dialect.timestampParameter(databaseNow().plusSeconds(seconds));
+  }
+
   private Instant databaseNow() {
     Instant timestamp =
         namedParameterJdbcTemplate.queryForObject(
