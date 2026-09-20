@@ -8,6 +8,8 @@ import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.sql.Timestamp;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -300,7 +302,7 @@ public class DatabaseBlobCleanupPolicyService {
       } finally {
         if (observation.transactionNanos >= 0 || observation.failed) {
           logger.info(
-              "Database blob cleanup phases: policyId={}, prefix={}, phase={}, failed={}, selectedRows={}, deletedRows={}, transactionCommitConfirmed={}, selectionMs={}, deleteMs={}, transactionMs={}, finalizationMs={}, progressMs={}",
+              "Database blob cleanup phases: policyId={}, prefix={}, phase={}, failed={}, selectedRows={}, deletedRows={}, transactionCommitConfirmed={}, selectionMs={}, deleteMs={}, transactionMs={}, finalizationMs={}, progressMs={}, candidateRows={}, candidateMs={}, lockingRecheckMs={}",
               policyId,
               prefix,
               observation.phase,
@@ -312,7 +314,10 @@ public class DatabaseBlobCleanupPolicyService {
               millis(observation.deleteNanos),
               millis(observation.transactionNanos),
               millis(observation.finalizationNanos),
-              millis(observation.progressNanos));
+              millis(observation.progressNanos),
+              observation.candidateRows,
+              millis(observation.candidateNanos),
+              millis(observation.lockingRecheckNanos));
         }
       }
     }
@@ -329,30 +334,70 @@ public class DatabaseBlobCleanupPolicyService {
                       ZonedDateTime now = ZonedDateTime.now();
                       Timestamp cutoff =
                           Timestamp.from(now.minusDays(policy.getRetentionDays()).toInstant());
-                      String forceIndex = dbUtils.isMysql() ? " force index (UK__MBLOB__NAME)" : "";
-                      String skipLocked = dbUtils.isMysql() ? " for update skip locked" : "";
-                      String sql =
-                          "select id from mblob"
-                              + forceIndex
-                              + " where name >= ? and name < ?"
+                      String eligibility =
+                          "name >= ? and name < ?"
                               + " and expire_after_seconds is not null and created_date < ?"
                               + " and timestampadd(second, expire_after_seconds, created_date) < ? "
-                              + MBlobRepository.CLEANUP_TASK_SAFETY_PREDICATE
-                              + " order by name limit ?"
-                              + skipLocked;
-                      observation.phase = "selection";
+                              + MBlobRepository.CLEANUP_TASK_SAFETY_PREDICATE;
+                      String candidateSql =
+                          "select id from mblob"
+                              + (dbUtils.isMysql() ? " force index (UK__MBLOB__NAME)" : "")
+                              + " where "
+                              + eligibility
+                              + " order by name limit ?";
+                      observation.phase = "candidate_selection";
                       long selectionStarted = nanoTime();
                       List<Long> ids;
                       try {
-                        ids =
-                            jdbcTemplate.queryForList(
-                                sql,
-                                Long.class,
-                                policy.getPrefix(),
-                                prefixUpperBound(policy.getPrefix()),
-                                cutoff,
-                                Timestamp.from(now.toInstant()),
-                                policy.getBatchSize());
+                        requireExecutionBudget(transactionStarted);
+                        List<Long> candidates;
+                        long candidateStarted = nanoTime();
+                        try {
+                          candidates =
+                              jdbcTemplate.queryForList(
+                                  candidateSql,
+                                  Long.class,
+                                  policy.getPrefix(),
+                                  prefixUpperBound(policy.getPrefix()),
+                                  cutoff,
+                                  Timestamp.from(now.toInstant()),
+                                  policy.getBatchSize());
+                        } finally {
+                          observation.candidateNanos = nanoTime() - candidateStarted;
+                        }
+                        observation.candidateRows = candidates.size();
+                        requireExecutionBudget(transactionStarted);
+                        ids = List.of();
+                        if (!candidates.isEmpty()) {
+                          // Candidate discovery grants no deletion authority. Lock only this
+                          // bounded ID set, rechecking every predicate after concurrent changes.
+                          // Zero deletions use the global eligibility probe; a positive partial
+                          // batch uses the ordinary progress/batch limit path. Never refill here
+                          // in an unbounded loop or infer drained from a skipped/changed page.
+                          String lockingSql =
+                              "select id from mblob"
+                                  + (dbUtils.isMysql() ? " force index (PRIMARY)" : "")
+                                  + " where id in ("
+                                  + String.join(",", Collections.nCopies(candidates.size(), "?"))
+                                  + ") and "
+                                  + eligibility
+                                  + " order by id"
+                                  + (dbUtils.isMysql() ? " for update skip locked" : "");
+                          List<Object> arguments = new ArrayList<>(candidates);
+                          arguments.add(policy.getPrefix());
+                          arguments.add(prefixUpperBound(policy.getPrefix()));
+                          arguments.add(cutoff);
+                          arguments.add(Timestamp.from(now.toInstant()));
+                          observation.phase = "locking_recheck";
+                          long lockingStarted = nanoTime();
+                          try {
+                            ids =
+                                jdbcTemplate.queryForList(
+                                    lockingSql, Long.class, arguments.toArray());
+                          } finally {
+                            observation.lockingRecheckNanos = nanoTime() - lockingStarted;
+                          }
+                        }
                       } finally {
                         observation.selectionNanos = nanoTime() - selectionStarted;
                       }
@@ -404,8 +449,11 @@ public class DatabaseBlobCleanupPolicyService {
     boolean failed;
     boolean transactionCommitted;
     int selectedRows = -1;
+    int candidateRows = -1;
     int deletedRows = -1;
     long selectionNanos = -1;
+    long candidateNanos = -1;
+    long lockingRecheckNanos = -1;
     long deleteNanos = -1;
     long transactionNanos = -1;
     long finalizationNanos = -1;

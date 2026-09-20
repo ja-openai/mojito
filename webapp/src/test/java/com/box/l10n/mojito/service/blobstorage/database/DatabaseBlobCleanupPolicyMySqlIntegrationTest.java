@@ -74,7 +74,7 @@ public class DatabaseBlobCleanupPolicyMySqlIntegrationTest {
         lock.execute("LOCK TABLES mblob WRITE");
         try {
           fixture.runBounded();
-          fixture.assertDisabledFailure("selection", 1, 0);
+          fixture.assertDisabledFailure("candidate_selection", 1, 0);
           fixture.assertReusableConnection(connectionId);
         } finally {
           lock.execute("UNLOCK TABLES");
@@ -114,7 +114,7 @@ public class DatabaseBlobCleanupPolicyMySqlIntegrationTest {
           """);
       try {
         fixture.runBounded();
-        fixture.assertDisabledFailure("delete", 1, 1);
+        fixture.assertDisabledFailure("delete", 2, 1);
         fixture.assertRealCancellation(fixture.deletes);
         fixture.assertReusableConnection(connectionId);
         assertThat(fixture.jdbc.queryForObject("SELECT @cleanup_delete_visits", Integer.class))
@@ -170,10 +170,108 @@ public class DatabaseBlobCleanupPolicyMySqlIntegrationTest {
                   .counter()
                   .count())
           .isEqualTo(2);
-      assertThat(fixture.selects).hasSize(1);
+      assertThat(fixture.selects).hasSize(2);
       assertThat(fixture.deletes).hasSize(1);
       fixture.assertReusableConnection(connectionId);
       verifyNoInteractions(fixture.scheduler);
+    }
+  }
+
+  @Test
+  public void lockingRecheckPreservesCandidatesChangedByAnotherConnection() throws Exception {
+    enabled();
+    try (Fixture fixture = new Fixture(mysqlVersion)) {
+      fixture.seedPolicy("pollable_task/");
+      for (int id = 1; id <= 7; id++) {
+        fixture.seedTask(100 + id, true, null, 0);
+        fixture.seedBlob(id, "pollable_task/" + (100 + id) + "/input", 10, 1L);
+      }
+      fixture.afterCandidates =
+          () -> {
+            // The nonlocking candidate read must allow these independent committed changes.
+            try (Connection connection = fixture.independentConnection();
+                Statement update = connection.createStatement()) {
+              update.setQueryTimeout(5);
+              update.executeUpdate("UPDATE mblob SET expire_after_seconds=NULL WHERE id=1");
+              update.executeUpdate("UPDATE mblob SET expire_after_seconds=2592000 WHERE id=2");
+              update.executeUpdate("UPDATE pollable_task SET finished_date=NULL WHERE id=103");
+              update.executeUpdate("UPDATE pollable_task SET parent_task_id=104 WHERE id=105");
+              update.executeUpdate("UPDATE mblob SET name='other_prefix/moved' WHERE id=5");
+              update.executeUpdate(
+                  "UPDATE mblob SET created_date=TIMESTAMPADD(DAY,-1,CURRENT_TIMESTAMP) WHERE id=6");
+            }
+          };
+
+      fixture.runBounded();
+
+      assertThat(fixture.blobs())
+          .extracting(row -> ((Number) row.get("id")).longValue())
+          .containsExactly(1L, 2L, 3L, 4L, 5L, 6L);
+      DatabaseBlobCleanupPolicy policy = fixture.policies.findById(1L).orElseThrow();
+      assertThat(policy.getTotalDeletedCount()).isEqualTo(18);
+      assertThat(policy.getStatus()).isEqualTo("PAUSED");
+      assertThat(fixture.selects).hasSize(2);
+      assertThat(fixture.deletes).hasSize(1);
+    }
+  }
+
+  @Test
+  public void partialLockedCandidatePageDeletesOnlyUnlockedRows() throws Exception {
+    enabled();
+    try (Fixture fixture = new Fixture(mysqlVersion)) {
+      fixture.seedPolicy("cleanup_test/");
+      fixture.seedBlob(1, "cleanup_test/one", 10, 1L);
+      fixture.seedBlob(2, "cleanup_test/two", 10, 1L);
+      long connectionId = fixture.connectionId();
+      try (Connection blocker = fixture.independentConnection();
+          Statement lock = blocker.createStatement()) {
+        blocker.setAutoCommit(false);
+        lock.setQueryTimeout(5);
+        lock.executeQuery("SELECT id FROM mblob WHERE id=1 FOR UPDATE").close();
+        try {
+          fixture.runBounded();
+          DatabaseBlobCleanupPolicy policy = fixture.policies.findById(1L).orElseThrow();
+          assertThat(policy.getStatus()).isEqualTo("PAUSED");
+          assertThat(policy.getTotalDeletedCount()).isEqualTo(18);
+          assertThat(fixture.blobs())
+              .extracting(row -> ((Number) row.get("id")).longValue())
+              .containsExactly(1L);
+          assertThat(fixture.selects).hasSize(2);
+          assertThat(fixture.deletes).hasSize(1);
+          fixture.assertReusableConnection(connectionId);
+        } finally {
+          blocker.rollback();
+        }
+      }
+    }
+  }
+
+  @Test
+  public void allLockedCandidatesDoNotMeanDrainedOrTriggerUnboundedRefill() throws Exception {
+    enabled();
+    try (Fixture fixture = new Fixture(mysqlVersion)) {
+      fixture.seedPolicy("cleanup_test/");
+      fixture.jdbc.update("UPDATE mblob_cleanup_policy SET max_retries=0,batch_size=1 WHERE id=1");
+      fixture.seedBlob(1, "cleanup_test/one", 10, 1L);
+      fixture.seedBlob(2, "cleanup_test/two", 10, 1L);
+      try (Connection blocker = fixture.independentConnection();
+          Statement lock = blocker.createStatement()) {
+        blocker.setAutoCommit(false);
+        lock.setQueryTimeout(5);
+        lock.executeQuery("SELECT id FROM mblob WHERE id=1 FOR UPDATE").close();
+        try {
+          fixture.runBounded();
+          DatabaseBlobCleanupPolicy policy = fixture.policies.findById(1L).orElseThrow();
+          assertThat(policy.getStatus()).isEqualTo("FAILED");
+          assertThat(policy.getLastError()).contains("Eligible rows remain");
+          assertThat(policy.getTotalDeletedCount()).isEqualTo(17);
+          assertThat(fixture.blobs()).hasSize(2);
+          assertThat(fixture.selects).hasSize(2);
+          assertThat(fixture.deletes).isEmpty();
+        } finally {
+          blocker.rollback();
+        }
+      }
     }
   }
 
@@ -192,6 +290,11 @@ public class DatabaseBlobCleanupPolicyMySqlIntegrationTest {
     }
   }
 
+  @FunctionalInterface
+  private interface CandidateAction {
+    void run() throws SQLException;
+  }
+
   private static final class Fixture implements AutoCloseable {
     final MySQLContainer<?> database;
     HikariDataSource pool;
@@ -203,6 +306,7 @@ public class DatabaseBlobCleanupPolicyMySqlIntegrationTest {
     LocalContainerEntityManagerFactoryBean factoryBean;
     DatabaseBlobCleanupPolicyRepository policies;
     DatabaseBlobCleanupPolicyService service;
+    CandidateAction afterCandidates = () -> {};
 
     Fixture(String version) {
       database =
@@ -415,7 +519,13 @@ public class DatabaseBlobCleanupPolicyMySqlIntegrationTest {
                               (select ? selects : deletes).add(execution);
                             }
                             try {
-                              return operation.invoke(statement, values);
+                              Object value = operation.invoke(statement, values);
+                              if (select
+                                  && !sql.contains("where id in (")
+                                  && operation.getName().equals("executeQuery")) {
+                                afterCandidates.run();
+                              }
+                              return value;
                             } catch (InvocationTargetException failure) {
                               if (execution != null
                                   && failure.getCause() instanceof SQLException sqlFailure)

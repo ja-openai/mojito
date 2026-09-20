@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 import xml.etree.ElementTree as ET
 
-from verify_queue_reports import LANES, OPTIONAL_SKIPS, verify_reports
+from verify_queue_reports import CLEANUP_SUITE, LANES, OPTIONAL_SKIPS, REQUIRED_METHODS, verify_reports
 
 
 class QueueReportGateTest(unittest.TestCase):
@@ -19,8 +19,10 @@ class QueueReportGateTest(unittest.TestCase):
             "testsuite", name=suite, failures="0", errors="0", skipped="0", flakes="0"
         )
         for group, count in groups.items():
+            required = sorted(REQUIRED_METHODS.get(suite, ()))
             for index in range(count):
-                name = f"case{index}" + (f"[{group}]" if group else "")
+                method = required[index] if index < len(required) else f"case{index}"
+                name = method + (f"[{group}]" if group else "")
                 ET.SubElement(root, "testcase", classname=suite, name=name)
         self.write(root)
         return root
@@ -47,7 +49,7 @@ class QueueReportGateTest(unittest.TestCase):
         case.set("name", name)
         ET.SubElement(case, "skipped")
         self.write(root)
-        self.assertEqual((234, 1), verify_reports(self.path, "application"))
+        self.assertEqual((240, 1), verify_reports(self.path, "application"))
         case.set("name", "requiredContract")
         self.write(root)
         with self.assertRaisesRegex(ValueError, "required test skipped"):
@@ -80,11 +82,23 @@ class QueueReportGateTest(unittest.TestCase):
         self.report(suite, {"8.0": 6})
         with self.assertRaisesRegex(ValueError, "8.4.*has 0 tests"):
             verify_reports(self.path, "application")
-        root = self.report(suite, {"8.0": 3, "8.4": 3})
+        root = self.report(suite, {"8.0": 6, "8.4": 6})
         ET.SubElement(root.find("testcase"), "skipped")
         self.write(root)
         with self.assertRaisesRegex(ValueError, "required test skipped"):
             verify_reports(self.path, "application")
+
+    def test_cleanup_requires_each_named_contract_in_both_mysql_versions(self):
+        for method in REQUIRED_METHODS[CLEANUP_SUITE]:
+            for group in ("8.0", "8.4"):
+                with self.subTest(method=method, group=group):
+                    root = self.populate()[CLEANUP_SUITE]
+                    case = next(c for c in root.findall("testcase")
+                                if c.get("name") == f"{method}[{group}]")
+                    case.set("name", f"unrelatedExtraCase[{group}]")
+                    self.write(root)
+                    with self.assertRaisesRegex(ValueError, "missing required test"):
+                        verify_reports(self.path, "application")
 
     def test_underfilled_or_unexpected_parameter_group_fails(self):
         suite = "com.box.l10n.mojito.queue.JdbcAsyncJobStoreNetworkIntegrationTest"

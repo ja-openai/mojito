@@ -113,8 +113,16 @@ Never infer a drain ETA from allocated tablespace size or optimizer row estimate
 
 ### Prefix cleanup execution limits
 
-The prefix-policy worker uses a 10-second SQL/transaction budget and checks elapsed time before
-deletion and before returning to commit. Its eligibility probe has the same SQL timeout. This does
+The prefix-policy worker first discovers a bounded candidate ID set through the name index without
+locking. It then locks only those IDs through the primary index, rechecking prefix, age, actual expiry
+and task protection before the guarded deletion. A zero-deletion result uses a separate global
+eligibility check; a partial batch records only actual deletions and obeys the ordinary batch limit.
+Locked or changed candidates cannot prove the prefix is drained. There is no unbounded page refill.
+If the first candidate page stays locked, the bounded retry limit can stop cleanup even when later
+eligible rows are unlocked. Reconcile the failure before restarting; do not equate it with drainage.
+
+Both reads and deletion share a 10-second SQL/transaction budget, with elapsed-time checks between
+phases and before returning to commit. The eligibility probe has the same SQL timeout. This does
 not impose a hard wall-clock deadline: acquiring a connection, JDBC cancellation, rollback, commit
 and connection release can take longer. A stop request prevents subsequent batches; it does not
 interrupt an executing statement. Repeated stops preserve `STOP_REQUESTED` until the worker finishes.
@@ -127,10 +135,16 @@ triggers and the original candidate IDs before continuing.
 
 The content-free phase log records selection, deletion, complete transaction, transaction
 finalization and progress-write durations, plus failure phase and selected/deleted counts.
+`candidateRows`, `candidateMs` and `lockingRecheckMs` separate candidate discovery from the locking
+recheck; `selectionMs` includes both. A phase not attempted has duration `-1`. Strict operational
+log parsers must recognize the deployed source's fields before relying on its phase evidence.
 Finalization includes commit or rollback and connection release. A reported deletion count can
 precede rollback or an uncertain commit; use the commit flag and independent row reconciliation.
 Validate actual JDBC cancellation and rollback with MySQL before relying on the budget in a rollout;
 mock and in-memory tests alone do not establish those properties.
+The two-stage selector is a candidate optimization: optimizer plans establish its access shape,
+not a latency improvement. Require the named mutation/locking/cancellation contracts on both
+supported MySQL versions, then separately measure a bounded canary before sustained cleanup.
 
 For steady retention, separately enable `l10n.pollable-task.archive.scheduling-enabled=true` and set
 `cron` after measuring the eligible arrival rate. The daily default of 100 tasks is not a capacity plan.

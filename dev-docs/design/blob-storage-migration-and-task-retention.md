@@ -115,6 +115,14 @@ Prefix cleanup requires policy age and actual row expiry. It preserves active ta
 payloads, graphs, malformed names and missing metadata, and rechecks at deletion.
 These fixes do not enable cleanup or provider lifecycle rules.
 
+The policy selector discovers at most one batch of IDs with a nonlocking name-index query,
+then locks that bounded ID set through the primary index with all eligibility predicates
+repeated. It never treats an empty or partial locking result as proof that the prefix is drained;
+zero deletions require the independent global eligibility probe. A partial successful batch
+uses normal progress and batch limits. Separate candidate and locking-recheck timings expose
+which phase costs time. The proposed access shape needs native MySQL race/cancellation tests
+and a measured canary before making any performance or sustained-throughput claim.
+
 The policy worker has a 10-second SQL/transaction budget and phase timings. Cancellation,
 rollback and transaction finalization can exceed that budget. Stop requests take effect between
 batches; timeout or uncertain completion disables further attempts when the policy write succeeds
