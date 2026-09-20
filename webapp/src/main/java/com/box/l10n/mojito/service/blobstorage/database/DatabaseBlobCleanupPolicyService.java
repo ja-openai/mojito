@@ -5,10 +5,12 @@ import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
 import com.box.l10n.mojito.service.DBUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.sql.Timestamp;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.quartz.JobBuilder;
 import org.quartz.JobKey;
@@ -18,10 +20,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionSystemException;
+import org.springframework.transaction.TransactionTimedOutException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -37,6 +42,7 @@ public class DatabaseBlobCleanupPolicyService {
   private static final int MAX_PAUSE_MILLIS = 60_000;
   private static final int MAX_RETRIES = 20;
   private static final int MAX_ERROR_LENGTH = 2_048;
+  static final int EXECUTION_BUDGET_SECONDS = 10;
 
   static final String STATUS_IDLE = "IDLE";
   static final String STATUS_QUEUED = "QUEUED";
@@ -65,13 +71,20 @@ public class DatabaseBlobCleanupPolicyService {
       PlatformTransactionManager transactionManager) {
     this.policyRepository = Objects.requireNonNull(policyRepository);
     this.mBlobRepository = Objects.requireNonNull(mBlobRepository);
-    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.jdbcTemplate =
+        new JdbcTemplate(
+            Objects.requireNonNull(Objects.requireNonNull(jdbcTemplate).getDataSource()));
+    // Spring replaces a JDBC query timeout with the remaining transaction timeout. Use the same
+    // budget for both, including the eligibility probe outside a transaction; never change the
+    // shared application's JdbcTemplate. The JPA delete inherits this transaction's timeout too.
+    this.jdbcTemplate.setQueryTimeout(EXECUTION_BUDGET_SECONDS);
     this.dbUtils = Objects.requireNonNull(dbUtils);
     this.quartzSchedulerManager = Objects.requireNonNull(quartzSchedulerManager);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
     this.transactionTemplate = new TransactionTemplate(Objects.requireNonNull(transactionManager));
     this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     this.transactionTemplate.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
+    this.transactionTemplate.setTimeout(EXECUTION_BUDGET_SECONDS);
   }
 
   public List<DatabaseBlobCleanupPolicy> listPolicies() {
@@ -149,7 +162,10 @@ public class DatabaseBlobCleanupPolicyService {
     policy.setEnabled(false);
     policy.setStopRequested(true);
     policy.setStatus(
-        STATUS_RUNNING.equals(policy.getStatus()) ? STATUS_STOP_REQUESTED : STATUS_STOPPED);
+        STATUS_RUNNING.equals(policy.getStatus())
+                || STATUS_STOP_REQUESTED.equals(policy.getStatus())
+            ? STATUS_STOP_REQUESTED
+            : STATUS_STOPPED);
     return policyRepository.save(policy);
   }
 
@@ -172,40 +188,61 @@ public class DatabaseBlobCleanupPolicyService {
   }
 
   void runPolicy(long policyId) {
-    markStarted(policyId);
     int completedBatches = 0;
     int consecutiveRetries = 0;
+    boolean started = false;
+    String prefix = null;
 
     while (true) {
-      DatabaseBlobCleanupPolicy policy = getPolicy(policyId);
-      if (!policy.isEnabled() || policy.isStopRequested()) {
-        finish(policyId, STATUS_STOPPED, null);
-        return;
-      }
-      if (policy.getMaxBatchesPerRun() > 0 && completedBatches >= policy.getMaxBatchesPerRun()) {
-        finish(policyId, STATUS_PAUSED, null);
-        return;
-      }
-
+      DatabaseBlobCleanupPolicy policy = null;
+      BatchObservation observation = new BatchObservation();
       try {
-        int deletedRows = deleteBatch(policy);
+        observation.phase = "start";
+        if (!started) {
+          markStarted(policyId);
+          started = true;
+        }
+        observation.phase = "policy_read";
+        policy = getPolicy(policyId);
+        prefix = policy.getPrefix();
+        if (!policy.isEnabled() || policy.isStopRequested()) {
+          observation.phase = "finish";
+          finish(policyId, STATUS_STOPPED, null);
+          return;
+        }
+        if (policy.getMaxBatchesPerRun() > 0 && completedBatches >= policy.getMaxBatchesPerRun()) {
+          observation.phase = "finish";
+          finish(policyId, STATUS_PAUSED, null);
+          return;
+        }
+        observation.phase = "transaction_begin";
+        int deletedRows = deleteBatch(policy, observation);
         if (deletedRows == 0) {
+          observation.phase = "eligibility";
           if (hasEligibleRows(policy)) {
             consecutiveRetries++;
             if (consecutiveRetries > policy.getMaxRetries()) {
+              observation.phase = "finish";
               finish(policyId, STATUS_FAILED, "Eligible rows remain locked after retry limit");
               return;
             }
             pause(retryDelayMillis(policy, consecutiveRetries));
             continue;
           }
+          observation.phase = "finish";
           finish(policyId, STATUS_DRAINED, null);
           return;
         }
 
         consecutiveRetries = 0;
         completedBatches++;
-        recordProgress(policyId, deletedRows);
+        observation.phase = "progress";
+        long progressStarted = nanoTime();
+        try {
+          recordProgress(policyId, deletedRows);
+        } finally {
+          observation.progressNanos = nanoTime() - progressStarted;
+        }
         meterRegistry
             .counter("DatabaseBlobStorage.policyCleanup.deletedRows", "prefix", policy.getPrefix())
             .increment(deletedRows);
@@ -215,9 +252,22 @@ public class DatabaseBlobCleanupPolicyService {
             policy.getPrefix(),
             completedBatches,
             deletedRows);
+        observation.phase = "complete";
         pause(policy.getPauseMillis());
       } catch (RuntimeException e) {
-        if (isRetryableLockFailure(e) && consecutiveRetries < policy.getMaxRetries()) {
+        observation.failed = true;
+        boolean reconciliationRequired =
+            isExecutionTimeout(e)
+                || observation.transactionCommitted
+                || "transaction_finalization".equals(observation.phase)
+                || "start".equals(observation.phase)
+                || "policy_read".equals(observation.phase)
+                || "finish".equals(observation.phase)
+                || e instanceof TransactionSystemException;
+        if (!reconciliationRequired
+            && policy != null
+            && isRetryableLockFailure(e)
+            && consecutiveRetries < policy.getMaxRetries()) {
           consecutiveRetries++;
           logger.warn(
               "Database blob policy cleanup lock conflict: policyId={}, prefix={}, retry={}, maxRetries={}",
@@ -230,46 +280,137 @@ public class DatabaseBlobCleanupPolicyService {
           continue;
         }
 
-        finish(policyId, STATUS_FAILED, e.getMessage());
-        logger.error(
-            "Database blob policy cleanup failed: policyId={}, prefix={}",
+        // Cancellation/rollback can outlast the budget, and commit acknowledgement can be lost.
+        // A separate progress write may also fail after deletion committed. Never retry those
+        // cases automatically or treat persisted counters as proof of the affected rows. If this
+        // disabling transaction fails, propagate it: successful disable has not been established.
+        finish(
             policyId,
-            policy.getPrefix(),
-            e);
+            STATUS_FAILED,
+            reconciliationRequired
+                ? "Cleanup failed during "
+                    + observation.phase
+                    + "; reconcile deleted rows before manually restarting. "
+                    + "Execution cancellation, rollback or commit outcome may be uncertain."
+                : e.getMessage(),
+            reconciliationRequired);
+        logger.error(
+            "Database blob policy cleanup failed: policyId={}, prefix={}", policyId, prefix, e);
         return;
+      } finally {
+        if (observation.transactionNanos >= 0 || observation.failed) {
+          logger.info(
+              "Database blob cleanup phases: policyId={}, prefix={}, phase={}, failed={}, selectedRows={}, deletedRows={}, transactionCommitConfirmed={}, selectionMs={}, deleteMs={}, transactionMs={}, finalizationMs={}, progressMs={}",
+              policyId,
+              prefix,
+              observation.phase,
+              observation.failed,
+              observation.selectedRows,
+              observation.deletedRows,
+              observation.transactionCommitted,
+              millis(observation.selectionNanos),
+              millis(observation.deleteNanos),
+              millis(observation.transactionNanos),
+              millis(observation.finalizationNanos),
+              millis(observation.progressNanos));
+        }
       }
     }
   }
 
-  private int deleteBatch(DatabaseBlobCleanupPolicy policy) {
-    return Objects.requireNonNull(
-        transactionTemplate.execute(
-            status -> {
-              ZonedDateTime now = ZonedDateTime.now();
-              Timestamp cutoff =
-                  Timestamp.from(now.minusDays(policy.getRetentionDays()).toInstant());
-              String forceIndex = dbUtils.isMysql() ? " force index (UK__MBLOB__NAME)" : "";
-              String skipLocked = dbUtils.isMysql() ? " for update skip locked" : "";
-              String sql =
-                  "select id from mblob"
-                      + forceIndex
-                      + " where name >= ? and name < ?"
-                      + " and expire_after_seconds is not null and created_date < ?"
-                      + " and timestampadd(second, expire_after_seconds, created_date) < ? "
-                      + MBlobRepository.CLEANUP_TASK_SAFETY_PREDICATE
-                      + " order by name limit ?"
-                      + skipLocked;
-              List<Long> ids =
-                  jdbcTemplate.queryForList(
-                      sql,
-                      Long.class,
-                      policy.getPrefix(),
-                      prefixUpperBound(policy.getPrefix()),
-                      cutoff,
-                      Timestamp.from(now.toInstant()),
-                      policy.getBatchSize());
-              return ids.isEmpty() ? 0 : mBlobRepository.deleteExpiredByIds(ids, now);
-            }));
+  private int deleteBatch(DatabaseBlobCleanupPolicy policy, BatchObservation observation) {
+    long transactionStarted = nanoTime();
+    try {
+      int deletedRows =
+          Objects.requireNonNull(
+              transactionTemplate.execute(
+                  status -> {
+                    try {
+                      ZonedDateTime now = ZonedDateTime.now();
+                      Timestamp cutoff =
+                          Timestamp.from(now.minusDays(policy.getRetentionDays()).toInstant());
+                      String forceIndex = dbUtils.isMysql() ? " force index (UK__MBLOB__NAME)" : "";
+                      String skipLocked = dbUtils.isMysql() ? " for update skip locked" : "";
+                      String sql =
+                          "select id from mblob"
+                              + forceIndex
+                              + " where name >= ? and name < ?"
+                              + " and expire_after_seconds is not null and created_date < ?"
+                              + " and timestampadd(second, expire_after_seconds, created_date) < ? "
+                              + MBlobRepository.CLEANUP_TASK_SAFETY_PREDICATE
+                              + " order by name limit ?"
+                              + skipLocked;
+                      observation.phase = "selection";
+                      long selectionStarted = nanoTime();
+                      List<Long> ids;
+                      try {
+                        ids =
+                            jdbcTemplate.queryForList(
+                                sql,
+                                Long.class,
+                                policy.getPrefix(),
+                                prefixUpperBound(policy.getPrefix()),
+                                cutoff,
+                                Timestamp.from(now.toInstant()),
+                                policy.getBatchSize());
+                      } finally {
+                        observation.selectionNanos = nanoTime() - selectionStarted;
+                      }
+                      observation.selectedRows = ids.size();
+                      requireExecutionBudget(transactionStarted);
+                      observation.phase = "delete";
+                      long deleteStarted = nanoTime();
+                      try {
+                        observation.deletedRows =
+                            ids.isEmpty() ? 0 : mBlobRepository.deleteExpiredByIds(ids, now);
+                      } finally {
+                        observation.deleteNanos = nanoTime() - deleteStarted;
+                      }
+                      requireExecutionBudget(transactionStarted);
+                      observation.phase = "transaction_finalization";
+                      return observation.deletedRows;
+                    } finally {
+                      observation.callbackFinished = nanoTime();
+                    }
+                  }));
+      observation.transactionCommitted = true;
+      return deletedRows;
+    } finally {
+      long finished = nanoTime();
+      observation.transactionNanos = finished - transactionStarted;
+      // Includes commit or rollback and connection release, not just the server's commit time.
+      if (observation.callbackFinished != null) {
+        observation.finalizationNanos = finished - observation.callbackFinished;
+      }
+    }
+  }
+
+  long nanoTime() {
+    return System.nanoTime();
+  }
+
+  private void requireExecutionBudget(long started) {
+    if (nanoTime() - started >= TimeUnit.SECONDS.toNanos(EXECUTION_BUDGET_SECONDS)) {
+      throw new TransactionTimedOutException("Database blob cleanup execution budget expired");
+    }
+  }
+
+  private static long millis(long nanos) {
+    return nanos < 0 ? -1 : TimeUnit.NANOSECONDS.toMillis(nanos);
+  }
+
+  private static final class BatchObservation {
+    String phase = "transaction_begin";
+    boolean failed;
+    boolean transactionCommitted;
+    int selectedRows = -1;
+    int deletedRows = -1;
+    long selectionNanos = -1;
+    long deleteNanos = -1;
+    long transactionNanos = -1;
+    long finalizationNanos = -1;
+    long progressNanos = -1;
+    Long callbackFinished;
   }
 
   private boolean hasEligibleRows(DatabaseBlobCleanupPolicy policy) {
@@ -320,6 +461,10 @@ public class DatabaseBlobCleanupPolicyService {
   }
 
   private void finish(long policyId, String finalStatus, String error) {
+    finish(policyId, finalStatus, error, false);
+  }
+
+  private void finish(long policyId, String finalStatus, String error, boolean disable) {
     transactionTemplate.executeWithoutResult(
         status -> {
           DatabaseBlobCleanupPolicy policy = getPolicy(policyId);
@@ -327,6 +472,9 @@ public class DatabaseBlobCleanupPolicyService {
           policy.setLastFinishedDate(ZonedDateTime.now());
           policy.setStopRequested(false);
           policy.setLastError(truncateError(error));
+          if (disable) {
+            policy.setEnabled(false);
+          }
           policyRepository.save(policy);
         });
   }
@@ -383,6 +531,20 @@ public class DatabaseBlobCleanupPolicyService {
         return true;
       }
       cause = cause.getCause();
+    }
+    return false;
+  }
+
+  private boolean isExecutionTimeout(RuntimeException exception) {
+    for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+      if (cause instanceof QueryTimeoutException
+          || cause instanceof jakarta.persistence.QueryTimeoutException
+          || cause instanceof TransactionTimedOutException
+          || cause instanceof SQLTimeoutException
+          || (cause instanceof SQLException sql
+              && (sql.getErrorCode() == 1317 || sql.getErrorCode() == 3024))) {
+        return true;
+      }
     }
     return false;
   }

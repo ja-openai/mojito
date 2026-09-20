@@ -47,7 +47,7 @@ class QueueReportGateTest(unittest.TestCase):
         case.set("name", name)
         ET.SubElement(case, "skipped")
         self.write(root)
-        self.assertEqual((228, 1), verify_reports(self.path, "application"))
+        self.assertEqual((234, 1), verify_reports(self.path, "application"))
         case.set("name", "requiredContract")
         self.write(root)
         with self.assertRaisesRegex(ValueError, "required test skipped"):
@@ -72,6 +72,18 @@ class QueueReportGateTest(unittest.TestCase):
         self.populate()
         self.report(suite, {"HSQL": 90, "MYSQL": 45})
         with self.assertRaisesRegex(ValueError, "POSTGRESQL.*has 0 tests"):
+            verify_reports(self.path, "application")
+
+    def test_cleanup_requires_both_mysql_versions_and_no_skips(self):
+        suite = "com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobCleanupPolicyMySqlIntegrationTest"
+        self.populate()
+        self.report(suite, {"8.0": 6})
+        with self.assertRaisesRegex(ValueError, "8.4.*has 0 tests"):
+            verify_reports(self.path, "application")
+        root = self.report(suite, {"8.0": 3, "8.4": 3})
+        ET.SubElement(root.find("testcase"), "skipped")
+        self.write(root)
+        with self.assertRaisesRegex(ValueError, "required test skipped"):
             verify_reports(self.path, "application")
 
     def test_underfilled_or_unexpected_parameter_group_fails(self):

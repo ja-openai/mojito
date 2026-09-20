@@ -115,6 +115,12 @@ Prefix cleanup requires policy age and actual row expiry. It preserves active ta
 payloads, graphs, malformed names and missing metadata, and rechecks at deletion.
 These fixes do not enable cleanup or provider lifecycle rules.
 
+The policy worker has a 10-second SQL/transaction budget and phase timings. Cancellation,
+rollback and transaction finalization can exceed that budget. Stop requests take effect between
+batches; timeout or uncertain completion disables further attempts when the policy write succeeds
+and requires row reconciliation before manual restart. Deletion and progress persistence remain
+separate transactions, so counters alone cannot establish crash-safe deletion accounting.
+
 Before replacement verify complete source coverage, retained bytes, schema/dependencies,
 per-prefix routes, server/binlog headroom and restore capability. Retain unknown/control/
 temporary rows and the original AUTO_INCREMENT floor. Bounded tooling verifies exact
