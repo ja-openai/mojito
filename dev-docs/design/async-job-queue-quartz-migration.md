@@ -220,9 +220,12 @@ misfire policy, persistent schedules, or trigger healing.
 | Cleanup/maintenance | [PollableTaskCleanupJob:45](../../webapp/src/main/java/com/box/l10n/mojito/service/pollableTask/PollableTaskCleanupJob.java#L45), [AssetExtractionCleanupJob:38](../../webapp/src/main/java/com/box/l10n/mojito/service/assetExtraction/AssetExtractionCleanupJob.java#L38), [PushPullRunCleanupJob:45](../../webapp/src/main/java/com/box/l10n/mojito/service/delta/PushPullRunCleanupJob.java#L45), [DatabaseBlobPolicyCleanupJob:14](../../webapp/src/main/java/com/box/l10n/mojito/service/blobstorage/database/DatabaseBlobPolicyCleanupJob.java#L14). | Keep bounded maintenance jobs. Pollable cleanup marks timed-out tasks; it is not queue cancellation, queue retention, or historical archival. |
 | Storage/cache and one-off updaters | [DatabaseBlobStorageCleanupJob:21](../../webapp/src/main/java/com/box/l10n/mojito/service/blobstorage/database/DatabaseBlobStorageCleanupJob.java#L21), [DatabaseCacheEvictionJob:37](../../webapp/src/main/java/com/box/l10n/mojito/service/cache/DatabaseCacheEvictionJob.java#L37), [ImageMigrationJob:26](../../webapp/src/main/java/com/box/l10n/mojito/service/image/ImageMigrationJob.java#L26), [StringAuthoringCleanupJob:23](../../webapp/src/main/java/com/box/l10n/mojito/service/stringauthoring/StringAuthoringCleanupJob.java#L23); legacy `PluralFormUpdaterJob`, `TUCVAddAssetIdUpdaterJob`, `AssetExtractionByBranchRemoverJob`, `RepositoryManualScreenshotRunJob` also exist. | Inventory actual registrations/enabled properties before treating legacy classes as live work. Do not replace one-off mutation jobs merely to remove a Quartz dependency. |
 
-`QuartzConfig.startSchedulers` honors `l10n.org.quartz.scheduler.enabled`, while
-startup cleanup compares registered beans with DEFAULT-group jobs/triggers
-([M: QuartzConfig:47](../../webapp/src/main/java/com/box/l10n/mojito/quartz/QuartzConfig.java#L47)).
+`QuartzConfig.startSchedulers` waits for its application's ready event so jobs
+cannot run before transaction advice and other application beans are initialized.
+It handles that event once, honors `l10n.org.quartz.scheduler.enabled`, and keeps
+the existing stagger between scheduler starts. Startup cleanup compares registered
+beans with DEFAULT-group jobs/triggers before activation
+([QuartzConfig](../../webapp/src/main/java/com/box/l10n/mojito/quartz/QuartzConfig.java)).
 Dynamic pollable work uses the `DYNAMIC` group. Removing beans or setting Quartz
 disabled is not a safe per-family migration/drain mechanism. Queue runtime startup
 is independent of the Quartz enable property; an API process with Quartz disabled
