@@ -16,6 +16,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.sql.Timestamp;
@@ -24,6 +25,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -51,17 +53,24 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
   private final AtomicLong clock = new AtomicLong();
   private final AtomicBoolean failCommit = new AtomicBoolean();
   private final List<Integer> selectionTimeouts = new ArrayList<>();
+  private final List<Integer> lockingTimeouts = new ArrayList<>();
   private final List<Integer> eligibilityTimeouts = new ArrayList<>();
   private JdbcTemplate jdbc;
   private DatabaseBlobCleanupPolicyService service;
   private Runnable afterSelection = () -> {};
+  private Runnable afterCandidates = () -> {};
   private Runnable afterDelete = () -> {};
   private boolean selectionTimeout;
+  private boolean lockingTimeout;
   private boolean eligibilityTimeout;
   private boolean failProgress;
   private boolean failDisable;
   private boolean failStart;
   private boolean failFinish;
+  private String prefix = "budget_test/";
+  private int batchSize = 1;
+  private int maxRetries = 2;
+  private Set<Long> skippedIds = Set.of();
   private Logger logger;
   private Level previousLevel;
   private ListAppender<ILoggingEvent> logs;
@@ -95,13 +104,15 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
             call -> {
               List<Long> ids = call.getArgument(0);
               ZonedDateTime now = call.getArgument(1);
-              assertEquals(List.of(1L), ids);
+              List<Object> arguments = new ArrayList<>(ids);
+              arguments.add(Timestamp.from(now.toInstant()));
               int count =
                   jdbc.update(
-                      "delete from mblob where id = ? and timestampadd(second, expire_after_seconds, created_date) < ? "
+                      "delete from mblob where id in ("
+                          + String.join(",", java.util.Collections.nCopies(ids.size(), "?"))
+                          + ") and timestampadd(second, expire_after_seconds, created_date) < ? "
                           + MBlobRepository.CLEANUP_TASK_SAFETY_PREDICATE,
-                      ids.getFirst(),
-                      Timestamp.from(now.toInstant()));
+                      arguments.toArray());
               afterDelete.run();
               return count;
             });
@@ -137,6 +148,7 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
   public void timeoutReachesActualSelectionWithoutChangingSharedJdbc() {
     service.runPolicy(1);
     assertEquals(List.of(10), selectionTimeouts);
+    assertEquals(List.of(10), lockingTimeouts);
     assertEquals(3, jdbc.getQueryTimeout());
     assertEquals(0, blobCount());
     assertEquals(18, readPolicy().getTotalDeletedCount());
@@ -147,6 +159,7 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
         phaseLog()
             .contains(
                 "selectionMs=0, deleteMs=0, transactionMs=0, finalizationMs=0, progressMs=0"));
+    assertTrue(phaseLog().contains("candidateRows=1, candidateMs=0, lockingRecheckMs=0"));
   }
 
   @Test
@@ -168,7 +181,32 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
     verify(blobs, never()).deleteExpiredByIds(anyList(), any());
     assertEquals(1, blobCount());
     assertDisabledFailure(17);
-    assertTrue(phaseLog().contains("phase=selection, failed=true"));
+    assertTrue(lockingTimeouts.isEmpty());
+    assertTrue(phaseLog().contains("phase=candidate_selection, failed=true"));
+  }
+
+  @Test
+  public void expiredBudgetAfterCandidateLookupNeverStartsLockingRecheck() {
+    afterCandidates = () -> clock.set(TimeUnit.SECONDS.toNanos(10));
+    service.runPolicy(1);
+    verify(blobs, never()).deleteExpiredByIds(anyList(), any());
+    assertTrue(lockingTimeouts.isEmpty());
+    assertEquals(1, blobCount());
+    assertDisabledFailure(17);
+    assertTrue(phaseLog().contains("candidateMs=10000, lockingRecheckMs=-1"));
+  }
+
+  @Test
+  public void lockingRecheckTimeoutDisablesWithoutRetryOrDelete() {
+    lockingTimeout = true;
+    service.runPolicy(1);
+    service.runEnabledPolicies();
+    assertEquals(List.of(10), selectionTimeouts);
+    assertEquals(List.of(10), lockingTimeouts);
+    verify(blobs, never()).deleteExpiredByIds(anyList(), any());
+    assertEquals(1, blobCount());
+    assertDisabledFailure(17);
+    assertTrue(phaseLog().contains("phase=locking_recheck, failed=true"));
   }
 
   @Test
@@ -179,6 +217,106 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
     assertEquals(1, blobCount());
     assertDisabledFailure(17);
     assertTrue(phaseLog().contains("selectionMs=10000"));
+  }
+
+  @Test
+  public void candidateAndLockingPhasesShareOneMonotonicBudget() {
+    afterCandidates = () -> clock.set(TimeUnit.SECONDS.toNanos(6));
+    afterSelection = () -> clock.addAndGet(TimeUnit.SECONDS.toNanos(4));
+    service.runPolicy(1);
+    verify(blobs, never()).deleteExpiredByIds(anyList(), any());
+    assertDisabledFailure(17);
+    assertEquals(1, blobCount());
+    assertTrue(phaseLog().contains("candidateMs=6000, lockingRecheckMs=4000"));
+  }
+
+  @Test
+  public void rechecksExpiryPrefixAndPolicyAgeAfterCandidateDiscovery() {
+    batchSize = 5;
+    for (int id = 2; id <= 5; id++) insertBlob(id, prefix + id);
+    afterCandidates =
+        () -> {
+          jdbc.update("update mblob set expire_after_seconds = null where id = 1");
+          jdbc.update("update mblob set expire_after_seconds = ? where id = 2", 30 * 86400L);
+          jdbc.update("update mblob set name = 'other_prefix/moved' where id = 3");
+          jdbc.update(
+              "update mblob set created_date = ? where id = 4",
+              Timestamp.from(ZonedDateTime.now().minusDays(1).toInstant()));
+        };
+    service.runPolicy(1);
+    assertEquals(
+        List.of(1L, 2L, 3L, 4L), jdbc.queryForList("select id from mblob order by id", Long.class));
+    verify(blobs).deleteExpiredByIds(eq(List.of(5L)), any());
+    assertEquals(18, readPolicy().getTotalDeletedCount());
+    assertTrue(phaseLog().contains("candidateRows=5"));
+    assertTrue(phaseLog().contains("selectedRows=1, deletedRows=1"));
+  }
+
+  @Test
+  public void rechecksTaskAndChildStateAfterCandidateDiscovery() {
+    jdbc.update("delete from mblob");
+    prefix = "pollable_task/";
+    batchSize = 5;
+    for (int id = 1; id <= 5; id++) {
+      insertBlob(id, prefix + id + "/input");
+      jdbc.update("insert into pollable_task values (?, current_timestamp, null, 0)", id);
+    }
+    afterCandidates =
+        () -> {
+          jdbc.update("update pollable_task set finished_date = null where id = 1");
+          jdbc.update("update pollable_task set parent_task_id = 5 where id = 2");
+          jdbc.update("update pollable_task set expected_sub_task_number = 1 where id = 3");
+          jdbc.update("insert into pollable_task values (6, null, 4, 0)");
+        };
+    service.runPolicy(1);
+    // Task5 also becomes a parent through task2; every candidate is now protected.
+    assertEquals(5, blobCount());
+    verify(blobs, never()).deleteExpiredByIds(anyList(), any());
+    assertEquals("DRAINED", readPolicy().getStatus());
+    assertEquals(17, readPolicy().getTotalDeletedCount());
+    assertEquals(List.of(10), eligibilityTimeouts);
+  }
+
+  @Test
+  public void partialSkippedPageDeletesOnlyRecheckedIdsWithoutClaimingDrained() {
+    batchSize = 2;
+    insertBlob(2, prefix + "two");
+    // HSQL has no production SKIP LOCKED clause. Filter the recheck's ResultSet only;
+    // opt-in MySQL tests separately exercise actual independent row locks.
+    skippedIds = Set.of(1L);
+    service.runPolicy(1);
+    assertEquals(List.of(1L), jdbc.queryForList("select id from mblob", Long.class));
+    verify(blobs).deleteExpiredByIds(eq(List.of(2L)), any());
+    assertEquals("PAUSED", readPolicy().getStatus());
+    assertEquals(18, readPolicy().getTotalDeletedCount());
+  }
+
+  @Test
+  public void allSkippedCandidatesCheckGlobalEligibilityAndStopAtRetryLimit() {
+    skippedIds = Set.of(1L);
+    insertBlob(2, prefix + "two"); // Outside this one-row candidate page; never refill unboundedly.
+    maxRetries = 0;
+    service.runPolicy(1);
+    assertEquals(2, blobCount());
+    verify(blobs, never()).deleteExpiredByIds(anyList(), any());
+    assertEquals("FAILED", readPolicy().getStatus());
+    assertTrue(readPolicy().getLastError().contains("Eligible rows remain"));
+    assertEquals(17, readPolicy().getTotalDeletedCount());
+    assertEquals(List.of(10), eligibilityTimeouts);
+    assertEquals(List.of(10), selectionTimeouts);
+  }
+
+  @Test
+  public void emptyCandidateSnapshotDoesNotHideNewEligibleRow() {
+    jdbc.update("delete from mblob");
+    afterCandidates = () -> insertBlob(2, prefix + "later");
+    maxRetries = 0;
+    service.runPolicy(1);
+    assertEquals(1, blobCount());
+    assertTrue(lockingTimeouts.isEmpty());
+    assertEquals("FAILED", readPolicy().getStatus());
+    assertEquals(17, readPolicy().getTotalDeletedCount());
+    assertEquals(List.of(10), eligibilityTimeouts);
   }
 
   @Test
@@ -305,6 +443,14 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
     return jdbc.queryForObject("select count(*) from mblob", Integer.class);
   }
 
+  private void insertBlob(long id, String name) {
+    jdbc.update(
+        "insert into mblob values (?, ?, ?, 1)",
+        id,
+        name,
+        Timestamp.from(ZonedDateTime.now().minusDays(10).toInstant()));
+  }
+
   private String phaseLog() {
     return logs.list.stream()
         .map(ILoggingEvent::getFormattedMessage)
@@ -319,14 +465,15 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
         (rs, row) -> {
           DatabaseBlobCleanupPolicy p = new DatabaseBlobCleanupPolicy();
           p.setId(1L);
-          p.setPrefix("budget_test/");
+          p.setPrefix(prefix);
           p.setEnabled(rs.getBoolean("enabled"));
           p.setStatus(rs.getString("status"));
           p.setStopRequested(rs.getBoolean("stop_requested"));
           p.setMaxBatchesPerRun(1);
-          p.setBatchSize(1);
+          p.setBatchSize(batchSize);
+          p.setRetentionDays(3);
           p.setPauseMillis(0);
-          p.setMaxRetries(2);
+          p.setMaxRetries(maxRetries);
           p.setLastDeletedCount(rs.getLong("last_count"));
           p.setTotalDeletedCount(rs.getLong("total"));
           p.setLastError(rs.getString("error"));
@@ -381,22 +528,30 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
                           getClass().getClassLoader(),
                           new Class<?>[] {PreparedStatement.class},
                           (ps, operation, values) -> {
-                            boolean select = sql.startsWith("select id from mblob");
+                            boolean recheck = sql.startsWith("select id from mblob where id in");
+                            boolean select = sql.startsWith("select id from mblob") && !recheck;
                             boolean eligible =
                                 sql.startsWith("select count(*) from (select id from mblob");
                             if (operation.getName().equals("setQueryTimeout")) {
                               if (select) selectionTimeouts.add((Integer) values[0]);
+                              if (recheck) lockingTimeouts.add((Integer) values[0]);
                               if (eligible) eligibilityTimeouts.add((Integer) values[0]);
                             }
                             if (operation.getName().equals("executeQuery")
                                 && ((select && selectionTimeout)
+                                    || (recheck && lockingTimeout)
                                     || (eligible && eligibilityTimeout))) {
                               throw new SQLTimeoutException("synthetic statement timeout");
                             }
                             try {
                               Object value = operation.invoke(statement, values);
-                              if (select && operation.getName().equals("executeQuery"))
-                                afterSelection.run();
+                              if (operation.getName().equals("executeQuery")) {
+                                if (select) afterCandidates.run();
+                                if (recheck) {
+                                  afterSelection.run();
+                                  if (!skippedIds.isEmpty()) return skipRows((ResultSet) value);
+                                }
+                              }
                               return value;
                             } catch (InvocationTargetException failure) {
                               throw failure.getCause();
@@ -410,5 +565,25 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
                 });
       }
     };
+  }
+
+  private ResultSet skipRows(ResultSet result) {
+    return (ResultSet)
+        Proxy.newProxyInstance(
+            getClass().getClassLoader(),
+            new Class<?>[] {ResultSet.class},
+            (proxy, method, args) -> {
+              if (method.getName().equals("next")) {
+                while (result.next()) {
+                  if (!skippedIds.contains(result.getLong(1))) return true;
+                }
+                return false;
+              }
+              try {
+                return method.invoke(result, args);
+              } catch (InvocationTargetException failure) {
+                throw failure.getCause();
+              }
+            });
   }
 }

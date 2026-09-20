@@ -9,6 +9,17 @@ import xml.etree.ElementTree as ET
 
 QUEUE_PACKAGE = "com.box.l10n.mojito.queue."
 CONSUMER_PACKAGE = "example.queue."
+CLEANUP_SUITE = "com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobCleanupPolicyMySqlIntegrationTest"
+REQUIRED_METHODS = {
+    CLEANUP_SUITE: {
+        "blockedSelectionIsCancelledAndDisablesPolicyWithoutRetry",
+        "guardedJpaDeleteCancellationRollsBackEarlierRowsAndReusesConnection",
+        "successfulBatchPreservesExpiryAndTaskReferenceGuards",
+        "lockingRecheckPreservesCandidatesChangedByAnotherConnection",
+        "partialLockedCandidatePageDeletesOnlyUnlockedRows",
+        "allLockedCandidatesDoNotMeanDrainedOrTriggerUnboundedRefill",
+    },
+}
 APPLICATION = {
     "JdbcAsyncJobStoreDatabaseIntegrationTest": {"": 20},
     "JdbcAsyncJobStorePoolIntegrationTest": {"MYSQL": 2, "POSTGRESQL": 2},
@@ -37,7 +48,7 @@ LANES = {
     "application": {
         **{QUEUE_PACKAGE + name: groups for name, groups in APPLICATION.items()},
         "com.box.l10n.mojito.AsyncJobQueueApplicationMigrationTest": {"8.0": 2, "8.4": 2},
-        "com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobCleanupPolicyMySqlIntegrationTest": {"8.0": 3, "8.4": 3},
+        CLEANUP_SUITE: {"8.0": 6, "8.4": 6},
     },
     "consumer": {CONSUMER_PACKAGE + name: groups for name, groups in CONSUMER.items()},
     "jpa-consumer": {
@@ -108,6 +119,10 @@ def verify_reports(directory, lane):
                 raise ValueError(
                     f"{suite}: group {group!r} has {groups[group]} tests; need {minimum}"
                 )
+            for method in REQUIRED_METHODS.get(suite, ()):
+                expected_name = method + (f"[{group}]" if group else "")
+                if expected_name not in seen:
+                    raise ValueError(f"{suite}: missing required test: {expected_name}")
     return passed, skipped
 
 
