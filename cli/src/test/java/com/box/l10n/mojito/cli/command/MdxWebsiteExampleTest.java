@@ -50,7 +50,12 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /** Exercises the example with real CLI commands and HTTP APIs against an isolated HSQL app. */
-@TestPropertySource(properties = {"l10n.blob-storage.default-type=AZURE"})
+@TestPropertySource(
+    properties = {
+      "l10n.blob-storage.default-type=AZURE",
+      // Keep the cached Azure context separate from database-backed CLI tests.
+      "spring.datasource.url=jdbc:hsqldb:mem:cli_azure_storage;DB_CLOSE_DELAY=-1"
+    })
 public class MdxWebsiteExampleTest extends CLITestBase {
 
   // Only the external provider is replaced. The production routing and MDX storage guard remain

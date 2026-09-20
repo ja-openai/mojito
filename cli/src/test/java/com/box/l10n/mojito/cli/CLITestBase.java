@@ -10,6 +10,7 @@ import com.box.l10n.mojito.rest.resttemplate.AuthenticatedRestTemplate;
 import com.box.l10n.mojito.rest.resttemplate.ResttemplateConfig;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.pollableTask.PollableAspect;
 import com.box.l10n.mojito.service.repository.RepositoryService;
 import com.box.l10n.mojito.service.tm.TMImportService;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -26,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
+import org.aspectj.lang.Aspects;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -90,6 +92,9 @@ public class CLITestBase extends IOTestBase {
     AnnotationTransactionAspect.aspectOf().setTransactionManager(transactionManager);
     AnnotationBeanConfigurerAspect.aspectOf()
         .setBeanFactory(applicationContext.getAutowireCapableBeanFactory());
+    applicationContext
+        .getAutowireCapableBeanFactory()
+        .autowireBean(Aspects.aspectOf(PollableAspect.class));
   }
 
   @PostConstruct

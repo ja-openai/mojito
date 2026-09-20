@@ -40,7 +40,12 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /** The content demo must work through the packaged Java CLI without a Node or model process. */
-@TestPropertySource(properties = {"l10n.blob-storage.default-type=AZURE"})
+@TestPropertySource(
+    properties = {
+      "l10n.blob-storage.default-type=AZURE",
+      // Keep the cached Azure context separate from database-backed CLI tests.
+      "spring.datasource.url=jdbc:hsqldb:mem:cli_azure_storage;DB_CLOSE_DELAY=-1"
+    })
 public class ContentDemoCreateCommandTest extends CLITestBase {
 
   private static final List<String> TARGET_LOCALES = List.of("fr", "de", "es", "ja", "ar");
