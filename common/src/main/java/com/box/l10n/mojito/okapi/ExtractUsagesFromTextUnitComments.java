@@ -26,6 +26,8 @@ public class ExtractUsagesFromTextUnitComments {
       "\\s*?<locations>\n?(?<usages>(.*?\\s)*?)</locations>";
   public static final String USAGES_GROUP_NAME = "usages";
 
+  private static final Pattern COMPILED_USAGES_PATTERN = Pattern.compile(USAGES_PATTERN);
+
   /**
    * Add usage locations to the text unit
    *
@@ -60,8 +62,7 @@ public class ExtractUsagesFromTextUnitComments {
    */
   void removeUsagesFromTextUnitComment(TextUnit textUnit) {
     String comment = textUnitUtils.getNote(textUnit);
-    Pattern pattern = Pattern.compile(USAGES_PATTERN);
-    Matcher matcher = pattern.matcher(textUnitUtils.getNote(textUnit));
+    Matcher matcher = COMPILED_USAGES_PATTERN.matcher(textUnitUtils.getNote(textUnit));
 
     if (matcher.find()) {
       textUnitUtils.setNote(textUnit, comment.replace(matcher.group(0), ""));
@@ -79,8 +80,7 @@ public class ExtractUsagesFromTextUnitComments {
     String locations_string = null;
     Set<String> locations = new LinkedHashSet<>();
 
-    Pattern pattern = Pattern.compile(USAGES_PATTERN);
-    Matcher matcher = pattern.matcher(comment);
+    Matcher matcher = COMPILED_USAGES_PATTERN.matcher(comment);
 
     if (matcher.find()) {
       locations_string = matcher.group(USAGES_GROUP_NAME);
