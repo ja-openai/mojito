@@ -2,7 +2,10 @@ package com.box.l10n.mojito.service.pollableTask;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
@@ -10,11 +13,14 @@ import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.test.TestIdWatcher;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.concurrent.ExecutionException;
+import org.aspectj.lang.Aspects;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.AsyncTaskExecutor;
 
 /**
  * @author jaurambault
@@ -29,7 +35,39 @@ public class PollableAspectTest extends ServiceTestBase {
 
   @Autowired ObjectMapper objectMapper;
 
+  @Autowired
+  @Qualifier("pollableTaskExecutor")
+  AsyncTaskExecutor pollableTaskExecutor;
+
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
+
+  @Test
+  public void cachedContextRestoresPollableServiceAndExecutor() throws Exception {
+    PollableAspect aspect = Aspects.aspectOf(PollableAspect.class);
+    PollableTaskService staleService = mock(PollableTaskService.class);
+    AsyncTaskExecutor staleExecutor = mock(AsyncTaskExecutor.class);
+    aspect.pollableTaskService = staleService;
+    aspect.pollableTaskExecutor = staleExecutor;
+    try {
+      useCurrentContextForAspects();
+      assertSame(pollableTaskService, aspect.pollableTaskService);
+      assertSame(pollableTaskExecutor, aspect.pollableTaskExecutor);
+
+      PollableTask parent =
+          pollableTaskService.createPollableTask(
+              null, testIdWatcher.getEntityName("restored-context-parent"), null, 0);
+      withParentId(parent.getId());
+      assertEquals(1, pollableTaskService.getPollableTask(parent.getId()).getSubTasks().size());
+      PollableFuture<String> future = simpleAsyncMethodWithResult();
+      assertEquals("The actual result of this function", future.get());
+      assertNotNull(
+          pollableTaskService.getPollableTask(future.getPollableTask().getId()).getFinishedDate());
+      verifyNoInteractions(staleService, staleExecutor);
+    } finally {
+      aspect.pollableTaskService = pollableTaskService;
+      aspect.pollableTaskExecutor = pollableTaskExecutor;
+    }
+  }
 
   @Test
   public void testSimpleMethodWithResult() throws InterruptedException, ExecutionException {

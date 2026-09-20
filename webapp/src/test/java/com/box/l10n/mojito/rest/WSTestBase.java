@@ -8,12 +8,14 @@ import com.box.l10n.mojito.rest.client.exception.LocaleNotFoundException;
 import com.box.l10n.mojito.rest.entity.RepositoryLocale;
 import com.box.l10n.mojito.rest.resttemplate.AuthenticatedRestTemplate;
 import com.box.l10n.mojito.rest.resttemplate.ResttemplateConfig;
+import com.box.l10n.mojito.service.pollableTask.PollableAspect;
 import com.box.l10n.mojito.xml.XmlParsingConfiguration;
 import jakarta.annotation.PostConstruct;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
+import org.aspectj.lang.Aspects;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.runner.RunWith;
@@ -65,6 +67,10 @@ public class WSTestBase {
     AnnotationTransactionAspect.aspectOf().setTransactionManager(transactionManager);
     AnnotationBeanConfigurerAspect.aspectOf()
         .setBeanFactory(applicationContext.getAutowireCapableBeanFactory());
+    // Existing aspect instances keep their injected dependencies when a cached context resumes.
+    applicationContext
+        .getAutowireCapableBeanFactory()
+        .autowireBean(Aspects.aspectOf(PollableAspect.class));
   }
 
   @PostConstruct
