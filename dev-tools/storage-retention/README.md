@@ -32,8 +32,7 @@ The integrated release preserves the existing V114–V120 migration history. Sto
 archive checkpoints now use V121 and V122, respectively; the isolated September 14 validation used
 earlier storage version numbers. Validate the complete Flyway chain and populated upgrade in CI
 against the final release artifact. Do not deploy a higher version and later insert a lower migration
-or repair an applied checksum to match a renamed file. These storage migrations have not been
-applied to a live database.
+or repair an applied checksum to match a renamed file.
 
 Keep these effective settings on every replica:
 
