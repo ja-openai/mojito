@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -169,23 +170,45 @@ public class AsyncJobQueueRuntimeTest {
   public void pollRecordsClaimQueueWaitAndProcessingLatency() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
-    CountDownLatch processed = new CountDownLatch(1);
+    CountDownLatch callbackEntered = new CountDownLatch(1);
+    CountDownLatch releaseCallback = new CountDownLatch(1);
+    CountDownLatch taskCompleted = observeTaskCompletion();
+    meterRegistry.timer("asyncJobQueue.processing.latency", "queueName", "assetlocalize");
+    AsyncJobHandler jobHandler = mock(AsyncJobHandler.class);
+    when(jobHandler.process(any())).thenReturn(AsyncJobHandlerResult.done());
+    doAnswer(
+            invocation -> {
+              callbackEntered.countDown();
+              assertThat(releaseCallback.await(5, TimeUnit.SECONDS)).isTrue();
+              return null;
+            })
+        .when(jobHandler)
+        .onJobDone(any(), any());
 
     AsyncJobQueueRuntime asyncJobQueueRuntime =
         runtime(
             inMemoryAsyncJobStore,
             queueSettings(100, 1_000, 1, 1, 10_000, 0),
-            handler(
-                asyncJobRecord -> {
-                  processed.countDown();
-                  return AsyncJobHandlerResult.done();
-                }),
+            jobHandler,
             mock(TaskScheduler.class),
             executor);
 
-    asyncJobQueueRuntime.pollOnce();
-    assertThat(processed.await(2, TimeUnit.SECONDS)).isTrue();
-    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
+    try {
+      asyncJobQueueRuntime.pollOnce();
+      assertThat(callbackEntered.await(2, TimeUnit.SECONDS)).isTrue();
+      waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
+      // DONE is visible while the callback still holds the worker before its final metrics.
+      assertThat(
+              meterRegistry
+                  .get("asyncJobQueue.processing.latency")
+                  .tag("queueName", "assetlocalize")
+                  .timer()
+                  .count())
+          .isZero();
+    } finally {
+      releaseCallback.countDown();
+    }
+    assertThat(taskCompleted.await(2, TimeUnit.SECONDS)).isTrue();
 
     assertThat(
             meterRegistry
@@ -2332,6 +2355,7 @@ public class AsyncJobQueueRuntimeTest {
   public void heartbeatCancelFailureStillReleasesCapacityAndRecordsLatency() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    CountDownLatch taskCompleted = observeTaskCompletion();
 
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
@@ -2349,6 +2373,7 @@ public class AsyncJobQueueRuntimeTest {
 
     waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
     waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(taskCompleted.await(2, TimeUnit.SECONDS)).isTrue();
     assertThat(
             meterRegistry
                 .get("asyncJobQueue.heartbeat.cancel.failed")
@@ -2369,6 +2394,7 @@ public class AsyncJobQueueRuntimeTest {
   public void heartbeatCancelErrorStillReleasesCapacityAndRecordsLatency() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    CountDownLatch taskCompleted = observeTaskCompletion();
 
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
@@ -2386,6 +2412,7 @@ public class AsyncJobQueueRuntimeTest {
 
     waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
     waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(taskCompleted.await(2, TimeUnit.SECONDS)).isTrue();
     assertThat(
             meterRegistry
                 .get("asyncJobQueue.heartbeat.cancel.failed")
@@ -4783,6 +4810,21 @@ public class AsyncJobQueueRuntimeTest {
     ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
     configureExecutor(threadPoolTaskExecutor, concurrency);
     return threadPoolTaskExecutor;
+  }
+
+  private CountDownLatch observeTaskCompletion() {
+    CountDownLatch completed = new CountDownLatch(1);
+    executor.setTaskDecorator(
+        task ->
+            () -> {
+              try {
+                task.run();
+              } finally {
+                // Store status and in-flight capacity can change before final metrics are recorded.
+                completed.countDown();
+              }
+            });
+    return completed;
   }
 
   private ThreadPoolTaskExecutor newGracefulExecutor(int concurrency, long awaitTerminationMs) {
