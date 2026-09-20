@@ -2,7 +2,6 @@ package com.box.l10n.mojito.quartz;
 
 import static com.box.l10n.mojito.quartz.QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
 
-import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -18,6 +17,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -29,6 +31,10 @@ public class QuartzConfig {
 
   @Autowired QuartzSchedulerManager schedulerManager;
 
+  @Autowired ApplicationContext applicationContext;
+
+  private boolean startupHandled;
+
   @Autowired(required = false)
   List<Trigger> triggers = new ArrayList<>();
 
@@ -39,12 +45,17 @@ public class QuartzConfig {
   Boolean schedulerEnabled;
 
   /**
-   * Starts the scheduler after having removed outdated trigger/jobs
+   * Starts schedulers after application initialization, including transaction advice, is complete.
+   * Outdated triggers/jobs are removed before any scheduler starts.
    *
    * @throws SchedulerException
    */
-  @PostConstruct
-  void startSchedulers() throws SchedulerException {
+  @EventListener(ApplicationReadyEvent.class)
+  synchronized void startSchedulers(ApplicationReadyEvent event) throws SchedulerException {
+    if (event.getApplicationContext() != applicationContext || startupHandled) {
+      return;
+    }
+    startupHandled = true;
     removeOutdatedJobs();
     int delay = 2;
     if (schedulerEnabled) {
