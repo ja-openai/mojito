@@ -659,18 +659,45 @@ public class PullCommand extends Command {
       String assetContent)
       throws CommandException {
 
-    return assetClient.getLocalizedAssetForContentParallel(
-        assetByPathAndRepositoryId.getId(),
-        assetContent,
-        repositoryLocales,
-        localeIdToOutputTagsMap,
-        sourceFileMatch.getFileType().getFilterConfigIdOverride(),
-        filterOptions,
-        status,
-        inheritanceMode,
-        pullRunName,
-        shouldPullWithNoSource(),
-        pullWithNoSourceBranches);
+    List<String> requestedOutputTags =
+        repositoryLocales.stream()
+            .flatMap(
+                locale ->
+                    (localeIdToOutputTagsMap.containsKey(locale)
+                            ? localeIdToOutputTagsMap.get(locale)
+                            : List.of(locale.getLocale().getBcp47Tag()))
+                        .stream())
+            .sorted()
+            .toList();
+    String requestedOutputTagsJson = objectMapper.writeValueAsStringUnchecked(requestedOutputTags);
+    PollableTask parentTask =
+        assetClient.getLocalizedAssetForContentParallel(
+            assetByPathAndRepositoryId.getId(),
+            assetContent,
+            repositoryLocales,
+            localeIdToOutputTagsMap,
+            sourceFileMatch.getFileType().getFilterConfigIdOverride(),
+            filterOptions,
+            status,
+            inheritanceMode,
+            pullRunName,
+            shouldPullWithNoSource(),
+            pullWithNoSourceBranches);
+    try {
+      consoleWriter
+          .a("Accepted parallel localize request: parent_task_id=")
+          .a(parentTask.getId())
+          .a(" asset_id=")
+          .a(assetByPathAndRepositoryId.getId())
+          .a(" requested_outputs=")
+          .a(requestedOutputTags.size())
+          .a(" requested_output_tags=")
+          .a(requestedOutputTagsJson)
+          .println();
+    } catch (RuntimeException ignored) {
+      // Keep polling accepted work even if its diagnostic cannot be printed.
+    }
+    return parentTask;
   }
 
   LocalizedAssetBody getLocalizedAssetBodyAsync(
