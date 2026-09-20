@@ -38,6 +38,8 @@ import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
+import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
+import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
 import com.google.common.collect.ImmutableList;
 import java.io.File;
 import java.io.IOException;
@@ -87,6 +89,8 @@ public class PullCommandTest extends CLITestBase {
   @Autowired TMTextUnitCurrentVariantService tmTextUnitCurrentVariantService;
 
   @Autowired TMTextUnitRepository tmTextUnitRepository;
+
+  @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
 
   @Autowired PullRunRepository pullRunRepository;
 
@@ -1017,6 +1021,20 @@ public class PullCommandTest extends CLITestBase {
         tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
             localeService.findByBcp47Tag("fr-FR").getId(), oldQuoted.getId()));
 
+    if (createCorrectedIdentityBeforeMigration || !migrateLegacyComments) {
+      // This setup push uses ordinary leveraging, which reads the existing root cache. Establish
+      // its input explicitly instead of depending on an asynchronous statistics refresh.
+      var rootTextUnits =
+          textUnitDTOsCacheService.getTextUnitDTOsForAssetAndLocale(
+              oldQuoted.getAsset().getId(),
+              localeService.getDefaultLocale().getId(),
+              true,
+              UpdateType.ALWAYS);
+      assertTrue(
+          "The setup push must be able to leverage the imported legacy identity",
+          rootTextUnits.stream()
+              .anyMatch(unit -> oldQuoted.getId().equals(unit.getTmTextUnitId()) && unit.isUsed()));
+    }
     if (createCorrectedIdentityBeforeMigration) {
       runConfiguredJsonMigrationCommand(
           "push", repository.getName(), source, null, "portable", false);
@@ -1129,17 +1147,38 @@ public class PullCommandTest extends CLITestBase {
 
   private void waitForCurrentVariants(TMTextUnit textUnit, List<String> localeTags)
       throws InterruptedException {
-    waitForCondition(
-        "Expected current variants for " + localeTags,
-        () ->
-            localeTags.stream()
-                .allMatch(
-                    localeTag -> {
-                      var current =
-                          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
-                              localeService.findByBcp47Tag(localeTag).getId(), textUnit.getId());
-                      return current != null && current.getTmTextUnitVariant() != null;
-                    }));
+    try {
+      waitForCondition(
+          "Expected current variants for " + localeTags,
+          () ->
+              localeTags.stream()
+                  .allMatch(
+                      localeTag -> {
+                        var current =
+                            tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+                                localeService.findByBcp47Tag(localeTag).getId(), textUnit.getId());
+                        return current != null && current.getTmTextUnitVariant() != null;
+                      }));
+    } catch (AssertionError failure) {
+      List<String> states =
+          localeTags.stream()
+              .map(
+                  localeTag -> {
+                    var current =
+                        tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+                            localeService.findByBcp47Tag(localeTag).getId(), textUnit.getId());
+                    if (current == null) return localeTag + "=missing current row";
+                    var variant = current.getTmTextUnitVariant();
+                    return localeTag
+                        + "="
+                        + (variant == null
+                            ? "deleted current variant"
+                            : "variant " + variant.getId() + ", status=" + variant.getStatus());
+                  })
+              .toList();
+      throw new AssertionError(
+          failure.getMessage() + "; textUnitId=" + textUnit.getId() + "; " + states, failure);
+    }
   }
 
   private void runConfiguredJsonMigrationCommand(
