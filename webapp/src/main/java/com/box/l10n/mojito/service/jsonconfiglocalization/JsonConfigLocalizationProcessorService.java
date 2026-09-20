@@ -1895,14 +1895,6 @@ public class JsonConfigLocalizationProcessorService {
     }
   }
 
-  private ObjectNode readObject(String json, String label) {
-    JsonNode node = readJson(json, label);
-    if (!(node instanceof ObjectNode objectNode)) {
-      throw new IllegalArgumentException("Invalid " + label + " JSON: root must be an object.");
-    }
-    return objectNode;
-  }
-
   private String stripJsonTrailingCommas(String json) {
     StringBuilder result = new StringBuilder(json.length());
     boolean inString = false;
