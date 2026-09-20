@@ -5,21 +5,39 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.DatabaseBlobCleanupPolicy;
 import com.box.l10n.mojito.entity.MBlob;
 import com.box.l10n.mojito.entity.PollableTask;
+import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
+import com.box.l10n.mojito.service.DBUtils;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import org.hibernate.engine.spi.SessionImplementor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @TestPropertySource(
     properties = {
@@ -47,6 +65,18 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
   @Autowired PollableTaskRepository pollableTaskRepository;
 
   @Autowired ApplicationContext applicationContext;
+
+  @Autowired JdbcTemplate jdbcTemplate;
+
+  @Autowired PlatformTransactionManager transactionManager;
+
+  @Autowired DBUtils dbUtils;
+
+  @Autowired QuartzSchedulerManager quartzSchedulerManager;
+
+  @Autowired MeterRegistry meterRegistry;
+
+  @PersistenceContext EntityManager entityManager;
 
   private final List<Long> taskIds = new ArrayList<>();
 
@@ -188,6 +218,78 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
     assertEquals(DatabaseBlobCleanupPolicyService.STATUS_DRAINED, drained.getStatus());
     assertEquals(1L, drained.getLastDeletedCount());
     assertEquals(3L, drained.getTotalDeletedCount());
+  }
+
+  @Test
+  public void cleanupBudgetReachesJdbcAndActualJpaDelete() {
+    saveBlob("cleanup_test/expired-1/input", 10, 86_400L);
+    DatabaseBlobCleanupPolicy policy = createPolicy(true, 1, 1);
+    MBlobRepository observed = mock(MBlobRepository.class);
+    when(observed.deleteExpiredByIds(anyList(), any()))
+        .thenAnswer(
+            call -> {
+              ConnectionHolder connection =
+                  (ConnectionHolder)
+                      TransactionSynchronizationManager.getResource(jdbcTemplate.getDataSource());
+              assertNotNull(connection);
+              assertTrue(connection.hasTimeout());
+              assertTrue(connection.getTimeToLiveInSeconds() > 0);
+              assertTrue(connection.getTimeToLiveInSeconds() <= 10);
+              int remaining =
+                  entityManager
+                      .unwrap(SessionImplementor.class)
+                      .getJdbcCoordinator()
+                      .determineRemainingTransactionTimeOutPeriod();
+              assertTrue(remaining > 0 && remaining <= 10);
+              // Execute the actual Spring Data/Hibernate native delete in this same transaction.
+              return mBlobRepository.deleteExpiredByIds(call.getArgument(0), call.getArgument(1));
+            });
+
+    budgetService(observed).runPolicy(policy.getId());
+
+    assertFalse(mBlobRepository.findByName("cleanup_test/expired-1/input").isPresent());
+    assertEquals(
+        1L, policyRepository.findById(policy.getId()).orElseThrow().getTotalDeletedCount());
+  }
+
+  @Test
+  public void expiredBudgetAfterActualJpaDeleteRollsBackBlobAndCounters() {
+    saveBlob("cleanup_test/expired-1/input", 10, 86_400L);
+    DatabaseBlobCleanupPolicy policy = createPolicy(true, 1, 1);
+    AtomicLong clock = new AtomicLong();
+    MBlobRepository observed = mock(MBlobRepository.class);
+    when(observed.deleteExpiredByIds(anyList(), any()))
+        .thenAnswer(
+            call -> {
+              int count =
+                  mBlobRepository.deleteExpiredByIds(call.getArgument(0), call.getArgument(1));
+              assertEquals(1, count);
+              clock.set(TimeUnit.SECONDS.toNanos(10));
+              return count;
+            });
+    DatabaseBlobCleanupPolicyService bounded = spy(budgetService(observed));
+    doAnswer(call -> clock.get()).when(bounded).nanoTime();
+
+    bounded.runPolicy(policy.getId());
+
+    assertTrue(mBlobRepository.findByName("cleanup_test/expired-1/input").isPresent());
+    DatabaseBlobCleanupPolicy failed = policyRepository.findById(policy.getId()).orElseThrow();
+    assertFalse(failed.isEnabled());
+    assertEquals(DatabaseBlobCleanupPolicyService.STATUS_FAILED, failed.getStatus());
+    assertEquals(0L, failed.getTotalDeletedCount());
+    assertEquals(0L, failed.getLastDeletedCount());
+    assertTrue(failed.getLastError().contains("reconcile deleted rows"));
+  }
+
+  private DatabaseBlobCleanupPolicyService budgetService(MBlobRepository observed) {
+    return new DatabaseBlobCleanupPolicyService(
+        policyRepository,
+        observed,
+        jdbcTemplate,
+        dbUtils,
+        quartzSchedulerManager,
+        meterRegistry,
+        transactionManager);
   }
 
   @Test

@@ -112,6 +112,27 @@ checks are implemented, but there is no automatic CPU/latency feedback controlle
 duration, candidates, copied/verified/retained bytes, failures, archive deletions and oldest eligible age.
 Never infer a drain ETA from allocated tablespace size or optimizer row estimates.
 
+### Prefix cleanup execution limits
+
+The prefix-policy worker uses a 10-second SQL/transaction budget and checks elapsed time before
+deletion and before returning to commit. Its eligibility probe has the same SQL timeout. This does
+not impose a hard wall-clock deadline: acquiring a connection, JDBC cancellation, rollback, commit
+and connection release can take longer. A stop request prevents subsequent batches; it does not
+interrupt an executing statement. Repeated stops preserve `STOP_REQUESTED` until the worker finishes.
+
+Timeouts, uncertain transaction finalization and failures to persist progress after a committed
+deletion require reconciliation before manual restart. The worker attempts to disable the policy;
+if that write fails, successful disablement has not been established. Do not retry an ambiguous
+start or infer affected rows from saved counters. Check policy state, executing/persisted Quartz
+triggers and the original candidate IDs before continuing.
+
+The content-free phase log records selection, deletion, complete transaction, transaction
+finalization and progress-write durations, plus failure phase and selected/deleted counts.
+Finalization includes commit or rollback and connection release. A reported deletion count can
+precede rollback or an uncertain commit; use the commit flag and independent row reconciliation.
+Validate actual JDBC cancellation and rollback with MySQL before relying on the budget in a rollout;
+mock and in-memory tests alone do not establish those properties.
+
 For steady retention, separately enable `l10n.pollable-task.archive.scheduling-enabled=true` and set
 `cron` after measuring the eligible arrival rate. The daily default of 100 tasks is not a capacity plan.
 The initial standalone scope cannot establish that overall task-table growth is controlled; inventory
