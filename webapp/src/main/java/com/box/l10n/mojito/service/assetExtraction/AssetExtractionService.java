@@ -733,20 +733,6 @@ public class AssetExtractionService {
     return new Modifications(added, removed, updated);
   }
 
-  private Sets.SetView<String> getMd5sForUsedInBoth(
-      ImmutableSet<BranchStateTextUnit> usedInBase,
-      ImmutableSet<BranchStateTextUnit> usedInCurrent) {
-    ImmutableSet<String> md5UsedInBase =
-        usedInBase.stream().map(BranchStateTextUnit::getMd5).collect(ImmutableSet.toImmutableSet());
-
-    ImmutableSet<String> md5UsedInCurrent =
-        usedInCurrent.stream()
-            .map(BranchStateTextUnit::getMd5)
-            .collect(ImmutableSet.toImmutableSet());
-
-    return Sets.intersection(md5UsedInBase, md5UsedInCurrent);
-  }
-
   void removeAssetTextUnits(
       AssetExtraction assetExtraction,
       ImmutableSet<BranchStateTextUnit> branchStateTextUnitsToRemove) {
