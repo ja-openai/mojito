@@ -1098,18 +1098,13 @@ public class OpenAIClient {
 
       String ending = "\r\n--" + boundary + "--\r\n";
 
-      return switch (fileContent()) {
-        case TextContent t ->
-            HttpRequest.BodyPublishers.ofByteArrays(
-                List.of(
-                    part1.getBytes(),
-                    part2Header.getBytes(),
-                    t.value().getBytes(StandardCharsets.UTF_8),
-                    ending.getBytes()));
-        case BinaryContent b ->
-            HttpRequest.BodyPublishers.ofByteArrays(
-                List.of(part1.getBytes(), part2Header.getBytes(), b.value(), ending.getBytes()));
-      };
+      byte[] content =
+          switch (fileContent()) {
+            case TextContent t -> t.value().getBytes(StandardCharsets.UTF_8);
+            case BinaryContent b -> b.value();
+          };
+      return HttpRequest.BodyPublishers.ofByteArrays(
+          List.of(part1.getBytes(), part2Header.getBytes(), content, ending.getBytes()));
     }
   }
 
