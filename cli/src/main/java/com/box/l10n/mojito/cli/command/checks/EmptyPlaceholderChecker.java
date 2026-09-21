@@ -42,14 +42,12 @@ public class EmptyPlaceholderChecker extends AbstractCliChecker {
   private Set<String> checkForEmptyPlaceholders(List<AssetExtractionDiff> assetExtractionDiffs) {
     return cliCheckerOptions.getParameterRegexSet().stream()
         .filter(regex -> isEmptyPlaceholderRegex(regex))
+        .map(regex -> Pattern.compile(regex.getRegex()))
         .flatMap(
-            placeholderRegularExpressions ->
+            pattern ->
                 getAddedTextUnitsExcludingInconsistentComments(assetExtractionDiffs).stream()
                     .map(assetExtractorTextUnit -> assetExtractorTextUnit.getSource())
-                    .filter(
-                        source ->
-                            isSourceStringWithEmptyPlaceholders(
-                                placeholderRegularExpressions, source)))
+                    .filter(source -> isSourceStringWithEmptyPlaceholders(pattern, source)))
         .collect(Collectors.toSet());
   }
 
@@ -58,9 +56,8 @@ public class EmptyPlaceholderChecker extends AbstractCliChecker {
         || regex.equals(PlaceholderRegularExpressions.DOUBLE_BRACE_REGEX);
   }
 
-  private boolean isSourceStringWithEmptyPlaceholders(
-      PlaceholderRegularExpressions placeholderRegularExpressions, String source) {
-    Matcher matcher = Pattern.compile(placeholderRegularExpressions.getRegex()).matcher(source);
+  private boolean isSourceStringWithEmptyPlaceholders(Pattern pattern, String source) {
+    Matcher matcher = pattern.matcher(source);
     while (matcher.find()) {
       String placeholder = source.substring(matcher.start(), matcher.end());
       logger.debug("Found placeholder '{}' in source string '{}'", placeholder, source);
