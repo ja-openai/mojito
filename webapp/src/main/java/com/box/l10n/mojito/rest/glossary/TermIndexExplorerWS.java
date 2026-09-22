@@ -588,23 +588,6 @@ public class TermIndexExplorerWS {
         request.sortBy());
   }
 
-  private GeneratedCandidateResponse toGeneratedCandidateResponse(
-      GlossaryTermIndexCurationService.SeededTermView candidate) {
-    return new GeneratedCandidateResponse(
-        candidate.termIndexCandidateId(),
-        candidate.termIndexExtractedTermId(),
-        candidate.term(),
-        candidate.normalizedKey(),
-        candidate.label(),
-        candidate.definition(),
-        candidate.rationale(),
-        candidate.termType(),
-        candidate.partOfSpeech(),
-        candidate.enforcement(),
-        candidate.doNotTranslate(),
-        candidate.confidence());
-  }
-
   private void persistTermIndexEntrySearchHybridResponse(
       UUID requestId, TermIndexEntrySearchHybridResponse response) {
     String payloadJson = objectMapper.writeValueAsStringUnchecked(response);
