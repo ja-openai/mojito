@@ -89,6 +89,27 @@ public class AssetLocalizeFanoutServiceTest {
   }
 
   @Test
+  public void malformedLaterOutputTagIsRejectedBeforeUploadOrRegistration() {
+    for (String tag : List.of("tag\0", "tag\uD800", "tag\uDC00", "tag\uD800x")) {
+      input.setLocaleInfos(List.of(locale(3L, null), locale(4L, tag)));
+      assertThatThrownBy(() -> service.schedule(input))
+          .isInstanceOfSatisfying(
+              org.springframework.web.server.ResponseStatusException.class,
+              error -> assertThat(error.getStatusCode().value()).isEqualTo(400));
+    }
+    verifyNoInteractions(inputs, store);
+  }
+
+  @Test
+  public void validUnicodeOutputTagRemainsUnchanged() {
+    String tag = "custom-\u65E5\u672C-\uD83D\uDE80";
+    input.setLocaleInfos(List.of(locale(3L, tag)));
+    assertThat(service.freeze(input).slots())
+        .containsExactly(new AssetLocalizeFanoutInput.Slot(3L, tag, tag));
+    verifyNoInteractions(inputs, store);
+  }
+
+  @Test
   public void boundedPlanRejectsTooManyLocalesAndTrackedRequests() {
     input.setLocaleInfos(java.util.Collections.nCopies(1001, locale(3L, "de")));
     assertThatThrownBy(() -> service.schedule(input))

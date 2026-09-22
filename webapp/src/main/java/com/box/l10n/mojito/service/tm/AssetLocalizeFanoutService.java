@@ -104,7 +104,7 @@ public class AssetLocalizeFanoutService {
           locale.getOutputBcp47tag() == null
               ? repositoryLocale.getLocale().getBcp47Tag()
               : locale.getOutputBcp47tag();
-      if (tag == null || tag.isBlank() || tag.length() > 255 || !outputTags.add(tag)) {
+      if (!AssetLocalizeFanoutInput.isValidOutputTag(tag) || !outputTags.add(tag)) {
         throw invalid();
       }
       slots.add(new Slot(locale.getLocaleId(), tag, locale.getOutputBcp47tag()));

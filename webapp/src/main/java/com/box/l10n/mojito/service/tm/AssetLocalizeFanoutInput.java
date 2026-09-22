@@ -92,12 +92,19 @@ public class AssetLocalizeFanoutInput implements PollableTaskInputSource {
     for (Slot slot : manifest.slots()) {
       if (slot == null
           || slot.localeId() <= 0
-          || slot.outputTag() == null
-          || slot.outputTag().isBlank()
-          || slot.outputTag().length() > 255
+          || !isValidOutputTag(slot.outputTag())
           || !tags.add(slot.outputTag())) throw invalid();
     }
     return manifest;
+  }
+
+  static boolean isValidOutputTag(String tag) {
+    // These values become JDBC text; PostgreSQL rejects NUL and UTF-8 rejects lone surrogates.
+    return tag != null
+        && !tag.isBlank()
+        && tag.length() <= 255
+        && tag.indexOf('\0') < 0
+        && StandardCharsets.UTF_8.newEncoder().canEncode(tag);
   }
 
   @Override

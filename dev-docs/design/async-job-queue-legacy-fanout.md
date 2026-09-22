@@ -12,8 +12,10 @@ proposed keyed v1 HTTP admission protocol or safe client retries.
 ## Durable boundaries
 
 1. Validate all requested locales in their repository and freeze their order and
-   resolved output tags. Reject duplicate/blank output tags and more than 1,000
-   locales before registration. No catalog-wide locale scan occurs.
+   resolved output tags. Reject duplicate/blank output tags, tags longer than 255
+   UTF-16 code units, tags containing NUL or malformed Unicode, and more than 1,000
+   locales before registration. Valid Unicode output tags remain supported. No
+   catalog-wide locale scan occurs.
 2. Write one immutable UUID manifest through the existing `POLLABLE_TASK` blob
    route; read back and verify SHA-256. The source is stored once, not in queue
    rows or per-locale SQL payloads. These receipts use permanent input retention;
@@ -64,6 +66,11 @@ baseline must use this same source/image so this overhead is included.
   `FINISHED` parent alone is not a completed localization cohort. Require no
   outstanding receipts, no unexplained queue/task debt, complete returned outputs,
   and successful comparison before disabling consumers/global flags.
+- Keep `l10n.org.async-job-queue.retention.enabled=false` on every node sharing
+  the database while outstanding receipts exist. Manual deletion through generic
+  queue retention is also unsupported during that period. Permanent input blob
+  retention does not preserve terminal queue rows or their winning-output references;
+  deleting those rows can prevent child repair and receipt completion.
 - Read parent/task/job/output identities through explicit mappings, never by
   scanning all queue JSON. A `COMPLETED` receipt does not erase child errors.
 - New runtime readers must be on every serving API and consuming worker before
