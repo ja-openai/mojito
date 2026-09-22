@@ -1,22 +1,23 @@
 package com.box.l10n.mojito.rest.review;
 
 import com.box.l10n.mojito.service.agentreview.IncidentReviewBatchService;
+import com.box.l10n.mojito.service.agentreview.ManualIncidentReviewService;
 import com.box.l10n.mojito.service.team.TeamService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/incident-review-projects")
 public class IncidentReviewProjectWS {
-  private final IncidentReviewBatchService batches;
+  private final ManualIncidentReviewService batches;
   private final TeamService teams;
 
-  public IncidentReviewProjectWS(IncidentReviewBatchService batches, TeamService teams) {
+  public IncidentReviewProjectWS(ManualIncidentReviewService batches, TeamService teams) {
     this.batches = batches;
     this.teams = teams;
   }
 
   @PostMapping("/preview")
-  public IncidentReviewBatchService.Result preview(
+  public ManualIncidentReviewService.Preview preview(
       @RequestBody IncidentReviewBatchService.Request request) {
     return batches.preview(request, teams.getCurrentUserIdOrThrow());
   }

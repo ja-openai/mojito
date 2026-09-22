@@ -12,6 +12,9 @@ export type IncidentReviewProjectRequest = {
   name: string;
   dueDate: string;
   maxWordCountPerProject: number | null;
+  maxIncidentCount?: number | null;
+  maxIncidentsPerProject?: number | null;
+  incidentIds?: number[];
   assignTranslator: boolean;
   type: ApiReviewProjectType;
   notes: string | null;
@@ -28,6 +31,8 @@ export type IncidentReviewProjectResult = {
   skipped: Array<{ incidentId: number; reason: string }>;
   scannedIncidentCount?: number;
   hasMore?: boolean;
+  incidentBatches?: number[][];
+  limitReached?: boolean;
 };
 
 async function submitIncidentReviewRequest(

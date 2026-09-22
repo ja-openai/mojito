@@ -25,6 +25,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** The same bounded incident selection and snapshot handoff for manual and scheduled batches. */
@@ -44,7 +45,45 @@ public class IncidentReviewBatchService {
       ReviewProjectType type,
       String notes,
       List<String> screenshotImageIds,
-      Boolean allRepositories) {
+      Boolean allRepositories,
+      Integer maxIncidentCount,
+      Integer maxIncidentsPerProject,
+      List<Long> incidentIds) {
+    public Request(
+        List<Long> repositoryIds,
+        List<Long> reviewFeatureIds,
+        List<String> localeTags,
+        List<String> excludedLocaleTags,
+        String reviewType,
+        Long teamId,
+        String name,
+        ZonedDateTime dueDate,
+        Integer maxWordCountPerProject,
+        Boolean assignTranslator,
+        ReviewProjectType type,
+        String notes,
+        List<String> screenshotImageIds,
+        Boolean allRepositories) {
+      this(
+          repositoryIds,
+          reviewFeatureIds,
+          localeTags,
+          excludedLocaleTags,
+          reviewType,
+          teamId,
+          name,
+          dueDate,
+          maxWordCountPerProject,
+          assignTranslator,
+          type,
+          notes,
+          screenshotImageIds,
+          allRepositories,
+          null,
+          null,
+          null);
+    }
+
     public Request(
         List<Long> repositoryIds,
         List<Long> reviewFeatureIds,
@@ -121,6 +160,24 @@ public class IncidentReviewBatchService {
 
   private record Group(Long runId, Long repositoryId, Long localeId, String key) {}
 
+  record PlannedIncident(
+      long incidentId,
+      long unitId,
+      Long runId,
+      long repositoryId,
+      long localeId,
+      String groupKey,
+      String localeTag,
+      int wordCount) {}
+
+  record PreviewPage(
+      List<PlannedIncident> candidates,
+      List<Skipped> skipped,
+      int scannedCount,
+      boolean hasMore,
+      long lastScannedId,
+      long upperBoundId) {}
+
   private record Selection(
       List<Candidate> candidates,
       List<Skipped> skipped,
@@ -132,6 +189,7 @@ public class IncidentReviewBatchService {
 
   private record CheckpointState(Set<String> completedGroups, boolean invalid) {}
 
+  // Internal scan page size; manual planning continues until its explicit scope is complete.
   @Value("${l10n.incident-review.batch-candidate-limit:500}")
   private int candidateLimit;
 
@@ -206,6 +264,93 @@ public class IncidentReviewBatchService {
     // Advancing and project assignment commit together, including slices containing only skips.
     cursor.setLastScannedIncidentId(selection.hasMore() ? selection.lastScannedId() : 0L);
     if (!selection.hasMore()) cursor.setSweepUpperBoundId(0L);
+    return createSelected(request, requestedByUserId, selection);
+  }
+
+  /**
+   * Each manual preview page has its own read transaction and contains only scalar planning data.
+   */
+  @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+  public PreviewPage previewManualPage(
+      Request request, Long requestedByUserId, long afterId, Long upperBoundId) {
+    Scope scope = validate(request, requestedByUserId);
+    IncidentReviewBatchCursor cursor = new IncidentReviewBatchCursor();
+    cursor.setLastScannedIncidentId(afterId);
+    if (upperBoundId == null) {
+      upperBoundId =
+          em.createQuery("select max(i.id) from TranslationIncident i", Long.class)
+              .getSingleResult();
+    }
+    cursor.setSweepUpperBoundId(upperBoundId == null ? 0 : upperBoundId);
+    Selection selection = select(request, scope, cursor, false, false);
+    PreviewPage page =
+        new PreviewPage(
+            selection.candidates().stream()
+                .map(
+                    c -> {
+                      Group group = group(c);
+                      return new PlannedIncident(
+                          c.incident().getId(),
+                          c.unit().getId(),
+                          group.runId(),
+                          group.repositoryId(),
+                          group.localeId(),
+                          group.key(),
+                          c.locale().getBcp47Tag(),
+                          words.getEnglishWordCount(c.unit().getContent()));
+                    })
+                .toList(),
+            selection.skipped(),
+            selection.scannedCount(),
+            selection.hasMore(),
+            selection.lastScannedId(),
+            cursor.getSweepUpperBoundId());
+    // Open-in-view otherwise keeps every scanned entity alive across these read transactions.
+    em.clear();
+    return page;
+  }
+
+  /** Recheck one explicitly planned project, keeping the normal global entity lock order. */
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public Result createManualProject(Request request, Long requestedByUserId) {
+    Scope scope = validate(request, requestedByUserId);
+    List<Long> ids = request.incidentIds();
+    int maxIncidents =
+        request.maxIncidentsPerProject() == null ? 500 : request.maxIncidentsPerProject();
+    if (ids == null
+        || ids.isEmpty()
+        || ids.size() > maxIncidents
+        || ids.stream().anyMatch(id -> id == null || id < 1)
+        || new HashSet<>(ids).size() != ids.size()
+        || (request.maxIncidentCount() != null && ids.size() > request.maxIncidentCount())) {
+      throw new IllegalArgumentException(
+          "Provide one previewed project of distinct incidentIds within the configured limits");
+    }
+    Selection selection =
+        selectIds(
+            request,
+            scope,
+            new IncidentReviewBatchCursor(),
+            true,
+            ids.stream().sorted().toList(),
+            false,
+            false);
+    // Out-of-scope IDs never expose incident details, and must not silently count as processed.
+    if (selection.candidates().size() + selection.skipped().size() != ids.size()) {
+      throw new IllegalArgumentException(
+          "Some selected incidents are unavailable in this scope; preview again");
+    }
+    if (waves(selection.candidates()).stream()
+            .mapToInt(wave -> countProjects(wave, maxWords(request)))
+            .sum()
+        > 1) {
+      throw new IllegalArgumentException(
+          "incidentIds must describe one project within the configured word limit; preview again");
+    }
+    return createSelected(request, requestedByUserId, selection);
+  }
+
+  private Result createSelected(Request request, Long requestedByUserId, Selection selection) {
     if (selection.candidates().isEmpty()) return result(selection, 0, List.of(), List.of());
     var assignmentState =
         assignments.load(
@@ -313,6 +458,11 @@ public class IncidentReviewBatchService {
     if (request.maxWordCountPerProject() != null
         && (maxWords(request) < 1 || maxWords(request) > 100000))
       throw new IllegalArgumentException("maxWordCountPerProject must be between 1 and 100000");
+    if (request.maxIncidentCount() != null && request.maxIncidentCount() < 1)
+      throw new IllegalArgumentException("maxIncidentCount must be a positive integer");
+    if (request.maxIncidentsPerProject() != null
+        && (request.maxIncidentsPerProject() < 1 || request.maxIncidentsPerProject() > 5000))
+      throw new IllegalArgumentException("maxIncidentsPerProject must be between 1 and 5000");
     if (request.type() == ReviewProjectType.TERMINOLOGY
         || request.type() == ReviewProjectType.TERM_CANDIDATE)
       throw new IllegalArgumentException("Incident review does not use terminology project types");
@@ -419,16 +569,17 @@ public class IncidentReviewBatchService {
 
   private Selection select(
       Request request, Scope scope, IncidentReviewBatchCursor cursor, boolean lock) {
+    return select(request, scope, cursor, lock, true);
+  }
+
+  private Selection select(
+      Request request,
+      Scope scope,
+      IncidentReviewBatchCursor cursor,
+      boolean lock,
+      boolean boundedProjects) {
     if ((!scope.allRepositories() && scope.repositoryIds().isEmpty())
         || scope.localeIds().isEmpty()) return new Selection(List.of(), List.of(), 0L, false, 0);
-    String repositoryPredicate =
-        scope.allRepositories()
-            ? "(i.selectedTmTextUnitId in (select t.id from TMTextUnit t where"
-                + " t.asset.repository.deleted = false) or i.repositoryName in (select r.name"
-                + " from Repository r where r.deleted = false))"
-            : "(i.selectedTmTextUnitId in (select t.id from TMTextUnit t where"
-                + " t.asset.repository.id in :repositories) or i.repositoryName in (select r.name"
-                + " from Repository r where r.id in :repositories))";
     String type = requestedReviewType(request);
     int limit = Math.clamp(candidateLimit, 1, 500);
     // Seek before repository/team/locale filtering: even a scope with no matches performs
@@ -442,8 +593,29 @@ public class IncidentReviewBatchService {
     }
     boolean hasMore = found.size() > limit;
     List<Long> ids = found.subList(0, Math.min(found.size(), limit));
-    if (ids.isEmpty())
+    return selectIds(request, scope, cursor, lock, ids, hasMore, boundedProjects);
+  }
+
+  private Selection selectIds(
+      Request request,
+      Scope scope,
+      IncidentReviewBatchCursor cursor,
+      boolean lock,
+      List<Long> ids,
+      boolean hasMore,
+      boolean boundedProjects) {
+    if (ids.isEmpty()
+        || scope.localeIds().isEmpty()
+        || (!scope.allRepositories() && scope.repositoryIds().isEmpty()))
       return new Selection(List.of(), List.of(), cursor.getLastScannedIncidentId(), false, 0);
+    String repositoryPredicate =
+        scope.allRepositories()
+            ? "(i.selectedTmTextUnitId in (select t.id from TMTextUnit t where"
+                + " t.asset.repository.deleted = false) or i.repositoryName in (select r.name"
+                + " from Repository r where r.deleted = false))"
+            : "(i.selectedTmTextUnitId in (select t.id from TMTextUnit t where"
+                + " t.asset.repository.id in :repositories) or i.repositoryName in (select r.name"
+                + " from Repository r where r.id in :repositories))";
 
     // Read scalar routing references first. Entity state is loaded only after its locks are held.
     var scopeQuery =
@@ -566,7 +738,10 @@ public class IncidentReviewBatchService {
     Map<Long, CheckpointState> checkpoints = new HashMap<>();
     List<Candidate> eligible = new ArrayList<>();
     List<Skipped> skipped = new ArrayList<>();
-    ProjectBudget budget = new ProjectBudget(maxWords(request), Math.clamp(projectLimit, 1, 25));
+    ProjectBudget budget =
+        new ProjectBudget(
+            maxWords(request),
+            boundedProjects ? Math.clamp(projectLimit, 1, 25) : Integer.MAX_VALUE);
     Map<Long, Candidate> byId = new HashMap<>();
     for (Candidate candidate : scanned) byId.put(candidate.incident().getId(), candidate);
     long lastId = cursor.getLastScannedIncidentId();

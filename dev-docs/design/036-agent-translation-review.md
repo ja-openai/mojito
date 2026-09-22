@@ -106,7 +106,8 @@ until human judgment; model verification does not constitute native validation.
 ## Incident-based batch creation
 
 The primary entry points are **Create review project** and **Review automation configuration**.
-Both use `IncidentReviewBatchService`; manual HTTP endpoints are
+Both share eligibility and routing in `IncidentReviewBatchService`; manual planning uses
+`ManualIncidentReviewService`. Manual HTTP endpoints are
 `POST /api/incident-review-projects/preview` and `POST /api/incident-review-projects`.
 
 - Select **Incidents** as the source. The common mode is **All eligible incidents** of the selected
@@ -145,27 +146,53 @@ Both use `IncidentReviewBatchService`; manual HTTP endpoints are
 
 ### Bounded intake and growing history
 
-- Each preview/create call considers at most 500 candidates and creates at most 25 projects.
-  `scannedIncidentCount` counts examined IDs, including skips and rows outside the selection;
-  outside-scope IDs and contents are never returned. `hasMore` means this sweep
-  has another slice. Counts describe that slice, not the entire backlog. The manual page keeps
-  returned project links and offers **Create next batch**; a skipped-only slice can also advance.
-- Manual preview and creation reports summarize incidents not included by reason, with at most
-  three incident links per reason behind an expandable row. Opening an example in a new tab
-  preserves the creation form. When the creation report retains only the most recent 100 skipped
-  details across batches, reason counts are explicitly labeled as covering that retained sample;
-  the overall skipped count still covers all completed batches. Unresolved string/locale matches,
-  deleted assets/repositories, and selection mismatches have distinct eligibility explanations.
-- A durable cursor belongs to the owning team and canonical repository/locale/type selection.
-  Assignment, name, deadline and word limits do not reset it. Creation commits progress and
-  assignment together; preview never advances progress. A fixed upper incident ID makes each sweep
-  finite. The next invocation after finishing starts a new sweep, so newly arrived or newly eligible
-  incidents are reconsidered. Same-scope callers serialize on the cursor; overlapping scopes lock
-  and recheck the underlying finding before assigning it.
-- Selection seeks by incident ID using open/unassigned indexes, then bulk-loads a bounded set of
-  current translations and proposals. Checkpoint artifacts are read once per run in a slice.
-  MySQL seeks explicitly use the measured covering indexes; quality and legacy-null types use
-  separate limited ranges merged by ID, avoiding optimizer choices that scan and sort history.
+- Manual preview starts a fresh finite selection with the current upper incident ID; it never
+  reads or advances an automation cursor. Internal reads examine at most 500 incident IDs at a
+  time and release their entity state after each page. Preview continues across skipped and
+  outside-scope pages until the full selection is checked or an explicit eligible-incident limit
+  is reached. Without an overall limit, **All incident types** includes the eligible
+  translation-quality incidents from a quality-only selection, even after an older scheduled
+  sweep. Eligibility can still change between preview requests.
+- **Maximum incidents overall** is optional; blank includes every eligible incident in the selected
+  repository/feature, locale, team and type scope. A supplied positive `maxIncidentCount` selects
+  the first eligible incidents by ID, rather than limiting scanned IDs. `limitReached` indicates
+  that at least one additional eligible incident was found. Preview's eligible count is the chosen
+  total, not a hidden first page or a claim about the remainder of a limited selection.
+- **Maximum incidents per project** defaults to 500 and accepts 1–5,000. This explicit
+  `maxIncidentsPerProject` limit bounds each creation transaction. Existing maximum source words
+  also applies; one string is never split. Compatible repository/locale/run groups and duplicate
+  string waves are carried across read pages, so the internal page size does not change project
+  membership. Blank word limit retains the regular project's unlimited-word behavior within the
+  selected incident-count limit.
+- Preview returns `incidentBatches`, one incident-ID list per planned project. The page automatically
+  submits every list in sequence with the same settings. Each create POST must provide one
+  nonempty, distinct `incidentIds` list within the configured limits. The server rechecks access,
+  scope, exact current state, assignment eligibility and the project's word/group boundaries under
+  the existing lock order; unavailable or incompatible plans require another preview. Creation
+  never adds incidents that arrived after preview. Changed or handled incidents can be skipped.
+- Creation progress shows planned projects checked and actual incidents/projects created. A failure
+  retains successful project links and allows the remaining planned projects to resume. Changing
+  selection or project settings invalidates the preview and resume plan. Navigating away loses the
+  browser's remaining plan; a fresh preview safely excludes active assignments. A lost response can
+  leave a committed project absent from the browser's totals; inspect the project list and preview
+  again rather than treating the browser report as a durable job ledger.
+- `scannedIncidentCount` counts examined IDs, including skips and rows outside the selection;
+  outside-scope IDs and contents are never returned. Manual preview counts cover all examined
+  pages, with at most 100 skipped details retained. Exclusion summaries show capped examples and
+  distinguish sampled reasons from the complete skipped count.
+- Scheduled automation retains the durable cursor for the owning team and canonical
+  repository/locale/type selection. Each scheduled slice examines at most 500 IDs and creates at
+  most 25 projects, with `hasMore` indicating another slice. Assignment, name, deadline and word
+  limits do not reset its progress. Creation commits progress and assignment together; a fixed
+  upper ID makes the sweep finite. A completed sweep wraps for later arrivals and newly eligible
+  incidents. Same-scope callers serialize on the cursor; overlapping scopes lock and recheck the
+  underlying finding before assigning it.
+- Selection seeks by incident ID using open-incident indexes, then bulk-loads a bounded set of
+  current translations, proposals and assignment state. Linked incidents remain candidates so
+  closed, undecided assignments can be reconsidered; open assignments are skipped after inspection.
+  Checkpoint artifacts are read once per run in a slice. MySQL seeks explicitly use the V124
+  status/ID indexes; quality and legacy-null types use separate limited ranges merged by ID.
+  Validate those query plans on the production distribution during release.
   Retain resolved incidents, immutable revisions and feedback as history; they do not need to be
   deleted to keep review batching bounded.
 - Historical agent findings and incidents may remain stored. Ordinary immediate routing and

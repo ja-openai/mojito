@@ -3,14 +3,22 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type {
+  IncidentReviewProjectRequest,
+  IncidentReviewProjectResult,
+} from '../../api/incident-review-projects';
 import type { ApiRepository } from '../../api/repositories';
 import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ReviewProjectSourceMode } from './ReviewProjectCreateForm';
 import { ReviewProjectCreatePage } from './ReviewProjectCreatePage';
 
 const createRequestMock = vi.hoisted(() => vi.fn());
-const previewIncidentsMock = vi.hoisted(() => vi.fn());
-const createIncidentsMock = vi.hoisted(() => vi.fn());
+const previewIncidentsMock = vi.hoisted(() =>
+  vi.fn<(request: IncidentReviewProjectRequest) => Promise<IncidentReviewProjectResult>>(),
+);
+const createIncidentsMock = vi.hoisted(() =>
+  vi.fn<(request: IncidentReviewProjectRequest) => Promise<IncidentReviewProjectResult>>(),
+);
 
 vi.mock('../../api/incident-review-projects', () => ({
   previewIncidentReviewProjects: previewIncidentsMock,
@@ -55,9 +63,13 @@ const createdResponse: ReviewProjectsApi.ReviewProjectCreateResponse = {
   localeResults: [{ localeTag: 'fr', status: 'CREATED', textUnitCount: 2, projectCount: 2 }],
 };
 
-function renderPage(sourceMode: ReviewProjectSourceMode = 'TEXT_UNITS', selectLocale = true) {
+function renderPage(
+  sourceMode: ReviewProjectSourceMode = 'TEXT_UNITS',
+  selectLocale = true,
+  availableRepositories = repositories,
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  queryClient.setQueryData(['repositories'], repositories);
+  queryClient.setQueryData(['repositories'], availableRepositories);
   queryClient.setQueryData(['teams', 'review-project-create'], [{ id: 31, name: 'Review team' }]);
   queryClient.setQueryData(
     ['review-feature-options', 'review-project-create'],
@@ -89,6 +101,7 @@ function renderPage(sourceMode: ReviewProjectSourceMode = 'TEXT_UNITS', selectLo
         <Routes>
           <Route path="/review-projects/create" element={<ReviewProjectCreatePage />} />
           <Route path="/review-projects" element={<div>Review projects created</div>} />
+          <Route path="/review-projects/:id" element={<div>Review project details</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -110,13 +123,32 @@ function renderPage(sourceMode: ReviewProjectSourceMode = 'TEXT_UNITS', selectLo
   return screen.getByRole('textbox', { name: /^Max word count per project \(optional\)/ });
 }
 
+function incidentResult(
+  overrides: Partial<IncidentReviewProjectResult> = {},
+): IncidentReviewProjectResult {
+  return {
+    eligibleIncidentCount: 0,
+    skippedIncidentCount: 0,
+    projectCount: 0,
+    localeTags: [],
+    projectIds: [],
+    requestIds: [],
+    skipped: [],
+    hasMore: false,
+    limitReached: false,
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   createRequestMock.mockResolvedValue(createdResponse);
   previewIncidentsMock.mockResolvedValue({
     eligibleIncidentCount: 3,
     skippedIncidentCount: 0,
-    projectCount: 2,
+    projectCount: 1,
+    incidentBatches: [[101, 102, 103]],
+    limitReached: false,
     localeTags: ['fr'],
     projectIds: [],
     requestIds: [],
@@ -125,9 +157,9 @@ beforeEach(() => {
   createIncidentsMock.mockResolvedValue({
     eligibleIncidentCount: 3,
     skippedIncidentCount: 0,
-    projectCount: 2,
+    projectCount: 1,
     localeTags: ['fr'],
-    projectIds: [201, 202],
+    projectIds: [201],
     requestIds: [200],
     skipped: [],
   });
@@ -143,6 +175,7 @@ describe('incident review project creation', () => {
   it('summarizes exclusions in the preview without listing every incident', async () => {
     previewIncidentsMock.mockResolvedValueOnce({
       eligibleIncidentCount: 1,
+      incidentBatches: [[501]],
       skippedIncidentCount: 499,
       projectCount: 1,
       localeTags: ['fr'],
@@ -201,7 +234,10 @@ describe('incident review project creation', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await screen.findByRole('link', { name: 'Open review project #201' });
-    expect(createIncidentsMock.mock.calls[0][0]).toEqual(previewIncidentsMock.mock.calls[0][0]);
+    expect(createIncidentsMock.mock.calls[0][0]).toEqual({
+      ...previewIncidentsMock.mock.calls[0][0],
+      incidentIds: [101, 102, 103],
+    });
     expect(createRequestMock).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Repositories' }));
     expect(screen.getByRole('button', { name: 'Select repositories' })).toBeInTheDocument();
@@ -274,7 +310,10 @@ describe('incident review project creation', () => {
       'href',
       '/review-projects/201',
     );
-    expect(createIncidentsMock.mock.calls[0][0]).toEqual(previewIncidentsMock.mock.calls[0][0]);
+    expect(createIncidentsMock.mock.calls[0][0]).toEqual({
+      ...previewIncidentsMock.mock.calls[0][0],
+      incidentIds: [101, 102, 103],
+    });
     expect(createRequestMock).not.toHaveBeenCalled();
   });
 
@@ -303,93 +342,362 @@ describe('incident review project creation', () => {
     );
   });
 
-  it('finishes an empty saved pass so a fresh preview can discover new incidents', async () => {
-    const emptyLastPage = {
-      eligibleIncidentCount: 0,
-      skippedIncidentCount: 0,
-      projectCount: 0,
-      localeTags: [],
-      projectIds: [],
-      requestIds: [],
-      skipped: [],
-      scannedIncidentCount: 0,
-      hasMore: false,
-    };
-    previewIncidentsMock.mockResolvedValueOnce(emptyLastPage);
-    createIncidentsMock.mockResolvedValueOnce(emptyLastPage);
+  it('does not create anything for an empty preview and can preview again', async () => {
+    previewIncidentsMock.mockResolvedValueOnce(incidentResult({ incidentBatches: [] }));
     renderPage('REPOSITORIES');
     selectIncidentSource();
     fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
-    await screen.findByText(/0 eligible incidents/);
-    fireEvent.click(screen.getByRole('button', { name: 'Check for new incidents' }));
-    await screen.findByText(/No eligible incidents remain in this pass/);
-    expect(createIncidentsMock).toHaveBeenCalledTimes(1);
+    await screen.findByText('No eligible incidents found. No projects need to be created.');
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(createIncidentsMock).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
     await screen.findByText(/3 eligible incidents/);
     expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
   });
 
-  it('advances a skipped page and continues the same selection without losing created projects', async () => {
-    const skippedPage = {
-      eligibleIncidentCount: 0,
-      skippedIncidentCount: 500,
-      scannedIncidentCount: 500,
-      hasMore: true,
-      projectCount: 0,
-      localeTags: [],
-      projectIds: [],
-      requestIds: [],
-      skipped: [],
-    };
-    previewIncidentsMock.mockResolvedValueOnce(skippedPage);
-    createIncidentsMock.mockResolvedValueOnce(skippedPage).mockResolvedValueOnce({
-      ...skippedPage,
-      eligibleIncidentCount: 2,
-      skippedIncidentCount: 0,
-      scannedIncidentCount: 2,
-      projectCount: 1,
-      projectIds: [203],
-      requestIds: [204],
-      localeTags: ['fr'],
-      hasMore: false,
+  it('creates every planned project beyond the old 500 incident limit', async () => {
+    const batches = [
+      Array.from({ length: 500 }, (_, index) => index + 1),
+      Array.from({ length: 250 }, (_, index) => index + 501),
+    ];
+    previewIncidentsMock.mockResolvedValueOnce(
+      incidentResult({
+        eligibleIncidentCount: 750,
+        projectCount: 2,
+        incidentBatches: batches,
+        localeTags: ['fr'],
+        scannedIncidentCount: 1000,
+      }),
+    );
+    let resolveSecond!: (result: IncidentReviewProjectResult) => void;
+    const pendingSecond = new Promise<IncidentReviewProjectResult>((resolve) => {
+      resolveSecond = resolve;
     });
+    createIncidentsMock
+      .mockResolvedValueOnce(
+        incidentResult({
+          eligibleIncidentCount: 500,
+          projectCount: 1,
+          projectIds: [201],
+          localeTags: ['fr'],
+        }),
+      )
+      .mockReturnValueOnce(pendingSecond);
     renderPage('REPOSITORIES');
     selectIncidentSource();
     fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
-    await screen.findByText(/This preview covers the next batch/);
-    fireEvent.click(screen.getByRole('button', { name: 'Continue to next batch' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Create next batch' }));
-    await screen.findByRole('link', { name: 'Open review project #203' });
-    expect(screen.getByText('Created 1 project.')).toBeInTheDocument();
-    expect(screen.getByText('500 incidents not included')).toBeInTheDocument();
-    expect(createIncidentsMock.mock.calls[1][0]).toEqual(createIncidentsMock.mock.calls[0][0]);
-    expect(screen.queryByRole('button', { name: 'Create next batch' })).not.toBeInTheDocument();
+    await screen.findByText(/750 eligible incidents/);
+    expect(screen.getByText(/This preview covers all matching incidents/)).toBeInTheDocument();
+    expect(previewIncidentsMock.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        maxIncidentCount: null,
+        maxIncidentsPerProject: 500,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByText(/1 of 2 planned projects checked/);
+    expect(screen.getByText('Created 1 project with 500 incidents.')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Maximum incidents per project' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create…' })).toBeDisabled();
+    await act(async () => {
+      resolveSecond(
+        incidentResult({
+          eligibleIncidentCount: 250,
+          projectCount: 1,
+          projectIds: [202],
+          localeTags: ['fr'],
+        }),
+      );
+      await pendingSecond;
+    });
+    await screen.findByText(/2 of 2 planned projects checked/);
+    expect(screen.getByText('Created 2 projects with 750 incidents.')).toBeInTheDocument();
+    expect(createIncidentsMock).toHaveBeenCalledTimes(2);
+    batches.forEach((incidentIds, index) => {
+      expect(createIncidentsMock.mock.calls[index][0]).toEqual({
+        ...previewIncidentsMock.mock.calls[0][0],
+        incidentIds,
+      });
+    });
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 
-  it('preserves committed project links when a continuation fails', async () => {
-    createIncidentsMock
-      .mockResolvedValueOnce({
+  it('creates the entire plan across 64 selected locales without a project cap', async () => {
+    const localeTags =
+      'af am ar az be bg bn ca cs cy da de el es et eu fa fi fil fr ga gl gu he hi hr hu hy id is it ja ka kk km kn ko lo lt lv mk ml mn mr ms my nb ne nl nn pa pl pt ro ru sk sl sq sr sv sw ta te th'.split(
+        ' ',
+      );
+    expect(localeTags).toHaveLength(64);
+    const incidentBatches = localeTags.map((_, index) =>
+      Array.from({ length: 10 }, (_, offset) => index * 10 + offset + 1),
+    );
+    previewIncidentsMock.mockResolvedValueOnce(
+      incidentResult({
+        eligibleIncidentCount: 640,
+        projectCount: 64,
+        incidentBatches,
+        localeTags,
+      }),
+    );
+    createIncidentsMock.mockImplementation((request: IncidentReviewProjectRequest) => {
+      const localeIndex = Math.floor((request.incidentIds![0] - 1) / 10);
+      return Promise.resolve(
+        incidentResult({
+          eligibleIncidentCount: 10,
+          projectCount: 1,
+          projectIds: [201 + localeIndex],
+          localeTags: [localeTags[localeIndex]],
+        }),
+      );
+    });
+    renderPage('REPOSITORIES', false, [
+      {
+        ...repositories[0],
+        repositoryLocales: localeTags.map((bcp47Tag) => ({
+          locale: { bcp47Tag },
+          parentLocale: { bcp47Tag: 'en' },
+          toBeFullyTranslated: true,
+        })),
+      },
+    ]);
+    selectIncidentSource();
+    fireEvent.click(screen.getByRole('button', { name: 'Locales' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Locales' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    await screen.findByText(/640 eligible incidents.*64 projects.*64 locales/);
+    expect(previewIncidentsMock.mock.calls[0][0].localeTags).toHaveLength(64);
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByText(/64 of 64 planned projects checked/);
+    expect(screen.getByText('Created 64 projects with 640 incidents.')).toBeInTheDocument();
+    expect(createIncidentsMock).toHaveBeenCalledTimes(64);
+    expect(createIncidentsMock.mock.calls.map(([request]) => request.incidentIds)).toEqual(
+      incidentBatches,
+    );
+  });
+
+  it('stops after Cancel even when there is no previous page to navigate to', async () => {
+    previewIncidentsMock.mockResolvedValueOnce(
+      incidentResult({
+        eligibleIncidentCount: 2,
+        projectCount: 2,
+        incidentBatches: [[1], [2]],
+      }),
+    );
+    let resolveFirst!: (result: IncidentReviewProjectResult) => void;
+    const pendingFirst = new Promise<IncidentReviewProjectResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    createIncidentsMock.mockReturnValueOnce(pendingFirst);
+    renderPage('REPOSITORIES');
+    selectIncidentSource();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    await screen.findByText(/2 eligible incidents/);
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(createIncidentsMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await act(async () => {
+      resolveFirst(
+        incidentResult({ eligibleIncidentCount: 1, projectCount: 1, projectIds: [201] }),
+      );
+      await pendingFirst;
+    });
+    await screen.findByRole('link', { name: 'Open review project #201' });
+    expect(screen.getByText(/1 of 2 planned projects checked/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resume remaining projects' })).toBeEnabled();
+    expect(createIncidentsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops creating subsequent projects when leaving the page', async () => {
+    previewIncidentsMock.mockResolvedValueOnce(
+      incidentResult({
         eligibleIncidentCount: 3,
-        skippedIncidentCount: 0,
-        projectCount: 1,
-        localeTags: ['fr'],
-        projectIds: [201],
-        requestIds: [200],
-        skipped: [],
-        hasMore: true,
-      })
-      .mockRejectedValueOnce(new Error('Temporary failure'));
+        projectCount: 3,
+        incidentBatches: [[1], [2], [3]],
+      }),
+    );
+    let resolveSecond!: (result: IncidentReviewProjectResult) => void;
+    const pendingSecond = new Promise<IncidentReviewProjectResult>((resolve) => {
+      resolveSecond = resolve;
+    });
+    createIncidentsMock
+      .mockResolvedValueOnce(
+        incidentResult({
+          eligibleIncidentCount: 1,
+          projectCount: 1,
+          projectIds: [201],
+        }),
+      )
+      .mockReturnValueOnce(pendingSecond);
     renderPage('REPOSITORIES');
     selectIncidentSource();
     fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
     await screen.findByText(/3 eligible incidents/);
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Create next batch' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Open review project #201' }));
+    await screen.findByText('Review project details');
+    await act(async () => {
+      resolveSecond(
+        incidentResult({ eligibleIncidentCount: 1, projectCount: 1, projectIds: [202] }),
+      );
+      await pendingSecond;
+    });
+    expect(createIncidentsMock.mock.calls.map(([request]) => request.incidentIds)).toEqual([
+      [1],
+      [2],
+    ]);
+  });
+
+  it('preserves successful projects and resumes at the failed planned project', async () => {
+    previewIncidentsMock.mockResolvedValueOnce(
+      incidentResult({
+        eligibleIncidentCount: 3,
+        projectCount: 3,
+        incidentBatches: [[1], [2], [3]],
+        localeTags: ['fr'],
+      }),
+    );
+    createIncidentsMock
+      .mockResolvedValueOnce(
+        incidentResult({
+          eligibleIncidentCount: 1,
+          projectCount: 1,
+          projectIds: [201],
+        }),
+      )
+      .mockRejectedValueOnce(new Error('Temporary failure'))
+      .mockResolvedValueOnce(
+        incidentResult({
+          eligibleIncidentCount: 1,
+          projectCount: 1,
+          projectIds: [202],
+        }),
+      )
+      .mockResolvedValueOnce(
+        incidentResult({
+          eligibleIncidentCount: 1,
+          projectCount: 1,
+          projectIds: [203],
+        }),
+      );
+    renderPage('REPOSITORIES');
+    selectIncidentSource();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    await screen.findByText(/3 eligible incidents/);
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await screen.findByText('Temporary failure');
+    expect(screen.getByText(/Counts and links show confirmed creations/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open review project #201' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create next batch' })).toBeEnabled();
+    expect(screen.getByText(/1 of 3 planned projects checked/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Resume remaining projects' }));
+    await screen.findByText(/3 of 3 planned projects checked/);
+    expect(screen.getByText('Created 3 projects with 3 incidents.')).toBeInTheDocument();
+    expect(createIncidentsMock.mock.calls.map(([request]) => request.incidentIds)).toEqual([
+      [1],
+      [2],
+      [2],
+      [3],
+    ]);
+    expect(screen.getByRole('link', { name: 'Open review project #201' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Resume remaining projects' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('invalidates a failed plan when settings change while keeping created project links', async () => {
+    previewIncidentsMock.mockResolvedValueOnce(
+      incidentResult({
+        eligibleIncidentCount: 2,
+        projectCount: 2,
+        incidentBatches: [[1], [2]],
+      }),
+    );
+    createIncidentsMock
+      .mockResolvedValueOnce(
+        incidentResult({
+          eligibleIncidentCount: 1,
+          projectCount: 1,
+          projectIds: [201],
+        }),
+      )
+      .mockRejectedValueOnce(new Error('Temporary failure'));
+    renderPage('REPOSITORIES');
+    selectIncidentSource();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    await screen.findByText(/2 eligible incidents/);
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByRole('button', { name: 'Resume remaining projects' });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Maximum incidents per project' }), {
+      target: { value: '100' },
+    });
+    expect(
+      screen.queryByRole('button', { name: 'Resume remaining projects' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open review project #201' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+  });
+
+  it('sends the visible limits and invalidates the preview when either changes', async () => {
+    renderPage('REPOSITORIES');
+    selectIncidentSource();
+    const overallLimit = screen.getByRole('textbox', {
+      name: 'Maximum incidents overall (optional)',
+    });
+    const projectLimit = screen.getByRole('textbox', { name: 'Maximum incidents per project' });
+    expect(overallLimit).toHaveValue('');
+    expect(projectLimit).toHaveValue('500');
+    fireEvent.change(overallLimit, { target: { value: '2000' } });
+    fireEvent.change(projectLimit, { target: { value: '100' } });
+    previewIncidentsMock.mockResolvedValueOnce(
+      incidentResult({
+        eligibleIncidentCount: 3,
+        projectCount: 1,
+        incidentBatches: [[1, 2, 3]],
+        limitReached: true,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    await screen.findByText(/The overall incident limit was reached/);
+    expect(previewIncidentsMock.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        maxIncidentCount: 2000,
+        maxIncidentsPerProject: 100,
+      }),
+    );
+    fireEvent.change(overallLimit, { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    await screen.findByText(/3 eligible incidents/);
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
+    fireEvent.change(projectLimit, { target: { value: '200' } });
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+  });
+
+  it.each([
+    ['Maximum incidents overall (optional)', '0'],
+    ['Maximum incidents overall (optional)', '2147483648'],
+    ['Maximum incidents overall (optional)', '1.5'],
+    ['Maximum incidents per project', ''],
+    ['Maximum incidents per project', '0'],
+    ['Maximum incidents per project', '5001'],
+  ])('rejects %s set to %s', (label, value) => {
+    renderPage('REPOSITORIES');
+    selectIncidentSource();
+    const field = screen.getByRole('textbox', { name: label });
+    fireEvent.change(field, { target: { value } });
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('button', { name: 'Preview incidents' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+  });
+
+  it('does not silently create an unplanned batch for an old preview response', async () => {
+    previewIncidentsMock.mockResolvedValueOnce(incidentResult({ eligibleIncidentCount: 1000 }));
+    renderPage('REPOSITORIES');
+    selectIncidentSource();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    await screen.findByText(/The preview did not include a creation plan/);
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(createIncidentsMock).not.toHaveBeenCalled();
   });
 });
 

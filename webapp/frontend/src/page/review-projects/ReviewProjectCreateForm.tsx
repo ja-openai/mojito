@@ -52,6 +52,9 @@ export type ReviewProjectCreateFormValues = {
   statusFilter: ReviewProjectCreateStatusFilter;
   skipTextUnitsInOpenProjects: boolean;
   maxWordCountPerProject: number | null;
+  maxIncidentCount?: number | null;
+  maxIncidentsPerProject?: number | null;
+  incidentBatches?: number[][];
   screenshotImageIds: string[];
   teamId: number | null;
   assignTranslator: boolean;
@@ -66,6 +69,7 @@ type Props = {
     payload: ReviewProjectCreateFormValues,
   ) => Promise<IncidentReviewProjectResult>;
   incidentPreviewRevision?: number;
+  onIncidentSettingsChange?: () => void;
   defaultName: string;
   defaultDueDate: string;
   localeOptions: LocaleSelectionOption[];
@@ -99,6 +103,7 @@ export function ReviewProjectCreateForm({
   onChangeReviewSource,
   onPreviewIncidents,
   incidentPreviewRevision = 0,
+  onIncidentSettingsChange,
   defaultName,
   defaultDueDate,
   localeOptions,
@@ -143,6 +148,8 @@ export function ReviewProjectCreateForm({
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
   const [skipTextUnitsInOpenProjects, setSkipTextUnitsInOpenProjects] = useState(true);
   const [maxWordCountDraft, setMaxWordCountDraft] = useState('');
+  const [maxIncidentCountDraft, setMaxIncidentCountDraft] = useState('');
+  const [maxIncidentsPerProjectDraft, setMaxIncidentsPerProjectDraft] = useState('500');
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
   const [assignTranslator, setAssignTranslator] = useState(true);
@@ -189,6 +196,19 @@ export function ReviewProjectCreateForm({
       Number.isInteger(maxWordCountPerProject) &&
       maxWordCountPerProject >= 1 &&
       maxWordCountPerProject <= (isIncidentReview ? 100000 : 2147483647));
+  const maxIncidentCount = maxIncidentCountDraft.trim() ? Number(maxIncidentCountDraft) : null;
+  const maxIncidentCountValid =
+    maxIncidentCount === null ||
+    (/^\d+$/.test(maxIncidentCountDraft.trim()) &&
+      Number.isSafeInteger(maxIncidentCount) &&
+      maxIncidentCount >= 1 &&
+      maxIncidentCount <= 2147483647);
+  const maxIncidentsPerProject = Number(maxIncidentsPerProjectDraft);
+  const maxIncidentsPerProjectValid =
+    /^\d+$/.test(maxIncidentsPerProjectDraft.trim()) &&
+    Number.isInteger(maxIncidentsPerProject) &&
+    maxIncidentsPerProject >= 1 &&
+    maxIncidentsPerProject <= 5000;
 
   const canSubmit = useMemo(
     () =>
@@ -204,11 +224,14 @@ export function ReviewProjectCreateForm({
       (!isIncidentReview ||
         (selectedTeamId != null && (isAllIncidents || sourceMode !== 'TEXT_UNITS'))) &&
       maxWordCountValid &&
+      (!isIncidentReview || (maxIncidentCountValid && maxIncidentsPerProjectValid)) &&
       uploadQueue.every((item) => item.status !== 'uploading'),
     [
       dueDate,
       name,
       maxWordCountValid,
+      maxIncidentCountValid,
+      maxIncidentsPerProjectValid,
       selectedLocaleTags.length,
       selectedReviewFeatureIds.length,
       selectedRepositoryIds.length,
@@ -237,12 +260,21 @@ export function ReviewProjectCreateForm({
     statusFilter: selectedStatusFilter,
     skipTextUnitsInOpenProjects,
     maxWordCountPerProject,
+    maxIncidentCount: isIncidentReview ? maxIncidentCount : null,
+    maxIncidentsPerProject: isIncidentReview ? maxIncidentsPerProject : null,
     screenshotImageIds: screenshotKeys,
     teamId: selectedTeamId,
     assignTranslator,
   };
-  const previewKey = JSON.stringify([payload, incidentPreviewRevision]);
+  const settingsKey = JSON.stringify(payload);
+  useEffect(() => {
+    setIncidentPreview(null);
+    setPreviewError(null);
+    onIncidentSettingsChange?.();
+  }, [settingsKey, onIncidentSettingsChange]);
+  const previewKey = JSON.stringify([settingsKey, incidentPreviewRevision]);
   const currentPreview = incidentPreview?.key === previewKey ? incidentPreview.result : null;
+  const hasIncidentPlan = Boolean(currentPreview?.incidentBatches?.length);
 
   const addScreenshotKeys = (raw: string[]) => {
     const next = raw
@@ -554,6 +586,60 @@ export function ReviewProjectCreateForm({
           />
         </div>
 
+        {isIncidentReview ? (
+          <div className="review-create__two-up">
+            <div className="review-create__field">
+              <label className="review-create__label" htmlFor="review-create-max-incidents">
+                Maximum incidents overall (optional)
+              </label>
+              <input
+                id="review-create-max-incidents"
+                className="review-create__input"
+                type="text"
+                inputMode="numeric"
+                value={maxIncidentCountDraft}
+                onChange={(event) => setMaxIncidentCountDraft(event.target.value)}
+                placeholder="All matching incidents"
+                disabled={isSubmitting}
+                aria-invalid={!maxIncidentCountValid}
+                aria-describedby="review-create-max-incidents-hint"
+              />
+              <span className="review-create__hint" id="review-create-max-incidents-hint">
+                Leave blank to include every eligible incident in the selected scope.
+              </span>
+              {!maxIncidentCountValid ? (
+                <span className="review-create__error" role="alert">
+                  Enter a whole number from 1 to 2,147,483,647, or leave blank.
+                </span>
+              ) : null}
+            </div>
+            <div className="review-create__field">
+              <label className="review-create__label" htmlFor="review-create-incidents-per-project">
+                Maximum incidents per project
+              </label>
+              <input
+                id="review-create-incidents-per-project"
+                className="review-create__input"
+                type="text"
+                inputMode="numeric"
+                value={maxIncidentsPerProjectDraft}
+                onChange={(event) => setMaxIncidentsPerProjectDraft(event.target.value)}
+                disabled={isSubmitting}
+                aria-invalid={!maxIncidentsPerProjectValid}
+                aria-describedby="review-create-incidents-per-project-hint"
+              />
+              <span className="review-create__hint" id="review-create-incidents-per-project-hint">
+                Split projects at this incident count or the word limit, whichever comes first.
+              </span>
+              {!maxIncidentsPerProjectValid ? (
+                <span className="review-create__error" role="alert">
+                  Enter a whole number from 1 to 5,000.
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="review-create__field">
           <label className="review-create__label" htmlFor="review-create-max-word-count">
             Max word count per project (optional)
@@ -712,10 +798,18 @@ export function ReviewProjectCreateForm({
             skippedIncidentCount={currentPreview.skippedIncidentCount}
           />
           <p className="review-create__hint">
-            {currentPreview.hasMore
-              ? 'This preview covers the next batch. More incidents remain to check for this selection; you can continue after creating it.'
-              : 'Availability is checked again when you create the projects.'}
+            {currentPreview.limitReached
+              ? 'The overall incident limit was reached. Increase or clear it to include more matching incidents.'
+              : 'This preview covers all matching incidents in the selected scope.'}{' '}
+            Eligibility is checked again when each project is created.
           </p>
+          {!currentPreview.eligibleIncidentCount ? (
+            <p>No eligible incidents found. No projects need to be created.</p>
+          ) : !hasIncidentPlan ? (
+            <p className="review-create__error">
+              The preview did not include a creation plan. Preview again before creating projects.
+            </p>
+          ) : null}
         </div>
       ) : null}
       <div className="review-create__actions">
@@ -760,20 +854,15 @@ export function ReviewProjectCreateForm({
             if (!payload.dueDate) {
               return;
             }
-            onSubmit(payload);
+            if (isIncidentReview && !hasIncidentPlan) return;
+            onSubmit({ ...payload, incidentBatches: currentPreview?.incidentBatches });
           }}
-          disabled={!canSubmit || isSubmitting || (isIncidentReview && !currentPreview)}
+          disabled={!canSubmit || isSubmitting || (isIncidentReview && !hasIncidentPlan)}
         >
           {isSubmitting ? (
             <>
               <span className="spinner" aria-hidden="true" /> {submitLabel}…
             </>
-          ) : isIncidentReview && currentPreview && !currentPreview.eligibleIncidentCount ? (
-            currentPreview.hasMore ? (
-              'Continue to next batch'
-            ) : (
-              'Check for new incidents'
-            )
           ) : (
             submitLabel
           )}
