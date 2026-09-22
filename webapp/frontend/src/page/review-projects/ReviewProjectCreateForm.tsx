@@ -200,7 +200,7 @@ export function ReviewProjectCreateForm({
           : sourceMode === 'REPOSITORIES'
             ? selectedRepositoryIds.length > 0
             : selectedReviewFeatureIds.length > 0)) &&
-      (isIncidentReview || selectedLocaleTags.length > 0) &&
+      selectedLocaleTags.length > 0 &&
       (!isIncidentReview ||
         (selectedTeamId != null && (isAllIncidents || sourceMode !== 'TEXT_UNITS'))) &&
       maxWordCountValid &&
@@ -543,9 +543,7 @@ export function ReviewProjectCreateForm({
         )}
 
         <div className="review-create__field">
-          <span className="review-create__label">
-            {isIncidentReview ? 'Locales (optional)' : 'Locales'}
-          </span>
+          <span className="review-create__label">Locales</span>
           <LocaleMultiSelect
             options={localeOptions.map((opt) => ({ tag: opt.tag, label: opt.label }))}
             selectedTags={selectedLocaleTags}
@@ -554,11 +552,6 @@ export function ReviewProjectCreateForm({
             align="left"
             disabled={isSubmitting}
           />
-          {isIncidentReview ? (
-            <span className="review-create__hint">
-              Leave empty to include all eligible incident locales.
-            </span>
-          ) : null}
         </div>
 
         <div className="review-create__field">

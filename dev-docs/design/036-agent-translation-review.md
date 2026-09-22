@@ -110,9 +110,11 @@ Both use `IncidentReviewBatchService`; manual HTTP endpoints are
 `POST /api/incident-review-projects/preview` and `POST /api/incident-review-projects`.
 
 - Select **Incidents** as the source. The common mode is **All eligible incidents** of the selected
-  type and owning team, regardless of repository. Repository/review-feature scope and locales are
-  optional narrowing filters; manual empty locales means all eligible incident locales. A batch
-  can create several projects while preserving repository, locale, run and finding attribution.
+  type and owning team, regardless of repository. Repository/review-feature scope is an optional
+  narrowing filter. Manual creation requires at least one selected locale, matching current-translation
+  creation; use **Select all** to include all available locales. Empty locale selection disables
+  preview and creation. Automation's empty locale include-list still means all eligible locales.
+  A batch can create several projects while preserving repository, locale, run and finding attribution.
   Keep translator assignment, due date, and maximum source words as assignment controls. Incident
   review type is distinct from the project's Normal/Emergency priority. The HTTP request explicitly
   sets `allRepositories=true`; omitted scope never silently widens a legacy request.

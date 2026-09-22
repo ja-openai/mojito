@@ -33,6 +33,11 @@ const repositories: ApiRepository[] = [
         parentLocale: { bcp47Tag: 'en' },
         toBeFullyTranslated: true,
       },
+      {
+        locale: { bcp47Tag: 'de' },
+        parentLocale: { bcp47Tag: 'en' },
+        toBeFullyTranslated: true,
+      },
     ],
   },
 ];
@@ -158,8 +163,9 @@ describe('incident review project creation', () => {
     expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
   });
 
-  it('defaults to the incident queue across repositories and locales, with optional narrowing', async () => {
+  it('requires explicit locale selection for the incident queue across repositories', async () => {
     renderPage('TEXT_UNITS', false);
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
     selectIncidentSource();
     expect(screen.getByRole('button', { name: 'All eligible incidents' })).toHaveAttribute(
       'aria-pressed',
@@ -169,6 +175,19 @@ describe('incident review project creation', () => {
     expect(
       screen.queryByRole('button', { name: 'Select review features' }),
     ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preview incidents' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(previewIncidentsMock).not.toHaveBeenCalled();
+    expect(createIncidentsMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Locales' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Locales' }));
+    expect(screen.getByRole('button', { name: 'Locales' })).toHaveTextContent('All locales');
+    expect(screen.getByRole('button', { name: 'Preview incidents' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
     await screen.findByText(/3 eligible incidents/);
     expect(previewIncidentsMock.mock.calls[0][0]).toEqual(
@@ -176,7 +195,7 @@ describe('incident review project creation', () => {
         allRepositories: true,
         repositoryIds: null,
         reviewFeatureIds: null,
-        localeTags: [],
+        localeTags: ['fr', 'de'],
         teamId: 31,
       }),
     );
@@ -187,6 +206,42 @@ describe('incident review project creation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Repositories' }));
     expect(screen.getByRole('button', { name: 'Select repositories' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+  });
+
+  it.each<ReviewProjectSourceMode>(['REPOSITORIES', 'REVIEW_FEATURE'])(
+    'requires locales for incident review scoped to %s',
+    (sourceMode) => {
+      renderPage(sourceMode, false);
+      expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+      selectIncidentSource();
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: sourceMode === 'REPOSITORIES' ? 'Repositories' : 'Review feature',
+        }),
+      );
+      expect(screen.getByRole('button', { name: 'Preview incidents' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    },
+  );
+
+  it('disables preview and creation when the last locale is cleared after previewing', async () => {
+    renderPage('REPOSITORIES');
+    selectIncidentSource();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    await screen.findByText(/3 eligible incidents/);
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Locales' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /French/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Locales' }));
+
+    expect(screen.queryByText(/3 eligible incidents/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preview incidents' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview incidents' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(previewIncidentsMock).toHaveBeenCalledTimes(1);
+    expect(createIncidentsMock).not.toHaveBeenCalled();
   });
 
   it('previews and creates one batch of incidents independently of translation status', async () => {
