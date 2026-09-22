@@ -113,25 +113,24 @@ public class GenerateMultiLocalizedAssetJob
 
   PollableFuture<LocalizedAssetBody> scheduleLocalizedAssetJob(
       QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo) {
-    String route = "quartz";
     try {
       PollableFuture<LocalizedAssetBody> pollableFuture =
           quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
-      recordLocalizedAssetSchedule(route, "succeeded");
+      recordLocalizedAssetSchedule("succeeded");
       return pollableFuture;
     } catch (RuntimeException e) {
-      recordLocalizedAssetSchedule(route, "failed");
+      recordLocalizedAssetSchedule("failed");
       throw e;
     }
   }
 
-  private void recordLocalizedAssetSchedule(String route, String result) {
+  private void recordLocalizedAssetSchedule(String result) {
     recordMetric(
         () ->
             meterRegistry
                 .counter(
                     "GenerateMultiLocalizedAssetJob.schedule",
-                    Tags.of("route", route, "result", result))
+                    Tags.of("route", "quartz", "result", result))
                 .increment());
   }
 
