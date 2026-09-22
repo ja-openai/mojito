@@ -4,8 +4,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.sf.okapi.common.encoder.EncoderContext;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 
@@ -24,9 +22,6 @@ import org.springframework.beans.factory.annotation.Configurable;
  */
 @Configurable
 public class AndroidXMLEncoder extends net.sf.okapi.common.encoder.XMLEncoder {
-
-  /** logger */
-  static Logger logger = LoggerFactory.getLogger(AndroidXMLEncoder.class);
 
   // trying to match variables between html tags, for example, <b>%d</b>, <i>%1$s</i>, <u>%2$s</u>
   private static final Pattern ANDROID_VARIABLE_WITHIN_HTML =

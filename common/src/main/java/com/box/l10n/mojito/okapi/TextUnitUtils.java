@@ -10,8 +10,6 @@ import net.sf.okapi.common.resource.TextFragment;
 import net.sf.okapi.common.resource.TextUnit;
 import net.sf.okapi.lib.translation.QueryUtil;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,9 +17,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class TextUnitUtils {
-
-  /** logger */
-  static Logger logger = LoggerFactory.getLogger(TextUnitUtils.class);
 
   /**
    * Gets the note from a {@link ITextUnit}.
