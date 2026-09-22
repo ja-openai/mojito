@@ -152,6 +152,7 @@ public class IncidentReviewBatchService {
   private final IncidentReviewBatchCursorRepository cursors;
   private final DBUtils dbUtils;
   private final JdbcTemplate jdbc;
+  private final IncidentReviewAssignmentService assignments;
 
   public IncidentReviewBatchService(
       EntityManager em,
@@ -167,7 +168,8 @@ public class IncidentReviewBatchService {
       AgentReviewStateService reviewedStates,
       IncidentReviewBatchCursorRepository cursors,
       DBUtils dbUtils,
-      JdbcTemplate jdbc) {
+      JdbcTemplate jdbc,
+      IncidentReviewAssignmentService assignments) {
     this.em = em;
     this.users = users;
     this.teams = teams;
@@ -182,6 +184,7 @@ public class IncidentReviewBatchService {
     this.cursors = cursors;
     this.dbUtils = dbUtils;
     this.jdbc = jdbc;
+    this.assignments = assignments;
   }
 
   @Transactional(readOnly = true)
@@ -204,6 +207,11 @@ public class IncidentReviewBatchService {
     cursor.setLastScannedIncidentId(selection.hasMore() ? selection.lastScannedId() : 0L);
     if (!selection.hasMore()) cursor.setSweepUpperBoundId(0L);
     if (selection.candidates().isEmpty()) return result(selection, 0, List.of(), List.of());
+    var assignmentState =
+        assignments.load(
+            selection.candidates().stream().map(Candidate::incident).toList(),
+            selection.candidates().stream().map(Candidate::proposal).toList(),
+            true);
     List<Candidate> ordinary =
         selection.candidates().stream().filter(c -> c.proposal() == null).toList();
     Map<String, List<Candidate>> intakeByType = new LinkedHashMap<>();
@@ -223,7 +231,13 @@ public class IncidentReviewBatchService {
             .map(
                 c ->
                     c.proposal() != null
-                        ? c
+                        ? new Candidate(
+                            c.incident(),
+                            c.unit(),
+                            c.locale(),
+                            c.current(),
+                            assignments.prepareForRouting(
+                                c.incident(), c.proposal(), assignmentState))
                         : new Candidate(
                             c.incident(),
                             c.unit(),
@@ -533,6 +547,11 @@ public class IncidentReviewBatchService {
                             new CurrentKey(i.getSelectedTmTextUnitId(), i.getResolvedLocaleId())),
                         latest.get(i.getReviewFindingId())))
             .toList();
+    var assignmentState =
+        assignments.load(
+            scanned.stream().map(Candidate::incident).toList(),
+            scanned.stream().map(Candidate::proposal).toList(),
+            lock);
     Map<String, Set<String>> fingerprintsByType = new HashMap<>();
     for (Candidate c : scanned)
       if (c.unit() != null && c.locale() != null)
@@ -560,7 +579,8 @@ public class IncidentReviewBatchService {
         examined++;
         continue;
       }
-      String reason = ineligible(request, scope, candidate, runById, checkpoints, reviewed);
+      String reason =
+          ineligible(request, scope, candidate, runById, checkpoints, reviewed, assignmentState);
       if (reason == null) {
         if (!budget.add(candidate)) {
           hasMore = true;
@@ -577,14 +597,14 @@ public class IncidentReviewBatchService {
   private List<Long> seekIds(
       IncidentReviewBatchCursor cursor, String reviewType, boolean nullTypeOnly, int limit) {
     boolean typed = reviewType != null || nullTypeOnly;
-    // The optimizer otherwise chose a skip-scan/filesort or PRIMARY scan over closed history
-    // in the million-row fixture. Keep MySQL on the measured covering seek index.
+    // Seek a bounded range of open incidents, including assignments to closed projects.
+    // Project status is checked under the assignment locks after this indexed range read.
     String index =
         dbUtils.isMysql()
             ? " force index ("
                 + (typed
-                    ? "I__TRANSLATION_INCIDENT__TYPED_BATCH_SEEK"
-                    : "I__TRANSLATION_INCIDENT__BATCH_SEEK")
+                    ? "I__TRANSLATION_INCIDENT__TYPED_OPEN_SEEK"
+                    : "I__TRANSLATION_INCIDENT__OPEN_SEEK")
                 + ")"
             : "";
     String typePredicate =
@@ -599,7 +619,7 @@ public class IncidentReviewBatchService {
     return jdbc.queryForList(
         "select id from translation_incident"
             + index
-            + " where status = 'OPEN' and resolution_review_project_id is null"
+            + " where status = 'OPEN'"
             + " and id > ? and id <= ?"
             + typePredicate
             + " order by id limit ?",
@@ -665,10 +685,12 @@ public class IncidentReviewBatchService {
       Candidate c,
       Map<Long, AgentReviewRun> runById,
       Map<Long, CheckpointState> checkpoints,
-      Map<String, Set<String>> reviewed) {
+      Map<String, Set<String>> reviewed,
+      IncidentReviewAssignmentService.Snapshot assignmentState) {
     TranslationIncident i = c.incident();
     if (i.getStatus() != TranslationIncidentStatus.OPEN) return "Incident is closed";
-    if (i.getResolutionReviewProjectId() != null) return "Already assigned to a review project";
+    String assignmentReason = assignments.ineligible(i, c.proposal(), assignmentState);
+    if (assignmentReason != null) return assignmentReason;
     if (i.getResolution() == TranslationIncidentResolution.REJECTED)
       return "Incident was already handled";
     if (i.getReviewTeamId() != null && !Objects.equals(i.getReviewTeamId(), request.teamId()))
@@ -695,8 +717,7 @@ public class IncidentReviewBatchService {
       if (run == null || !Objects.equals(run.getTeamId(), request.teamId()))
         return "Finding belongs to a different team";
       if (run.getStatus() == RunStatus.CANCELLED) return "Review run was cancelled";
-      if (p.getDisposition() != Disposition.OPEN || p.getReviewProjectId() != null)
-        return "Finding was already routed or handled";
+      // Assignment status and pending/final human feedback were checked above.
       if ((p.getReadiness() != Readiness.READY && p.getReadiness() != Readiness.HUMAN_REVIEW)
           || p.getCategory() == Category.OPTIONAL_IMPROVEMENT)
         return "Finding is not ready for human review";
