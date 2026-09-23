@@ -314,7 +314,9 @@ describe('incident review project creation', () => {
     expect(screen.getByRole('button', { name: 'Create…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Preview incidents' })).toBeDisabled();
     expect(screen.getByRole('textbox', { name: 'Maximum incidents per project' })).toBeDisabled();
-    expect(screen.getByText(/job continues on the server/)).toBeInTheDocument();
+    expect(
+      screen.getByText('You can leave this page and return to check progress.'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Leave page' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Create…' }));

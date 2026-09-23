@@ -811,11 +811,19 @@ export function ReviewProjectCreatePage() {
               }}
             />
             {reviewSource === 'INCIDENTS' && (hasIncidentTask || startingIncidentMode) ? (
-              <div className="review-create__report" role="status">
-                <div className="review-create__report-title">
-                  {(startingIncidentMode ?? incidentTaskMode) === 'preview'
-                    ? 'Incident preview progress'
-                    : 'Incident review projects'}
+              <div className="review-create__report review-create__incident-report" role="status">
+                <div className="review-create__incident-report-header">
+                  <div className="review-create__report-title">
+                    {isWorkingOnIncidents && !incidentPollingError ? (
+                      <span className="spinner" aria-hidden="true" />
+                    ) : null}
+                    {(startingIncidentMode ?? incidentTaskMode) === 'preview'
+                      ? 'Incident preview progress'
+                      : 'Incident review projects'}
+                  </div>
+                  {hasIncidentTask ? (
+                    <span className="review-create__report-summary">Task #{incidentTaskId}</span>
+                  ) : null}
                 </div>
                 <p>
                   {incidentTaskStatus?.message ||
@@ -823,15 +831,13 @@ export function ReviewProjectCreatePage() {
                       ? 'Preparing incident review…'
                       : 'Incident review finished.')}
                 </p>
-                {hasIncidentTask ? <p>Task #{incidentTaskId}</p> : null}
                 {hasIncidentTask && !startingIncidentMode && incidentTaskRunning ? (
-                  <p>
-                    You can leave this page. The job continues on the server; return to this URL to
-                    check its progress.
+                  <p className="review-create__report-summary">
+                    You can leave this page and return to check progress.
                   </p>
                 ) : null}
                 {resumedIncidentTask.current ? (
-                  <p>
+                  <p className="review-create__report-summary">
                     Reconnected to the saved task. Form settings are not restored; choose your scope
                     before starting another task.
                   </p>
@@ -841,7 +847,7 @@ export function ReviewProjectCreatePage() {
                     <p className="review-create__error" role="alert">
                       {incidentPollingError}
                     </p>
-                    <p>
+                    <p className="review-create__report-summary">
                       {incidentTaskStatus?.isAllFinished
                         ? 'The task finished, but its saved result could not be loaded. Reconnect to check any created projects.'
                         : 'The job may still be running. Reconnect to check its status before starting another.'}
