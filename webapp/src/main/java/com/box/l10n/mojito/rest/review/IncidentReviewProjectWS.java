@@ -1,31 +1,31 @@
 package com.box.l10n.mojito.rest.review;
 
 import com.box.l10n.mojito.service.agentreview.IncidentReviewBatchService;
-import com.box.l10n.mojito.service.agentreview.ManualIncidentReviewService;
-import com.box.l10n.mojito.service.team.TeamService;
+import com.box.l10n.mojito.service.agentreview.IncidentReviewJobService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/incident-review-projects")
 public class IncidentReviewProjectWS {
-  private final ManualIncidentReviewService batches;
-  private final TeamService teams;
+  public record StartResponse(long pollableTaskId) {}
 
-  public IncidentReviewProjectWS(ManualIncidentReviewService batches, TeamService teams) {
-    this.batches = batches;
-    this.teams = teams;
+  private final IncidentReviewJobService jobs;
+
+  public IncidentReviewProjectWS(IncidentReviewJobService jobs) {
+    this.jobs = jobs;
   }
 
   @PostMapping("/preview")
-  public ManualIncidentReviewService.Preview preview(
-      @RequestBody IncidentReviewBatchService.Request request) {
-    return batches.preview(request, teams.getCurrentUserIdOrThrow());
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public StartResponse preview(@RequestBody IncidentReviewBatchService.Request request) {
+    return new StartResponse(jobs.preview(request).getPollableTask().getId());
   }
 
   @PostMapping
-  public IncidentReviewBatchService.Result create(
-      @RequestBody IncidentReviewBatchService.Request request) {
-    return batches.create(request, teams.getCurrentUserIdOrThrow());
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public StartResponse create(@RequestBody IncidentReviewBatchService.Request request) {
+    return new StartResponse(jobs.create(request).getPollableTask().getId());
   }
 
   @ExceptionHandler(IllegalArgumentException.class)

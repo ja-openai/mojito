@@ -280,7 +280,7 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
     var other = incidents.saveAndFlush(incident(outside, 0));
     var request = request(f, null, null, null, null);
 
-    assertThatThrownBy(() -> manual.create(request, actor()))
+    assertThatThrownBy(() -> batches.createManualProject(request, actor()))
         .isInstanceOf(IllegalArgumentException.class);
     for (List<Long> invalid :
         List.of(
@@ -318,6 +318,21 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
         .isNull();
     assertThat(incidents.findAllById(selected.stream().map(TranslationIncident::getId).toList()))
         .allSatisfy(incident -> assertThat(incident.getResolutionReviewProjectId()).isNull());
+  }
+
+  @Test
+  public void createWithoutPreviewPlansAndCreatesAllProjects() throws Exception {
+    Fixture f = fixture("", 1, 3);
+    var selected =
+        incidents.saveAllAndFlush(List.of(incident(f, 0), incident(f, 1), incident(f, 2)));
+    var created = manual.create(request(f, null, null, 2, null), actor());
+    assertThat(created.eligibleIncidentCount()).isEqualTo(3);
+    assertThat(created.projectCount()).isEqualTo(2);
+    assertThat(created.hasMore()).isFalse();
+    assertThat(incidents.findAllById(selected.stream().map(TranslationIncident::getId).toList()))
+        .allSatisfy(
+            incident ->
+                assertThat(incident.getResolutionReviewProjectId()).isIn(created.projectIds()));
   }
 
   private List<Long> plannedIds(ManualIncidentReviewService.Preview preview) {

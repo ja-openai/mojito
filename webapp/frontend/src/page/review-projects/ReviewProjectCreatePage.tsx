@@ -1,6 +1,6 @@
 import './review-projects-page.css';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -8,8 +8,11 @@ import {
   createIncidentReviewProjects,
   type IncidentReviewProjectRequest,
   type IncidentReviewProjectResult,
+  type IncidentReviewTask,
+  type IncidentReviewTaskMode,
   previewIncidentReviewProjects,
   type ReviewSource,
+  waitForIncidentReviewTask,
 } from '../../api/incident-review-projects';
 import { type ApiReviewFeatureOption, fetchReviewFeatureOptions } from '../../api/review-features';
 import {
@@ -198,12 +201,6 @@ type CreateSubmissionReport = {
   responses: ReviewProjectCreateResponse[];
 };
 
-type IncidentCreationPlan = {
-  request: IncidentReviewProjectRequest;
-  batches: number[][];
-  checkedProjectCount: number;
-};
-
 function buildCreateSubmissionReport(
   responses: ReviewProjectCreateResponse[],
 ): CreateSubmissionReport {
@@ -272,24 +269,72 @@ export function ReviewProjectCreatePage() {
   const [submissionReport, setSubmissionReport] = useState<CreateSubmissionReport | null>(null);
   const [incidentCreationReport, setIncidentCreationReport] =
     useState<IncidentReviewProjectResult | null>(null);
-  const [incidentCreationPlan, setIncidentCreationPlan] = useState<IncidentCreationPlan | null>(
+  const [incidentPreview, setIncidentPreview] = useState<IncidentReviewProjectResult | null>(null);
+  const [incidentTaskStatus, setIncidentTaskStatus] = useState<IncidentReviewTask | null>(null);
+  const [completedIncidentTaskId, setCompletedIncidentTaskId] = useState<number | null>(null);
+  const [incidentPollingError, setIncidentPollingError] = useState<string | null>(null);
+  const [incidentPollRevision, setIncidentPollRevision] = useState(0);
+  const [startingIncidentMode, setStartingIncidentMode] = useState<IncidentReviewTaskMode | null>(
     null,
   );
-  const [isCreatingIncidents, setIsCreatingIncidents] = useState(false);
-  const incidentCreationRunning = useRef(false);
-  const incidentCreationCancelled = useRef(false);
+  const incidentStarting = useRef(false);
   const isMounted = useRef(true);
-  const [incidentPreviewRevision, setIncidentPreviewRevision] = useState(0);
-
   useEffect(() => {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
     };
   }, []);
+  const incidentTaskId = Number(urlSearchParams.get('incidentTask'));
+  const incidentTaskMode = urlSearchParams.get('incidentTaskMode');
+  const hasIncidentTask =
+    Number.isSafeInteger(incidentTaskId) &&
+    incidentTaskId > 0 &&
+    (incidentTaskMode === 'preview' || incidentTaskMode === 'create');
+  const incidentTaskRunning = hasIncidentTask && completedIncidentTaskId !== incidentTaskId;
+  const isWorkingOnIncidents = startingIncidentMode !== null || incidentTaskRunning;
+  const resumedIncidentTask = useRef(hasIncidentTask);
+
+  useEffect(() => {
+    if (!hasIncidentTask) return;
+    const controller = new AbortController();
+    setIncidentPollingError(null);
+    setIncidentTaskStatus(null);
+    setCompletedIncidentTaskId(null);
+    setIncidentPreview(null);
+    setIncidentCreationReport(null);
+    setErrorMessage(null);
+    void waitForIncidentReviewTask(
+      incidentTaskId,
+      (task) => {
+        if (!controller.signal.aborted) setIncidentTaskStatus(task);
+      },
+      controller.signal,
+    )
+      .then(({ task, result, outputError }) => {
+        if (controller.signal.aborted) return;
+        setIncidentTaskStatus(task);
+        setCompletedIncidentTaskId(task.id);
+        setErrorMessage(task.errorMessage || null);
+        setIncidentPollingError(outputError || null);
+        if (incidentTaskMode === 'preview') setIncidentPreview(result);
+        else {
+          setIncidentCreationReport(result);
+          void queryClient.invalidateQueries({ queryKey: ['review-projects'] });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setIncidentPollingError(
+            getCreateReviewProjectErrorMessage(error) || 'Unable to check incident task progress.',
+          );
+        }
+      });
+    // Leaving the page stops polling; the accepted job continues on the server.
+    return () => controller.abort();
+  }, [hasIncidentTask, incidentTaskId, incidentTaskMode, incidentPollRevision, queryClient]);
 
   const createReviewProject = useCreateReviewProject();
-  const createIncidentProjects = useMutation({ mutationFn: createIncidentReviewProjects });
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams', 'review-project-create'],
     queryFn: fetchTeams,
@@ -334,6 +379,7 @@ export function ReviewProjectCreatePage() {
   const hasRepositories = repositoryOptions.length > 0;
   const hasReviewFeatures = reviewFeatureOptions.length > 0;
   const showCreateForm =
+    hasIncidentTask ||
     hasTextUnitSource ||
     hasRepositories ||
     hasReviewFeatures ||
@@ -506,81 +552,61 @@ export function ReviewProjectCreatePage() {
     [],
   );
 
-  const handlePreviewIncidents = useCallback(
-    (values: ReviewProjectCreateFormValues) => {
-      setIncidentCreationPlan(null);
+  const startIncidentTask = useCallback(
+    async (mode: IncidentReviewTaskMode, values: ReviewProjectCreateFormValues) => {
+      if (incidentStarting.current || incidentTaskRunning) return;
+      incidentStarting.current = true;
+      setStartingIncidentMode(mode);
       setErrorMessage(null);
-      return previewIncidentReviewProjects(toIncidentRequest(values));
-    },
-    [toIncidentRequest],
-  );
-
-  const handleIncidentSettingsChange = useCallback(() => {
-    incidentCreationCancelled.current = true;
-    setIncidentCreationPlan(null);
-  }, []);
-
-  const runIncidentCreationPlan = useCallback(
-    async (plan: IncidentCreationPlan) => {
-      if (incidentCreationRunning.current) return;
-      incidentCreationRunning.current = true;
-      incidentCreationCancelled.current = false;
-      setIsCreatingIncidents(true);
-      setErrorMessage(null);
-      setIncidentPreviewRevision((revision) => revision + 1);
+      setIncidentPollingError(null);
+      setIncidentTaskStatus(null);
+      setIncidentPreview(null);
+      setIncidentCreationReport(null);
       try {
-        for (
-          let index = plan.checkedProjectCount;
-          isMounted.current && !incidentCreationCancelled.current && index < plan.batches.length;
-          index += 1
-        ) {
-          const next = await createIncidentProjects.mutateAsync({
-            ...plan.request,
-            incidentIds: plan.batches[index],
-          });
-          void queryClient.invalidateQueries({ queryKey: ['review-projects'] });
-          if (!isMounted.current) break;
-          setIncidentCreationReport((previous) =>
-            previous
-              ? {
-                  ...next,
-                  eligibleIncidentCount:
-                    previous.eligibleIncidentCount + next.eligibleIncidentCount,
-                  skippedIncidentCount: previous.skippedIncidentCount + next.skippedIncidentCount,
-                  projectCount: previous.projectCount + next.projectCount,
-                  scannedIncidentCount:
-                    (previous.scannedIncidentCount ?? 0) + (next.scannedIncidentCount ?? 0),
-                  localeTags: [...new Set([...previous.localeTags, ...next.localeTags])],
-                  projectIds: [...previous.projectIds, ...next.projectIds],
-                  requestIds: [...previous.requestIds, ...next.requestIds],
-                  skipped: [...previous.skipped, ...next.skipped].slice(-100),
-                }
-              : next,
-          );
-          setIncidentCreationPlan((current) =>
-            current?.request === plan.request
-              ? { ...plan, checkedProjectCount: index + 1 }
-              : current,
-          );
-        }
+        const request = toIncidentRequest(values);
+        const { pollableTaskId } = await (mode === 'preview'
+          ? previewIncidentReviewProjects(request)
+          : createIncidentReviewProjects(request));
+        if (!isMounted.current) return;
+        resumedIncidentTask.current = false;
+        setUrlSearchParams(
+          (current) => {
+            const next = new URLSearchParams(current);
+            next.set('source', 'incidents');
+            next.set('incidentTask', String(pollableTaskId));
+            next.set('incidentTaskMode', mode);
+            return next;
+          },
+          { replace: true },
+        );
       } catch (error) {
         if (isMounted.current) {
           setErrorMessage(
-            getCreateReviewProjectErrorMessage(error) ||
-              'Unable to create the remaining incident projects.',
+            getCreateReviewProjectErrorMessage(error) || 'Unable to start incident review.',
           );
         }
       } finally {
-        incidentCreationRunning.current = false;
-        if (isMounted.current) setIsCreatingIncidents(false);
+        incidentStarting.current = false;
+        if (isMounted.current) setStartingIncidentMode(null);
       }
     },
-    [createIncidentProjects, queryClient],
+    [incidentTaskRunning, setUrlSearchParams, toIncidentRequest],
   );
+
+  const handlePreviewIncidents = useCallback(
+    (values: ReviewProjectCreateFormValues) => {
+      void startIncidentTask('preview', values);
+    },
+    [startIncidentTask],
+  );
+
+  const handleIncidentSettingsChange = useCallback(() => {
+    setIncidentPreview(null);
+  }, []);
 
   const handleSubmit = useCallback(
     (values: ReviewProjectCreateFormValues) => {
-      if (createReviewProject.isPending || incidentCreationRunning.current) return;
+      if (createReviewProject.isPending || incidentStarting.current || incidentTaskRunning) return;
       const needsExplicitScope = values.reviewSource !== 'INCIDENTS' || !values.allRepositories;
       if (needsExplicitScope && sourceMode === 'TEXT_UNITS' && !tmIds.length) {
         setErrorMessage('Add at least one text unit id.');
@@ -605,14 +631,7 @@ export function ReviewProjectCreatePage() {
       setSubmissionReport(null);
       setIncidentCreationReport(null);
       if (values.reviewSource === 'INCIDENTS') {
-        if (!values.incidentBatches?.length) return;
-        const plan = {
-          request: toIncidentRequest(values),
-          batches: values.incidentBatches,
-          checkedProjectCount: 0,
-        };
-        setIncidentCreationPlan(plan);
-        void runIncidentCreationPlan(plan);
+        void startIncidentTask('create', values);
         return;
       }
       void (async () => {
@@ -715,8 +734,8 @@ export function ReviewProjectCreatePage() {
     },
     [
       createReviewProject,
-      toIncidentRequest,
-      runIncidentCreationPlan,
+      startIncidentTask,
+      incidentTaskRunning,
       navigate,
       reviewFeaturesById,
       sourceMode,
@@ -748,7 +767,11 @@ export function ReviewProjectCreatePage() {
               }}
               onPreviewIncidents={handlePreviewIncidents}
               onIncidentSettingsChange={handleIncidentSettingsChange}
-              incidentPreviewRevision={incidentPreviewRevision}
+              incidentPreview={incidentPreview}
+              isPreviewing={
+                startingIncidentMode === 'preview' ||
+                (incidentTaskRunning && incidentTaskMode === 'preview')
+              }
               defaultName={prefillName || 'Review project'}
               defaultDueDate={prefillDueDate ?? defaultDueDate}
               localeOptions={localeOptions}
@@ -778,75 +801,86 @@ export function ReviewProjectCreatePage() {
                 setSelectedStatusFilter(next);
                 setStatusFilterWasCustomized(true);
               }}
-              isSubmitting={createReviewProject.isPending || isCreatingIncidents}
+              isSubmitting={createReviewProject.isPending || isWorkingOnIncidents}
               errorMessage={errorMessage}
               submitLabel="Create"
+              cancelLabel={isWorkingOnIncidents ? 'Leave page' : 'Cancel'}
               onSubmit={handleSubmit}
               onCancel={() => {
-                incidentCreationCancelled.current = true;
                 void navigate(-1);
               }}
             />
-            {reviewSource === 'INCIDENTS' && (incidentCreationPlan || incidentCreationReport) ? (
+            {reviewSource === 'INCIDENTS' && (hasIncidentTask || startingIncidentMode) ? (
               <div className="review-create__report" role="status">
-                <div className="review-create__report-title">Incident review projects</div>
-                {incidentCreationPlan ? (
+                <div className="review-create__report-title">
+                  {(startingIncidentMode ?? incidentTaskMode) === 'preview'
+                    ? 'Incident preview progress'
+                    : 'Incident review projects'}
+                </div>
+                <p>
+                  {incidentTaskStatus?.message ||
+                    (isWorkingOnIncidents
+                      ? 'Preparing incident review…'
+                      : 'Incident review finished.')}
+                </p>
+                {hasIncidentTask ? <p>Task #{incidentTaskId}</p> : null}
+                {hasIncidentTask && !startingIncidentMode && incidentTaskRunning ? (
                   <p>
-                    {incidentCreationPlan.checkedProjectCount} of{' '}
-                    {incidentCreationPlan.batches.length} planned projects checked. Eligibility is
-                    checked again before creation.
+                    You can leave this page. The job continues on the server; return to this URL to
+                    check its progress.
                   </p>
                 ) : null}
-                <p>
-                  Created {incidentCreationReport?.projectCount ?? 0} project
-                  {incidentCreationReport?.projectCount === 1 ? '' : 's'} with{' '}
-                  {incidentCreationReport?.eligibleIncidentCount ?? 0} incident
-                  {incidentCreationReport?.eligibleIncidentCount === 1 ? '' : 's'}.
-                </p>
-                {(incidentCreationReport?.projectIds.length ?? 0) > 100 ? (
-                  <p>Showing the most recent 100 projects.</p>
+                {resumedIncidentTask.current ? (
+                  <p>
+                    Reconnected to the saved task. Form settings are not restored; choose your scope
+                    before starting another task.
+                  </p>
                 ) : null}
-                {incidentCreationReport?.projectIds.length ? (
-                  <ul>
-                    {incidentCreationReport.projectIds.slice(-100).map((id) => (
-                      <li key={id}>
-                        <Link to={`/review-projects/${id}`}>Open review project #{id}</Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {incidentCreationPlan &&
-                incidentCreationPlan.checkedProjectCount < incidentCreationPlan.batches.length &&
-                !isCreatingIncidents ? (
+                {incidentPollingError ? (
                   <div>
-                    <p>
-                      Completed projects are preserved. Resume the remaining planned projects or
-                      change the settings and preview again.
+                    <p className="review-create__error" role="alert">
+                      {incidentPollingError}
                     </p>
-                    {errorMessage ? (
-                      <p className="review-create__hint">
-                        Counts and links show confirmed creations. A request may have completed
-                        without a response; check the{' '}
-                        <Link to="/review-projects" target="_blank" rel="noopener noreferrer">
-                          project list
-                        </Link>{' '}
-                        if totals differ. Keep this page open to resume.
-                      </p>
-                    ) : null}
+                    <p>
+                      {incidentTaskStatus?.isAllFinished
+                        ? 'The task finished, but its saved result could not be loaded. Reconnect to check any created projects.'
+                        : 'The job may still be running. Reconnect to check its status before starting another.'}
+                    </p>
                     <button
                       type="button"
-                      className="review-create__cta"
-                      onClick={() => void runIncidentCreationPlan(incidentCreationPlan)}
+                      className="review-create__ghost"
+                      onClick={() => setIncidentPollRevision((value) => value + 1)}
                     >
-                      Resume remaining projects
+                      Reconnect
                     </button>
                   </div>
                 ) : null}
                 {incidentCreationReport ? (
-                  <IncidentSkipSummary
-                    skipped={incidentCreationReport.skipped}
-                    skippedIncidentCount={incidentCreationReport.skippedIncidentCount}
-                  />
+                  <>
+                    <p>
+                      Created {incidentCreationReport.projectCount} project
+                      {incidentCreationReport.projectCount === 1 ? '' : 's'} with{' '}
+                      {incidentCreationReport.eligibleIncidentCount} incident
+                      {incidentCreationReport.eligibleIncidentCount === 1 ? '' : 's'}.
+                    </p>
+                    {errorMessage ? <p>Projects already created are preserved.</p> : null}
+                    {incidentCreationReport.projectIds.length > 100 ? (
+                      <p>Showing the most recent 100 projects.</p>
+                    ) : null}
+                    {incidentCreationReport.projectIds.length ? (
+                      <ul>
+                        {incidentCreationReport.projectIds.slice(-100).map((id) => (
+                          <li key={id}>
+                            <Link to={`/review-projects/${id}`}>Open review project #{id}</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <IncidentSkipSummary
+                      skipped={incidentCreationReport.skipped}
+                      skippedIncidentCount={incidentCreationReport.skippedIncidentCount}
+                    />
+                  </>
                 ) : null}
               </div>
             ) : null}

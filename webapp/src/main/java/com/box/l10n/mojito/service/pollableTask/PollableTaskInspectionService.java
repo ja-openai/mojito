@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.pollableTask;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.service.agentreview.IncidentReviewJobAccess;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,18 +28,21 @@ public class PollableTaskInspectionService {
   private final RepositoryRepository repositoryRepository;
   private final ObjectMapper objectMapper;
   private final AiReviewChatJobAccess aiReviewChatJobAccess;
+  private final IncidentReviewJobAccess incidentReviewJobAccess;
 
   public PollableTaskInspectionService(
       PollableTaskService pollableTaskService,
       PollableTaskBlobStorage pollableTaskBlobStorage,
       RepositoryRepository repositoryRepository,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
-      AiReviewChatJobAccess aiReviewChatJobAccess) {
+      AiReviewChatJobAccess aiReviewChatJobAccess,
+      IncidentReviewJobAccess incidentReviewJobAccess) {
     this.pollableTaskService = Objects.requireNonNull(pollableTaskService);
     this.pollableTaskBlobStorage = Objects.requireNonNull(pollableTaskBlobStorage);
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.objectMapper = Objects.requireNonNull(objectMapper);
     this.aiReviewChatJobAccess = Objects.requireNonNull(aiReviewChatJobAccess);
+    this.incidentReviewJobAccess = Objects.requireNonNull(incidentReviewJobAccess);
   }
 
   public TaskInspection inspectTask(long pollableTaskId) {
@@ -47,6 +51,7 @@ public class PollableTaskInspectionService {
       throw new IllegalArgumentException("Pollable task not found: " + pollableTaskId);
     }
     aiReviewChatJobAccess.assertCanRead(pollableTask);
+    incidentReviewJobAccess.assertCanRead(pollableTask);
 
     List<PollableTask> failures =
         pollableTaskService.getAllPollableTasksWithError(pollableTask).stream()
@@ -89,6 +94,7 @@ public class PollableTaskInspectionService {
 
   private TaskFailure toFailure(PollableTask pollableTask) {
     aiReviewChatJobAccess.assertCanRead(pollableTask);
+    incidentReviewJobAccess.assertCanRead(pollableTask);
     StoredTaskData storedTaskData = getStoredTaskData(pollableTask.getId());
     return new TaskFailure(
         pollableTask.getId(),
@@ -174,6 +180,7 @@ public class PollableTaskInspectionService {
     }
 
     if (includeParentFallback && pollableTask.getParentTask() != null) {
+      incidentReviewJobAccess.assertCanRead(pollableTask.getParentTask());
       TaskRepositoryRef parentRepository =
           resolveRepository(
               pollableTask.getParentTask(),

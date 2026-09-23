@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.service.agentreview.IncidentReviewJobAccess;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import java.lang.reflect.Proxy;
@@ -37,7 +38,8 @@ public class PollableTaskInspectionServiceTest {
             storage,
             repositoryRepository(Optional.empty(), null),
             ObjectMapper.withNoFailOnUnknownProperties(),
-            access);
+            access,
+            mock(IncidentReviewJobAccess.class));
 
     assertThatThrownBy(() -> service.inspectTask(91L)).isInstanceOf(ResponseStatusException.class);
     verifyNoInteractions(storage);
@@ -70,7 +72,8 @@ public class PollableTaskInspectionServiceTest {
             pollableTaskBlobStorage,
             repositoryRepository(Optional.of(repository), null),
             ObjectMapper.withNoFailOnUnknownProperties(),
-            mock(AiReviewChatJobAccess.class));
+            mock(AiReviewChatJobAccess.class),
+            mock(IncidentReviewJobAccess.class));
 
     PollableTaskInspectionService.TaskInspection inspection = service.inspectTask(50255159L);
 
@@ -95,7 +98,8 @@ public class PollableTaskInspectionServiceTest {
             new StubPollableTaskBlobStorage(),
             repositoryRepository(Optional.empty(), null),
             ObjectMapper.withNoFailOnUnknownProperties(),
-            mock(AiReviewChatJobAccess.class));
+            mock(AiReviewChatJobAccess.class),
+            mock(IncidentReviewJobAccess.class));
 
     assertThatThrownBy(() -> service.inspectTask(404L))
         .isInstanceOf(IllegalArgumentException.class)

@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.rest.pollableTask;
 
 import com.box.l10n.mojito.entity.PollableTask;
+import com.box.l10n.mojito.service.agentreview.IncidentReviewJobAccess;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskInspectionService;
@@ -32,6 +33,8 @@ public class PollableTaskWS {
 
   @Autowired AiReviewChatJobAccess aiReviewChatJobAccess;
 
+  @Autowired IncidentReviewJobAccess incidentReviewJobAccess;
+
   /**
    * Gets a {@link PollableTask} by id.
    *
@@ -45,6 +48,7 @@ public class PollableTaskWS {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pollable task not found.");
     }
     aiReviewChatJobAccess.assertCanRead(task);
+    incidentReviewJobAccess.assertCanReadTree(task);
     return task;
   }
 

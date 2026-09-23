@@ -442,7 +442,8 @@ public class IncidentReviewBatchService {
     return result(selection, projectIds.size(), projectIds, new ArrayList<>(requestIds));
   }
 
-  private Scope validate(Request request, Long requestedByUserId) {
+  /** Validate the actor and request shape without scanning incidents or resolving locale scope. */
+  public void validateRequest(Request request, Long requestedByUserId) {
     if (!users.isCurrentUserAdminOrPm())
       throw new AccessDeniedException("Incident review creation requires a PM or administrator");
     if (request == null || request.teamId() == null || requestedByUserId == null)
@@ -484,6 +485,14 @@ public class IncidentReviewBatchService {
         || repositories.stream().anyMatch(Objects::isNull)
         || featureIds.stream().anyMatch(Objects::isNull))
       throw new IllegalArgumentException("Select at most 200 identified repositories or features");
+  }
+
+  private Scope validate(Request request, Long requestedByUserId) {
+    validateRequest(request, requestedByUserId);
+    List<Long> repositories = request.repositoryIds() == null ? List.of() : request.repositoryIds();
+    List<Long> featureIds =
+        request.reviewFeatureIds() == null ? List.of() : request.reviewFeatureIds();
+    boolean allRepositories = Boolean.TRUE.equals(request.allRepositories());
     Set<Long> repositoryIds = new LinkedHashSet<>(repositories);
     for (Long id : featureIds) {
       ReviewFeature feature =

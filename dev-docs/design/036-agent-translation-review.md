@@ -164,18 +164,24 @@ Both share eligibility and routing in `IncidentReviewBatchService`; manual plann
   string waves are carried across read pages, so the internal page size does not change project
   membership. Blank word limit retains the regular project's unlimited-word behavior within the
   selected incident-count limit.
-- Preview returns `incidentBatches`, one incident-ID list per planned project. The page automatically
-  submits every list in sequence with the same settings. Each create POST must provide one
-  nonempty, distinct `incidentIds` list within the configured limits. The server rechecks access,
-  scope, exact current state, assignment eligibility and the project's word/group boundaries under
-  the existing lock order; unavailable or incompatible plans require another preview. Creation
-  never adds incidents that arrived after preview. Changed or handled incidents can be skipped.
-- Creation progress shows planned projects checked and actual incidents/projects created. A failure
-  retains successful project links and allows the remaining planned projects to resume. Changing
-  selection or project settings invalidates the preview and resume plan. Navigating away loses the
-  browser's remaining plan; a fresh preview safely excludes active assignments. A lost response can
-  leave a committed project absent from the browser's totals; inspect the project list and preview
-  again rather than treating the browser report as a durable job ledger.
+- Manual Preview and Create use the existing Quartz pollable-task mechanism. Both return HTTP
+  202 with a task ID before scanning; the client polls task progress and stored output. Preview
+  is optional. Create plans the current finite selection and processes every planned project in
+  the background, using one existing bounded transaction per project. Navigating away does not
+  cancel server work; the task URL can reconnect to it without submitting another creation job.
+- Preview remains read-only and returns `incidentBatches` for the displayed counts. Create makes
+  its own fresh plan, so eligibility and counts can change after a preview. It rechecks access,
+  scope, exact current state, assignment eligibility and word/group boundaries under the existing
+  lock order for every project. Changed or handled incidents can be skipped; creation does not
+  add incidents beyond the job's finite plan.
+- Both jobs run as the requesting user and recheck current authorization. Task status, input,
+  output and inspection are readable only by that owner while they retain PM/admin access.
+  Scheduled automation keeps its existing independent behavior.
+- Creation publishes progress and saves aggregate results after each committed project. A failed
+  task retains those saved project links; a new creation request safely excludes active
+  assignments. Output persistence follows the database commit, so a failure between those steps
+  can leave a committed project absent from the saved report. This is not an automatic retry or
+  crash-recovery ledger; inspect the project list before starting a replacement task.
 - `scannedIncidentCount` counts examined IDs, including skips and rows outside the selection;
   outside-scope IDs and contents are never returned. Manual preview counts cover all examined
   pages, with at most 100 skipped details retained. Exclusion summaries show capped examples and

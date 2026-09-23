@@ -15,6 +15,7 @@ import com.box.l10n.mojito.entity.glossary.termindex.TermIndexAutomationRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.service.agentreview.IncidentReviewJobAccess;
 import com.box.l10n.mojito.service.assetExtraction.AssetExtractionRepository;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageConfigurationProperties;
@@ -346,7 +347,8 @@ public class PollableTaskArchiveRepositoryTest extends ServiceTestBase {
             taskBlobStorage,
             mock(RepositoryRepository.class),
             ObjectMapper.withNoFailOnUnknownProperties(),
-            mock(AiReviewChatJobAccess.class));
+            mock(AiReviewChatJobAccess.class),
+            mock(IncidentReviewJobAccess.class));
     PollableTaskInspectionService.TaskInspection inspection =
         inspectionService.inspectTask(task.getId());
     assertThat(inspection.status()).isEqualTo(PollableTaskInspectionService.TaskStatus.SUCCEEDED);

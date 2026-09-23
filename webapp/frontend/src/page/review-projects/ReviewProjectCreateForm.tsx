@@ -54,7 +54,6 @@ export type ReviewProjectCreateFormValues = {
   maxWordCountPerProject: number | null;
   maxIncidentCount?: number | null;
   maxIncidentsPerProject?: number | null;
-  incidentBatches?: number[][];
   screenshotImageIds: string[];
   teamId: number | null;
   assignTranslator: boolean;
@@ -65,10 +64,9 @@ export type ReviewProjectSourceMode = 'TEXT_UNITS' | 'REPOSITORIES' | 'REVIEW_FE
 type Props = {
   reviewSource?: ReviewSource;
   onChangeReviewSource?: (source: ReviewSource) => void;
-  onPreviewIncidents?: (
-    payload: ReviewProjectCreateFormValues,
-  ) => Promise<IncidentReviewProjectResult>;
-  incidentPreviewRevision?: number;
+  onPreviewIncidents?: (payload: ReviewProjectCreateFormValues) => void;
+  incidentPreview?: IncidentReviewProjectResult | null;
+  isPreviewing?: boolean;
   onIncidentSettingsChange?: () => void;
   defaultName: string;
   defaultDueDate: string;
@@ -94,6 +92,7 @@ type Props = {
   isSubmitting?: boolean;
   errorMessage?: string | null;
   submitLabel?: string;
+  cancelLabel?: string;
   onSubmit: (payload: ReviewProjectCreateFormValues) => void;
   onCancel?: () => void;
 };
@@ -102,7 +101,8 @@ export function ReviewProjectCreateForm({
   reviewSource = 'CURRENT_TRANSLATIONS',
   onChangeReviewSource,
   onPreviewIncidents,
-  incidentPreviewRevision = 0,
+  incidentPreview = null,
+  isPreviewing = false,
   onIncidentSettingsChange,
   defaultName,
   defaultDueDate,
@@ -128,17 +128,12 @@ export function ReviewProjectCreateForm({
   isSubmitting: externalIsSubmitting = false,
   errorMessage,
   submitLabel = 'Create',
+  cancelLabel = 'Cancel',
   onSubmit,
   onCancel,
 }: Props) {
   const [incidentReviewType, setIncidentReviewType] = useState('');
   const [allIncidentRepositories, setAllIncidentRepositories] = useState(true);
-  const [isPreviewing, setIsPreviewing] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [incidentPreview, setIncidentPreview] = useState<{
-    key: string;
-    result: IncidentReviewProjectResult;
-  } | null>(null);
   const isIncidentReview = reviewSource === 'INCIDENTS';
   const isAllIncidents = isIncidentReview && allIncidentRepositories;
   const isSubmitting = externalIsSubmitting || isPreviewing;
@@ -268,13 +263,9 @@ export function ReviewProjectCreateForm({
   };
   const settingsKey = JSON.stringify(payload);
   useEffect(() => {
-    setIncidentPreview(null);
-    setPreviewError(null);
     onIncidentSettingsChange?.();
   }, [settingsKey, onIncidentSettingsChange]);
-  const previewKey = JSON.stringify([settingsKey, incidentPreviewRevision]);
-  const currentPreview = incidentPreview?.key === previewKey ? incidentPreview.result : null;
-  const hasIncidentPlan = Boolean(currentPreview?.incidentBatches?.length);
+  const currentPreview = incidentPreview;
 
   const addScreenshotKeys = (raw: string[]) => {
     const next = raw
@@ -805,23 +796,14 @@ export function ReviewProjectCreateForm({
           </p>
           {!currentPreview.eligibleIncidentCount ? (
             <p>No eligible incidents found. No projects need to be created.</p>
-          ) : !hasIncidentPlan ? (
-            <p className="review-create__error">
-              The preview did not include a creation plan. Preview again before creating projects.
-            </p>
           ) : null}
         </div>
       ) : null}
       <div className="review-create__actions">
         {errorMessage ? <div className="review-create__error">{errorMessage}</div> : null}
-        {previewError ? (
-          <div className="review-create__error" role="alert">
-            {previewError}
-          </div>
-        ) : null}
         {onCancel ? (
           <button type="button" className="review-create__ghost" onClick={onCancel}>
-            Cancel
+            {cancelLabel}
           </button>
         ) : null}
         {isIncidentReview && onPreviewIncidents ? (
@@ -829,19 +811,7 @@ export function ReviewProjectCreateForm({
             type="button"
             className="review-create__ghost"
             disabled={!canSubmit || isSubmitting}
-            onClick={() => {
-              setIsPreviewing(true);
-              setPreviewError(null);
-              void onPreviewIncidents(payload)
-                .then((result) => setIncidentPreview({ key: previewKey, result }))
-                .catch((error: unknown) => {
-                  setIncidentPreview(null);
-                  setPreviewError(
-                    error instanceof Error ? error.message : 'Unable to preview incidents.',
-                  );
-                })
-                .finally(() => setIsPreviewing(false));
-            }}
+            onClick={() => onPreviewIncidents(payload)}
           >
             {isPreviewing ? 'Previewing…' : 'Preview incidents'}
           </button>
@@ -854,10 +824,9 @@ export function ReviewProjectCreateForm({
             if (!payload.dueDate) {
               return;
             }
-            if (isIncidentReview && !hasIncidentPlan) return;
-            onSubmit({ ...payload, incidentBatches: currentPreview?.incidentBatches });
+            onSubmit(payload);
           }}
-          disabled={!canSubmit || isSubmitting || (isIncidentReview && !hasIncidentPlan)}
+          disabled={!canSubmit || isSubmitting}
         >
           {isSubmitting ? (
             <>

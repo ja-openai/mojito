@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.service.agentreview.IncidentReviewCreateJob;
+import com.box.l10n.mojito.service.agentreview.IncidentReviewJobAccess;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJob;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
 import com.box.l10n.mojito.service.security.user.UserService;
@@ -150,6 +152,37 @@ public class PollableTaskArchiveReadTest {
     anotherUser.setId(15L);
     when(users.getCurrentUser()).thenReturn(Optional.of(anotherUser));
     assertThatThrownBy(() -> access.assertCanRead(taskService.getPollableTask(42L)))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("404");
+  }
+
+  @Test
+  public void archivedIncidentOwnershipStillAllowsOnlyTheRequester() {
+    PollableTask archived = task(42L);
+    archived.setName(IncidentReviewCreateJob.class.getCanonicalName());
+    User owner = new User();
+    owner.setId(14L);
+    archived.setCreatedByUser(owner);
+    when(taskRepository.findById(42L)).thenReturn(Optional.empty());
+    when(archiveStorage.findArchivedTask(42L)).thenReturn(Optional.of(archived));
+    UserService users = mock(UserService.class);
+    when(users.getCurrentUser()).thenReturn(Optional.of(owner));
+    when(users.isCurrentUserAdminOrPm()).thenReturn(true);
+    IncidentReviewJobAccess access = new IncidentReviewJobAccess(taskService, users);
+
+    access.assertCanRead(taskService.getPollableTask(42L));
+
+    User anotherUser = new User();
+    anotherUser.setId(15L);
+    when(users.getCurrentUser()).thenReturn(Optional.of(anotherUser));
+    assertThatThrownBy(() -> access.assertCanRead(taskService.getPollableTask(42L)))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("404");
+
+    when(users.getCurrentUser()).thenReturn(Optional.of(owner));
+    when(taskRepository.findById(42L)).thenReturn(Optional.of(task(42L)));
+    // An ownerless live row must not inherit ownership from a stale archive.
+    assertThatThrownBy(() -> access.assertCanRead(archived))
         .isInstanceOf(ResponseStatusException.class)
         .hasMessageContaining("404");
   }

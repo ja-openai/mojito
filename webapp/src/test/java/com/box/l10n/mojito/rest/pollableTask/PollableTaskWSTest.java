@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.box.l10n.mojito.entity.PollableTask;
+import com.box.l10n.mojito.service.agentreview.IncidentReviewJobAccess;
 import com.box.l10n.mojito.service.oaireview.AiReviewChatJobAccess;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskInspectionService;
@@ -26,6 +27,7 @@ public class PollableTaskWSTest {
     PollableTaskWS ws = new PollableTaskWS();
     ws.pollableTaskService = new StubPollableTaskService(null);
     ws.aiReviewChatJobAccess = mock(AiReviewChatJobAccess.class);
+    ws.incidentReviewJobAccess = mock(IncidentReviewJobAccess.class);
     ws.pollableTaskBlobStorage = mock(PollableTaskBlobStorage.class);
 
     for (Runnable read :
@@ -51,6 +53,7 @@ public class PollableTaskWSTest {
     PollableTaskWS ws = new PollableTaskWS();
     ws.pollableTaskService = new StubPollableTaskService(task);
     ws.aiReviewChatJobAccess = mock(AiReviewChatJobAccess.class);
+    ws.incidentReviewJobAccess = mock(IncidentReviewJobAccess.class);
     ws.pollableTaskBlobStorage = mock(PollableTaskBlobStorage.class);
     doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND))
         .when(ws.aiReviewChatJobAccess)
@@ -73,6 +76,7 @@ public class PollableTaskWSTest {
 
     PollableTaskWS ws = new PollableTaskWS();
     ws.aiReviewChatJobAccess = mock(AiReviewChatJobAccess.class);
+    ws.incidentReviewJobAccess = mock(IncidentReviewJobAccess.class);
     ws.pollableTaskService = new StubPollableTaskService(pollableTask);
     ws.tmXliffRepository = emptyTmxliffRepository();
     ws.pollableTaskBlobStorage = new PollableTaskBlobStorage();
@@ -111,6 +115,7 @@ public class PollableTaskWSTest {
 
     PollableTaskWS ws = new PollableTaskWS();
     ws.aiReviewChatJobAccess = mock(AiReviewChatJobAccess.class);
+    ws.incidentReviewJobAccess = mock(IncidentReviewJobAccess.class);
     ws.pollableTaskService = new StubPollableTaskService(null);
     ws.tmXliffRepository = emptyTmxliffRepository();
     ws.pollableTaskBlobStorage = new PollableTaskBlobStorage();
@@ -126,6 +131,7 @@ public class PollableTaskWSTest {
   public void testGetPollableTaskInspectionReturnsNotFoundForMissingTask() {
     PollableTaskWS ws = new PollableTaskWS();
     ws.aiReviewChatJobAccess = mock(AiReviewChatJobAccess.class);
+    ws.incidentReviewJobAccess = mock(IncidentReviewJobAccess.class);
     ws.pollableTaskService = new StubPollableTaskService(null);
     ws.tmXliffRepository = emptyTmxliffRepository();
     ws.pollableTaskBlobStorage = new PollableTaskBlobStorage();
@@ -146,7 +152,8 @@ public class PollableTaskWSTest {
         new PollableTaskBlobStorage(),
         emptyRepositoryRepository(),
         com.box.l10n.mojito.json.ObjectMapper.withNoFailOnUnknownProperties(),
-        mock(AiReviewChatJobAccess.class)) {
+        mock(AiReviewChatJobAccess.class),
+        mock(IncidentReviewJobAccess.class)) {
       @Override
       public TaskInspection inspectTask(long pollableTaskId) {
         if (inspection == null) {

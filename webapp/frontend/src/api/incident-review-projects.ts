@@ -1,3 +1,5 @@
+import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
+import { isTransientHttpError, poll } from '../utils/poller';
 import type { ApiReviewProjectType } from './review-projects';
 
 export type ReviewSource = 'CURRENT_TRANSLATIONS' | 'INCIDENTS';
@@ -14,12 +16,22 @@ export type IncidentReviewProjectRequest = {
   maxWordCountPerProject: number | null;
   maxIncidentCount?: number | null;
   maxIncidentsPerProject?: number | null;
-  incidentIds?: number[];
   assignTranslator: boolean;
   type: ApiReviewProjectType;
   notes: string | null;
   screenshotImageIds: string[];
 };
+
+export type IncidentReviewTaskMode = 'preview' | 'create';
+
+export type IncidentReviewTask = {
+  id: number;
+  isAllFinished: boolean;
+  message?: string | null;
+  errorMessage?: string | null;
+};
+
+export type IncidentReviewTaskStart = { pollableTaskId: number };
 
 export type IncidentReviewProjectResult = {
   eligibleIncidentCount: number;
@@ -38,24 +50,22 @@ export type IncidentReviewProjectResult = {
 async function submitIncidentReviewRequest(
   path: string,
   request: IncidentReviewProjectRequest,
-): Promise<IncidentReviewProjectResult> {
+): Promise<IncidentReviewTaskStart> {
   const response = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   });
-  if (!response.ok) {
-    const body = await response.text();
-    let message = 'Unable to prepare incident review projects.';
-    try {
-      const error = JSON.parse(body) as { message?: string };
-      if (typeof error.message === 'string') message = error.message;
-    } catch {
-      // A proxy error may not contain a JSON application response.
-    }
-    throw new Error(message);
+  const result = await readResponse<IncidentReviewTaskStart>(response);
+  if (!result || !Number.isSafeInteger(result.pollableTaskId) || result.pollableTaskId <= 0) {
+    throw Object.assign(
+      new Error(`Incident review did not return a valid task ID (HTTP ${response.status}).`),
+      {
+        status: response.status,
+      },
+    );
   }
-  return response.json() as Promise<IncidentReviewProjectResult>;
+  return result;
 }
 
 export function previewIncidentReviewProjects(request: IncidentReviewProjectRequest) {
@@ -64,4 +74,70 @@ export function previewIncidentReviewProjects(request: IncidentReviewProjectRequ
 
 export function createIncidentReviewProjects(request: IncidentReviewProjectRequest) {
   return submitIncidentReviewRequest('/api/incident-review-projects', request);
+}
+
+export async function waitForIncidentReviewTask(
+  taskId: number,
+  onProgress: (task: IncidentReviewTask) => void,
+  signal: AbortSignal,
+): Promise<{
+  task: IncidentReviewTask;
+  result: IncidentReviewProjectResult | null;
+  outputError?: string;
+}> {
+  const task = await poll(
+    async () => {
+      const response = await fetch(`/api/pollableTasks/${taskId}`, { signal });
+      const raw = await readResponse<IncidentReviewTask & { allFinished?: boolean }>(response);
+      return {
+        ...raw,
+        isAllFinished: raw.isAllFinished ?? raw.allFinished ?? false,
+        errorMessage: normalizePollableTaskErrorMessage(raw.errorMessage) || null,
+      };
+    },
+    {
+      intervalMs: 1000,
+      maxIntervalMs: 8000,
+      timeoutMs: 60 * 60 * 1000,
+      timeoutMessage: 'Stopped waiting for incident review. Reconnect to check its progress.',
+      isTransientError: (error) => !signal.aborted && isTransientHttpError(error),
+      onResult: onProgress,
+      shouldStop: (task) => task.isAllFinished,
+    },
+  );
+  // Failed creation can still have committed projects. Read its output before reporting failure.
+  try {
+    const response = await fetch(`/api/pollableTasks/${taskId}/output`, { signal });
+    if (task.errorMessage && response.status === 404) return { task, result: null };
+    const result = await readResponse<IncidentReviewProjectResult | null>(response);
+    if (!result && !task.errorMessage)
+      throw new Error('The completed incident task has no result.');
+    return { task, result };
+  } catch (error) {
+    if (signal.aborted || !task.errorMessage) throw error;
+    return {
+      task,
+      result: null,
+      outputError: error instanceof Error ? error.message : 'Unable to load the saved result.',
+    };
+  }
+}
+
+async function readResponse<T>(response: Response): Promise<T> {
+  const body = await response.text();
+  let value: unknown;
+  try {
+    value = body ? JSON.parse(body) : null;
+  } catch {
+    // Proxy responses need a useful HTTP status rather than an HTML error page.
+  }
+  if (!response.ok || value === undefined) {
+    const message = response.ok
+      ? 'Incident review returned an unexpected response'
+      : normalizePollableTaskErrorMessage(value) || 'Incident review request failed';
+    throw Object.assign(new Error(`${message} (HTTP ${response.status}).`), {
+      status: response.status,
+    });
+  }
+  return value as T;
 }
