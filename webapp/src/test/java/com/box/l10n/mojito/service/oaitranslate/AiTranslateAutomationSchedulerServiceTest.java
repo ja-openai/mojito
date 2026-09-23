@@ -206,6 +206,44 @@ public class AiTranslateAutomationSchedulerServiceTest {
   }
 
   @Test
+  public void clearingLocaleExclusionsReconsidersRunCreatedInSamePersistedSecond() {
+    ZonedDateTime persistedSecond = ZonedDateTime.parse("2026-09-23T12:00:00Z");
+    ZonedDateTime startedAfterConfigChange = persistedSecond.plusMinutes(1);
+    when(aiTranslateAutomationConfigService.getConfig()).thenReturn(config(List.of(), List.of()));
+    when(aiTranslateAutomationConfigService.getLastModifiedDate()).thenReturn(persistedSecond);
+    when(repositoryRepository.findByDeletedFalseAndHiddenFalseOrderByNameAsc())
+        .thenReturn(List.of(repository(1L, "repo-a")));
+    when(aiTranslateRunService.getLatestCompletedRunStarts(List.of(1L)))
+        .thenReturn(Map.of(1L, startedAfterConfigChange));
+    when(aiTranslateRunService.getLatestCompletedRunCreatedDates(List.of(1L)))
+        .thenReturn(Map.of(1L, persistedSecond));
+
+    assertEquals(
+        1,
+        aiTranslateAutomationSchedulerService
+            .scheduleConfiguredRepositories("cron", true)
+            .scheduledRepositoryCount());
+    verify(tmTextUnitCurrentVariantRepository, never())
+        .findFirstChangeSince(1L, startedAfterConfigChange);
+
+    ZonedDateTime newerRunCreatedDate = persistedSecond.plusMinutes(2);
+    when(aiTranslateRunService.getLatestCompletedRunCreatedDates(List.of(1L)))
+        .thenReturn(Map.of(1L, newerRunCreatedDate));
+    when(aiTranslateRunService.getLatestCompletedRunStarts(List.of(1L)))
+        .thenReturn(Map.of(1L, newerRunCreatedDate));
+
+    assertEquals(
+        0,
+        aiTranslateAutomationSchedulerService
+            .scheduleConfiguredRepositories("cron", true)
+            .scheduledRepositoryCount());
+    ArgumentCaptor<AiTranslateInput> inputCaptor = ArgumentCaptor.forClass(AiTranslateInput.class);
+    verify(aiTranslateService).aiTranslateAsync(inputCaptor.capture(), anyString());
+    assertNull(inputCaptor.getValue().targetBcp47tags());
+    verify(tmTextUnitCurrentVariantRepository).findFirstChangeSince(1L, newerRunCreatedDate);
+  }
+
+  @Test
   public void includedRepositoryLocaleExclusionsAreExactAndLeaveOtherRepositoriesUnchanged() {
     when(aiTranslateAutomationConfigService.getConfig())
         .thenReturn(config(List.of(1L, 2L), List.of(1L), Map.of(1L, List.of("fr"))));

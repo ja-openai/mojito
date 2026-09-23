@@ -247,11 +247,12 @@ public class AiTranslateAutomationSchedulerService {
     }
 
     // Locale selections are captured when a run is scheduled, before it starts executing.
+    // Audit dates have second precision, so equal dates cannot prove the run used this config.
     ZonedDateTime lastCompletedRunCreatedDate =
         lastCompletedRunCreatedDates.get(repository.getId());
     if (configLastModifiedDate != null
         && (lastCompletedRunCreatedDate == null
-            || configLastModifiedDate.isAfter(lastCompletedRunCreatedDate))) {
+            || !configLastModifiedDate.isBefore(lastCompletedRunCreatedDate))) {
       return true;
     }
 
