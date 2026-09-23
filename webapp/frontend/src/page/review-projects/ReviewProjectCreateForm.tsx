@@ -53,7 +53,6 @@ export type ReviewProjectCreateFormValues = {
   skipTextUnitsInOpenProjects: boolean;
   maxWordCountPerProject: number | null;
   maxIncidentCount?: number | null;
-  maxIncidentsPerProject?: number | null;
   screenshotImageIds: string[];
   teamId: number | null;
   assignTranslator: boolean;
@@ -144,7 +143,6 @@ export function ReviewProjectCreateForm({
   const [skipTextUnitsInOpenProjects, setSkipTextUnitsInOpenProjects] = useState(true);
   const [maxWordCountDraft, setMaxWordCountDraft] = useState('');
   const [maxIncidentCountDraft, setMaxIncidentCountDraft] = useState('');
-  const [maxIncidentsPerProjectDraft, setMaxIncidentsPerProjectDraft] = useState('500');
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
   const [assignTranslator, setAssignTranslator] = useState(true);
@@ -198,12 +196,6 @@ export function ReviewProjectCreateForm({
       Number.isSafeInteger(maxIncidentCount) &&
       maxIncidentCount >= 1 &&
       maxIncidentCount <= 2147483647);
-  const maxIncidentsPerProject = Number(maxIncidentsPerProjectDraft);
-  const maxIncidentsPerProjectValid =
-    /^\d+$/.test(maxIncidentsPerProjectDraft.trim()) &&
-    Number.isInteger(maxIncidentsPerProject) &&
-    maxIncidentsPerProject >= 1 &&
-    maxIncidentsPerProject <= 5000;
 
   const canSubmit = useMemo(
     () =>
@@ -219,14 +211,13 @@ export function ReviewProjectCreateForm({
       (!isIncidentReview ||
         (selectedTeamId != null && (isAllIncidents || sourceMode !== 'TEXT_UNITS'))) &&
       maxWordCountValid &&
-      (!isIncidentReview || (maxIncidentCountValid && maxIncidentsPerProjectValid)) &&
+      (!isIncidentReview || maxIncidentCountValid) &&
       uploadQueue.every((item) => item.status !== 'uploading'),
     [
       dueDate,
       name,
       maxWordCountValid,
       maxIncidentCountValid,
-      maxIncidentsPerProjectValid,
       selectedLocaleTags.length,
       selectedReviewFeatureIds.length,
       selectedRepositoryIds.length,
@@ -256,7 +247,6 @@ export function ReviewProjectCreateForm({
     skipTextUnitsInOpenProjects,
     maxWordCountPerProject,
     maxIncidentCount: isIncidentReview ? maxIncidentCount : null,
-    maxIncidentsPerProject: isIncidentReview ? maxIncidentsPerProject : null,
     screenshotImageIds: screenshotKeys,
     teamId: selectedTeamId,
     assignTranslator,
@@ -578,56 +568,30 @@ export function ReviewProjectCreateForm({
         </div>
 
         {isIncidentReview ? (
-          <div className="review-create__two-up">
-            <div className="review-create__field">
-              <label className="review-create__label" htmlFor="review-create-max-incidents">
-                Maximum incidents overall (optional)
-              </label>
-              <input
-                id="review-create-max-incidents"
-                className="review-create__input"
-                type="text"
-                inputMode="numeric"
-                value={maxIncidentCountDraft}
-                onChange={(event) => setMaxIncidentCountDraft(event.target.value)}
-                placeholder="All matching incidents"
-                disabled={isSubmitting}
-                aria-invalid={!maxIncidentCountValid}
-                aria-describedby="review-create-max-incidents-hint"
-              />
-              <span className="review-create__hint" id="review-create-max-incidents-hint">
-                Leave blank to include every eligible incident in the selected scope.
+          <div className="review-create__field">
+            <label className="review-create__label" htmlFor="review-create-max-incidents">
+              Maximum incidents overall (optional)
+            </label>
+            <input
+              id="review-create-max-incidents"
+              className="review-create__input"
+              type="text"
+              inputMode="numeric"
+              value={maxIncidentCountDraft}
+              onChange={(event) => setMaxIncidentCountDraft(event.target.value)}
+              placeholder="All matching incidents"
+              disabled={isSubmitting}
+              aria-invalid={!maxIncidentCountValid}
+              aria-describedby="review-create-max-incidents-hint"
+            />
+            <span className="review-create__hint" id="review-create-max-incidents-hint">
+              Leave blank to include every eligible incident in the selected scope.
+            </span>
+            {!maxIncidentCountValid ? (
+              <span className="review-create__error" role="alert">
+                Enter a whole number from 1 to 2,147,483,647, or leave blank.
               </span>
-              {!maxIncidentCountValid ? (
-                <span className="review-create__error" role="alert">
-                  Enter a whole number from 1 to 2,147,483,647, or leave blank.
-                </span>
-              ) : null}
-            </div>
-            <div className="review-create__field">
-              <label className="review-create__label" htmlFor="review-create-incidents-per-project">
-                Maximum incidents per project
-              </label>
-              <input
-                id="review-create-incidents-per-project"
-                className="review-create__input"
-                type="text"
-                inputMode="numeric"
-                value={maxIncidentsPerProjectDraft}
-                onChange={(event) => setMaxIncidentsPerProjectDraft(event.target.value)}
-                disabled={isSubmitting}
-                aria-invalid={!maxIncidentsPerProjectValid}
-                aria-describedby="review-create-incidents-per-project-hint"
-              />
-              <span className="review-create__hint" id="review-create-incidents-per-project-hint">
-                Split projects at this incident count or the word limit, whichever comes first.
-              </span>
-              {!maxIncidentsPerProjectValid ? (
-                <span className="review-create__error" role="alert">
-                  Enter a whole number from 1 to 5,000.
-                </span>
-              ) : null}
-            </div>
+            ) : null}
           </div>
         ) : null}
 

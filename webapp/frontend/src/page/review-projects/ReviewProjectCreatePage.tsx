@@ -542,7 +542,6 @@ export function ReviewProjectCreatePage() {
         dueDate: values.dueDate,
         maxWordCountPerProject: values.maxWordCountPerProject,
         maxIncidentCount: values.maxIncidentCount,
-        maxIncidentsPerProject: values.maxIncidentsPerProject,
         assignTranslator: values.assignTranslator,
         type: values.type,
         notes: values.notes,

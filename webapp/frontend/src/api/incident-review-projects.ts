@@ -15,7 +15,6 @@ export type IncidentReviewProjectRequest = {
   dueDate: string;
   maxWordCountPerProject: number | null;
   maxIncidentCount?: number | null;
-  maxIncidentsPerProject?: number | null;
   assignTranslator: boolean;
   type: ApiReviewProjectType;
   notes: string | null;

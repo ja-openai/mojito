@@ -47,7 +47,6 @@ public class IncidentReviewBatchService {
       List<String> screenshotImageIds,
       Boolean allRepositories,
       Integer maxIncidentCount,
-      Integer maxIncidentsPerProject,
       List<Long> incidentIds) {
     public Request(
         List<Long> repositoryIds,
@@ -79,7 +78,6 @@ public class IncidentReviewBatchService {
           notes,
           screenshotImageIds,
           allRepositories,
-          null,
           null,
           null);
     }
@@ -315,11 +313,8 @@ public class IncidentReviewBatchService {
   public Result createManualProject(Request request, Long requestedByUserId) {
     Scope scope = validate(request, requestedByUserId);
     List<Long> ids = request.incidentIds();
-    int maxIncidents =
-        request.maxIncidentsPerProject() == null ? 500 : request.maxIncidentsPerProject();
     if (ids == null
         || ids.isEmpty()
-        || ids.size() > maxIncidents
         || ids.stream().anyMatch(id -> id == null || id < 1)
         || new HashSet<>(ids).size() != ids.size()
         || (request.maxIncidentCount() != null && ids.size() > request.maxIncidentCount())) {
@@ -461,9 +456,6 @@ public class IncidentReviewBatchService {
       throw new IllegalArgumentException("maxWordCountPerProject must be between 1 and 100000");
     if (request.maxIncidentCount() != null && request.maxIncidentCount() < 1)
       throw new IllegalArgumentException("maxIncidentCount must be a positive integer");
-    if (request.maxIncidentsPerProject() != null
-        && (request.maxIncidentsPerProject() < 1 || request.maxIncidentsPerProject() > 5000))
-      throw new IllegalArgumentException("maxIncidentsPerProject must be between 1 and 5000");
     if (request.type() == ReviewProjectType.TERMINOLOGY
         || request.type() == ReviewProjectType.TERM_CANDIDATE)
       throw new IllegalArgumentException("Incident review does not use terminology project types");

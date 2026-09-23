@@ -13,6 +13,7 @@ import com.box.l10n.mojito.service.agentreview.IncidentReviewBatchService.Skippe
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.LongStream;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -71,7 +72,7 @@ public class ManualIncidentReviewServiceTest {
         .allSatisfy(
             batch -> {
               assertThat(batch.teamId()).isEqualTo(request.teamId());
-              assertThat(batch.maxIncidentsPerProject()).isEqualTo(2);
+              assertThat(batch.maxWordCountPerProject()).isEqualTo(2);
               assertThat(batch.dueDate()).isEqualTo(request.dueDate());
             });
   }
@@ -127,7 +128,42 @@ public class ManualIncidentReviewServiceTest {
     verify(batches, never()).previewManualPage(any(), any(), anyLong(), any());
   }
 
+  @Test
+  public void unlimitedProjectIncludesMoreThanFiveThousandIncidentsAcrossScanPages() {
+    Request request = request(null, null);
+    List<PlannedIncident> incidents =
+        LongStream.rangeClosed(1, 5001).mapToObj(this::incident).toList();
+    for (int offset = 0; offset < incidents.size(); offset += 500) {
+      int end = Math.min(offset + 500, incidents.size());
+      when(batches.previewManualPage(request, 7L, offset, offset == 0 ? null : 5001L))
+          .thenReturn(
+              new PreviewPage(
+                  incidents.subList(offset, end),
+                  List.of(),
+                  end - offset,
+                  end < incidents.size(),
+                  end,
+                  5001));
+    }
+    when(batches.createManualProject(any(), eq(7L))).thenReturn(created(5001, 10L));
+
+    Result result = service.create(request, 7L);
+
+    assertThat(result.eligibleIncidentCount()).isEqualTo(5001);
+    assertThat(result.projectCount()).isEqualTo(1);
+    assertThat(result.scannedIncidentCount()).isEqualTo(5001);
+    ArgumentCaptor<Request> created = ArgumentCaptor.forClass(Request.class);
+    verify(batches).createManualProject(created.capture(), eq(7L));
+    assertThat(created.getValue().incidentIds())
+        .containsExactlyElementsOf(LongStream.rangeClosed(1, 5001).boxed().toList());
+    assertThat(created.getValue().maxWordCountPerProject()).isNull();
+  }
+
   static Request request(List<Long> ids) {
+    return request(ids, 2);
+  }
+
+  static Request request(List<Long> ids, Integer maxWords) {
     return new Request(
         List.of(),
         List.of(),
@@ -137,14 +173,13 @@ public class ManualIncidentReviewServiceTest {
         3L,
         "Incident review",
         ZonedDateTime.now().plusDays(1).withNano(0),
-        null,
+        maxWords,
         false,
         null,
         null,
         List.of(),
         true,
         null,
-        2,
         ids);
   }
 

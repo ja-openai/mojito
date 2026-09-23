@@ -30,10 +30,9 @@ public class ManualIncidentReviewService {
     final List<List<Long>> projects = new ArrayList<>();
     long wordCount;
 
-    void add(PlannedIncident incident, int maxWords, int maxIncidents) {
+    void add(PlannedIncident incident, int maxWords) {
       if (projects.isEmpty()
-          || projects.getLast().size() == maxIncidents
-          || wordCount + incident.wordCount() > maxWords) {
+          || (maxWords != Integer.MAX_VALUE && wordCount + incident.wordCount() > maxWords)) {
         projects.add(new ArrayList<>());
         wordCount = 0;
       }
@@ -53,10 +52,6 @@ public class ManualIncidentReviewService {
   }
 
   public Preview preview(Request request, Long actor, Consumer<String> progress) {
-    int maxIncidents =
-        request != null && request.maxIncidentsPerProject() != null
-            ? request.maxIncidentsPerProject()
-            : 500;
     int maxWords =
         request != null && request.maxWordCountPerProject() != null
             ? request.maxWordCountPerProject()
@@ -99,7 +94,7 @@ public class ManualIncidentReviewService {
                 - 1;
         List<Wave> waves = groups.computeIfAbsent(group, ignored -> new ArrayList<>());
         if (waves.size() <= occurrence) waves.add(new Wave());
-        waves.get(occurrence).add(incident, maxWords, maxIncidents);
+        waves.get(occurrence).add(incident, maxWords);
         locales.add(incident.localeTag());
         selected++;
       }
@@ -215,7 +210,6 @@ public class ManualIncidentReviewService {
         request.screenshotImageIds(),
         request.allRepositories(),
         request.maxIncidentCount(),
-        request.maxIncidentsPerProject(),
         ids);
   }
 }

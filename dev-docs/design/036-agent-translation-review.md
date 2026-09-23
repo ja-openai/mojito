@@ -158,17 +158,19 @@ Both share eligibility and routing in `IncidentReviewBatchService`; manual plann
   the first eligible incidents by ID, rather than limiting scanned IDs. `limitReached` indicates
   that at least one additional eligible incident was found. Preview's eligible count is the chosen
   total, not a hidden first page or a claim about the remainder of a limited selection.
-- **Maximum incidents per project** defaults to 500 and accepts 1–5,000. This explicit
-  `maxIncidentsPerProject` limit bounds each creation transaction. Existing maximum source words
-  also applies; one string is never split. Compatible repository/locale/run groups and duplicate
-  string waves are carried across read pages, so the internal page size does not change project
-  membership. Blank word limit retains the regular project's unlimited-word behavior within the
-  selected incident-count limit.
+- Manual incident projects use the optional maximum source words per project, like regular
+  manual projects; one string is never split. There is no per-project incident-count limit.
+  Compatible repository/locale/run groups and duplicate string waves are carried across read
+  pages, so the internal page size does not change project membership. Blank word limit means
+  no size-based splitting. Previously saved job inputs remain readable; their removed
+  `maxIncidentsPerProject` setting is ignored.
 - Manual Preview and Create use the existing Quartz pollable-task mechanism. Both return HTTP
   202 with a task ID before scanning; the client polls task progress and stored output. Preview
   is optional. Create plans the current finite selection and processes every planned project in
-  the background, using one existing bounded transaction per project. Navigating away does not
-  cancel server work; the task URL can reconnect to it without submitting another creation job.
+  the background, using one atomic transaction per project. Creation loads and locks that
+  project's rows together; transaction size scales with the project, while scanning remains
+  paged. Navigating away does not cancel server work; the task URL can reconnect to it without
+  submitting another creation job.
 - Preview remains read-only and returns `incidentBatches` for the displayed counts. Create makes
   its own fresh plan, so eligibility and counts can change after a preview. It rechecks access,
   scope, exact current state, assignment eligibility and word/group boundaries under the existing

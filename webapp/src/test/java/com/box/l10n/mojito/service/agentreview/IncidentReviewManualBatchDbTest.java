@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.LongStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +56,7 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
     }
     List<Long> ids =
         incidents.saveAllAndFlush(pending).stream().map(TranslationIncident::getId).toList();
-    var request = request(f, null, null, null, null);
+    var request = request(f, null, null, null);
     long cursorCount = cursors.count();
 
     var preview = manual.preview(request, actor());
@@ -94,6 +93,34 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
   }
 
   @Test
+  public void oneProjectWithoutWordLimitSpansMoreThanFiveHundredIncidents() throws Exception {
+    Fixture f = fixture("", 1, 501);
+    List<TranslationIncident> pending = new ArrayList<>();
+    for (int i = 0; i < f.units().size(); i++) pending.add(incident(f, i));
+    List<Long> ids =
+        incidents.saveAllAndFlush(pending).stream().map(TranslationIncident::getId).toList();
+    var request = request(f, null, null, null);
+
+    var preview = manual.preview(request, actor());
+
+    assertThat(preview.eligibleIncidentCount()).isEqualTo(501);
+    assertThat(preview.projectCount()).isEqualTo(1);
+    assertThat(preview.incidentBatches()).containsExactly(ids);
+    assertThat(preview.limitReached()).isFalse();
+
+    var created = manual.create(withIds(request, preview.incidentBatches().getFirst()), actor());
+
+    assertThat(created.eligibleIncidentCount()).isEqualTo(501);
+    assertThat(created.projectCount()).isEqualTo(1);
+    assertThat(created.skippedIncidentCount()).isZero();
+    assertThat(incidents.findAllById(ids))
+        .allSatisfy(
+            incident ->
+                assertThat(incident.getResolutionReviewProjectId())
+                    .isEqualTo(created.projectIds().getFirst()));
+  }
+
+  @Test
   public void projectSplitsAndDuplicateWavesDoNotDependOnInternalPageSize() throws Exception {
     Fixture f = fixture("", 1, 5);
     List<TranslationIncident> saved =
@@ -105,7 +132,7 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
                 incident(f, 0),
                 incident(f, 3),
                 incident(f, 4)));
-    var request = request(f, null, null, 2, null);
+    var request = request(f, 4, null, null);
     Object originalLimit = ReflectionTestUtils.getField(batches, "candidateLimit");
     try {
       ReflectionTestUtils.setField(batches, "candidateLimit", 2);
@@ -140,7 +167,7 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
       stale.add(incident);
     }
     stale = incidents.saveAllAndFlush(stale);
-    var allTypes = withType(request(f, null, null, null, null), null);
+    var allTypes = withType(request(f, null, null, null), null);
     batches.create(allTypes, actor());
     var cursor =
         cursors.findAll().stream()
@@ -190,7 +217,7 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
     Object originalLimit = ReflectionTestUtils.getField(batches, "candidateLimit");
     try {
       ReflectionTestUtils.setField(batches, "candidateLimit", 2);
-      var preview = manual.preview(request(f, null, 3, 2, null), actor());
+      var preview = manual.preview(request(f, 4, 3, null), actor());
 
       assertThat(preview.eligibleIncidentCount()).isEqualTo(3);
       assertThat(preview.projectCount()).isEqualTo(2);
@@ -210,32 +237,30 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
   }
 
   @Test
-  public void explicitIncidentAndWordLimitsControlSplitsAndCreationRechecksWordBudget()
-      throws Exception {
+  public void optionalWordLimitControlsSplitsAndCreationRechecksWordBudget() throws Exception {
     Fixture f = fixture("", 1, 7);
     List<TranslationIncident> pending = new ArrayList<>();
     for (int i = 0; i < 7; i++) pending.add(incident(f, i));
     pending = incidents.saveAllAndFlush(pending);
 
-    assertThat(manual.preview(request(f, null, null, 3, null), actor()).incidentBatches())
+    assertThat(manual.preview(request(f, 6, null, null), actor()).incidentBatches())
         .extracting(List::size)
         .containsExactly(3, 3, 1);
-    assertThat(manual.preview(request(f, 5, null, 3, null), actor()).incidentBatches())
+    assertThat(manual.preview(request(f, 5, null, null), actor()).incidentBatches())
         .extracting(List::size)
         .containsExactly(2, 2, 2, 1);
-    assertThat(manual.preview(request(f, 1, null, 3, null), actor()).incidentBatches())
+    assertThat(manual.preview(request(f, 1, null, null), actor()).incidentBatches())
         .hasSize(7)
         .allSatisfy(batch -> assertThat(batch).hasSize(1));
-    assertThat(manual.preview(request(f, 100000, null, null, null), actor()).projectCount())
-        .isEqualTo(1);
+    assertThat(manual.preview(request(f, 100000, null, null), actor()).projectCount()).isEqualTo(1);
 
     // A create call must remain one project even if a client changes the previewed grouping.
     List<Long> tooManyWords =
         pending.subList(0, 3).stream().map(TranslationIncident::getId).toList();
-    assertThatThrownBy(() -> manual.create(request(f, 5, null, 3, tooManyWords), actor()))
+    assertThatThrownBy(() -> manual.create(request(f, 5, null, tooManyWords), actor()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("one project");
-    var created = manual.create(request(f, 5, null, 3, tooManyWords.subList(0, 2)), actor());
+    var created = manual.create(request(f, 5, null, tooManyWords.subList(0, 2)), actor());
     assertThat(created.eligibleIncidentCount()).isEqualTo(2);
     assertThat(created.projectCount()).isEqualTo(1);
     assertThat(created.skippedIncidentCount()).isZero();
@@ -247,7 +272,7 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
     Fixture f = fixture("", 1, 4);
     var pending =
         incidents.saveAllAndFlush(List.of(incident(f, 0), incident(f, 1), incident(f, 2)));
-    var request = request(f, null, null, null, null);
+    var request = request(f, null, null, null);
     var preview = manual.preview(request, actor());
     var changed = incidents.findById(pending.get(0).getId()).orElseThrow();
     changed.setSelectedSource("A stale incident snapshot");
@@ -278,7 +303,7 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
     Fixture outside = fixture("outside", 1, 1);
     var selected = incidents.saveAllAndFlush(List.of(incident(f, 0), incident(f, 1)));
     var other = incidents.saveAndFlush(incident(outside, 0));
-    var request = request(f, null, null, null, null);
+    var request = request(f, null, null, null);
 
     assertThatThrownBy(() -> batches.createManualProject(request, actor()))
         .isInstanceOf(IllegalArgumentException.class);
@@ -287,27 +312,17 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
             List.<Long>of(),
             List.of(0L),
             List.of(-1L),
-            List.of(selected.getFirst().getId(), selected.getFirst().getId()),
-            LongStream.rangeClosed(1, 5001).boxed().toList())) {
+            List.of(selected.getFirst().getId(), selected.getFirst().getId()))) {
       assertThatThrownBy(() -> manual.create(withIds(request, invalid), actor()))
           .isInstanceOf(IllegalArgumentException.class);
     }
     assertThatThrownBy(
             () ->
                 manual.create(
-                    request(
-                        f,
-                        null,
-                        null,
-                        1,
-                        selected.stream().map(TranslationIncident::getId).toList()),
+                    request(f, null, 1, selected.stream().map(TranslationIncident::getId).toList()),
                     actor()))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> manual.preview(request(f, null, 0, null, null), actor()))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> manual.preview(request(f, null, null, 0, null), actor()))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> manual.preview(request(f, null, null, 5001, null), actor()))
+    assertThatThrownBy(() -> manual.preview(request(f, null, 0, null), actor()))
         .isInstanceOf(IllegalArgumentException.class);
 
     assertThatThrownBy(() -> manual.create(withIds(request, List.of(other.getId())), actor()))
@@ -325,7 +340,7 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
     Fixture f = fixture("", 1, 3);
     var selected =
         incidents.saveAllAndFlush(List.of(incident(f, 0), incident(f, 1), incident(f, 2)));
-    var created = manual.create(request(f, null, null, 2, null), actor());
+    var created = manual.create(request(f, 4, null, null), actor());
     assertThat(created.eligibleIncidentCount()).isEqualTo(3);
     assertThat(created.projectCount()).isEqualTo(2);
     assertThat(created.hasMore()).isFalse();
@@ -344,7 +359,7 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
   }
 
   private IncidentReviewBatchService.Request request(
-      Fixture f, Integer maxWords, Integer maxTotal, Integer maxPerProject, List<Long> ids) {
+      Fixture f, Integer maxWords, Integer maxTotal, List<Long> ids) {
     return new IncidentReviewBatchService.Request(
         List.of(f.repository().getId()),
         null,
@@ -361,7 +376,6 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
         null,
         false,
         maxTotal,
-        maxPerProject,
         ids);
   }
 
@@ -383,7 +397,6 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
         request.screenshotImageIds(),
         request.allRepositories(),
         request.maxIncidentCount(),
-        request.maxIncidentsPerProject(),
         ids);
   }
 
@@ -405,7 +418,6 @@ public class IncidentReviewManualBatchDbTest extends ServiceTestBase {
         request.screenshotImageIds(),
         request.allRepositories(),
         request.maxIncidentCount(),
-        request.maxIncidentsPerProject(),
         request.incidentIds());
   }
 

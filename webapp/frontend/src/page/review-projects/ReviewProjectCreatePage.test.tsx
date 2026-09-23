@@ -204,6 +204,9 @@ describe('incident review project creation', () => {
   it('creates directly with one whole-scope request without previewing', async () => {
     renderPage('REPOSITORIES');
     selectIncidentSource();
+    expect(
+      screen.queryByRole('textbox', { name: 'Maximum incidents per project' }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await screen.findByRole('link', { name: 'Open review project #201' });
@@ -215,10 +218,11 @@ describe('incident review project creation', () => {
         localeTags: ['fr'],
         teamId: 31,
         maxIncidentCount: null,
-        maxIncidentsPerProject: 500,
+        maxWordCountPerProject: null,
       }),
     );
     expect(createIncidentsMock.mock.calls[0][0]).not.toHaveProperty('incidentIds');
+    expect(createIncidentsMock.mock.calls[0][0]).not.toHaveProperty('maxIncidentsPerProject');
     expect(createRequestMock).not.toHaveBeenCalled();
     expect(screen.getByTestId('location')).toHaveTextContent('incidentTask=2000');
     expect(screen.getByTestId('location')).toHaveTextContent('incidentTaskMode=create');
@@ -313,7 +317,9 @@ describe('incident review project creation', () => {
     await screen.findByText('Created 4 of 9 projects.');
     expect(screen.getByRole('button', { name: 'Create…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Preview incidents' })).toBeDisabled();
-    expect(screen.getByRole('textbox', { name: 'Maximum incidents per project' })).toBeDisabled();
+    expect(
+      screen.getByRole('textbox', { name: 'Max word count per project (optional)' }),
+    ).toBeDisabled();
     expect(
       screen.getByText('You can leave this page and return to check progress.'),
     ).toBeInTheDocument();
@@ -511,30 +517,29 @@ describe('incident review project creation', () => {
     expect(screen.queryByRole('link', { name: /Open review project/ })).not.toBeInTheDocument();
   });
 
-  it('sends visible overall and per-project limits in one create request', async () => {
+  it('sends the optional overall incident limit and word split in one create request', async () => {
     renderPage('REPOSITORIES');
     selectIncidentSource();
     fireEvent.change(
       screen.getByRole('textbox', { name: 'Maximum incidents overall (optional)' }),
       { target: { value: '2000' } },
     );
-    fireEvent.change(screen.getByRole('textbox', { name: 'Maximum incidents per project' }), {
-      target: { value: '100' },
-    });
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Max word count per project (optional)' }),
+      { target: { value: '100' } },
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await screen.findByRole('link', { name: 'Open review project #201' });
     expect(createIncidentsMock.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ maxIncidentCount: 2000, maxIncidentsPerProject: 100 }),
+      expect.objectContaining({ maxIncidentCount: 2000, maxWordCountPerProject: 100 }),
     );
+    expect(createIncidentsMock.mock.calls[0][0]).not.toHaveProperty('maxIncidentsPerProject');
   });
 
   it.each([
     ['Maximum incidents overall (optional)', '0'],
     ['Maximum incidents overall (optional)', '2147483648'],
     ['Maximum incidents overall (optional)', '1.5'],
-    ['Maximum incidents per project', ''],
-    ['Maximum incidents per project', '0'],
-    ['Maximum incidents per project', '5001'],
   ])('rejects %s set to %s', (label, value) => {
     renderPage('REPOSITORIES');
     selectIncidentSource();

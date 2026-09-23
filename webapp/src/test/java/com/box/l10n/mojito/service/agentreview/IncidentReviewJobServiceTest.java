@@ -81,7 +81,7 @@ public class IncidentReviewJobServiceTest {
       assertThat(decoded.requestedByUserId()).isEqualTo(7L);
       assertThat(decoded.request().incidentIds()).isNull();
       assertThat(decoded.request().dueDate().toInstant()).isEqualTo(request.dueDate().toInstant());
-      assertThat(decoded.request().maxIncidentsPerProject()).isEqualTo(2);
+      assertThat(decoded.request().maxWordCountPerProject()).isEqualTo(2);
     }
     verify(batches, times(2)).validateRequest(request, 7L);
     verifyNoMoreInteractions(batches);
@@ -98,6 +98,22 @@ public class IncidentReviewJobServiceTest {
     validation.validateRequest(request, 7L);
     verify(teams).assertCurrentUserCanAccessTeam(request.teamId());
     verify(users, never()).checkUserCanEditLocale(anyLong());
+  }
+
+  @Test
+  public void savedJobsIgnoreRemovedIncidentCountLimit() throws Exception {
+    ObjectMapper mapper = ObjectMapper.withNoFailOnUnknownProperties();
+    Command oldCommand = new Command(ManualIncidentReviewServiceTest.request(null, null), 7L);
+    com.fasterxml.jackson.databind.node.ObjectNode payload = mapper.valueToTree(oldCommand);
+    ((com.fasterxml.jackson.databind.node.ObjectNode) payload.get("request"))
+        .put("maxIncidentsPerProject", 500);
+
+    Command decoded = mapper.treeToValue(payload, Command.class);
+
+    assertThat(decoded.request().maxWordCountPerProject()).isNull();
+    assertThat(decoded.request().maxIncidentCount()).isNull();
+    assertThat(decoded.requestedByUserId()).isEqualTo(7L);
+    assertThat(mapper.writeValueAsString(decoded)).doesNotContain("maxIncidentsPerProject");
   }
 
   @Test
