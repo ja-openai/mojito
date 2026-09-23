@@ -169,6 +169,6 @@ public class FilePattern {
    * @return the corresponding regex
    */
   private String patternTemplateToRegex(String filePatternTemplate) {
-    return filePatternTemplate.replaceAll("\\.", Matcher.quoteReplacement("\\."));
+    return filePatternTemplate.replace(".", "\\.");
   }
 }
