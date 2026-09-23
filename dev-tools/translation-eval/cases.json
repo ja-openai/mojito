@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "synthetic-ui-context-smoke-v1",
+  "description": "24 synthetic UI examples authored for a local exploratory experiment; no production strings, human-reviewed translation references, or prevalence claim. Checks are narrow predeclared requirement probes, not complete linguistic quality judgments. French/German lexical probes allow common intended-sense forms but require manual adjudication of alternative valid wording. Hindi/Bengali terminal ASCII-period checks express an experiment-specific locale policy supplied only in the locale-suffix arm; they measure adherence to that supplied policy, not inherent correctness of a language's punctuation.",
+  "localeSuffixes": {
+    "hi": "For this product's Hindi UI style, end every complete declarative or imperative sentence with the ASCII period (.) rather than the danda (।). Preserve protected placeholders, code, filenames, and approved glossary spellings.",
+    "bn": "For this product's Bengali UI style, end every complete declarative or imperative sentence with the ASCII period (.) rather than the danda (।). Preserve protected placeholders, code, filenames, and approved glossary spellings."
+  },
+  "cases": [
+    {
+      "id": "fr-release-action",
+      "locale": "fr",
+      "slice": "ambiguous-action",
+      "input": {"tmTextUnitId": 1001, "source": "Free", "sourceDescription": "Button in a room-booking application. The user releases a previously reserved meeting room so other people can book it. This is an imperative action, not a price or subscription tier.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "(?i)libér|débloqu|relâch|annul", "reason": "Detect a common release/cancel-action rendering rather than the unrelated no-cost sense; manually adjudicate valid alternatives outside this probe."}]
+    },
+    {
+      "id": "fr-light-theme",
+      "locale": "fr",
+      "slice": "ambiguous-adjective",
+      "input": {"tmTextUnitId": 1002, "source": "Light", "sourceDescription": "Appearance settings choice for the light color theme, alongside Dark and System. The label describes a theme with a pale background, not a lamp, low weight, or reduced functionality.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "(?i)clair|lumineux|lumineuse", "reason": "Detect a common light-theme rendering; manually adjudicate valid alternatives outside this probe."}]
+    },
+    {
+      "id": "fr-workspace-glossary",
+      "locale": "fr",
+      "slice": "required-terminology",
+      "input": {"tmTextUnitId": 1003, "source": "Open the workspace.", "sourceDescription": "Instruction to open the collaborative editing area. The product uses a deliberately specific approved name for workspace.", "glossaryTerms": [{"term": "workspace", "termDescription": "Collaborative editing area; use the approved product terminology.", "termTarget": "atelier", "termTargetComment": "Required noun for this synthetic product; inflection and sentence casing may vary.", "doNotTranslate": false}], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "(?i)\\batelier\\b", "reason": "Use the supplied approved French workspace term."}]
+    },
+    {
+      "id": "fr-brand-spelling",
+      "locale": "fr",
+      "slice": "protected-brand",
+      "input": {"tmTextUnitId": 1004, "source": "Try PixelBox today.", "sourceDescription": "Short invitation to try the product named PixelBox.", "glossaryTerms": [{"term": "PixelBox", "termDescription": "Synthetic product brand.", "termTarget": "PixelBox", "termTargetComment": "Keep this exact case-sensitive spelling.", "doNotTranslate": true}], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "PixelBox", "reason": "Preserve the approved case-sensitive brand spelling."}]
+    },
+    {
+      "id": "fr-file-placeholder",
+      "locale": "fr",
+      "slice": "protected-placeholder-filename",
+      "input": {"tmTextUnitId": 1005, "source": "Save {fileName} as report.csv.", "sourceDescription": "File-export instruction. {fileName} is a runtime placeholder. report.csv is the literal output filename and must remain unchanged.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "{fileName}", "reason": "Preserve the runtime placeholder."}, {"kind": "contains", "value": "report.csv", "reason": "Preserve the literal output filename."}]
+    },
+    {
+      "id": "fr-code-literal",
+      "locale": "fr",
+      "slice": "protected-code",
+      "input": {"tmTextUnitId": 1006, "source": "Run `sync --dry-run` to preview changes.", "sourceDescription": "Developer tool instruction. The backtick-delimited text is a literal shell command. Translate the surrounding explanation only.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "`sync --dry-run`", "reason": "Preserve the command, option, spacing, and backticks."}]
+    },
+    {
+      "id": "de-release-action",
+      "locale": "de",
+      "slice": "ambiguous-action",
+      "input": {"tmTextUnitId": 2001, "source": "Free", "sourceDescription": "Button in a room-booking application. The user releases a previously reserved meeting room so other people can book it. This is an imperative action, not a price or subscription tier.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "(?i)freigeb|freigab|aufheb|stornier|freimach", "reason": "Detect a common release/cancel-action rendering rather than the unrelated no-cost sense; manually adjudicate valid alternatives outside this probe."}]
+    },
+    {
+      "id": "de-light-theme",
+      "locale": "de",
+      "slice": "ambiguous-adjective",
+      "input": {"tmTextUnitId": 2002, "source": "Light", "sourceDescription": "Appearance settings choice for the light color theme, alongside Dark and System. The label describes a theme with a pale background, not a lamp, low weight, or reduced functionality.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "(?i)hell", "reason": "Detect a common light-theme rendering; manually adjudicate valid alternatives outside this probe."}]
+    },
+    {
+      "id": "de-workspace-glossary",
+      "locale": "de",
+      "slice": "required-terminology",
+      "input": {"tmTextUnitId": 2003, "source": "Open the workspace.", "sourceDescription": "Instruction to open the collaborative editing area. The product uses a deliberately specific approved name for workspace.", "glossaryTerms": [{"term": "workspace", "termDescription": "Collaborative editing area; use the approved product terminology.", "termTarget": "Arbeitsraum", "termTargetComment": "Required noun for this synthetic product; inflection and sentence casing may vary.", "doNotTranslate": false}], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "(?i)Arbeitsraum", "reason": "Use the supplied approved German workspace term."}]
+    },
+    {
+      "id": "de-brand-spelling",
+      "locale": "de",
+      "slice": "protected-brand",
+      "input": {"tmTextUnitId": 2004, "source": "Try PixelBox today.", "sourceDescription": "Short invitation to try the product named PixelBox.", "glossaryTerms": [{"term": "PixelBox", "termDescription": "Synthetic product brand.", "termTarget": "PixelBox", "termTargetComment": "Keep this exact case-sensitive spelling.", "doNotTranslate": true}], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "PixelBox", "reason": "Preserve the approved case-sensitive brand spelling."}]
+    },
+    {
+      "id": "de-file-placeholder",
+      "locale": "de",
+      "slice": "protected-placeholder-filename",
+      "input": {"tmTextUnitId": 2005, "source": "Save {fileName} as report.csv.", "sourceDescription": "File-export instruction. {fileName} is a runtime placeholder. report.csv is the literal output filename and must remain unchanged.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "{fileName}", "reason": "Preserve the runtime placeholder."}, {"kind": "contains", "value": "report.csv", "reason": "Preserve the literal output filename."}]
+    },
+    {
+      "id": "de-code-literal",
+      "locale": "de",
+      "slice": "protected-code",
+      "input": {"tmTextUnitId": 2006, "source": "Run `sync --dry-run` to preview changes.", "sourceDescription": "Developer tool instruction. The backtick-delimited text is a literal shell command. Translate the surrounding explanation only.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "`sync --dry-run`", "reason": "Preserve the command, option, spacing, and backticks."}]
+    },
+    {
+      "id": "hi-save-confirmation",
+      "locale": "hi",
+      "slice": "locale-style",
+      "input": {"tmTextUnitId": 3001, "source": "Your changes have been saved.", "sourceDescription": "Success notification after the user saves settings. Use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "hi-connect-failure",
+      "locale": "hi",
+      "slice": "locale-style",
+      "input": {"tmTextUnitId": 3002, "source": "We could not connect to the server.", "sourceDescription": "Error notification after a failed network connection. Keep the negative meaning and use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "hi-invite-placeholder",
+      "locale": "hi",
+      "slice": "locale-style-protected-placeholder",
+      "input": {"tmTextUnitId": 3003, "source": "An invitation has been sent to {name}.", "sourceDescription": "Success notification after inviting a person. {name} is a runtime placeholder. Use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "{name}", "reason": "Preserve the runtime placeholder."}, {"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "hi-brand-spelling",
+      "locale": "hi",
+      "slice": "locale-style-protected-brand",
+      "input": {"tmTextUnitId": 3004, "source": "PixelBox is ready to use.", "sourceDescription": "Success notification after installation. Use a complete sentence.", "glossaryTerms": [{"term": "PixelBox", "termDescription": "Synthetic product brand.", "termTarget": "PixelBox", "termTargetComment": "Keep this exact Latin-script, case-sensitive spelling; do not transliterate.", "doNotTranslate": true}], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "PixelBox", "reason": "Preserve the approved Latin-script brand spelling."}, {"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "hi-code-literal",
+      "locale": "hi",
+      "slice": "locale-style-protected-code",
+      "input": {"tmTextUnitId": 3005, "source": "Run `sync --dry-run` to preview changes.", "sourceDescription": "Developer tool instruction. The backtick-delimited text is a literal shell command. Translate the surrounding explanation only and use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "`sync --dry-run`", "reason": "Preserve the command, option, spacing, and backticks."}, {"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "hi-file-placeholder",
+      "locale": "hi",
+      "slice": "locale-style-protected-placeholder-filename",
+      "input": {"tmTextUnitId": 3006, "source": "Save {fileName} as report.csv.", "sourceDescription": "File-export instruction. {fileName} is a runtime placeholder. report.csv is the literal output filename and must remain unchanged. Use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "{fileName}", "reason": "Preserve the runtime placeholder."}, {"kind": "contains", "value": "report.csv", "reason": "Preserve the literal output filename."}, {"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "bn-save-confirmation",
+      "locale": "bn",
+      "slice": "locale-style",
+      "input": {"tmTextUnitId": 4001, "source": "Your changes have been saved.", "sourceDescription": "Success notification after the user saves settings. Use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "bn-connect-failure",
+      "locale": "bn",
+      "slice": "locale-style",
+      "input": {"tmTextUnitId": 4002, "source": "We could not connect to the server.", "sourceDescription": "Error notification after a failed network connection. Keep the negative meaning and use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "bn-invite-placeholder",
+      "locale": "bn",
+      "slice": "locale-style-protected-placeholder",
+      "input": {"tmTextUnitId": 4003, "source": "An invitation has been sent to {name}.", "sourceDescription": "Success notification after inviting a person. {name} is a runtime placeholder. Use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "{name}", "reason": "Preserve the runtime placeholder."}, {"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "bn-brand-spelling",
+      "locale": "bn",
+      "slice": "locale-style-protected-brand",
+      "input": {"tmTextUnitId": 4004, "source": "PixelBox is ready to use.", "sourceDescription": "Success notification after installation. Use a complete sentence.", "glossaryTerms": [{"term": "PixelBox", "termDescription": "Synthetic product brand.", "termTarget": "PixelBox", "termTargetComment": "Keep this exact Latin-script, case-sensitive spelling; do not transliterate.", "doNotTranslate": true}], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "PixelBox", "reason": "Preserve the approved Latin-script brand spelling."}, {"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "bn-code-literal",
+      "locale": "bn",
+      "slice": "locale-style-protected-code",
+      "input": {"tmTextUnitId": 4005, "source": "Run `sync --dry-run` to preview changes.", "sourceDescription": "Developer tool instruction. The backtick-delimited text is a literal shell command. Translate the surrounding explanation only and use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "`sync --dry-run`", "reason": "Preserve the command, option, spacing, and backticks."}, {"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    },
+    {
+      "id": "bn-file-placeholder",
+      "locale": "bn",
+      "slice": "locale-style-protected-placeholder-filename",
+      "input": {"tmTextUnitId": 4006, "source": "Save {fileName} as report.csv.", "sourceDescription": "File-export instruction. {fileName} is a runtime placeholder. report.csv is the literal output filename and must remain unchanged. Use a complete sentence.", "glossaryTerms": [], "relatedStrings": []},
+      "checks": [{"kind": "contains", "value": "{fileName}", "reason": "Preserve the runtime placeholder."}, {"kind": "contains", "value": "report.csv", "reason": "Preserve the literal output filename."}, {"kind": "regex", "value": "\\.$", "reason": "Meet the experiment's explicit terminal ASCII-period policy when that policy is supplied."}]
+    }
+  ]
+}

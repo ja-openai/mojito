@@ -5,6 +5,11 @@ runner or a claim of better translations. Local source was inspected at `4ecd28b
 existing working-tree changes; serving configuration, production data, and deployment were not
 inspected. No translation experiment or provider call was run for this research.
 
+September 18 update: a [local executable pilot](../investigations/2026-09-18-translation-eval-pilot.md)
+now has saved inputs, real model outputs, and narrow requirement checks. It supports starting with
+the small **Compare this change** workflow described there. The broader architecture below remains
+a proposal; the pilot does not establish production linguistic gains or full generation parity.
+
 ## Recommendation
 
 Build the evaluation workflow inside Mojito, with an independently runnable experiment worker.
@@ -71,9 +76,11 @@ Four replay problems must be solved before trusting experiment scores:
    input that existed before review; separate first translation from post-editing tasks.
 2. The prompt fingerprint hashes `instructions`. Glossary and related strings are in user input,
    so the fingerprint does not identify the entire translation configuration.
-3. `dryRun` bypasses the importer and its integrity checks. Eval must explicitly execute the
-   applicable validators. Dry-run still creates normal task/lineage artifacts; it is not a pure
-   function or a complete evaluation mode.
+3. `dryRun` bypasses the importer and its integrity checks. Current no-batch generation can already
+   run message-format candidate validation and one repair attempt before that branch when the
+   default-off validation policy is enabled. Eval must explicitly execute all applicable validators.
+   Dry-run still creates normal task/lineage artifacts; it is not a pure function or a complete
+   evaluation mode.
 4. Request blobs are conditional and inline screenshot data is redacted. Historical requests are
    not guaranteed replayable. Preserve authorized image objects and hashes separately; label
    incomplete historical examples as such rather than reconstructing missing context as fact.
