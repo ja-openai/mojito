@@ -37,6 +37,12 @@ a new incident for every attempt. Review type/run filters remain available on in
 proposal history and pending feedback are queried through the dedicated review API/MCP operations.
 Keep historical incident attribution and original proposal provenance even when a later run responds.
 
+The incident queue also supports a searchable locale filter, persisted as `locale` in the URL.
+It matches the displayed locale exactly (case-insensitively): resolved locale when available,
+otherwise observed locale. The server applies it alongside the other filters before pagination,
+so the count and results cover the full matching scope. Selecting another locale clears the
+previous incident selection; direct links may include both `locale` and `incidentId`.
+
 Retain current disposition as ordinary queryable state and append its feedback history in the same
 transaction. This is a review-specific history table, not a general workflow or event-replay engine.
 Project deletion must not delete runs, proposals, or feedback; project links can become historical.

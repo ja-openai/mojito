@@ -14,11 +14,19 @@ import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import com.box.l10n.mojito.utils.ServerConfig;
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import org.hibernate.cfg.Configuration;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 
 public class TranslationIncidentServiceTest {
 
@@ -65,6 +73,132 @@ public class TranslationIncidentServiceTest {
     when(auditorAwareImpl.getCurrentAuditor()).thenReturn(Optional.of(currentUser));
     when(translationIncidentRepository.save(any(TranslationIncident.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
+  }
+
+  @Test
+  public void localeFilterUsesDisplayedLocaleBeforePaginationAndCombinesWithOtherFilters() {
+    try (var factory =
+            new Configuration()
+                .addAnnotatedClass(TranslationIncident.class)
+                .setProperty(
+                    "hibernate.connection.url", "jdbc:hsqldb:mem:incidents-" + UUID.randomUUID())
+                .setProperty("hibernate.connection.driver_class", "org.hsqldb.jdbc.JDBCDriver")
+                .setProperty("hibernate.connection.username", "sa")
+                .setProperty("hibernate.connection.password", "")
+                .setProperty("hibernate.hbm2ddl.auto", "create-drop")
+                .buildSessionFactory();
+        var session = factory.openSession()) {
+      var resolved = incident("fr", "fr-CA");
+      var unresolved = incident("fr-ca", null);
+      unresolved.setCreatedDate(ZonedDateTime.parse("2026-09-20T02:00:00Z"));
+      var differentResolvedLocale = incident("fr-CA", "fr");
+      var differentRegion = incident("fr", "fr-CAX");
+      var closed = incident("fr", "fr-CA");
+      closed.setStatus(TranslationIncidentStatus.CLOSED);
+      var differentQuery = incident("fr", "fr-CA");
+      differentQuery.setStringId("settings.cancel");
+      var differentReviewType = incident("fr", "fr-CA");
+      differentReviewType.setReviewType("terminology");
+      var differentReviewRun = incident("fr", "fr-CA");
+      differentReviewRun.setReviewRunId(42L);
+      var earlier = incident("fr", "fr-CA");
+      earlier.setCreatedDate(ZonedDateTime.parse("2026-09-19T23:59:59Z"));
+      var later = incident("fr", "fr-CA");
+      later.setCreatedDate(ZonedDateTime.parse("2026-09-21T00:00:00Z"));
+      var transaction = session.beginTransaction();
+      List.of(
+              resolved,
+              unresolved,
+              differentResolvedLocale,
+              differentRegion,
+              closed,
+              differentQuery,
+              differentReviewType,
+              differentReviewRun,
+              earlier,
+              later)
+          .forEach(session::persist);
+      transaction.commit();
+      var repository =
+          new SimpleJpaRepository<TranslationIncident, Long>(TranslationIncident.class, session);
+      when(translationIncidentRepository.findAll(
+              Mockito.<Specification<TranslationIncident>>any(), any(Pageable.class)))
+          .thenAnswer(
+              invocation ->
+                  repository.findAll(
+                      invocation.<Specification<TranslationIncident>>getArgument(0),
+                      invocation.<Pageable>getArgument(1)));
+
+      var localeOnly =
+          translationIncidentService.getIncidents(
+              null, null, null, null, 0, 2, null, null, " FR-ca ");
+      assertThat(localeOnly.totalElements()).isEqualTo(8);
+      assertThat(localeOnly.totalPages()).isEqualTo(4);
+      assertThat(localeOnly.items()).hasSize(2);
+      var firstPage = filteredIncidents(0);
+      assertThat(firstPage.items())
+          .extracting(TranslationIncidentService.IncidentSummary::id)
+          .containsExactly(unresolved.getId());
+      assertThat(firstPage.totalElements()).isEqualTo(2);
+      assertThat(firstPage.totalPages()).isEqualTo(2);
+      assertThat(firstPage.hasNext()).isTrue();
+      var secondPage = filteredIncidents(1);
+      assertThat(secondPage.items())
+          .extracting(TranslationIncidentService.IncidentSummary::id)
+          .containsExactly(resolved.getId());
+      assertThat(secondPage.hasPrevious()).isTrue();
+      assertThat(secondPage.hasNext()).isFalse();
+      assertThat(
+              translationIncidentService
+                  .getIncidents(null, null, null, null, 0, 25, null, null, "fr")
+                  .items())
+          .extracting(TranslationIncidentService.IncidentSummary::id)
+          .containsExactly(differentResolvedLocale.getId());
+      assertThat(
+              translationIncidentService
+                  .getIncidents(null, null, null, null, 0, 25, null, null, "fr-CA%")
+                  .totalElements())
+          .isZero();
+      assertThat(
+              translationIncidentService
+                  .getIncidents(null, null, null, null, 0, 25, null, null, " ")
+                  .totalElements())
+          .isEqualTo(10);
+      assertThat(
+              translationIncidentService
+                  .getIncidents(null, null, null, null, 0, 25, null, null)
+                  .totalElements())
+          .isEqualTo(10);
+    }
+  }
+
+  private TranslationIncidentService.IncidentPage filteredIncidents(int page) {
+    return translationIncidentService.getIncidents(
+        TranslationIncidentStatus.OPEN,
+        "save",
+        LocalDate.of(2026, 9, 20),
+        LocalDate.of(2026, 9, 20),
+        page,
+        1,
+        "linguistic",
+        41L,
+        "fr-CA");
+  }
+
+  private TranslationIncident incident(String observedLocale, String resolvedLocale) {
+    TranslationIncident incident = new TranslationIncident();
+    incident.setStatus(TranslationIncidentStatus.OPEN);
+    incident.setResolution(TranslationIncidentResolution.PENDING_REVIEW);
+    incident.setLookupResolutionStatus("UNIQUE_MATCH");
+    incident.setLocaleResolutionStrategy("NORMALIZED");
+    incident.setStringId("settings.save");
+    incident.setObservedLocale(observedLocale);
+    incident.setResolvedLocale(resolvedLocale);
+    incident.setReason("Incorrect translation");
+    incident.setReviewType("linguistic");
+    incident.setReviewRunId(41L);
+    incident.setCreatedDate(ZonedDateTime.parse("2026-09-20T01:00:00Z"));
+    return incident;
   }
 
   @Test

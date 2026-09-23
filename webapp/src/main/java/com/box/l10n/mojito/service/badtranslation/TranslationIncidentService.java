@@ -17,6 +17,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
@@ -247,13 +248,28 @@ public class TranslationIncidentService {
       int size,
       String reviewType,
       Long reviewRunId) {
+    return getIncidents(
+        status, query, createdAfter, createdBefore, page, size, reviewType, reviewRunId, null);
+  }
+
+  @Transactional(readOnly = true)
+  public IncidentPage getIncidents(
+      TranslationIncidentStatus status,
+      String query,
+      LocalDate createdAfter,
+      LocalDate createdBefore,
+      int page,
+      int size,
+      String reviewType,
+      Long reviewRunId,
+      String locale) {
     assertCurrentUserCanManageIncidents();
     int validatedPage = Math.max(0, page);
     int validatedSize = Math.max(1, Math.min(size, 200));
     Page<TranslationIncident> result =
         translationIncidentRepository.findAll(
             buildIncidentSpecification(
-                status, query, createdAfter, createdBefore, reviewType, reviewRunId),
+                status, query, createdAfter, createdBefore, reviewType, reviewRunId, locale),
             PageRequest.of(
                 validatedPage, validatedSize, Sort.by(Sort.Direction.DESC, "createdDate")));
     return new IncidentPage(
@@ -821,7 +837,8 @@ public class TranslationIncidentService {
       LocalDate createdAfter,
       LocalDate createdBefore,
       String reviewType,
-      Long reviewRunId) {
+      Long reviewRunId,
+      String locale) {
     return (root, criteriaQuery, criteriaBuilder) -> {
       List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
       if (status != null) {
@@ -832,6 +849,16 @@ public class TranslationIncidentService {
       }
       if (reviewRunId != null) {
         predicates.add(criteriaBuilder.equal(root.get("reviewRunId"), reviewRunId));
+      }
+
+      String normalizedLocale = normalizeOptional(locale);
+      if (normalizedLocale != null) {
+        predicates.add(
+            criteriaBuilder.equal(
+                criteriaBuilder.lower(
+                    criteriaBuilder.coalesce(
+                        root.get("resolvedLocale"), root.get("observedLocale"))),
+                normalizedLocale.toLowerCase(Locale.ROOT)));
       }
 
       String normalizedQuery = normalizeOptional(query);

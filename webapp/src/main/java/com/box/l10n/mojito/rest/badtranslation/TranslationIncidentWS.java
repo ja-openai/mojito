@@ -49,9 +49,10 @@ public class TranslationIncidentWS {
       @RequestParam(name = "page", required = false, defaultValue = "0") int page,
       @RequestParam(name = "size", required = false, defaultValue = "25") int size,
       @RequestParam(required = false) String reviewType,
-      @RequestParam(required = false) Long reviewRunId) {
+      @RequestParam(required = false) Long reviewRunId,
+      @RequestParam(name = "locale", required = false) String locale) {
     return translationIncidentService.getIncidents(
-        status, query, createdAfter, createdBefore, page, size, reviewType, reviewRunId);
+        status, query, createdAfter, createdBefore, page, size, reviewType, reviewRunId, locale);
   }
 
   @GetMapping("/{incidentId}")

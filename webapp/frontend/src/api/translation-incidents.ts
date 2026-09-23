@@ -141,6 +141,7 @@ export async function fetchTranslationIncidents(options?: {
   reviewType?: string | null;
   reviewRunId?: number | null;
   status?: ApiTranslationIncidentStatus | null;
+  locale?: string | null;
   query?: string | null;
   createdAfter?: string | null;
   createdBefore?: string | null;
@@ -152,6 +153,9 @@ export async function fetchTranslationIncidents(options?: {
   if (options?.reviewRunId != null) params.set('reviewRunId', String(options.reviewRunId));
   if (options?.status) {
     params.set('status', options.status);
+  }
+  if (options?.locale) {
+    params.set('locale', options.locale);
   }
   if (options?.query) {
     params.set('query', options.query);

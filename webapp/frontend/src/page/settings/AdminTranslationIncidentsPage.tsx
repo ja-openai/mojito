@@ -30,8 +30,10 @@ import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import { useLocales } from '../../hooks/useLocales';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useUser } from '../../hooks/useUser';
+import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 
 const STATUS_FILTERS: Array<{
   label: string;
@@ -179,7 +181,20 @@ export function AdminTranslationIncidentsPage() {
   const isPm = user.role === 'ROLE_PM';
   const queryClient = useQueryClient();
   const { data: repositories } = useRepositories();
+  const { data: locales } = useLocales();
+  const resolveLocaleName = useLocaleDisplayNameResolver();
   const [searchParams, setSearchParams] = useSearchParams();
+  const localeFilter = searchParams.get('locale')?.trim() || null;
+  const localeOptions = useMemo(() => {
+    const tags = new Set((locales ?? []).map((locale) => locale.bcp47Tag));
+    if (localeFilter) tags.add(localeFilter);
+    return [...tags].sort().map((tag) => ({
+      value: tag,
+      label: tag,
+      helper: resolveLocaleName(tag),
+      searchText: `${tag} ${resolveLocaleName(tag)}`,
+    }));
+  }, [locales, localeFilter, resolveLocaleName]);
   const reviewTypeFilter = searchParams.get('reviewType') ?? '';
   const reviewRunFilter = searchParams.get('reviewRunId') ?? '';
   const [debouncedReviewType, setDebouncedReviewType] = useState(reviewTypeFilter.trim());
@@ -191,7 +206,7 @@ export function AdminTranslationIncidentsPage() {
       ? Number(debouncedReviewRun)
       : null;
   const invalidReviewRun = debouncedReviewRun !== '' && reviewRunId === null;
-  const updateReviewFilter = (key: string, value: string) => {
+  const updateUrlFilter = (key: string, value: string) => {
     setSearchParams(
       (current) => {
         const next = new URLSearchParams(current);
@@ -258,6 +273,7 @@ export function AdminTranslationIncidentsPage() {
       debouncedReviewType,
       reviewRunId,
       statusFilter,
+      localeFilter,
       debouncedIncidentSearch,
       createdAfter,
       createdBefore,
@@ -269,6 +285,7 @@ export function AdminTranslationIncidentsPage() {
         reviewType: debouncedReviewType || null,
         reviewRunId,
         status: statusFilter,
+        locale: localeFilter,
         query: debouncedIncidentSearch || null,
         createdAfter: createdAfter || null,
         createdBefore: createdBefore || null,
@@ -653,6 +670,17 @@ export function AdminTranslationIncidentsPage() {
             className="translation-incidents-page__workflow-filter"
             buttonAriaLabel="Filter translation incidents by status"
           />
+          <SingleSelectDropdown
+            label="Locale"
+            options={localeOptions}
+            value={localeFilter}
+            onChange={(next) => updateUrlFilter('locale', next ?? '')}
+            noneLabel="All locales"
+            placeholder="All locales"
+            searchPlaceholder="Search locales"
+            className="translation-incidents-page__workflow-filter"
+            buttonAriaLabel="Filter translation incidents by locale"
+          />
           <label className="translation-incidents-page__date-filter">
             <span>Review type</span>
             <input
@@ -662,7 +690,7 @@ export function AdminTranslationIncidentsPage() {
               placeholder="All types"
               list="incident-review-types"
               maxLength={100}
-              onChange={(event) => updateReviewFilter('reviewType', event.target.value)}
+              onChange={(event) => updateUrlFilter('reviewType', event.target.value)}
             />
             <datalist id="incident-review-types">
               <option value="TRANSLATION_QUALITY">Translation quality</option>
@@ -680,7 +708,7 @@ export function AdminTranslationIncidentsPage() {
               placeholder="All runs"
               onChange={(event) => {
                 if (/^\d*$/.test(event.target.value))
-                  updateReviewFilter('reviewRunId', event.target.value);
+                  updateUrlFilter('reviewRunId', event.target.value);
               }}
             />
           </label>
