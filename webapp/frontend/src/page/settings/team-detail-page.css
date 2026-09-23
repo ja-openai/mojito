@@ -1,0 +1,119 @@
+.user-detail-page.team-detail-page {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.team-detail-page > .settings-subpage__topbar {
+  flex-shrink: 0;
+}
+
+.team-detail-page__tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-4);
+  padding: 0 var(--space-7);
+  overflow-x: auto;
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.team-detail-page__tab {
+  flex-shrink: 0;
+  padding: var(--space-3) 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.team-detail-page__tab:hover,
+.team-detail-page__tab[aria-selected='true'] {
+  color: var(--color-text);
+}
+
+.team-detail-page__tab[aria-selected='true'] {
+  border-bottom-color: var(--color-accent);
+}
+
+.team-detail-page__tab:focus-visible,
+.team-detail-page [role='tabpanel']:focus-visible,
+.team-detail-page__roster-table:focus-visible,
+.team-detail-page__slack-mapping-table:focus-visible {
+  outline: 2px solid var(--color-focus-outline);
+  outline-offset: -2px;
+}
+
+.team-detail-page__content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.team-detail-page__content > [hidden] {
+  display: none;
+}
+
+.team-detail-page .user-detail-page__field {
+  min-width: 0;
+}
+
+.team-detail-page__roster-table,
+.team-detail-page__slack-mapping-table {
+  max-height: min(32rem, 55dvh);
+  overflow: auto;
+  scrollbar-gutter: stable;
+  scroll-padding-top: 2.5rem;
+}
+
+.team-detail-page__roster-header,
+.team-detail-page__slack-mapping-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+}
+
+.team-detail-page__roster-header,
+.team-detail-page__roster-row,
+.team-detail-page__slack-mapping-header,
+.team-detail-page__slack-mapping-row {
+  flex-shrink: 0;
+}
+
+.team-detail-page__slack-mapping-header,
+.team-detail-page__slack-mapping-row {
+  min-width: 60rem;
+}
+
+.team-detail-page__slack-mapping-row > :first-child {
+  overflow-wrap: anywhere;
+}
+
+.team-detail-page .user-detail-page__actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 48rem) {
+  .team-detail-page .settings-subpage__topbar-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .team-detail-page .settings-subpage__topbar-context {
+    display: none;
+  }
+
+  .team-detail-page .settings-subpage__topbar-title {
+    display: block;
+    line-height: var(--app-shell-header-height);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .team-detail-page__tabs {
+    padding: 0 var(--space-4);
+  }
+}

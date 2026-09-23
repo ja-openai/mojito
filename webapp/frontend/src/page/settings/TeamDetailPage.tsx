@@ -1,9 +1,10 @@
 import './settings-page.css';
 import './admin-team-pools-page.css';
 import './admin-user-detail-page.css';
+import './team-detail-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -44,6 +45,15 @@ type StatusNotice = {
 
 type TeamDeleteMode = 'disable' | 'hard-delete';
 type RosterEditorMode = 'form' | 'batch';
+type TeamSection = 'general' | 'translators' | 'pms' | 'slack-notifications' | 'slack-mappings';
+
+const teamSections: { id: TeamSection; label: string; adminOnly?: boolean }[] = [
+  { id: 'general', label: 'General' },
+  { id: 'translators', label: 'Translators' },
+  { id: 'pms', label: 'PMs', adminOnly: true },
+  { id: 'slack-notifications', label: 'Slack notifications', adminOnly: true },
+  { id: 'slack-mappings', label: 'Slack mappings', adminOnly: true },
+];
 
 type SlackMappingDraftRow = {
   mojitoUserId: number;
@@ -173,6 +183,20 @@ export function TeamDetailPage() {
   const canAccess = isAdmin || isPm;
   const params = useParams<{ teamId?: string }>();
 
+  const [activeSection, setActiveSection] = useState<TeamSection>('general');
+  const sectionTabs = useRef<Partial<Record<TeamSection, HTMLButtonElement | null>>>({});
+  const contentRef = useRef<HTMLDivElement>(null);
+  const visibleSections = teamSections.filter((section) => !section.adminOnly || isAdmin);
+  const selectedSection = visibleSections.some((section) => section.id === activeSection)
+    ? activeSection
+    : 'general';
+  const selectSection = (section: TeamSection) => {
+    setActiveSection(section);
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  };
+
   const [draftName, setDraftName] = useState('');
   const [draftPmUserIds, setDraftPmUserIds] = useState<number[]>([]);
   const [draftTranslatorUserIds, setDraftTranslatorUserIds] = useState<number[]>([]);
@@ -286,6 +310,7 @@ export function TeamDetailPage() {
   }, [effectiveTeam?.id, effectiveTeam?.name]);
 
   useEffect(() => {
+    setActiveSection('general');
     setDraftPmBatchInput('');
     setDraftTranslatorBatchInput('');
     setPmEditorMode('form');
@@ -1110,11 +1135,65 @@ export function TeamDetailPage() {
         }
       />
 
-      <div className="user-detail-page__content team-detail-page__content">
-        <section className="user-detail-page__section">
+      <div className="team-detail-page__tabs" role="tablist" aria-label="Team settings sections">
+        {visibleSections.map((section, index) => (
+          <button
+            key={section.id}
+            ref={(element) => {
+              sectionTabs.current[section.id] = element;
+            }}
+            type="button"
+            role="tab"
+            id={`team-tab-${section.id}`}
+            aria-controls={`team-panel-${section.id}`}
+            aria-selected={selectedSection === section.id}
+            tabIndex={selectedSection === section.id ? 0 : -1}
+            className="team-detail-page__tab"
+            onClick={() => selectSection(section.id)}
+            onKeyDown={(event) => {
+              let nextIndex: number;
+              switch (event.key) {
+                case 'ArrowRight':
+                  nextIndex = (index + 1) % visibleSections.length;
+                  break;
+                case 'ArrowLeft':
+                  nextIndex = (index - 1 + visibleSections.length) % visibleSections.length;
+                  break;
+                case 'Home':
+                  nextIndex = 0;
+                  break;
+                case 'End':
+                  nextIndex = visibleSections.length - 1;
+                  break;
+                default:
+                  return;
+              }
+              event.preventDefault();
+              const nextSection = visibleSections[nextIndex].id;
+              selectSection(nextSection);
+              sectionTabs.current[nextSection]?.focus();
+            }}
+          >
+            {section.label}
+          </button>
+        ))}
+      </div>
+
+      <div ref={contentRef} className="user-detail-page__content team-detail-page__content">
+        <section
+          className="user-detail-page__section"
+          role="tabpanel"
+          id="team-panel-general"
+          aria-labelledby="team-tab-general"
+          tabIndex={0}
+          hidden={selectedSection !== 'general'}
+        >
           <div className="user-detail-page__field">
-            <div className="user-detail-page__label">Name</div>
+            <label className="user-detail-page__label" htmlFor="team-name">
+              Name
+            </label>
             <input
+              id="team-name"
               type="text"
               className="settings-input"
               value={draftName}
@@ -1145,10 +1224,49 @@ export function TeamDetailPage() {
               ) : null}
             </div>
           </div>
+          <div className="user-detail-page__danger team-detail-page__danger">
+            <button
+              type="button"
+              className="user-detail-page__delete"
+              onClick={() => {
+                setTeamDeleteMode('disable');
+                setShowDeleteConfirm(true);
+              }}
+              disabled={deleteTeamMutation.isPending || disableTeamMutation.isPending}
+            >
+              Disable
+            </button>
+            <button
+              type="button"
+              className="user-detail-page__delete"
+              onClick={() => {
+                setTeamDeleteMode('hard-delete');
+                setShowDeleteConfirm(true);
+              }}
+              disabled={deleteTeamMutation.isPending || disableTeamMutation.isPending}
+              title="Permanently delete the team if it has no review-project usage"
+            >
+              Delete
+            </button>
+            {deleteTeamMutation.isError ? (
+              <div className="user-detail-page__hint is-error">
+                {deleteTeamMutation.error instanceof Error
+                  ? deleteTeamMutation.error.message
+                  : 'Failed to disable team.'}
+              </div>
+            ) : null}
+          </div>
         </section>
 
         {isAdmin ? (
-          <section className="user-detail-page__section team-detail-page__slack-section">
+          <section
+            className="user-detail-page__section"
+            role="tabpanel"
+            id="team-panel-slack-notifications"
+            aria-labelledby="team-tab-slack-notifications"
+            tabIndex={0}
+            hidden={selectedSection !== 'slack-notifications'}
+          >
             <div className="user-detail-page__field">
               <div className="settings-card__header">
                 <h2>Slack Notifications</h2>
@@ -1265,7 +1383,14 @@ export function TeamDetailPage() {
         ) : null}
 
         {isAdmin ? (
-          <section className="user-detail-page__section team-detail-page__slack-section">
+          <section
+            className="user-detail-page__section"
+            role="tabpanel"
+            id="team-panel-slack-mappings"
+            aria-labelledby="team-tab-slack-mappings"
+            tabIndex={0}
+            hidden={selectedSection !== 'slack-mappings'}
+          >
             <div className="user-detail-page__field">
               <div className="settings-card__header">
                 <h2>Slack User ID Mappings</h2>
@@ -1278,6 +1403,7 @@ export function TeamDetailPage() {
                 className="team-detail-page__slack-mapping-table"
                 role="table"
                 aria-label="Slack user mappings"
+                tabIndex={0}
               >
                 <div className="team-detail-page__slack-mapping-header" role="row">
                   <div role="columnheader">Mojito user</div>
@@ -1460,7 +1586,14 @@ export function TeamDetailPage() {
           </section>
         ) : null}
 
-        <section className="user-detail-page__section">
+        <section
+          className="user-detail-page__section"
+          role="tabpanel"
+          id="team-panel-translators"
+          aria-labelledby="team-tab-translators"
+          tabIndex={0}
+          hidden={selectedSection !== 'translators'}
+        >
           <div className="user-detail-page__field">
             <div className="settings-card__header team-pools-page__card-header">
               <h2>Translators</h2>
@@ -1489,6 +1622,7 @@ export function TeamDetailPage() {
               <>
                 <MultiSelectChip
                   label="Translators"
+                  disabled={selectedSection !== 'translators'}
                   options={translatorOptions}
                   selectedValues={draftTranslatorUserIds}
                   onChange={(next) => {
@@ -1525,7 +1659,12 @@ export function TeamDetailPage() {
                   Choose translators one by one, or switch to Batch to edit usernames directly.
                 </div>
                 {draftTranslatorUsers.length > 0 ? (
-                  <div className="team-detail-page__roster-table">
+                  <div
+                    className="team-detail-page__roster-table"
+                    role="region"
+                    aria-label="Translator roster"
+                    tabIndex={0}
+                  >
                     <div className="team-detail-page__roster-header">
                       <div>Username</div>
                       <div>Name</div>
@@ -1621,7 +1760,14 @@ export function TeamDetailPage() {
         </section>
 
         {isAdmin ? (
-          <section className="user-detail-page__section">
+          <section
+            className="user-detail-page__section"
+            role="tabpanel"
+            id="team-panel-pms"
+            aria-labelledby="team-tab-pms"
+            tabIndex={0}
+            hidden={selectedSection !== 'pms'}
+          >
             <div className="user-detail-page__field">
               <div className="settings-card__header team-pools-page__card-header">
                 <h2>PMs</h2>
@@ -1650,6 +1796,7 @@ export function TeamDetailPage() {
                 <>
                   <MultiSelectChip
                     label="Project managers"
+                    disabled={selectedSection !== 'pms'}
                     options={pmOptions}
                     selectedValues={draftPmUserIds}
                     onChange={(next) => {
@@ -1700,7 +1847,12 @@ export function TeamDetailPage() {
                     directly.
                   </div>
                   {draftPmUsers.length > 0 ? (
-                    <div className="team-detail-page__roster-table">
+                    <div
+                      className="team-detail-page__roster-table"
+                      role="region"
+                      aria-label="PM roster"
+                      tabIndex={0}
+                    >
                       <div className="team-detail-page__roster-header">
                         <div>Username</div>
                         <div>Name</div>
@@ -1786,39 +1938,6 @@ export function TeamDetailPage() {
             </div>
           </section>
         ) : null}
-
-        <div className="user-detail-page__danger team-detail-page__danger">
-          <button
-            type="button"
-            className="user-detail-page__delete"
-            onClick={() => {
-              setTeamDeleteMode('disable');
-              setShowDeleteConfirm(true);
-            }}
-            disabled={deleteTeamMutation.isPending || disableTeamMutation.isPending}
-          >
-            Disable
-          </button>
-          <button
-            type="button"
-            className="user-detail-page__delete"
-            onClick={() => {
-              setTeamDeleteMode('hard-delete');
-              setShowDeleteConfirm(true);
-            }}
-            disabled={deleteTeamMutation.isPending || disableTeamMutation.isPending}
-            title="Permanently delete the team if it has no review-project usage"
-          >
-            Delete
-          </button>
-          {deleteTeamMutation.isError ? (
-            <div className="user-detail-page__hint is-error">
-              {deleteTeamMutation.error instanceof Error
-                ? deleteTeamMutation.error.message
-                : 'Failed to disable team.'}
-            </div>
-          ) : null}
-        </div>
       </div>
       <Modal
         open={isSlackChannelMembersModalOpen}

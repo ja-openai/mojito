@@ -48,3 +48,10 @@ Open questions
 - Do we want per-route code splitting once pages grow?
 - Where should shared tokens live long-term (global CSS vs. theming system)?
 - Keep legacy route aliases explicit in `NewFrontendController` and redirect them in the SPA when there is a current replacement route.
+
+Team settings navigation
+- Team details keep the title and section tabs visible above a scrolling content pane.
+- General, Translators, and the admin-only PM and Slack sections show one panel at a time;
+  switching sections preserves unsaved drafts and editor modes.
+- Long rosters and Slack mappings scroll within bounded lists, with sticky column headings.
+  Slack mappings also scroll horizontally on narrow screens.

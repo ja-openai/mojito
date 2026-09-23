@@ -122,11 +122,6 @@
   margin-top: var(--space-3);
   padding-top: var(--space-3);
   border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
-  order: 2;
-}
-
-.team-detail-page__slack-section {
-  order: 1;
 }
 
 .team-detail-page__slack-setting-field {
