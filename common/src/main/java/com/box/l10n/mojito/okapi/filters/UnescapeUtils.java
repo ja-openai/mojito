@@ -9,14 +9,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class UnescapeUtils {
 
-  private static final Pattern ESCAPED_CARIAGE_RETURN = Pattern.compile("\\\\r");
-  private static final Pattern ESCAPED_LINE_FEED = Pattern.compile("\\\\n");
   private static final Pattern ESCAPED_QUOTES = Pattern.compile("\\\\(\"|')");
   private static final Pattern ESCAPED_BACKQUOTES = Pattern.compile("\\\\(`)");
   private static final Pattern ESCAPED_CHARACTERS = Pattern.compile("\\\\(.)?");
   private static final Pattern ESCAPED_UNICODE = Pattern.compile("\\\\u([0-9a-fA-F]{4})");
   private static final Pattern SPACES = Pattern.compile("\\s+");
-  private static final Pattern LINE_FEED = Pattern.compile("\n");
 
   /**
    * Unescapes line feed, cariage return, single quote and double quote
@@ -32,11 +29,11 @@ public class UnescapeUtils {
   }
 
   String replaceEscapedCarriageReturn(String text) {
-    return ESCAPED_CARIAGE_RETURN.matcher(text).replaceAll("\r");
+    return text.replace("\\r", "\r");
   }
 
   String replaceEscapedLineFeed(String text) {
-    return ESCAPED_LINE_FEED.matcher(text).replaceAll("\n");
+    return text.replace("\\n", "\n");
   }
 
   /**
@@ -98,6 +95,6 @@ public class UnescapeUtils {
   }
 
   String replaceLineFeedWithSpace(String text) {
-    return LINE_FEED.matcher(text).replaceAll(" ");
+    return text.replace('\n', ' ');
   }
 }
