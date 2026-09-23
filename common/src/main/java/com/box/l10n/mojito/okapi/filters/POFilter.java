@@ -51,6 +51,9 @@ public class POFilter extends net.sf.okapi.filters.po.POFilter {
   static final String USAGE_LOCATION_GROUP_NAME = "location";
   static final String USAGE_LOCATION_PATTERN = "#: (?<location>.*)";
 
+  private static final Pattern COMPILED_USAGE_LOCATION_PATTERN =
+      Pattern.compile(USAGE_LOCATION_PATTERN);
+
   // Having " _" as plural separator wasn't very wise... Android filter for example doesn't have a
   // space: "_".
   // see {@link ThirdPartySyncCommand} too.
@@ -415,8 +418,7 @@ public class POFilter extends net.sf.okapi.filters.po.POFilter {
   Set<String> getUsagesFromSkeleton(String skeleton) {
     Set<String> locations = new LinkedHashSet<>();
 
-    Pattern pattern = Pattern.compile(USAGE_LOCATION_PATTERN);
-    Matcher matcher = pattern.matcher(skeleton);
+    Matcher matcher = COMPILED_USAGE_LOCATION_PATTERN.matcher(skeleton);
 
     while (matcher.find()) {
       locations.add(matcher.group(USAGE_LOCATION_GROUP_NAME));
