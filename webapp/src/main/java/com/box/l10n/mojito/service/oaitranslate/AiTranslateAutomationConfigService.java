@@ -1,10 +1,18 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
 import com.box.l10n.mojito.entity.AiTranslateAutomationConfigEntity;
+import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import org.quartz.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,11 +24,18 @@ public class AiTranslateAutomationConfigService {
 
   private final AiTranslateAutomationConfigRepository repository;
   private final ObjectMapper objectMapper;
+  private final RepositoryRepository repositoryRepository;
+  private final LocaleService localeService;
 
   public AiTranslateAutomationConfigService(
-      AiTranslateAutomationConfigRepository repository, ObjectMapper objectMapper) {
+      AiTranslateAutomationConfigRepository repository,
+      ObjectMapper objectMapper,
+      RepositoryRepository repositoryRepository,
+      LocaleService localeService) {
     this.repository = repository;
     this.objectMapper = objectMapper;
+    this.repositoryRepository = repositoryRepository;
+    this.localeService = localeService;
   }
 
   public record Config(
@@ -28,13 +43,14 @@ public class AiTranslateAutomationConfigService {
       List<Long> repositoryIds,
       List<Long> excludedRepositoryIds,
       int sourceTextMaxCountPerLocale,
-      String cronExpression) {}
+      String cronExpression,
+      Map<Long, List<String>> excludedLocaleTagsByRepositoryId) {}
 
   public Config getConfig() {
     AiTranslateAutomationConfigEntity entity = repository.findFirstByOrderByIdAsc();
     if (entity == null) {
       return new Config(
-          false, List.of(), List.of(), DEFAULT_SOURCE_TEXT_MAX_COUNT_PER_LOCALE, null);
+          false, List.of(), List.of(), DEFAULT_SOURCE_TEXT_MAX_COUNT_PER_LOCALE, null, Map.of());
     }
 
     List<Long> repositoryIds = decodeRepositoryIds(entity.getRepositoryIdsJson());
@@ -45,7 +61,13 @@ public class AiTranslateAutomationConfigService {
             ? decodeRepositoryIds(entity.getExcludedRepositoryIdsJson())
             : List.of(),
         normalizeSourceTextMaxCountPerLocale(entity.getSourceTextMaxCountPerLocale()),
-        sanitizeStoredCronExpression(entity.getCronExpression()));
+        sanitizeStoredCronExpression(entity.getCronExpression()),
+        decodeLocaleExclusions(entity.getExcludedLocaleTagsByRepositoryIdJson()));
+  }
+
+  public ZonedDateTime getLastModifiedDate() {
+    AiTranslateAutomationConfigEntity entity = repository.findFirstByOrderByIdAsc();
+    return entity == null ? null : entity.getLastModifiedDate();
   }
 
   @Transactional
@@ -60,10 +82,19 @@ public class AiTranslateAutomationConfigService {
         normalizedRepositoryIds.isEmpty()
             ? normalizeRepositoryIds(config.excludedRepositoryIds())
             : List.of();
+    Map<Long, List<String>> savedLocaleExclusions =
+        decodeLocaleExclusions(entity.getExcludedLocaleTagsByRepositoryIdJson());
+    Map<Long, List<String>> normalizedLocaleExclusions =
+        config.excludedLocaleTagsByRepositoryId() == null
+            ? savedLocaleExclusions
+            : normalizeLocaleExclusions(
+                config.excludedLocaleTagsByRepositoryId(), savedLocaleExclusions);
     entity.setEnabled(config.enabled());
     entity.setRepositoryIdsJson(objectMapper.writeValueAsStringUnchecked(normalizedRepositoryIds));
     entity.setExcludedRepositoryIdsJson(
         objectMapper.writeValueAsStringUnchecked(normalizedExcludedRepositoryIds));
+    entity.setExcludedLocaleTagsByRepositoryIdJson(
+        objectMapper.writeValueAsStringUnchecked(normalizedLocaleExclusions));
     entity.setSourceTextMaxCountPerLocale(
         normalizeSourceTextMaxCountPerLocale(config.sourceTextMaxCountPerLocale()));
     entity.setCronExpression(normalizeCronExpression(config.cronExpression()));
@@ -74,7 +105,56 @@ public class AiTranslateAutomationConfigService {
         normalizedRepositoryIds,
         normalizedExcludedRepositoryIds,
         entity.getSourceTextMaxCountPerLocale(),
-        entity.getCronExpression());
+        entity.getCronExpression(),
+        normalizedLocaleExclusions);
+  }
+
+  private Map<Long, List<String>> decodeLocaleExclusions(String json) {
+    if (json == null || json.isBlank()) {
+      return Map.of();
+    }
+    return objectMapper.readValueUnchecked(json, new TypeReference<Map<Long, List<String>>>() {});
+  }
+
+  private Map<Long, List<String>> normalizeLocaleExclusions(
+      Map<Long, List<String>> excludedLocaleTagsByRepositoryId,
+      Map<Long, List<String>> savedLocaleExclusions) {
+    Map<Long, List<String>> normalized = new TreeMap<>();
+    for (var entry : excludedLocaleTagsByRepositoryId.entrySet()) {
+      Long repositoryId = entry.getKey();
+      // Preserve unchanged rules even if their repository was deleted since the config was saved.
+      if (entry.getValue() != null
+          && entry.getValue().equals(savedLocaleExclusions.get(repositoryId))) {
+        normalized.put(repositoryId, entry.getValue());
+        continue;
+      }
+      if (repositoryId == null
+          || repositoryRepository
+              .findNoGraphById(repositoryId)
+              .filter(repo -> !Boolean.TRUE.equals(repo.getDeleted()))
+              .isEmpty()) {
+        throw new IllegalArgumentException("Repository not found: " + repositoryId);
+      }
+      if (entry.getValue() == null) {
+        throw new IllegalArgumentException(
+            "Excluded locale tags are required for repository " + repositoryId);
+      }
+      TreeSet<String> localeTags = new TreeSet<>();
+      for (String localeTag : entry.getValue()) {
+        if (localeTag == null || localeTag.isBlank()) {
+          throw new IllegalArgumentException("Excluded locale tags must not be blank");
+        }
+        Locale locale = localeService.findByBcp47Tag(localeTag.trim());
+        if (locale == null) {
+          throw new IllegalArgumentException("Unknown locale tag: " + localeTag.trim());
+        }
+        localeTags.add(locale.getBcp47Tag());
+      }
+      if (!localeTags.isEmpty()) {
+        normalized.put(repositoryId, List.copyOf(localeTags));
+      }
+    }
+    return normalized;
   }
 
   private List<Long> decodeRepositoryIds(String repositoryIdsJson) {

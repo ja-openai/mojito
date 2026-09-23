@@ -2,6 +2,7 @@ export type ApiAiTranslateAutomationConfig = {
   enabled: boolean;
   repositoryIds: number[];
   excludedRepositoryIds: number[];
+  excludedLocaleTagsByRepositoryId: Record<string, string[]>;
   sourceTextMaxCountPerLocale: number;
   cronExpression: string | null;
 };
@@ -10,6 +11,7 @@ export type ApiAiTranslateAutomationConfigUpdate = {
   enabled: boolean;
   repositoryIds: number[];
   excludedRepositoryIds: number[];
+  excludedLocaleTagsByRepositoryId: Record<string, string[]>;
   sourceTextMaxCountPerLocale: number;
   cronExpression: string | null;
 };

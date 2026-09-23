@@ -132,6 +132,20 @@ public class AiTranslateRunService {
   }
 
   @Transactional(readOnly = true)
+  public Map<Long, ZonedDateTime> getLatestCompletedRunCreatedDates(
+      Collection<Long> repositoryIds) {
+    if (repositoryIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return aiTranslateRunRepository.findLatestCompletedRunCreatedDates(repositoryIds).stream()
+        .collect(
+            Collectors.toMap(
+                AiTranslateRunCreatedDateRow::repositoryId,
+                AiTranslateRunCreatedDateRow::createdDate));
+  }
+
+  @Transactional(readOnly = true)
   public List<RunSummary> getRecentRuns(List<Long> repositoryIds, int limit) {
     List<AiTranslateRunSummaryRow> rows =
         repositoryIds == null || repositoryIds.isEmpty()

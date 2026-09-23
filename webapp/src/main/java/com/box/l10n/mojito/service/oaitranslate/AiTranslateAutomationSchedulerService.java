@@ -57,6 +57,8 @@ public class AiTranslateAutomationSchedulerService {
       String triggerSource, boolean requireEnabled, Long requestedByUserId) {
     incrementCounter("runs", Tags.of("result", "started"));
     try {
+      ZonedDateTime configLastModifiedDate =
+          aiTranslateAutomationConfigService.getLastModifiedDate();
       var config = aiTranslateAutomationConfigService.getConfig();
       logger.info(
           "AI translate automation run started: source={}, enabled={}, repositoryCount={}, excludedRepositoryCount={}, sourceTextMaxCountPerLocale={}",
@@ -100,9 +102,19 @@ public class AiTranslateAutomationSchedulerService {
           candidateRepositories.stream().map(Repository::getId).toList();
       Map<Long, ZonedDateTime> lastCompletedRunStarts =
           aiTranslateRunService.getLatestCompletedRunStarts(candidateRepositoryIds);
+      Map<Long, ZonedDateTime> lastCompletedRunCreatedDates =
+          configLastModifiedDate == null
+              ? Map.of()
+              : aiTranslateRunService.getLatestCompletedRunCreatedDates(candidateRepositoryIds);
       Set<Long> repositoriesWithRecentChanges =
           candidateRepositories.stream()
-              .filter(repository -> hasChangesSinceLastRun(repository, lastCompletedRunStarts))
+              .filter(
+                  repository ->
+                      hasChangesSinceLastRun(
+                          repository,
+                          lastCompletedRunStarts,
+                          lastCompletedRunCreatedDates,
+                          configLastModifiedDate))
               .map(Repository::getId)
               .collect(Collectors.toSet());
       for (Repository repository : eligibleRepositories) {
@@ -137,11 +149,33 @@ public class AiTranslateAutomationSchedulerService {
           continue;
         }
 
+        List<String> targetLocaleTags = null;
+        List<String> excludedLocaleTags =
+            config.excludedLocaleTagsByRepositoryId().getOrDefault(repository.getId(), List.of());
+        if (!excludedLocaleTags.isEmpty()) {
+          targetLocaleTags =
+              repository.getRepositoryLocales().stream()
+                  .filter(repositoryLocale -> repositoryLocale.getParentLocale() != null)
+                  .map(repositoryLocale -> repositoryLocale.getLocale().getBcp47Tag())
+                  .filter(localeTag -> !excludedLocaleTags.contains(localeTag))
+                  .sorted()
+                  .toList();
+          if (targetLocaleTags.isEmpty()) {
+            logger.info(
+                "AI translate automation repository skipped: source={}, repositoryId={}, repositoryName={}, reason=all_locales_excluded",
+                triggerSource,
+                repository.getId(),
+                repository.getName());
+            incrementCounter("repositories", Tags.of("result", "all_locales_excluded"));
+            continue;
+          }
+        }
+
         String uniqueId = UNIQUE_ID_PREFIX + repository.getId();
         AiTranslateInput aiTranslateInput =
             new AiTranslateInput(
                 repository.getName(),
-                null,
+                targetLocaleTags,
                 config.sourceTextMaxCountPerLocale(),
                 null,
                 false,
@@ -203,9 +237,21 @@ public class AiTranslateAutomationSchedulerService {
   }
 
   private boolean hasChangesSinceLastRun(
-      Repository repository, Map<Long, ZonedDateTime> lastCompletedRunStarts) {
+      Repository repository,
+      Map<Long, ZonedDateTime> lastCompletedRunStarts,
+      Map<Long, ZonedDateTime> lastCompletedRunCreatedDates,
+      ZonedDateTime configLastModifiedDate) {
     ZonedDateTime lastCompletedRunStart = lastCompletedRunStarts.get(repository.getId());
     if (lastCompletedRunStart == null) {
+      return true;
+    }
+
+    // Locale selections are captured when a run is scheduled, before it starts executing.
+    ZonedDateTime lastCompletedRunCreatedDate =
+        lastCompletedRunCreatedDates.get(repository.getId());
+    if (configLastModifiedDate != null
+        && (lastCompletedRunCreatedDate == null
+            || configLastModifiedDate.isAfter(lastCompletedRunCreatedDate))) {
       return true;
     }
 

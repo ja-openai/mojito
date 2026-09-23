@@ -23,7 +23,9 @@ import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useUser } from '../../hooks/useUser';
+import { hasSameSet } from '../../utils/arraySelection';
 import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
+import { AiTranslateRepositoryLocalesField } from './AiTranslateRepositoryLocalesField';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const CRON_PRESETS = [
@@ -52,6 +54,9 @@ export function AdminAiTranslateAutomationPage() {
   const [automationExcludedRepositoryIdsDraft, setAutomationExcludedRepositoryIdsDraft] = useState<
     number[]
   >([]);
+  const [automationExcludedLocalesDraft, setAutomationExcludedLocalesDraft] = useState<
+    Record<string, string[]>
+  >({});
   const [automationSourceTextMaxDraft, setAutomationSourceTextMaxDraft] = useState('100');
   const [automationCronExpressionDraft, setAutomationCronExpressionDraft] = useState('');
   const [runHistoryRepositoryIds, setRunHistoryRepositoryIds] = useState<number[]>([]);
@@ -103,6 +108,7 @@ export function AdminAiTranslateAutomationPage() {
       setAutomationExcludedRepositoryIdsDraft(
         nextRepositoryMode === 'EXCLUDED' ? nextConfig.excludedRepositoryIds : [],
       );
+      setAutomationExcludedLocalesDraft(nextConfig.excludedLocaleTagsByRepositoryId ?? {});
       setAutomationSourceTextMaxDraft(String(nextConfig.sourceTextMaxCountPerLocale));
       setAutomationCronExpressionDraft(nextConfig.cronExpression ?? '');
       await queryClient.invalidateQueries({ queryKey: ['ai-translate-automation-runs'] });
@@ -130,6 +136,7 @@ export function AdminAiTranslateAutomationPage() {
     setAutomationExcludedRepositoryIdsDraft(
       nextRepositoryMode === 'EXCLUDED' ? config.excludedRepositoryIds : [],
     );
+    setAutomationExcludedLocalesDraft(config.excludedLocaleTagsByRepositoryId ?? {});
     setAutomationSourceTextMaxDraft(String(config.sourceTextMaxCountPerLocale));
     setAutomationCronExpressionDraft(config.cronExpression ?? '');
   }, [automationConfigQuery.data]);
@@ -190,6 +197,19 @@ export function AdminAiTranslateAutomationPage() {
     if (automationCronExpressionDraft !== (saved.cronExpression ?? '')) {
       return true;
     }
+    const savedExcludedLocales = saved.excludedLocaleTagsByRepositoryId ?? {};
+    const repositoryIdsWithLocaleRules = new Set([
+      ...Object.keys(savedExcludedLocales),
+      ...Object.keys(automationExcludedLocalesDraft),
+    ]);
+    if (
+      [...repositoryIdsWithLocaleRules].some(
+        (id) =>
+          !hasSameSet(automationExcludedLocalesDraft[id] ?? [], savedExcludedLocales[id] ?? []),
+      )
+    ) {
+      return true;
+    }
     return !haveSameSortedIds(excludedRepositoryIdsToSave, saved.excludedRepositoryIds);
   }, [
     automationConfigQuery.data,
@@ -197,18 +217,21 @@ export function AdminAiTranslateAutomationPage() {
     automationRepositoryModeDraft,
     automationRepositoryIdsDraft,
     automationExcludedRepositoryIdsDraft,
+    automationExcludedLocalesDraft,
     automationCronExpressionDraft,
     automationSourceTextMax.valid,
     automationSourceTextMax.value,
   ]);
 
+  const resetSaveAutomation = saveAutomationMutation.reset;
+  const resetRunAutomation = runAutomationMutation.reset;
   useEffect(() => {
     if (!isAutomationDirty) {
       return;
     }
-    saveAutomationMutation.reset();
-    runAutomationMutation.reset();
-  }, [isAutomationDirty, runAutomationMutation, saveAutomationMutation]);
+    resetSaveAutomation();
+    resetRunAutomation();
+  }, [isAutomationDirty, resetRunAutomation, resetSaveAutomation]);
 
   if (!isAdmin) {
     return <Navigate to="/repositories" replace />;
@@ -233,6 +256,7 @@ export function AdminAiTranslateAutomationPage() {
         automationRepositoryModeDraft === 'INCLUDED' ? automationRepositoryIdsDraft : [],
       excludedRepositoryIds:
         automationRepositoryModeDraft === 'EXCLUDED' ? automationExcludedRepositoryIdsDraft : [],
+      excludedLocaleTagsByRepositoryId: automationExcludedLocalesDraft,
       sourceTextMaxCountPerLocale: automationSourceTextMax.value as number,
       cronExpression: automationCronExpressionDraft.trim() || null,
     });
@@ -391,6 +415,20 @@ export function AdminAiTranslateAutomationPage() {
               </div>
             )}
           </div>
+          <AiTranslateRepositoryLocalesField
+            repositories={(repositories ?? []).filter((repository) =>
+              automationRepositoryModeDraft === 'INCLUDED'
+                ? automationRepositoryIdsDraft.includes(repository.id)
+                : !automationExcludedRepositoryIdsDraft.includes(repository.id),
+            )}
+            excludedLocaleTagsByRepositoryId={automationExcludedLocalesDraft}
+            onChange={setAutomationExcludedLocalesDraft}
+            disabled={
+              !automationConfigQuery.data ||
+              automationConfigQuery.isError ||
+              saveAutomationMutation.isPending
+            }
+          />
           <div className="settings-card__footer">
             <div className="settings-card__footer-group">
               <div className="settings-actions">

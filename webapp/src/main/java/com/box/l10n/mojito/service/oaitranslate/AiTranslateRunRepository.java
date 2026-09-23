@@ -29,6 +29,20 @@ public interface AiTranslateRunRepository extends JpaRepository<AiTranslateRun, 
 
   @Query(
       """
+      select new com.box.l10n.mojito.service.oaitranslate.AiTranslateRunCreatedDateRow(
+        run.repository.id,
+        max(run.createdDate)
+      )
+      from AiTranslateRun run
+      where run.repository.id in :repositoryIds
+        and run.status = com.box.l10n.mojito.entity.AiTranslateRun.Status.COMPLETED
+      group by run.repository.id
+      """)
+  List<AiTranslateRunCreatedDateRow> findLatestCompletedRunCreatedDates(
+      @Param("repositoryIds") Collection<Long> repositoryIds);
+
+  @Query(
+      """
       select new com.box.l10n.mojito.service.oaitranslate.AiTranslateRunSummaryRow(
         run.id,
         run.triggerSource,

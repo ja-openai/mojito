@@ -7,6 +7,7 @@ import com.box.l10n.mojito.service.oaitranslate.AiTranslateRunService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateTextUnitAttemptService;
 import com.box.l10n.mojito.service.team.TeamService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,28 +51,36 @@ public class AiTranslateAutomationWS {
         config.repositoryIds(),
         config.excludedRepositoryIds(),
         config.sourceTextMaxCountPerLocale(),
-        config.cronExpression());
+        config.cronExpression(),
+        config.excludedLocaleTagsByRepositoryId());
   }
 
   @RequestMapping(method = RequestMethod.PUT, value = "/api/ai-translate/automation")
   @ResponseStatus(HttpStatus.OK)
   public AutomationConfigResponse updateAutomationConfig(
       @RequestBody AutomationConfigRequest request) {
-    var updated =
-        aiTranslateAutomationConfigService.updateConfig(
-            new AiTranslateAutomationConfigService.Config(
-                request.enabled(),
-                request.repositoryIds(),
-                request.excludedRepositoryIds(),
-                request.sourceTextMaxCountPerLocale(),
-                request.cronExpression()));
+    AiTranslateAutomationConfigService.Config updated;
+    try {
+      updated =
+          aiTranslateAutomationConfigService.updateConfig(
+              new AiTranslateAutomationConfigService.Config(
+                  request.enabled(),
+                  request.repositoryIds(),
+                  request.excludedRepositoryIds(),
+                  request.sourceTextMaxCountPerLocale(),
+                  request.cronExpression(),
+                  request.excludedLocaleTagsByRepositoryId()));
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
     aiTranslateAutomationCronSchedulerService.syncConfig(updated);
     return new AutomationConfigResponse(
         updated.enabled(),
         updated.repositoryIds(),
         updated.excludedRepositoryIds(),
         updated.sourceTextMaxCountPerLocale(),
-        updated.cronExpression());
+        updated.cronExpression(),
+        updated.excludedLocaleTagsByRepositoryId());
   }
 
   @RequestMapping(method = RequestMethod.POST, value = "/api/ai-translate/automation/run")
@@ -166,14 +175,16 @@ public class AiTranslateAutomationWS {
       List<Long> repositoryIds,
       List<Long> excludedRepositoryIds,
       int sourceTextMaxCountPerLocale,
-      String cronExpression) {}
+      String cronExpression,
+      Map<Long, List<String>> excludedLocaleTagsByRepositoryId) {}
 
   public record AutomationConfigResponse(
       boolean enabled,
       List<Long> repositoryIds,
       List<Long> excludedRepositoryIds,
       int sourceTextMaxCountPerLocale,
-      String cronExpression) {}
+      String cronExpression,
+      Map<Long, List<String>> excludedLocaleTagsByRepositoryId) {}
 
   public record RunAutomationResponse(int scheduledRepositoryCount) {}
 

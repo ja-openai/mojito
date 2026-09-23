@@ -17,6 +17,9 @@ public class AiTranslateAutomationConfigEntity extends AuditableEntity {
   @Column(name = "excluded_repository_ids_json", length = Integer.MAX_VALUE)
   private String excludedRepositoryIdsJson;
 
+  @Column(name = "excluded_locale_tags_by_repository_id_json", length = Integer.MAX_VALUE)
+  private String excludedLocaleTagsByRepositoryIdJson;
+
   @Column(name = "source_text_max_count_per_locale", nullable = false)
   private int sourceTextMaxCountPerLocale = 100;
 
@@ -45,6 +48,14 @@ public class AiTranslateAutomationConfigEntity extends AuditableEntity {
 
   public void setExcludedRepositoryIdsJson(String excludedRepositoryIdsJson) {
     this.excludedRepositoryIdsJson = excludedRepositoryIdsJson;
+  }
+
+  public String getExcludedLocaleTagsByRepositoryIdJson() {
+    return excludedLocaleTagsByRepositoryIdJson;
+  }
+
+  public void setExcludedLocaleTagsByRepositoryIdJson(String excludedLocaleTagsByRepositoryIdJson) {
+    this.excludedLocaleTagsByRepositoryIdJson = excludedLocaleTagsByRepositoryIdJson;
   }
 
   public int getSourceTextMaxCountPerLocale() {
