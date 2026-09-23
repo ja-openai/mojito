@@ -102,7 +102,9 @@ marking the new revision `READY`. Once routed, revise only in response to pendin
 - Attach the evidence humans need to the proposal's `evidenceJson`, using the contract's labeled
   URL or artifact entries. Upload linked screenshots/files to the same run as that proposal revision;
   an artifact saved only in an earlier run or checkpoint is not automatically visible to its human
-  reviewer. Mojito creates the project-scoped evidence links after routing.
+  reviewer. Mojito creates admin-only project-scoped evidence links after routing. Keep the
+  finding summary actionable for assigned reviewers, who see it alongside the original and
+  proposed translation without the detailed Report tab.
 - Renew the claim while working. If another coordinator owns it or the generation is stale, stop
   publishing, inspect the latest run, and reconcile before taking over. Never forge newer tokens.
 - Finish the run only when the coverage ledger accurately describes the requested scope. Finish

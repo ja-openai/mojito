@@ -11,6 +11,7 @@ import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.service.badtranslation.TranslationIncidentRepository;
 import com.box.l10n.mojito.service.review.ReviewProjectRepository;
 import com.box.l10n.mojito.service.review.ReviewProjectService;
+import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -43,6 +44,7 @@ public class AgentReviewProjectService {
   private final TMTextUnitRepository textUnits;
   private final ReviewProjectService reviewProjects;
   private final ReviewProjectRepository projects;
+  private final UserService users;
   private final TransactionTemplate transactions;
   private final String automaticReviewType;
   @PersistenceContext private EntityManager entityManager;
@@ -58,6 +60,7 @@ public class AgentReviewProjectService {
       TMTextUnitRepository textUnits,
       ReviewProjectService reviewProjects,
       ReviewProjectRepository projects,
+      UserService users,
       PlatformTransactionManager transactionManager,
       @Value("${l10n.agent-review.automatic-review-type:TRANSLATION_QUALITY}")
           String automaticReviewType) {
@@ -71,6 +74,7 @@ public class AgentReviewProjectService {
     this.textUnits = textUnits;
     this.reviewProjects = reviewProjects;
     this.projects = projects;
+    this.users = users;
     this.automaticReviewType = automaticReviewType;
     this.transactions = new TransactionTemplate(transactionManager);
     transactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -356,6 +360,9 @@ public class AgentReviewProjectService {
 
   @Transactional(readOnly = true)
   public List<FeedbackView> history(long projectId, long proposalId, long afterId, int limit) {
+    if (!users.isCurrentUserAdmin()) {
+      throw new AccessDeniedException("Review reports are only available to administrators");
+    }
     if (afterId < 0 || limit < 1 || limit > 200) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "afterId must be nonnegative and limit between 1 and 200");

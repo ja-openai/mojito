@@ -13,6 +13,7 @@ import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.badtranslation.TranslationIncidentRepository;
 import com.box.l10n.mojito.service.review.ReviewProjectTextUnitDetail;
+import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.EntityManager;
@@ -41,6 +42,7 @@ public class AgentReviewDecisionService {
   private final AgentReviewRunRepository runs;
   private final TranslationIncidentRepository incidents;
   private final TMTextUnitIntegrityCheckService integrity;
+  private final UserService users;
   private final ObjectMapper mapper;
   @PersistenceContext private EntityManager entityManager;
 
@@ -51,6 +53,7 @@ public class AgentReviewDecisionService {
       AgentReviewRunRepository runs,
       TranslationIncidentRepository incidents,
       TMTextUnitIntegrityCheckService integrity,
+      UserService users,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper mapper) {
     this.reviews = reviews;
     this.proposals = proposals;
@@ -58,6 +61,7 @@ public class AgentReviewDecisionService {
     this.runs = runs;
     this.incidents = incidents;
     this.integrity = integrity;
+    this.users = users;
     this.mapper = mapper;
   }
 
@@ -401,6 +405,7 @@ public class AgentReviewDecisionService {
         runs.findById(project.getAgentReviewRunId())
             .map(AgentReviewRun::getReviewType)
             .orElse(null);
+    boolean canViewReport = users.isCurrentUserAdmin();
     Map<Long, AgentReviewProposalView> result = new HashMap<>();
     for (AgentReviewProposal proposal : projectProposals) {
       ReviewProjectTextUnitDetail row = rowsById.get(proposal.getReviewProjectTextUnitId());
@@ -413,7 +418,8 @@ public class AgentReviewDecisionService {
                 row,
                 lastRequests.get(proposal.getId()),
                 latestFeedback.get(proposal.getId()),
-                nextProjects.get(proposal.getId())));
+                nextProjects.get(proposal.getId()),
+                canViewReport));
     }
     return result;
   }
@@ -424,7 +430,8 @@ public class AgentReviewDecisionService {
       ReviewProjectTextUnitDetail row,
       String lastRequestId,
       AgentReviewFeedback latestFeedback,
-      Long nextProjectId) {
+      Long nextProjectId,
+      boolean canViewReport) {
     return new AgentReviewProposalView(
         proposal.getId(),
         proposal.getPreviousProposalId(),
@@ -439,9 +446,9 @@ public class AgentReviewDecisionService {
         proposal.getRationale(),
         proposal.getCategory().name(),
         proposal.getReadiness().name(),
-        proposal.getVerificationRationale(),
-        proposal.getIntegrityDiagnostics(),
-        evidence(proposal),
+        canViewReport ? proposal.getVerificationRationale() : null,
+        canViewReport ? proposal.getIntegrityDiagnostics() : null,
+        canViewReport ? evidence(proposal) : List.of(),
         proposal.getDisposition().name(),
         proposal.getDisposition() != Disposition.RESOLVED
             && stale(

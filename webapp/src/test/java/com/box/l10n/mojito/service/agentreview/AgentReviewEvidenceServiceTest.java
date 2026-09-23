@@ -54,8 +54,7 @@ public class AgentReviewEvidenceServiceTest {
 
   @Before
   public void setup() {
-    // Exercise the existing project policy with an assigned translator, without granting run
-    // access.
+    // Report access still validates the project and exact proposal artifact for administrators.
     ReflectionTestUtils.setField(reviewProjects, "userService", userService);
     ReflectionTestUtils.setField(reviewProjects, "userRepository", users);
     ReflectionTestUtils.setField(reviewProjects, "teamService", teams);
@@ -64,7 +63,7 @@ public class AgentReviewEvidenceServiceTest {
     translator.setId(5L);
     translator.setCanTranslateAllLocales(false);
     when(teams.getCurrentUserIdOrThrow()).thenReturn(5L);
-    when(userService.isCurrentUserTranslator()).thenReturn(true);
+    when(userService.isCurrentUserAdmin()).thenReturn(true);
     when(users.findById(5L)).thenReturn(Optional.of(translator));
     when(teamUsers.findByUserIdAndRole(5L, TeamUserRole.TRANSLATOR)).thenReturn(List.of());
     when(reviews.getRun(30L)).thenThrow(new AccessDeniedException("Manager access required"));
@@ -93,11 +92,11 @@ public class AgentReviewEvidenceServiceTest {
     when(reviews.readStoredArtifact(30L, HASH)).thenReturn(artifact);
     service =
         new AgentReviewEvidenceService(
-            reviewProjects, projects, rows, proposals, reviews, new ObjectMapper());
+            reviewProjects, projects, rows, proposals, reviews, userService, new ObjectMapper());
   }
 
   @Test
-  public void assignedTranslatorCanReadAnExplicitProposalArtifactWithoutRunAccess() {
+  public void administratorCanReadAnExplicitProposalArtifact() {
     assertSame(artifact, service.read(10L, 20L, HASH));
     verify(reviewProjects).assertCurrentUserCanReadProject(project);
     verify(reviews).readStoredArtifact(30L, HASH);
@@ -112,16 +111,23 @@ public class AgentReviewEvidenceServiceTest {
   }
 
   @Test
-  public void anUnassignedOutsiderCannotReadOrDiscoverProposalEvidence() {
-    User otherTranslator = new User();
-    otherTranslator.setId(99L);
-    project.setAssignedTranslatorUser(otherTranslator);
+  public void evenAnAssignedTranslatorCannotReadOrDiscoverProposalEvidence() {
+    when(userService.isCurrentUserAdmin()).thenReturn(false);
+    when(userService.isCurrentUserTranslator()).thenReturn(true);
     assertThrows(AccessDeniedException.class, () -> service.read(10L, 20L, HASH));
-    verifyNoInteractions(proposals, rows, reviews);
+    verifyNoInteractions(projects, proposals, rows, reviews);
   }
 
   @Test
-  public void anUnreferencedRunArtifactCannotBeReadEvenByTheAssignedTranslator() {
+  public void aProjectManagerCannotReadOrDiscoverProposalEvidence() {
+    when(userService.isCurrentUserAdmin()).thenReturn(false);
+    when(userService.isCurrentUserPm()).thenReturn(true);
+    assertThrows(AccessDeniedException.class, () -> service.read(10L, 20L, HASH));
+    verifyNoInteractions(projects, proposals, rows, reviews);
+  }
+
+  @Test
+  public void anUnreferencedRunArtifactCannotBeReadEvenByAnAdministrator() {
     assertNotFound("b".repeat(64));
     verifyNoInteractions(reviews);
   }

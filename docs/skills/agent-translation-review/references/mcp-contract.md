@@ -215,11 +215,13 @@ External links support HTTP/HTTPS URLs without embedded credentials. Artifact li
 server-returned digest and must already exist in the same run as the proposal revision. When a new
 responding run reuses earlier evidence, read that artifact from its original run and upload it to the
 responding run before linking its returned digest. A cross-run reference in the checkpoint alone
-does not expose that artifact to the assigned reviewer. The project panel shows up to 30 entries.
+does not expose that artifact in the report. The admin-only project report shows up to 30 entries.
 
 After routing, Mojito turns an `artifactSha256` entry into
 `/api/agent-reviews/projects/{projectId}/proposals/{proposalId}/artifacts/{sha256}`. This endpoint
-checks project access and the exact proposal evidence link. PNG, JPEG, WebP, and GIF images can be
+requires admin access and checks project access and the exact proposal evidence link.
+The project Report tab, detailed evidence, and feedback history are admin-only; assigned reviewers
+retain the original/proposal/finding strip and ordinary review controls. PNG, JPEG, WebP, and GIF images can be
 viewed inline; other files download. Coordinators still use `agent_review.read_artifact` with the
 run ID to restore arbitrary permitted run artifacts. Do not invent project IDs or place a manager-only
 raw-run artifact URL in reviewer evidence.

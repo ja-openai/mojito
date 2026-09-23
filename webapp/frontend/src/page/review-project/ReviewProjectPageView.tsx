@@ -2178,6 +2178,12 @@ function DetailPane({
   const textUnitName = textUnit.tmTextUnit?.name ?? `Text unit ${textUnit.id}`;
   const agentReview = textUnit.agentReview;
   const isAgentReview = agentReview != null;
+  const canViewAgentReport = isAgentReview && user.role === 'ROLE_ADMIN';
+  useEffect(() => {
+    if (!canViewAgentReport) {
+      setActiveContextTab((current) => (current === 'incident' ? 'glossary' : current));
+    }
+  }, [canViewAgentReport]);
   const queryClient = useQueryClient();
   const [reopenPending, setReopenPending] = useState(false);
   const [reopenError, setReopenError] = useState<string | null>(null);
@@ -4831,7 +4837,7 @@ function DetailPane({
           proposal={agentReview}
           localeTag={localeTag}
           draftTarget={draftTarget}
-          onOpenReport={() => setActiveContextTab('incident')}
+          onOpenReport={canViewAgentReport ? () => setActiveContextTab('incident') : undefined}
           onUseOriginal={handleUseReportedOriginal}
           onUseSuggestion={() => {
             if (incidentSuggestion) handleUseAiSuggestion(incidentSuggestion);
@@ -5514,7 +5520,7 @@ function DetailPane({
                     ]),
                 { value: 'history' as const, label: 'History' },
                 { value: 'context' as const, label: 'Context' },
-                ...(agentReview ? [{ value: 'incident' as const, label: 'Report' }] : []),
+                ...(canViewAgentReport ? [{ value: 'incident' as const, label: 'Report' }] : []),
               ].map((tab) =>
                 (() => {
                   const tabCount = formatTabCount(tab.count);
@@ -5613,7 +5619,7 @@ function DetailPane({
                 />
               ) : null}
 
-              {activeContextTab === 'incident' && agentReview ? (
+              {activeContextTab === 'incident' && canViewAgentReport && agentReview ? (
                 <div className="review-project-detail__context-stack">
                   <AgentReviewContext
                     projectId={projectId}

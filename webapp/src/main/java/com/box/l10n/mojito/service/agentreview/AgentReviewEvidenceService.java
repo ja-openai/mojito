@@ -7,17 +7,19 @@ import com.box.l10n.mojito.service.agentreview.AgentReviewContracts.Artifact;
 import com.box.l10n.mojito.service.review.ReviewProjectRepository;
 import com.box.l10n.mojito.service.review.ReviewProjectService;
 import com.box.l10n.mojito.service.review.ReviewProjectTextUnitRepository;
+import com.box.l10n.mojito.service.security.user.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-/** Gives human reviewers access only to durable artifacts attached to their project proposals. */
+/** Gives administrators access only to durable artifacts attached to their project proposals. */
 @Service
 public class AgentReviewEvidenceService {
   private final ReviewProjectService reviewProjects;
@@ -25,6 +27,7 @@ public class AgentReviewEvidenceService {
   private final ReviewProjectTextUnitRepository rows;
   private final AgentReviewProposalRepository proposals;
   private final AgentReviewService reviews;
+  private final UserService users;
   private final ObjectMapper mapper;
 
   public AgentReviewEvidenceService(
@@ -33,17 +36,22 @@ public class AgentReviewEvidenceService {
       ReviewProjectTextUnitRepository rows,
       AgentReviewProposalRepository proposals,
       AgentReviewService reviews,
+      UserService users,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper mapper) {
     this.reviewProjects = reviewProjects;
     this.projects = projects;
     this.rows = rows;
     this.proposals = proposals;
     this.reviews = reviews;
+    this.users = users;
     this.mapper = mapper;
   }
 
   @Transactional(readOnly = true)
   public Artifact read(long projectId, long proposalId, String sha256) {
+    if (!users.isCurrentUserAdmin()) {
+      throw new AccessDeniedException("Review reports are only available to administrators");
+    }
     ReviewProject project = projects.findById(projectId).orElseThrow(this::notFound);
     reviewProjects.assertCurrentUserCanReadProject(project);
     AgentReviewProposal proposal = proposals.findById(proposalId).orElseThrow(this::notFound);

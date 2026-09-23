@@ -243,9 +243,9 @@ existing project shell. Batch creation and assignment do not imply table-based e
 
 - Reuse the normal three-panel presentation: the existing source/translation navigation list on
   the left, translation editor and review chat in the center, and source, comment, string ID,
-  glossary, placeholders, history and context on the right. Add a **Report** tab for the reported
-  finding, evidence, optional assessments, and incident feedback history. Keep the normal panel
-  widths and controls. Review one string at a time.
+  glossary, placeholders, history and context on the right. Add an admin-only **Report** tab for
+  the reported finding, evidence, optional assessments, and incident feedback history. Keep the
+  normal panel widths and controls. Review one string at a time.
 - Filter incident work by review status: **Awaiting review** includes **Changed since review**;
   **Reviewed** excludes requests waiting for an agent. Use the normal filter icon; translation
   status and Edited filters remain specific to regular projects. Filtering preserves unsaved work.
@@ -255,8 +255,10 @@ existing project shell. Batch creation and assignment do not imply table-based e
   the other version shows **Use original** or **Use suggestion**, which copies into the editor without saving. Selection follows
   edits and Reset; when custom text matches neither version, neither is selected. If both versions
   are identical, show only the original as selected. Keep both snapshots visible after Use or Accept.
-  **View report →** opens the full Report tab. Later AI chat suggestions remain separate from the
-  recorded finding, with an explicit **Review** action and no automatic review on incident load.
+  Admins see **View report →**, which opens the full Report tab. Other reviewers retain the strip
+  and ordinary editing controls, without the link or Report tab. Later AI chat suggestions remain
+  separate from the recorded finding, with an explicit **Review** action and no automatic review
+  on incident load.
 - Keep the ordinary **Reset** and **Accept** controls. Accepting unchanged current text records
   `KEEP_CURRENT` without changing live text, status or export inclusion. Accepting an edit or used
   suggestion applies it through the existing guarded save. Preserve exact proposal provenance,
@@ -379,13 +381,17 @@ runs retain the original team and review type.
   atomically under the same access and current-state checks.
 - Review Projects use the standard editor and review chat, with a persistent original/proposal
   report strip. **Use** stages either version and **Accept** saves the decision and optional note.
-  The **Report** tab contains rationale, verifier notes, optional
-  assessments, and feedback history. A current source, context comment, or translation
+  The admin-only **Report** tab contains rationale, verifier notes, optional
+  assessments, and feedback history. Non-admin project responses omit verifier notes,
+  integrity diagnostics, and evidence; project feedback-history and evidence-artifact reads
+  require admin access. The compact original/proposal/finding strip and guarded review decisions
+  remain available to assigned reviewers. A current source, context comment, or translation
   change blocks acceptance of the old proposal. Structural integrity checks apply to every accepting
   reviewer, including administrators.
 - Attach external evidence as `{label,url}` or same-run uploaded evidence as
-  `{label,artifactSha256}` in the proposal's evidence array. Assigned reviewers can read those exact
-  referenced artifacts through a project-authorized endpoint; they cannot browse other run artifacts.
+  `{label,artifactSha256}` in the proposal's evidence array. Administrators can read those exact
+  referenced artifacts through a project-authorized endpoint; they cannot browse other run
+  artifacts through that endpoint.
   Raster images open inline; other content downloads with safe content-type handling.
 - V111 adds the three review tables; V112 adds the historical incident/project links and incident
   filters. V115 adds queued routing and the batch lookup index; V116 adds automation source/type;

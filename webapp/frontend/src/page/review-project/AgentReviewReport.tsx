@@ -57,7 +57,7 @@ export function AgentReviewReport({
   suggestionDisabled: boolean;
   originalError?: string | null;
   suggestionError?: string | null;
-  onOpenReport: () => void;
+  onOpenReport?: () => void;
 }) {
   const originalSelected =
     proposal.reviewedTarget !== null && draftTarget === proposal.reviewedTarget;
@@ -81,11 +81,13 @@ export function AgentReviewReport({
           {proposal.verificationStatus === 'HUMAN_REVIEW' ? 'Human review' : 'Automation'}
           {status ? ` · ${status}` : ''}
         </span>
-        <div className="agent-review-report__actions">
-          <button type="button" className="agent-review-report__link" onClick={onOpenReport}>
-            View report →
-          </button>
-        </div>
+        {onOpenReport ? (
+          <div className="agent-review-report__actions">
+            <button type="button" className="agent-review-report__link" onClick={onOpenReport}>
+              View report →
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className="agent-review-report__columns">
         <div>

@@ -46,6 +46,20 @@ describe('AgentReviewReport', () => {
     expect(callbacks.onOpenReport).toHaveBeenCalledOnce();
   });
 
+  it('hides the report link without hiding the finding or translation choices when report access is unavailable', () => {
+    const callbacks = props();
+    render(<AgentReviewReport {...callbacks} onOpenReport={undefined} />);
+
+    expect(screen.queryByRole('button', { name: 'View report →' })).not.toBeInTheDocument();
+    const report = screen.getByRole('region', { name: 'Reported issue' });
+    expect(report).toHaveTextContent(proposal.rationale);
+    expect(report).toHaveTextContent(proposal.reviewedTarget!);
+    expect(report).toHaveTextContent(proposal.proposedTarget!);
+    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+    expect(callbacks.onUseSuggestion).toHaveBeenCalledOnce();
+    expect(callbacks.onOpenReport).not.toHaveBeenCalled();
+  });
+
   it('retains the original and proposal when the selected draft or review state changes', () => {
     const callbacks = props();
     const { rerender } = render(<AgentReviewReport {...callbacks} />);

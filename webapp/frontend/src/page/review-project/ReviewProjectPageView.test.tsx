@@ -354,6 +354,8 @@ const user: ApiUserProfile = {
   userLocales: [],
 };
 
+const adminUser: ApiUserProfile = { ...user, role: 'ROLE_ADMIN' };
+
 const textUnit: ApiReviewProjectTextUnit = {
   id: 101,
   tmTextUnit: {
@@ -3296,11 +3298,22 @@ function buildAgentTextUnit(
 function renderAgentReview(
   overrides: Partial<NonNullable<ApiReviewProjectTextUnit['agentReview']>> = {},
   mutations = buildMutations(),
+  currentUser = user,
 ) {
-  return renderReviewProjectPageView({
-    project: { ...project, reviewProjectTextUnits: [buildAgentTextUnit(overrides)] },
-    mutations,
-  });
+  return renderReviewProjectPageView(
+    {
+      project: { ...project, reviewProjectTextUnits: [buildAgentTextUnit(overrides)] },
+      mutations,
+    },
+    currentUser,
+  );
+}
+
+function renderAdminAgentReview(
+  overrides: Partial<NonNullable<ApiReviewProjectTextUnit['agentReview']>> = {},
+  mutations = buildMutations(),
+) {
+  return renderAgentReview(overrides, mutations, adminUser);
 }
 
 function renderReviewWithRetainedNotes(
@@ -3308,6 +3321,7 @@ function renderReviewWithRetainedNotes(
   notes: { comment?: string; decisionNotes?: string },
   mutations = buildMutations(),
   originalAssessment?: 'BAD',
+  currentUser = user,
 ) {
   visibleTextEditorEnabledMock.mockReturnValue(false);
   const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -3322,7 +3336,7 @@ function renderReviewWithRetainedNotes(
     onRequestDetailsQueryHandled: noop,
     onRequestDetailsFlowFinished: noop,
   };
-  const firstVisit = render(renderReviewProjectPageViewNode(props, queryClient));
+  const firstVisit = render(renderReviewProjectPageViewNode(props, queryClient, currentUser));
   fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
     target: { value: 'Temporary draft for retained-note setup' },
   });
@@ -3345,13 +3359,83 @@ function renderReviewWithRetainedNotes(
     });
   }
   return {
-    view: render(renderReviewProjectPageViewNode(props, queryClient)),
+    view: render(renderReviewProjectPageViewNode(props, queryClient, currentUser)),
     props,
     queryClient,
   };
 }
 
 describe('Agent proposal review in Review Projects', () => {
+  it.each(['ROLE_USER', 'ROLE_TRANSLATOR', 'ROLE_PM'] as const)(
+    'hides the report and its link from %s while preserving normal incident review',
+    async (role) => {
+      const onRequestDecisionState =
+        vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
+      renderAgentReview(
+        { verificationStatus: 'HUMAN_REVIEW' },
+        buildMutations({ onRequestDecisionState }),
+        { ...user, role },
+      );
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled());
+      const report = within(screen.getByRole('region', { name: 'Reported issue' }));
+      expect(report.getByText('The target is still in English.')).toBeVisible();
+      expect(report.getByRole('heading', { name: 'Original at review' })).toBeVisible();
+      expect(report.getByRole('heading', { name: 'Proposed correction' })).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Use suggestion' })).toBeEnabled();
+      expect(screen.queryByRole('button', { name: 'View report →' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Report' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('region', { name: 'Evidence and verification' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('region', { name: 'Feedback and agent responses' }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText('Confirmed this is a payment action.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Checkout screenshot')).not.toBeInTheDocument();
+      expect(fetchAgentReviewFeedbackMock).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+      expect(onRequestDecisionState).toHaveBeenCalledTimes(1);
+      expect(onRequestDecisionState.mock.calls[0][0]).toMatchObject({
+        decisionState: 'DECIDED',
+        agentReview: { action: 'KEEP_CURRENT', proposalId: 901 },
+      });
+    },
+  );
+
+  it('returns to Glossary if admin report access is removed while the report is open', async () => {
+    const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+    const props: ReviewProjectPageViewProps = {
+      projectId: project.id,
+      project: { ...project, reviewProjectTextUnits: [buildAgentTextUnit()] },
+      mutations: buildMutations(),
+      selectedTextUnitQueryId: null,
+      onSelectedTextUnitIdChange: noop,
+      openRequestDetailsQuery: false,
+      requestDetailsSource: null,
+      onRequestDetailsQueryHandled: noop,
+      onRequestDetailsFlowFinished: noop,
+    };
+    const view = render(renderReviewProjectPageViewNode(props, queryClient, adminUser));
+    fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
+    expect(screen.getByRole('region', { name: 'Evidence and verification' })).toBeVisible();
+    await waitFor(() => expect(fetchAgentReviewFeedbackMock).toHaveBeenCalledTimes(1));
+
+    view.rerender(renderReviewProjectPageViewNode(props, queryClient, user));
+
+    expect(screen.getByRole('tab', { name: 'Glossary' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('tab', { name: 'Report' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View report →' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Evidence and verification' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Feedback and agent responses' }),
+    ).not.toBeInTheDocument();
+    expect(fetchAgentReviewFeedbackMock).toHaveBeenCalledTimes(1);
+  });
+
   it('filters incidents by their review state instead of the current translation status', () => {
     virtualRowsLimitMock.value = 10;
     const cases = [
@@ -3429,7 +3513,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('keeps the report above the regular editor and separate from optional AI chat', async () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
-    const { container } = renderAgentReview();
+    const { container } = renderAdminAgentReview();
     expect(container.querySelector('.review-project-row')).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Incident review queue' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Review finding' })).not.toBeInTheDocument();
@@ -3465,7 +3549,7 @@ describe('Agent proposal review in Review Projects', () => {
     expect(requestAiReviewMock).not.toHaveBeenCalled();
   });
 
-  it('opens full report details while keeping History dedicated to translation history', async () => {
+  it('lets admins open full report details while keeping History dedicated to translation history', async () => {
     fetchTextUnitHistoryMock.mockResolvedValue([
       {
         id: 29,
@@ -3474,7 +3558,7 @@ describe('Agent proposal review in Review Projects', () => {
         createdByUser: { username: 'Earlier translator' },
       },
     ]);
-    renderAgentReview();
+    renderAdminAgentReview();
     fireEvent.click(screen.getByRole('tab', { name: 'History' }));
     expect(await screen.findByText('Earlier approved translation')).toBeVisible();
     expect(fetchTextUnitHistoryMock).toHaveBeenCalledWith(3, 'pt-PT');
@@ -3527,7 +3611,7 @@ describe('Agent proposal review in Review Projects', () => {
     ['HOLD', 'Automation'],
     ['HUMAN_REVIEW', 'Human review'],
   ])('labels %s requests without inventing an automation source', (verificationStatus, label) => {
-    renderAgentReview({ verificationStatus });
+    renderAdminAgentReview({ verificationStatus });
     const report = within(screen.getByRole('region', { name: 'Reported issue' }));
     expect(report.getByText(label)).toBeVisible();
     const request = report.getByRole('button', { name: 'View report →' });
@@ -3548,7 +3632,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('keeps a long finding in the report and accessible in full details', () => {
     const rationale = 'The target uses an outdated product name. '.repeat(12).trim();
-    renderAgentReview({ rationale });
+    renderAdminAgentReview({ rationale });
     const request = screen.getByRole('button', { name: 'View report →' });
     expect(
       within(screen.getByRole('region', { name: 'Reported issue' })).getByText(rationale),
@@ -3601,7 +3685,7 @@ describe('Agent proposal review in Review Projects', () => {
           explanation: 'An older note awaiting context.',
         },
       ]);
-      renderAgentReview({ disposition, canReviewAgain: disposition !== 'SUPERSEDED' });
+      renderAdminAgentReview({ disposition, canReviewAgain: disposition !== 'SUPERSEDED' });
       const request = screen.getByRole('button', { name: 'View report →' });
       expect(request).toBeVisible();
       expect(
@@ -3962,10 +4046,13 @@ describe('Agent proposal review in Review Projects', () => {
         decisionState: 'DECIDED',
         decisionTmTextUnitVariant: row.currentTmTextUnitVariant,
       };
-      renderReviewProjectPageView({
-        project: { ...project, reviewProjectTextUnits: [row] },
-        mutations: buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
-      });
+      renderReviewProjectPageView(
+        {
+          project: { ...project, reviewProjectTextUnits: [row] },
+          mutations: buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
+        },
+        adminUser,
+      );
       expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
       expect(screen.getByRole('region', { name: 'AI translation feedback' })).toBeVisible();
       fireEvent.click(screen.getByRole('button', { name: 'View report →' }));
@@ -4009,7 +4096,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('saves an optional Report explanation with normal Accept without a separate note control', () => {
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    renderAgentReview({}, buildMutations({ onRequestDecisionState }));
+    renderAdminAgentReview({}, buildMutations({ onRequestDecisionState }));
     expect(screen.queryByRole('button', { name: /decision note/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View report →' }));
     fireEvent.click(screen.getByText('Review feedback'));
@@ -4062,7 +4149,7 @@ describe('Agent proposal review in Review Projects', () => {
         explanation: 'The current wording was approved.',
       },
     ]);
-    renderAgentReview({ disposition: 'RESOLVED', canReviewAgain: true });
+    renderAdminAgentReview({ disposition: 'RESOLVED', canReviewAgain: true });
     fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
       target: { value: 'Unsaved translation edit' },
     });
@@ -4141,7 +4228,7 @@ describe('Agent proposal review in Review Projects', () => {
       queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], liveProject);
       const view = render(
         <QueryClientProvider client={queryClient}>
-          <UserContext.Provider value={user}>
+          <UserContext.Provider value={adminUser}>
             <MemoryRouter>
               <LiveReview />
             </MemoryRouter>
@@ -4258,7 +4345,7 @@ describe('Agent proposal review in Review Projects', () => {
   it('allows choosing the original and editing Report feedback but blocks changes during composition', async () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    renderAgentReview({}, buildMutations({ onRequestDecisionState }));
+    renderAdminAgentReview({}, buildMutations({ onRequestDecisionState }));
     const editor = screen.getByRole('textbox', { name: 'Translation' });
     fireEvent.change(editor, { target: { value: 'Unfinished correction' } });
     fireEvent.click(screen.getByRole('button', { name: 'View report →' }));
@@ -4281,15 +4368,18 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('blocks editing Report feedback and choosing report text during a save', () => {
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    renderReviewProjectPageView({
-      project: { ...project, reviewProjectTextUnits: [buildAgentTextUnit()] },
-      selectedTextUnitQueryId: textUnit.tmTextUnit!.id,
-      mutations: buildMutations({
-        isSaving: true,
-        activeTextUnitId: textUnit.id,
-        onRequestDecisionState,
-      }),
-    });
+    renderReviewProjectPageView(
+      {
+        project: { ...project, reviewProjectTextUnits: [buildAgentTextUnit()] },
+        selectedTextUnitQueryId: textUnit.tmTextUnit!.id,
+        mutations: buildMutations({
+          isSaving: true,
+          activeTextUnitId: textUnit.id,
+          onRequestDecisionState,
+        }),
+      },
+      adminUser,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'View report →' }));
     fireEvent.click(screen.getByText('Review feedback'));
     expect(screen.getByRole('textbox', { name: 'Explanation' })).toBeDisabled();
@@ -4445,7 +4535,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('does not use Decided to bypass a negative original assessment', () => {
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    renderAgentReview({}, buildMutations({ onRequestDecisionState }));
+    renderAdminAgentReview({}, buildMutations({ onRequestDecisionState }));
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
     fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'BAD' } });
@@ -4476,7 +4566,7 @@ describe('Agent proposal review in Review Projects', () => {
   });
 
   it('keeps optional incident feedback intact when visiting the ordinary context and history tabs', async () => {
-    renderAgentReview();
+    renderAdminAgentReview();
     expect(fetchAgentReviewFeedbackMock).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
@@ -4520,7 +4610,7 @@ describe('Agent proposal review in Review Projects', () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    renderAgentReview({}, buildMutations({ onRequestSaveDecision, onRequestDecisionState }));
+    renderAdminAgentReview({}, buildMutations({ onRequestSaveDecision, onRequestDecisionState }));
     const editor = screen.getByRole('textbox', { name: 'Translation' });
     expect(editor).toHaveValue('Pay {price} now');
     expect(screen.getByRole('button', { name: 'View report →' })).toBeVisible();
@@ -4937,7 +5027,7 @@ describe('Agent proposal review in Review Projects', () => {
   it('accepts the latest unchanged translation with feedback on a stale request without changing its current translation', () => {
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    renderAgentReview(
+    renderAdminAgentReview(
       { stale: true, reviewedTarget: 'Earlier translation' },
       buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
     );
@@ -4982,7 +5072,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('preserves feedback when resetting translation edits and clears it with a later feedback-only reset', () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
-    renderAgentReview();
+    renderAdminAgentReview();
     const editor = screen.getByRole('textbox', { name: 'Translation' });
     fireEvent.change(editor, { target: { value: 'Pague {price} imediatamente' } });
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
@@ -5030,7 +5120,7 @@ describe('Agent proposal review in Review Projects', () => {
   it('records separate original and suggestion judgments with unchanged acceptance without saving text', () => {
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    renderAgentReview({}, buildMutations({ onRequestSaveDecision, onRequestDecisionState }));
+    renderAdminAgentReview({}, buildMutations({ onRequestSaveDecision, onRequestDecisionState }));
     fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'AI feedback note' }), {
       target: { value: 'A reason for the proposed edit.' },
@@ -5063,7 +5153,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('requires clearing a negative current assessment before keeping the unchanged translation', () => {
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-    renderAgentReview({}, buildMutations({ onRequestDecisionState }));
+    renderAdminAgentReview({}, buildMutations({ onRequestDecisionState }));
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
     fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'BAD' } });
@@ -5081,7 +5171,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('preserves negative current feedback on correction acceptance without inventing a positive rating', async () => {
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
-    renderAgentReview({}, buildMutations({ onRequestSaveDecision }));
+    renderAdminAgentReview({}, buildMutations({ onRequestSaveDecision }));
     fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
     fireEvent.click(screen.getByText('Review feedback'));
     fireEvent.change(screen.getByLabelText('Original translation'), { target: { value: 'BAD' } });
@@ -5108,6 +5198,8 @@ describe('Agent proposal review in Review Projects', () => {
           decisionNotes: 'A correction is needed.',
         },
         buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
+        undefined,
+        adminUser,
       );
       fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
       fireEvent.click(screen.getByText('Review feedback'));
@@ -5132,6 +5224,7 @@ describe('Agent proposal review in Review Projects', () => {
               },
             },
             queryClient,
+            adminUser,
           ),
         );
       }
@@ -5368,7 +5461,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it('does not allow evidence to create executable links or silently overwrite a conflict', () => {
     const current = buildAgentTextUnit({ stale: true });
-    renderAgentReview(
+    renderAdminAgentReview(
       {
         evidence: [
           { label: 'Checkout screenshot', url: 'https://example.com/screenshot' },
@@ -5418,7 +5511,7 @@ it('adopts unchanged current text after keep-current feedback without leaving a 
     onRequestDetailsQueryHandled: noop,
     onRequestDetailsFlowFinished: noop,
   };
-  const view = render(renderReviewProjectPageViewNode(initialProps, queryClient));
+  const view = render(renderReviewProjectPageViewNode(initialProps, queryClient, adminUser));
   fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
   const feedback = screen.getByRole('region', { name: 'AI translation feedback' });
   fireEvent.click(within(feedback).getByRole('button', { name: 'Terminology' }));
@@ -5469,6 +5562,7 @@ it('adopts unchanged current text after keep-current feedback without leaving a 
         }),
       },
       queryClient,
+      adminUser,
     ),
   );
   expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveValue('Pay {price} now');
@@ -5506,7 +5600,7 @@ it('requires an agent response and explicit reconsideration before another human
   ]);
   const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
   const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
-  renderAgentReview(
+  renderAdminAgentReview(
     { disposition: 'FOLLOW_UP', canReconsider: true },
     buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
   );
