@@ -280,6 +280,69 @@ public class AiTranslateQualityTest {
   }
 
   @Test
+  public void requestsOmitUntranslatedGlossaryMatchesAndPreserveHebrewAndDntTargets() {
+    for (AiTranslateType type : AiTranslateType.values()) {
+      TextUnitDTO unit = textUnit(1L, "Create Open Cancel Save ChatGPT Codex");
+      unit.setTarget("יצירה פתיחה ביטול שמירה ChatGPT Codex");
+      Fixture fixture = new Fixture("he", unit);
+      var glossary = new GlossaryService.GlossaryTrie();
+      glossary.addTerm(glossaryTerm(1L, "Create", null, false));
+      glossary.addTerm(glossaryTerm(2L, "Open", "", false));
+      glossary.addTerm(glossaryTerm(3L, "Cancel", " \n\t\u00a0", false));
+      glossary.addTerm(glossaryTerm(4L, "Save", "שמירה", false));
+      glossary.addTerm(glossaryTerm(5L, "ChatGPT", null, true));
+      glossary.addTerm(glossaryTerm(6L, "Codex", " \n\t\u00a0", true));
+      when(fixture.service.glossaryService.loadLinkedGlossaryTrieForLocale(10L, "he"))
+          .thenReturn(glossary);
+      assertThat(glossary.findTerms(unit.getSource())).hasSize(6);
+      fixture.respondWith(
+          request -> {
+            Object output =
+                switch (type) {
+                  case TARGET_ONLY_NEW ->
+                      new AiTranslateType.CompletionMultiTextUnitOutput(
+                          List.of(
+                              new AiTranslateType.CompletionMultiTextUnitOutput.Target(
+                                  unit.getTmTextUnitId(), unit.getTarget())),
+                          null);
+                  case WITH_REVIEW ->
+                      new AiTranslateType.CompletionOutput(
+                          unit.getSource(),
+                          new AiTranslateType.CompletionOutput.Target(unit.getTarget(), "", 100),
+                          null,
+                          null,
+                          null,
+                          null);
+                  case TARGET_WITH_CONFIDENCE ->
+                      new AiTranslateType.WithConfidenceCompletionOutput(unit.getTarget(), 100);
+                  default -> new AiTranslateType.SimpleCompletionOutput(unit.getTarget());
+                };
+            return response("completed", fixture.mapper.writeValueAsStringUnchecked(output));
+          });
+
+      fixture.run(type);
+
+      assertThat(fixture.requests).as(type.name()).hasSize(1);
+      JsonNode input = fixture.input(fixture.requests.getFirst());
+      JsonNode requestedUnit =
+          type.supportsMultipleTextUnits() ? input.at("/textUnitsToTranslate/0") : input;
+      assertThat(requestedUnit.at("/existingTarget/content").asText())
+          .isEqualTo("יצירה פתיחה ביטול שמירה ChatGPT Codex");
+      JsonNode terms = requestedUnit.get("glossaryTerms");
+      assertThat(terms)
+          .extracting(term -> term.get("term").asText())
+          .containsExactly("Save", "ChatGPT", "Codex");
+      assertThat(terms)
+          .extracting(term -> term.get("termTarget").asText())
+          .containsExactly("שמירה", "ChatGPT", "Codex");
+      assertThat(terms)
+          .extracting(term -> term.get("doNotTranslate").asBoolean())
+          .containsExactly(false, true, true);
+      assertThat(fixture.imported).hasSize(1);
+    }
+  }
+
+  @Test
   public void statedConfidenceDoesNotBypassSourceIdentity() {
     var output =
         new AiTranslateType.CompletionOutput(
@@ -709,6 +772,28 @@ public class AiTranslateQualityTest {
     assertThat(fixture.requests).hasSize(2);
     assertThat(fixture.imported).hasSize(1);
     assertThat(unit.getTarget()).isEqualTo(target);
+  }
+
+  private static GlossaryService.GlossaryTerm glossaryTerm(
+      long id, String source, String target, boolean doNotTranslate) {
+    return new GlossaryService.GlossaryTerm(
+        id,
+        1L,
+        "Product terminology",
+        source,
+        source,
+        "Source glossary description",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        target,
+        null,
+        doNotTranslate,
+        false,
+        List.of());
   }
 
   private static TextUnitDTO textUnit(long id, String source) {

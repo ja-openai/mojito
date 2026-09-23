@@ -2025,20 +2025,15 @@ public class AiTranslateService {
   }
 
   private static CompletionInput.GlossaryTerm convertGlossaryTerm(GlossaryService.GlossaryTerm gt) {
-
-    String target = gt.doNotTranslate() && gt.target() == null ? gt.source() : gt.target();
-
     return new CompletionInput.GlossaryTerm(
-        gt.source(), gt.comment(), target, gt.targetComment(), gt.doNotTranslate());
+        gt.source(), gt.comment(), gt.target(), gt.targetComment(), gt.doNotTranslate());
   }
 
   private static CompletionMultiTextUnitInput.TextUnit.GlossaryTerm convertGlossaryTermForMulti(
       GlossaryService.GlossaryTerm gt) {
 
-    String target = gt.doNotTranslate() && gt.target() == null ? gt.source() : gt.target();
-
     return new CompletionMultiTextUnitInput.TextUnit.GlossaryTerm(
-        gt.source(), gt.comment(), target, gt.targetComment(), gt.doNotTranslate());
+        gt.source(), gt.comment(), gt.target(), gt.targetComment(), gt.doNotTranslate());
   }
 
   // TODO(ja) duplicated

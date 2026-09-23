@@ -10,7 +10,10 @@ and unresolved ambiguity, while preserving good translations and existing human 
 
 1. Compose the translation prompt with locale guidance, matched source rules, parsed plural guidance,
    source descriptions, related strings, screenshots where available, and matched glossary terms.
-   Glossary payloads explicitly retain the do-not-translate flag.
+   Glossary payloads include only usable targets for the requested locale or explicit
+   do-not-translate terms, which can retain their source spelling. Missing, blank, and
+   excluded/rejected targets do not provide translation guidance. Source-only metadata remains
+   available to glossary matching and UI; see `011-glossary-workspace.md`.
 2. Ask for meaning-preserving, idiomatic wording. Source length is not an implicit character limit;
    negation, conditions, quantities, names, and units take priority over brevity. Input context must
    not become invented claims or persuasive additions. Protected ICU/MF2 and markup structure remain
@@ -85,8 +88,10 @@ second candidate-validation failure leaves the existing target, status, comments
 untouched and appears in the run report. Warnings alone never cause a repair call.
 
 Legacy Batch uses the same preflight and creates one follow-up provider Batch containing only failed
-strings. Repair request lines retain their original uploaded request bodies plus diagnostic feedback;
-managed settings are not reread during repair. The existing poll job carries the follow-up batch and
+strings. Repair request lines retain their original uploaded request bodies plus diagnostic feedback,
+with missing/blank non-DNT glossary targets removed and missing/blank DNT targets replaced by source
+spelling. Managed settings are not reread during repair; a nonblank target already stored by an old
+request is not revalidated against current glossary data. The existing poll job carries the follow-up batch and
 its attempt marker. Errors after repair are terminal. Original input IDs also bound response
 membership: duplicate or unexpected IDs reject the output before mutation, and missing results are
 reported. No synchronous online fallback is introduced into Batch processing.

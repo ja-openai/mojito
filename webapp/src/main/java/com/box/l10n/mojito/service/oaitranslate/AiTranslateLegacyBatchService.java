@@ -411,9 +411,8 @@ class AiTranslateLegacyBatchService {
   }
 
   private static CompletionInput.GlossaryTerm convertGlossaryTerm(GlossaryService.GlossaryTerm gt) {
-    String target = gt.doNotTranslate() && gt.target() == null ? gt.source() : gt.target();
     return new CompletionInput.GlossaryTerm(
-        gt.source(), gt.comment(), target, gt.targetComment(), gt.doNotTranslate());
+        gt.source(), gt.comment(), gt.target(), gt.targetComment(), gt.doNotTranslate());
   }
 
   private ChatCompletionsRequest getChatCompletionsRequest(

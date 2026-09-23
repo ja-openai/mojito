@@ -277,6 +277,20 @@ already loaded source snapshot rather than fetching the same snapshot twice.
 Glossary approval metadata and evidence remain authoritative MySQL reads. Legacy
 repository-name lookups or missing locale metadata keep the existing
 direct-search fallback.
+When a managed glossary has no row for the requested locale, its source term
+and definition remain available, but its preferred target and target comment
+stay empty. This applies both to an absent locale and to an individual term
+without a usable target. Null, blank, or excluded/rejected translations do not
+provide preferred targets or target comments. The source-locale translation
+must not become preferred terminology for another locale. Explicit
+do-not-translate terms still use the source spelling when no usable target exists.
+
+AI Translate omits source-only terms from `glossaryTerms` at the shared single-
+and multi-text-unit request boundary, while retaining localized targets and
+explicit do-not-translate terms. This covers modern translation and legacy
+batch requests; batch repair replay also filters unusable targets from stored
+input. Source metadata remains available to glossary UI and lexical matching.
+
 `GlossaryWS.matchDuration` captures request timing, while
 `GlossaryService.cache.lookup` and `GlossaryService.cache.loadDuration` measure
 bounded-scope cache reuse and cold-load duration. Legacy AI translation batches

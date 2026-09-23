@@ -9,6 +9,7 @@ import com.box.l10n.mojito.openai.OpenAIClient.RetrieveBatchResponse;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService.BatchRepairCandidate;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -97,6 +98,7 @@ class AiTranslateBatchRepairService {
           || messages.isEmpty()) {
         throw new IllegalArgumentException("The original batch request cannot be repaired");
       }
+      filterOriginalGlossaryTerms(messages);
       messages
           .addObject()
           .put("role", "user")
@@ -148,6 +150,59 @@ class AiTranslateBatchRepairService {
   }
 
   record RepairState(List<Long> textUnitIds, CreateBatchResponse createdBatch) {}
+
+  private void filterOriginalGlossaryTerms(ArrayNode messages) {
+    // Stored requests bypass the typed input records and may predate their glossary filtering.
+    for (JsonNode node : messages) {
+      if (!(node instanceof ObjectNode message)
+          || !"user".equals(message.path("role").asText())
+          || !message.path("content").isTextual()) {
+        continue;
+      }
+      JsonNode input;
+      try {
+        input = objectMapper.readTree(message.path("content").asText());
+      } catch (JsonProcessingException e) {
+        // Other user guidance can be plain text rather than an AI Translate input.
+        continue;
+      }
+      if (!(input instanceof ObjectNode)) {
+        continue;
+      }
+      boolean changed = false;
+      if (input.path("source").isTextual()) {
+        changed = filterGlossaryTerms(input.path("glossaryTerms"));
+      }
+      if (input.path("textUnitsToTranslate") instanceof ArrayNode textUnits) {
+        for (JsonNode textUnit : textUnits) {
+          changed |= filterGlossaryTerms(textUnit.path("glossaryTerms"));
+        }
+      }
+      if (changed) {
+        message.put("content", objectMapper.writeValueAsStringUnchecked(input));
+      }
+    }
+  }
+
+  private boolean filterGlossaryTerms(JsonNode node) {
+    if (!(node instanceof ArrayNode terms)) {
+      return false;
+    }
+    boolean changed = false;
+    for (int i = terms.size() - 1; i >= 0; i--) {
+      if (!(terms.get(i) instanceof ObjectNode term)
+          || GlossaryService.hasUsableTarget(term.path("termTarget").asText(null))) {
+        continue;
+      }
+      if (term.path("doNotTranslate").isBoolean() && term.path("doNotTranslate").booleanValue()) {
+        term.put("termTarget", term.path("term").asText(null));
+      } else {
+        terms.remove(i);
+      }
+      changed = true;
+    }
+    return changed;
+  }
 
   private Map<Long, ObjectNode> getOriginalRequests(RetrieveBatchResponse batch) {
     if (batch.inputFileId() == null || batch.inputFileId().isBlank()) {

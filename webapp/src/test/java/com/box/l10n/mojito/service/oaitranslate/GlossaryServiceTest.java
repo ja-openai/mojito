@@ -780,6 +780,161 @@ public class GlossaryServiceTest {
   }
 
   @Test
+  public void managedGlossaryWithoutTargetLocaleDoesNotUseSourceTranslation() {
+    for (boolean useJsonCache : List.of(false, true)) {
+      TextUnitDTO create = usedTextUnitDTO(11L, "Create");
+      create.setTarget("Create");
+      create.setTargetComment("English translation comment");
+      create.setIncludedInLocalizedFile(true);
+      TextUnitDTO productName = usedTextUnitDTO(12L, "ChatGPT");
+      productName.setComment("DNT");
+      productName.setTarget("ChatGPT");
+      productName.setIncludedInLocalizedFile(true);
+      ImmutableList<TextUnitDTO> sourceTerms = ImmutableList.of(create, productName);
+
+      GlossaryTrie trie = loadManagedGlossary(sourceTerms, ImmutableList.of(), useJsonCache);
+
+      GlossaryTerm createTerm = trie.findMatches("Create").getFirst().glossaryTerm();
+      assertEquals("Create", createTerm.source());
+      assertNull(createTerm.target());
+      assertNull(createTerm.targetComment());
+      assertFalse(createTerm.doNotTranslate());
+      GlossaryTerm productTerm = trie.findMatches("ChatGPT").getFirst().glossaryTerm();
+      assertEquals("ChatGPT", productTerm.target());
+      assertTrue(productTerm.doNotTranslate());
+    }
+  }
+
+  @Test
+  public void managedGlossaryWithPartialLocaleUsesOnlyUsableIndividualTargets() {
+    record TargetCase(
+        String source, String target, boolean included, boolean dnt, String expected) {}
+    List<TargetCase> cases =
+        List.of(
+            new TargetCase("No target", null, true, false, null),
+            new TargetCase("Empty", "", true, false, null),
+            new TargetCase("Blank", " \t\n\u00a0", true, false, null),
+            new TargetCase("Rejected", "נדחה", false, false, null),
+            new TargetCase("Create", "יצירה", true, false, "יצירה"),
+            new TargetCase("ChatGPT", " \u00a0", true, true, "ChatGPT"),
+            new TargetCase("Codex", "קודקס", false, true, "Codex"),
+            new TargetCase("Brand", "Fixed spelling", true, true, "Fixed spelling"));
+    for (boolean useJsonCache : List.of(false, true)) {
+      ImmutableList.Builder<TextUnitDTO> sourceTerms = ImmutableList.builder();
+      ImmutableList.Builder<TextUnitDTO> targetTerms = ImmutableList.builder();
+      TextUnitDTO missing = usedTextUnitDTO(1L, "Missing");
+      missing.setTarget("Missing");
+      missing.setTargetComment("English source comment");
+      missing.setIncludedInLocalizedFile(true);
+      sourceTerms.add(missing);
+      long id = 2L;
+      for (TargetCase targetCase : cases) {
+        TextUnitDTO source = usedTextUnitDTO(id, targetCase.source());
+        source.setTarget(targetCase.source());
+        source.setTargetComment("English source comment");
+        source.setIncludedInLocalizedFile(true);
+        source.setComment(targetCase.dnt() ? "DNT" : "Source definition");
+        sourceTerms.add(source);
+        TextUnitDTO target = usedTextUnitDTO(id++, targetCase.source());
+        target.setTarget(targetCase.target());
+        target.setTargetComment("Target comment");
+        target.setIncludedInLocalizedFile(targetCase.included());
+        targetTerms.add(target);
+      }
+
+      GlossaryTrie trie =
+          loadManagedGlossary(sourceTerms.build(), targetTerms.build(), useJsonCache);
+
+      GlossaryTerm missingTerm = trie.findMatches("Missing").getFirst().glossaryTerm();
+      assertNull(missingTerm.target());
+      assertNull(missingTerm.targetComment());
+      for (TargetCase targetCase : cases) {
+        GlossaryTerm term = trie.findMatches(targetCase.source()).getFirst().glossaryTerm();
+        assertEquals(targetCase.expected(), term.target(), targetCase.source());
+        assertEquals(targetCase.dnt(), term.doNotTranslate(), targetCase.source());
+        assertEquals(targetCase.dnt() ? "DNT" : "Source definition", term.comment());
+        assertEquals(
+            targetCase.included()
+                    && targetCase.target() != null
+                    && targetCase.target().equals(targetCase.expected())
+                ? "Target comment"
+                : null,
+            term.targetComment(),
+            targetCase.source());
+      }
+    }
+  }
+
+  private GlossaryTrie loadManagedGlossary(
+      ImmutableList<TextUnitDTO> sourceTerms,
+      ImmutableList<TextUnitDTO> targetTerms,
+      boolean useJsonCache) {
+    TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
+    GlossaryRepository glossaryRepository = mock(GlossaryRepository.class);
+    GlossaryStorageService glossaryStorageService = mock(GlossaryStorageService.class);
+    TextUnitDTOsCacheService textUnitDTOsCacheService = mock(TextUnitDTOsCacheService.class);
+    LocaleService localeService = mock(LocaleService.class);
+    GlossaryService glossaryService =
+        new GlossaryService(
+            textUnitSearcher,
+            glossaryRepository,
+            glossaryStorageService,
+            mock(GlossaryTermMetadataRepository.class),
+            mock(GlossaryTermEvidenceRepository.class),
+            mock(RepositoryRepository.class),
+            textUnitDTOsCacheService,
+            localeService,
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
+    Glossary glossary = glossary(201L, "Core", "core-glossary");
+    when(glossaryRepository.findEnabledByRepositoryId(77L)).thenReturn(List.of(glossary));
+    when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(asset(301L));
+    if (useJsonCache) {
+      glossary.getBackingRepository().setSourceLocale(locale(1L, "en-US"));
+      when(localeService.findByBcp47Tag("he")).thenReturn(locale(2L, "he"));
+      when(textUnitDTOsCacheService.getTextUnitDTOsForAssetAndLocale(
+              301L, 1L, true, UpdateType.ALWAYS))
+          .thenReturn(sourceTerms);
+      when(textUnitDTOsCacheService.getTextUnitDTOsForAssetAndLocale(
+              301L, 2L, false, UpdateType.ALWAYS))
+          .thenReturn(targetTerms);
+    } else {
+      when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
+          .thenAnswer(
+              invocation -> {
+                TextUnitSearcherParameters parameters = invocation.getArgument(0);
+                return parameters.isForRootLocale() ? sourceTerms : targetTerms;
+              });
+    }
+
+    GlossaryTrie trie = glossaryService.loadLinkedGlossaryTrieForLocale(77L, "he");
+    return trie;
+  }
+
+  @Test
+  public void legacyGlossaryRetainsLocalizedTarget() {
+    TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
+    GlossaryService glossaryService =
+        glossaryService(
+            textUnitSearcher,
+            mock(GlossaryRepository.class),
+            mock(GlossaryStorageService.class),
+            new SimpleMeterRegistry());
+    TextUnitDTO translatedTerm = textUnitDTO(11L, "Create");
+    translatedTerm.setTarget("יצירה");
+    translatedTerm.setTargetComment("Hebrew translation comment");
+    translatedTerm.setIncludedInLocalizedFile(true);
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
+        .thenReturn(List.of(translatedTerm));
+
+    GlossaryTrie trie = glossaryService.loadGlossaryTrieForLocale("legacy-glossary", "he");
+
+    GlossaryTerm term = trie.findMatches("Create").getFirst().glossaryTerm();
+    assertEquals("יצירה", term.target());
+    assertEquals("Hebrew translation comment", term.targetComment());
+  }
+
+  @Test
   public void managedGlossaryHydratesUsedSourceAndTargetTermsFromJsonCache() {
     TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
     GlossaryRepository glossaryRepository = mock(GlossaryRepository.class);
@@ -906,6 +1061,8 @@ public class GlossaryServiceTest {
     com.box.l10n.mojito.entity.Locale sourceLocale = locale(1L, "en-US");
     glossary.getBackingRepository().setSourceLocale(sourceLocale);
     TextUnitDTO sourceTextUnit = usedTextUnitDTO(11L, "Settings");
+    sourceTextUnit.setTarget("Settings");
+    sourceTextUnit.setIncludedInLocalizedFile(true);
 
     when(glossaryRepository.findEnabledByRepositoryId(77L)).thenReturn(List.of(glossary));
     when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(asset(301L));
@@ -916,7 +1073,8 @@ public class GlossaryServiceTest {
 
     GlossaryTrie glossaryTrie = glossaryService.loadLinkedGlossaryTrieForLocale(77L, "en-US");
 
-    assertEquals(1, glossaryTrie.findMatches("Settings").size());
+    assertEquals(
+        "Settings", glossaryTrie.findMatches("Settings").getFirst().glossaryTerm().target());
     verify(textUnitDTOsCacheService, times(1))
         .getTextUnitDTOsForAssetAndLocale(301L, 1L, true, UpdateType.ALWAYS);
     verify(textUnitSearcher, times(0)).search(any(TextUnitSearcherParameters.class));

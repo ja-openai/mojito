@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
+import static com.box.l10n.mojito.service.oaitranslate.GlossaryService.hasUsableTarget;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.*;
 import java.util.function.BiFunction;
@@ -310,6 +312,14 @@ public enum AiTranslateType {
         List<GlossaryTerm> glossaryTerms,
         List<AiTranslateRelatedStringsProvider.RelatedString> relatedStrings) {
 
+      public TextUnit {
+        // Source-only matches remain useful in the UI, but must not guide translation.
+        glossaryTerms =
+            glossaryTerms.stream()
+                .filter(term -> term.doNotTranslate() || hasUsableTarget(term.termTarget()))
+                .toList();
+      }
+
       public record ExistingTarget(
           String content,
           String comment,
@@ -321,7 +331,13 @@ public enum AiTranslateType {
           String termDescription,
           String termTarget,
           String termTargetComment,
-          boolean doNotTranslate) {}
+          boolean doNotTranslate) {
+        public GlossaryTerm {
+          if (doNotTranslate && !hasUsableTarget(termTarget)) {
+            termTarget = term;
+          }
+        }
+      }
     }
 
     public static Builder builder(String locale) {
@@ -404,6 +420,13 @@ public enum AiTranslateType {
       ExistingTarget existingTarget,
       List<GlossaryTerm> glossaryTerms,
       List<AiTranslateRelatedStringsProvider.RelatedString> relatedStrings) {
+    CompletionInput {
+      glossaryTerms =
+          glossaryTerms.stream()
+              .filter(term -> term.doNotTranslate() || hasUsableTarget(term.termTarget()))
+              .toList();
+    }
+
     record ExistingTarget(
         String content,
         String comment,
@@ -415,7 +438,13 @@ public enum AiTranslateType {
         String termDescription,
         String termTarget,
         String termTargetComment,
-        boolean doNotTranslate) {}
+        boolean doNotTranslate) {
+      GlossaryTerm {
+        if (doNotTranslate && !hasUsableTarget(termTarget)) {
+          termTarget = term;
+        }
+      }
+    }
 
     static CompletionInput from(CompletionMultiTextUnitInput input) {
       if (input.textUnitsToTranslate().size() != 1) {

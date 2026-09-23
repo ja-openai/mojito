@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 class AiTranslateBatchRepairServiceTest {
@@ -117,6 +119,98 @@ class AiTranslateBatchRepairServiceTest {
     assertThatThrownBy(() -> service.createRepairBatch(original, List.of(candidate(42))))
         .hasMessageContaining("submission outcome is unknown");
     verifyNoInteractions(client);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void filtersUnusableGlossaryTargetsInUploadedRepairInput(boolean multipleTextUnits) {
+    ObjectNode textUnit =
+        (ObjectNode)
+            mapper.readTreeUnchecked(
+                """
+                {
+                  "tmTextUnitId": 42,
+                  "source": "Create {name} with GitHub",
+                  "sourceDescription": "Create action",
+                  "existingTarget": {"content": "יצירה", "comment": "Keep this context"},
+                  "relatedStrings": [{"source": "Nearby source"}],
+                  "customContext": {"preserve": true},
+                  "glossaryTerms": [
+                    {"term": "Create", "termTarget": null, "doNotTranslate": false,
+                     "termTargetComment": "English source comment"},
+                    {"term": "Missing"},
+                    {"term": "Empty", "termTarget": ""},
+                    {"term": "Blank", "termTarget": " \\t\\n"},
+                    {"term": "Unicode blank", "termTarget": "\\u2003"},
+                    {"term": "Nonbreaking blank", "termTarget": "\\u00a0"},
+                    {"term": "Localized", "termTarget": "יצירה", "doNotTranslate": false,
+                     "termTargetComment": "Hebrew target comment", "extra": "kept"},
+                    {"term": "GitHub", "termTarget": null, "doNotTranslate": true},
+                    {"term": "OpenAI", "termTarget": " ", "doNotTranslate": true},
+                    {"term": "DNT target", "termTarget": "Fixed spelling", "doNotTranslate": true}
+                  ]
+                }
+                """);
+    ObjectNode input;
+    if (multipleTextUnits) {
+      input = mapper.createObjectNode();
+      input.putArray("textUnitsToTranslate").add(textUnit).add(textUnit.deepCopy());
+      input.putObject("extraRequestContext").put("preserve", true);
+    } else {
+      input = textUnit;
+    }
+    input.put("locale", "he");
+    String originalContent = mapper.writeValueAsStringUnchecked(input);
+    ObjectNode originalRequest = request(42);
+    ArrayNode originalMessages = (ArrayNode) originalRequest.at("/body/messages");
+    originalMessages.addObject().put("role", "user").put("content", originalContent);
+    originalMessages.addObject().put("role", "assistant").put("content", originalContent);
+    when(client.downloadFileContent(any()))
+        .thenReturn(
+            new OpenAIClient.DownloadFileContentResponse(
+                mapper.writeValueAsStringUnchecked(originalRequest)));
+    when(storage.getString(AI_TRANSLATE_WS, "snapshot")).thenReturn(Optional.of("saved DTOs"));
+    when(client.uploadFile(any()))
+        .thenReturn(
+            new OpenAIClient.UploadFileResponse(
+                "file", "repair-input", "batch", "repair.jsonl", 0, 0, "processed", null));
+    when(client.createBatch(any()))
+        .thenReturn(
+            mapper.readValueUnchecked(
+                "{\"id\":\"repair\",\"input_file_id\":\"repair-input\"}",
+                OpenAIClient.CreateBatchResponse.class));
+
+    service.createRepairBatch(original(), List.of(candidate(42)));
+
+    ArgumentCaptor<OpenAIClient.UploadFileRequest> upload =
+        ArgumentCaptor.forClass(OpenAIClient.UploadFileRequest.class);
+    verify(client).uploadFile(upload.capture());
+    ObjectNode repairedRequest =
+        (ObjectNode)
+            mapper.readTreeUnchecked(
+                mapper.valueToTree(upload.getValue()).at("/fileContent/value").asText());
+    ArrayNode repairedMessages = (ArrayNode) repairedRequest.at("/body/messages");
+    ObjectNode repairedInput =
+        (ObjectNode) mapper.readTreeUnchecked(repairedMessages.get(2).path("content").asText());
+    List<ObjectNode> expectedTextUnits =
+        multipleTextUnits
+            ? List.of(
+                (ObjectNode) input.at("/textUnitsToTranslate/0"),
+                (ObjectNode) input.at("/textUnitsToTranslate/1"))
+            : List.of(input);
+    for (ObjectNode expectedTextUnit : expectedTextUnits) {
+      ArrayNode terms = (ArrayNode) expectedTextUnit.path("glossaryTerms");
+      for (int i = 0; i < 6; i++) {
+        terms.remove(0);
+      }
+      ((ObjectNode) terms.get(1)).put("termTarget", "GitHub");
+      ((ObjectNode) terms.get(2)).put("termTarget", "OpenAI");
+    }
+    assertThat(repairedInput).isEqualTo(input);
+    // Only the input glossary guidance changes; unrelated fields, roles and plain text survive.
+    ((ObjectNode) repairedMessages.get(2)).put("content", originalContent);
+    repairedMessages.remove(4);
+    assertThat(repairedRequest).isEqualTo(originalRequest);
   }
 
   @Test

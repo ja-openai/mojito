@@ -267,11 +267,13 @@ public class GlossaryService {
       }
 
       TextUnitDTO localizedTextUnit =
-          localizedTextUnitByTermKey.getOrDefault(textUnitDTO.getName(), textUnitDTO);
-      if (localizedTextUnit.isIncludedInLocalizedFile()) {
-        if (localizedTextUnit.getTarget() != null) {
-          target = localizedTextUnit.getTarget();
-        }
+          canonicalAsset == null
+              ? textUnitDTO
+              : localizedTextUnitByTermKey.get(textUnitDTO.getName());
+      if (localizedTextUnit != null
+          && localizedTextUnit.isIncludedInLocalizedFile()
+          && hasUsableTarget(localizedTextUnit.getTarget())) {
+        target = localizedTextUnit.getTarget();
         targetComment = localizedTextUnit.getTargetComment();
       }
 
@@ -302,6 +304,13 @@ public class GlossaryService {
   private boolean shouldIncludeInMatches(GlossaryTermMetadata metadata) {
     return metadata == null
         || GlossaryTermMetadata.STATUS_APPROVED.equalsIgnoreCase(metadata.getStatus());
+  }
+
+  static boolean hasUsableTarget(String target) {
+    return target != null
+        && target
+            .codePoints()
+            .anyMatch(c -> !Character.isWhitespace(c) && !Character.isSpaceChar(c));
   }
 
   /**

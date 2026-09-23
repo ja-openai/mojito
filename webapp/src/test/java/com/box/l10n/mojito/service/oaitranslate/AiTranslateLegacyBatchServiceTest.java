@@ -202,6 +202,142 @@ public class AiTranslateLegacyBatchServiceTest {
   }
 
   @Test
+  public void multiTextUnitBatchOmitsUntranslatedGlossaryTerms() {
+    assertBatchOmitsUntranslatedGlossaryTerms(AiTranslateType.TARGET_ONLY_NEW);
+  }
+
+  @Test
+  public void singleTextUnitBatchOmitsUntranslatedGlossaryTerms() {
+    assertBatchOmitsUntranslatedGlossaryTerms(AiTranslateType.TARGET_ONLY);
+  }
+
+  private void assertBatchOmitsUntranslatedGlossaryTerms(AiTranslateType translateType) {
+    TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
+    RepositoryRepository repositoryRepository = mock(RepositoryRepository.class);
+    RepositoryService repositoryService = mock(RepositoryService.class);
+    OpenAIClient openAIClient = mock(OpenAIClient.class);
+    GlossaryService glossaryService = mock(GlossaryService.class);
+    ObjectMapper mapper = new ObjectMapper();
+    AiTranslateService.configureObjectMapper(mapper);
+    AiTranslateLegacyBatchService service =
+        new AiTranslateLegacyBatchService(
+            textUnitSearcher,
+            repositoryRepository,
+            repositoryService,
+            mock(StructuredBlobStorage.class),
+            new AiTranslateConfigurationProperties(),
+            openAIClient,
+            mapper,
+            mock(AssetTextUnitRepository.class),
+            mock(TMTextUnitVariantRepository.class),
+            glossaryService,
+            mock(AiTranslateLocalePromptSuffixService.class));
+    Repository repository = new Repository();
+    repository.setId(77L);
+    repository.setName("product");
+    Locale locale = new Locale();
+    locale.setId(88L);
+    locale.setBcp47Tag("he");
+    RepositoryLocale repositoryLocale = new RepositoryLocale();
+    repositoryLocale.setRepository(repository);
+    repositoryLocale.setLocale(locale);
+    TextUnitDTO textUnit = new TextUnitDTO();
+    textUnit.setTmTextUnitId(42L);
+    textUnit.setSource("Create Save Submit Open ChatGPT Codex");
+    textUnit.setTargetLocale("he");
+    GlossaryService.GlossaryTrie glossaryTrie = new GlossaryService.GlossaryTrie();
+    glossaryTrie.addTerm(batchGlossaryTerm(1L, "Create", null, false));
+    glossaryTrie.addTerm(batchGlossaryTerm(2L, "Save", "", false));
+    glossaryTrie.addTerm(batchGlossaryTerm(3L, "Submit", " \t ", false));
+    glossaryTrie.addTerm(batchGlossaryTerm(4L, "Open", "פתיחה", false));
+    glossaryTrie.addTerm(batchGlossaryTerm(5L, "ChatGPT", null, true));
+    glossaryTrie.addTerm(batchGlossaryTerm(6L, "Codex", " \t ", true));
+    when(repositoryRepository.findByName("product")).thenReturn(repository);
+    when(repositoryService.getRepositoryLocalesWithoutRootLocale(repository))
+        .thenReturn(Set.of(repositoryLocale));
+    when(textUnitSearcher.search(any())).thenReturn(List.of(textUnit));
+    when(glossaryService.loadLinkedGlossaryTrieForLocale(77L, "he")).thenReturn(glossaryTrie);
+    when(openAIClient.uploadFile(any()))
+        .thenReturn(
+            new OpenAIClient.UploadFileResponse(
+                "file", "file-id", "batch", "batch.jsonl", 1, 0L, "processed", null));
+    when(openAIClient.createBatch(any())).thenReturn(mock(OpenAIClient.CreateBatchResponse.class));
+
+    var result =
+        service.createBatches(
+            new AiTranslateService.AiTranslateInput(
+                "product",
+                null,
+                100,
+                null,
+                true,
+                null,
+                null,
+                null,
+                translateType.name(),
+                StatusFilter.FOR_TRANSLATION.name(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                false,
+                false,
+                false,
+                null));
+
+    assertThat(result.batchCreationErrors()).isEmpty();
+    ArgumentCaptor<OpenAIClient.UploadFileRequest> upload =
+        ArgumentCaptor.forClass(OpenAIClient.UploadFileRequest.class);
+    verify(openAIClient).uploadFile(upload.capture());
+    List<JsonNode> batchLines = batchLines(mapper, mapper.valueToTree(upload.getValue()));
+    assertThat(batchLines).hasSize(1);
+    JsonNode input =
+        mapper.readValueUnchecked(
+            batchLines.getFirst().at("/body/messages/1/content").asText(), JsonNode.class);
+    assertThat(input.path("locale").asText()).isEqualTo("he");
+    JsonNode glossaryTerms =
+        translateType == AiTranslateType.TARGET_ONLY_NEW
+            ? input.at("/textUnitsToTranslate/0/glossaryTerms")
+            : input.path("glossaryTerms");
+    assertThat(glossaryTerms)
+        .extracting(term -> term.path("term").asText())
+        .containsExactly("Open", "ChatGPT", "Codex");
+    assertThat(glossaryTerms)
+        .extracting(term -> term.path("termTarget").asText())
+        .containsExactly("פתיחה", "ChatGPT", "Codex");
+    assertThat(glossaryTerms)
+        .extracting(term -> term.path("doNotTranslate").asBoolean())
+        .containsExactly(false, true, true);
+  }
+
+  private static GlossaryService.GlossaryTerm batchGlossaryTerm(
+      long id, String source, String target, boolean doNotTranslate) {
+    return new GlossaryService.GlossaryTerm(
+        id,
+        1L,
+        "Core",
+        source,
+        source,
+        "Source description",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        target,
+        null,
+        doNotTranslate,
+        false,
+        List.of());
+  }
+
+  @Test
   public void emptyLocaleSkipsGlossaryBlobStorageAndProviderRequests() {
     TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
     RepositoryRepository repositoryRepository = mock(RepositoryRepository.class);
