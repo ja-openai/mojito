@@ -110,6 +110,39 @@ public class HtmlTagIntegrityCheckerTest {
   }
 
   @Test
+  public void testHtmlTagCheckWorksForNamespacedNoValueAttributes() {
+    String source = "Choose <button type=\"button\" ui:locked class=\"action\">Continue</button>.";
+    String target =
+        "Choisissez <button type=\"button\" ui:locked class=\"action\">Continuer</button>.";
+
+    checker.check(source, target);
+  }
+
+  @Test
+  public void testHtmlTagCheckWorksForNamespacedQuotedAttributes() {
+    String source = "Status: <span ui:variant=\"compact\" ui:label='status'>Ready</span>";
+    String target = "Statut : <span ui:variant=\"compact\" ui:label='status'>Prêt</span>";
+
+    checker.check(source, target);
+  }
+
+  @Test(expected = HtmlTagIntegrityCheckerException.class)
+  public void testHtmlTagCheckRejectsModifiedNamespacedAttributes() {
+    String source = "Status <icon ui:variant=\"compact\"/>";
+    String target = "Statut <icon ui:variant=\"expanded\"/>";
+
+    checker.check(source, target);
+  }
+
+  @Test(expected = HtmlTagIntegrityCheckerException.class)
+  public void testHtmlTagCheckRejectsInvalidOrderWithNamespacedAttributes() {
+    String source = "<span ui:variant=\"compact\">Ready</span>";
+    String target = "</span>Prêt<span ui:variant=\"compact\">";
+
+    checker.check(source, target);
+  }
+
+  @Test
   public void testHtmlTagCheckWorksForSelfClosingTags() {
     String source = "There are <p/>%1 files and %2 folders";
     String target = "Il y a <p/>%1 fichiers et %2 dossiers";
