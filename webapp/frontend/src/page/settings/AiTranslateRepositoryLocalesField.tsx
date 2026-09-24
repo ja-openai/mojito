@@ -10,53 +10,133 @@ import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
 
 export function AiTranslateRepositoryLocalesField({
   repositories,
+  eligibleRepositoryIds,
   excludedLocaleTagsByRepositoryId,
   onChange,
   disabled = false,
 }: {
   repositories: ApiRepository[];
+  eligibleRepositoryIds: number[];
   excludedLocaleTagsByRepositoryId: Record<string, string[]>;
   onChange: (next: Record<string, string[]>) => void;
   disabled?: boolean;
 }) {
   const [repositoryId, setRepositoryId] = useState<number | null>(null);
-  const repositoryOptions = useRepositorySelectionOptions(repositories);
-  const repository = repositories.find((item) => item.id === repositoryId);
+  const resolveLocaleName = useLocaleDisplayNameResolver();
+  const exclusions = Object.entries(excludedLocaleTagsByRepositoryId).filter(
+    ([, tags]) => tags.length > 0,
+  );
+  const repositoryOptions = useRepositorySelectionOptions(
+    repositories.filter(
+      (item) =>
+        eligibleRepositoryIds.includes(item.id) &&
+        !excludedLocaleTagsByRepositoryId[String(item.id)]?.length,
+    ),
+  );
+  const getRepository = (id: number): ApiRepository =>
+    repositories.find((item) => item.id === id) ?? { id, name: `Repository #${id}` };
+  const repository =
+    repositoryId !== null &&
+    (eligibleRepositoryIds.includes(repositoryId) ||
+      excludedLocaleTagsByRepositoryId[String(repositoryId)]?.length)
+      ? getRepository(repositoryId)
+      : null;
+
+  const updateExclusions = (id: number, tags: string[]) => {
+    const next = { ...excludedLocaleTagsByRepositoryId };
+    if (tags.length) {
+      next[String(id)] = tags;
+    } else {
+      delete next[String(id)];
+    }
+    onChange(next);
+  };
 
   return (
     <div className="settings-field">
       <div className="settings-field__label">Locale exclusions by repository</div>
       <p className="settings-hint">
-        Saved exclusions apply to scheduled runs and Run now for this repository. Direct AI
-        translation is unaffected.
+        Add exclusions for any number of repositories, then Save. Saved exclusions apply to
+        scheduled runs and Run now. Direct AI translation is unaffected.
       </p>
+      {exclusions.length ? (
+        <ul className="settings-locale-exclusions" aria-label="Repository locale exclusions">
+          {exclusions.map(([id, tags]) => {
+            const item = getRepository(Number(id));
+            return (
+              <li
+                key={id}
+                className="settings-locale-exclusions__row"
+                aria-label={`Locale exclusions for ${item.name}`}
+              >
+                <div className="settings-locale-exclusions__details">
+                  <span className="settings-field__label">{item.name}</span>
+                  <div className="settings-locale-exclusions__tags">
+                    {tags.map((tag) => (
+                      <code key={tag} title={resolveLocaleName(tag)}>
+                        {tag}
+                      </code>
+                    ))}
+                  </div>
+                  {!eligibleRepositoryIds.includes(item.id) ? (
+                    <span className="settings-hint">
+                      Inactive: outside the current repository scope.
+                    </span>
+                  ) : null}
+                </div>
+                <div className="settings-actions">
+                  <button
+                    type="button"
+                    className="settings-button settings-button--ghost"
+                    onClick={() => setRepositoryId(item.id)}
+                    disabled={disabled}
+                    aria-label={`Edit locale exclusions for ${item.name}`}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-button settings-button--ghost"
+                    onClick={() => {
+                      updateExclusions(item.id, []);
+                      if (repositoryId === item.id) setRepositoryId(null);
+                    }}
+                    disabled={disabled}
+                    aria-label={`Remove locale exclusions for ${item.name}`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="settings-hint">No locale exclusions configured.</p>
+      )}
       <RepositorySingleSelect
         options={repositoryOptions}
-        value={repository?.id ?? null}
+        value={null}
         onChange={setRepositoryId}
-        disabled={disabled}
+        disabled={disabled || repositoryOptions.length === 0}
+        placeholder="Add repository"
         className="settings-repository-select"
         buttonAriaLabel="Choose repository for automatic AI locale exclusions"
       />
       {repository ? (
-        <RepositoryLocaleExclusions
-          key={repository.id}
-          repository={repository}
-          selectedTags={excludedLocaleTagsByRepositoryId[String(repository.id)] ?? []}
-          onChange={(tags) => {
-            const next = { ...excludedLocaleTagsByRepositoryId };
-            if (tags.length) {
-              next[String(repository.id)] = tags;
-            } else {
-              delete next[String(repository.id)];
-            }
-            onChange(next);
-          }}
-          disabled={disabled}
-        />
+        <div className="settings-field">
+          <div className="settings-field__label">Edit exclusions for {repository.name}</div>
+          <RepositoryLocaleExclusions
+            key={repository.id}
+            repository={repository}
+            selectedTags={excludedLocaleTagsByRepositoryId[String(repository.id)] ?? []}
+            onChange={(tags) => updateExclusions(repository.id, tags)}
+            disabled={disabled}
+          />
+        </div>
       ) : (
         <p className="settings-hint">
-          Select a repository in the automation scope to edit its locales.
+          Add a repository in the automation scope or edit an existing exclusion above.
         </p>
       )}
     </div>

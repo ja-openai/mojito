@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -43,7 +43,7 @@ const config: ApiAiTranslateAutomationConfig = {
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
+  return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <AdminAiTranslateAutomationPage />
@@ -53,12 +53,11 @@ function renderPage() {
 }
 
 async function clearFirstRepositoryExclusions() {
-  const repositoryButton = screen.getByRole('button', {
-    name: 'Choose repository for automatic AI locale exclusions',
+  const repositoryButton = await screen.findByRole('button', {
+    name: 'Edit locale exclusions for First repository',
   });
   await waitFor(() => expect(repositoryButton).toBeEnabled());
   fireEvent.click(repositoryButton);
-  fireEvent.click(screen.getByRole('button', { name: 'First repository' }));
   const localeButton = screen.getByRole('button', {
     name: 'Select automatic AI translation excluded locales',
   });
@@ -82,14 +81,15 @@ describe('AdminAiTranslateAutomationPage locale exclusions', () => {
 
   it('saves locale exclusions with the existing automation settings and retains out-of-scope rules', async () => {
     renderPage();
-    const repositoryButton = screen.getByRole('button', {
-      name: 'Choose repository for automatic AI locale exclusions',
+    const repositoryButton = await screen.findByRole('button', {
+      name: 'Edit locale exclusions for First repository',
     });
     await waitFor(() => expect(repositoryButton).toBeEnabled());
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(
+      screen.getByRole('listitem', { name: 'Locale exclusions for Second repository' }),
+    ).toHaveTextContent('ja');
     fireEvent.click(repositoryButton);
-    expect(screen.queryByRole('button', { name: 'Second repository' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'First repository' }));
     const localeButton = screen.getByRole('button', {
       name: 'Select automatic AI translation excluded locales',
     });
@@ -113,6 +113,7 @@ describe('AdminAiTranslateAutomationPage locale exclusions', () => {
       ...config,
       repositoryIds: [1],
       excludedRepositoryIds: [],
+      excludedLocaleTagsByRepositoryId: {},
     });
     renderPage();
     const button = screen.getByRole('button', {
@@ -122,6 +123,64 @@ describe('AdminAiTranslateAutomationPage locale exclusions', () => {
     fireEvent.click(button);
     expect(screen.getByRole('button', { name: 'First repository' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Second repository' })).not.toBeInTheDocument();
+  });
+
+  it('saves multiple repository exclusions and shows them after a fresh page load', async () => {
+    mocks.fetchAiTranslateAutomationConfig.mockResolvedValue({
+      ...config,
+      excludedRepositoryIds: [],
+      excludedLocaleTagsByRepositoryId: { '1': ['fr'] },
+    });
+    const page = renderPage();
+    expect(
+      await screen.findByRole('listitem', { name: 'Locale exclusions for First repository' }),
+    ).toHaveTextContent('fr');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Choose repository for automatic AI locale exclusions' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Second repository' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Select automatic AI translation excluded locales' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Show all locales' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /^French\s*fr\b/ }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Select automatic AI translation excluded locales' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByText('Settings saved.');
+    expect(mocks.updateAiTranslateAutomationConfig).toHaveBeenCalledWith(
+      {
+        ...config,
+        excludedRepositoryIds: [],
+        excludedLocaleTagsByRepositoryId: { '1': ['fr'], '2': ['fr'] },
+      },
+      expect.anything(),
+    );
+
+    page.unmount();
+    renderPage();
+    expect(
+      await screen.findByRole('listitem', { name: 'Locale exclusions for First repository' }),
+    ).toHaveTextContent('fr');
+    expect(
+      screen.getByRole('listitem', { name: 'Locale exclusions for Second repository' }),
+    ).toHaveTextContent('fr');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+
+  it('keeps excluded repositories visible with inactive rules after reload', async () => {
+    renderPage();
+    const rule = await screen.findByRole('listitem', {
+      name: 'Locale exclusions for Second repository',
+    });
+    expect(within(rule).getByText('ja')).toBeInTheDocument();
+    expect(
+      within(rule).getByText('Inactive: outside the current repository scope.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('listitem', { name: 'Locale exclusions for First repository' }),
+    ).not.toHaveTextContent('Inactive');
   });
 
   it('keeps Save and locale editing disabled while a save is pending', async () => {

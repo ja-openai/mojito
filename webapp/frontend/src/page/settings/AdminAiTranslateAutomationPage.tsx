@@ -416,11 +416,14 @@ export function AdminAiTranslateAutomationPage() {
             )}
           </div>
           <AiTranslateRepositoryLocalesField
-            repositories={(repositories ?? []).filter((repository) =>
-              automationRepositoryModeDraft === 'INCLUDED'
-                ? automationRepositoryIdsDraft.includes(repository.id)
-                : !automationExcludedRepositoryIdsDraft.includes(repository.id),
-            )}
+            repositories={repositories ?? []}
+            eligibleRepositoryIds={(repositories ?? [])
+              .filter((repository) =>
+                automationRepositoryModeDraft === 'INCLUDED'
+                  ? automationRepositoryIdsDraft.includes(repository.id)
+                  : !automationExcludedRepositoryIdsDraft.includes(repository.id),
+              )
+              .map((repository) => repository.id)}
             excludedLocaleTagsByRepositoryId={automationExcludedLocalesDraft}
             onChange={setAutomationExcludedLocalesDraft}
             disabled={

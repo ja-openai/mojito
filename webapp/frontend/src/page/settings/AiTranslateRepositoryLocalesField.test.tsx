@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -39,6 +39,7 @@ function Harness({ onChange }: { onChange: (next: Record<string, string[]>) => v
   return (
     <AiTranslateRepositoryLocalesField
       repositories={repositories}
+      eligibleRepositoryIds={[1, 2]}
       excludedLocaleTagsByRepositoryId={value}
       onChange={(next) => {
         setValue(next);
@@ -61,11 +62,30 @@ function toggleLocales() {
   );
 }
 
+function editRepository(name: string) {
+  fireEvent.click(screen.getByRole('button', { name: `Edit locale exclusions for ${name}` }));
+}
+
 describe('AiTranslateRepositoryLocalesField', () => {
+  it('shows every saved rule immediately, including unavailable repositories', () => {
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} />);
+
+    const first = screen.getByRole('listitem', { name: 'Locale exclusions for First repository' });
+    expect(within(first).getByText('fr')).toBeInTheDocument();
+    expect(within(first).getByText('ja')).toBeInTheDocument();
+    const unavailable = screen.getByRole('listitem', {
+      name: 'Locale exclusions for Repository #99',
+    });
+    expect(within(unavailable).getByText('es')).toBeInTheDocument();
+    expect(within(unavailable).getByText(/Inactive/)).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('shows target locales and existing exclusions, with access to all locales', () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
-    selectRepository('First repository');
+    editRepository('First repository');
     toggleLocales();
 
     expect(screen.getByRole('checkbox', { name: /^French\s*fr\b/ })).toBeChecked();
@@ -86,7 +106,7 @@ describe('AiTranslateRepositoryLocalesField', () => {
   it('keeps each repository draft separate and clears only the selected repository', () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
-    selectRepository('First repository');
+    editRepository('First repository');
     toggleLocales();
     fireEvent.click(screen.getByRole('checkbox', { name: /^French \(Canada\)\s*fr-CA\b/ }));
     toggleLocales();
@@ -96,38 +116,88 @@ describe('AiTranslateRepositoryLocalesField', () => {
     expect(screen.queryByRole('checkbox', { name: /^French\s*fr\b/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('checkbox', { name: /^German\s*de\b/ }));
     toggleLocales();
-    selectRepository('First repository');
+    const second = screen.getByRole('listitem', {
+      name: 'Locale exclusions for Second repository',
+    });
+    expect(within(second).getByText('de')).toBeInTheDocument();
+    expect(
+      screen.getByRole('listitem', { name: 'Locale exclusions for First repository' }),
+    ).toBeInTheDocument();
+    editRepository('First repository');
     toggleLocales();
     expect(screen.getByRole('checkbox', { name: /^French \(Canada\)\s*fr-CA\b/ })).toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'Clear locale selection' }));
     expect(onChange).toHaveBeenLastCalledWith({ '2': ['de'], '99': ['es'] });
+    expect(
+      screen.queryByRole('listitem', { name: 'Locale exclusions for First repository' }),
+    ).not.toBeInTheDocument();
+    expect(second).toBeInTheDocument();
   });
 
-  it('hides an out-of-scope repository without removing its rules', () => {
+  it('keeps out-of-scope rules visible and editable without offering to add other inactive repositories', () => {
     const onChange = vi.fn();
     const value = { '1': ['fr'] };
     const view = render(
       <AiTranslateRepositoryLocalesField
         repositories={repositories}
+        eligibleRepositoryIds={[1, 2]}
         excludedLocaleTagsByRepositoryId={value}
         onChange={onChange}
       />,
     );
-    selectRepository('First repository');
+    editRepository('First repository');
     view.rerender(
       <AiTranslateRepositoryLocalesField
-        repositories={repositories.slice(1)}
+        repositories={repositories}
+        eligibleRepositoryIds={[2]}
         excludedLocaleTagsByRepositoryId={value}
         onChange={onChange}
       />,
     );
-    expect(
-      screen.queryByRole('button', { name: 'Select automatic AI translation excluded locales' }),
-    ).not.toBeInTheDocument();
+    const first = screen.getByRole('listitem', { name: 'Locale exclusions for First repository' });
+    expect(within(first).getByText('fr')).toBeInTheDocument();
+    expect(within(first).getByText(/Inactive/)).toBeInTheDocument();
+    toggleLocales();
+    expect(screen.getByRole('checkbox', { name: /^French\s*fr\b/ })).toBeChecked();
+    toggleLocales();
     expect(onChange).not.toHaveBeenCalled();
     selectRepository('Second repository');
     toggleLocales();
     fireEvent.click(screen.getByRole('checkbox', { name: /^German\s*de\b/ }));
     expect(onChange).toHaveBeenCalledWith({ '1': ['fr'], '2': ['de'] });
+  });
+
+  it('removes only the chosen rule and keeps its repository out of Add when inactive', () => {
+    const onChange = vi.fn();
+    const HarnessWithScope = () => {
+      const [value, setValue] = useState<Record<string, string[]>>({ '1': ['fr'], '99': ['es'] });
+      return (
+        <AiTranslateRepositoryLocalesField
+          repositories={repositories}
+          eligibleRepositoryIds={[2]}
+          excludedLocaleTagsByRepositoryId={value}
+          onChange={(next) => {
+            setValue(next);
+            onChange(next);
+          }}
+        />
+      );
+    };
+    render(<HarnessWithScope />);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove locale exclusions for First repository' }),
+    );
+    expect(onChange).toHaveBeenLastCalledWith({ '99': ['es'] });
+    expect(
+      screen.queryByRole('listitem', { name: 'Locale exclusions for First repository' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Choose repository for automatic AI locale exclusions' }),
+    );
+    expect(screen.queryByRole('button', { name: 'First repository' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Second repository' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('listitem', { name: 'Locale exclusions for Repository #99' }),
+    ).toBeInTheDocument();
   });
 });

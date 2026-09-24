@@ -4,10 +4,17 @@ An included repository can exclude individual locales from AI translation automa
 this under **Settings → System → AI translation automation**, alongside the existing repository
 selection, and save with the rest of the automation settings.
 
+All configured exclusions are shown together with their repository names and locale tags, including
+after reloading the page. Use **Add repository** to configure another repository, **Edit** to change
+its excluded locales, or **Remove** to clear only that repository's rule. These changes are drafts
+until the page's **Save** action succeeds.
+
 The locale selector shows the selected repository's target locales and any existing exclusions.
 **Show all locales** allows a language to be excluded before it is enabled on the repository.
 Clearing the selection includes all of that repository's target locales again. Rules remain saved
-when a repository is temporarily removed from the automation's scope.
+and visible as inactive when a repository is temporarily removed from the automation's scope.
+Rules for unavailable repositories remain visible by repository ID. Neither scope changes nor
+editing another repository silently deletes these rules.
 
 ## Behavior
 
@@ -38,7 +45,7 @@ Migration `V125__AI_Translate_Automation_Locale_Exclusions.sql` adds a nullable 
 `GET` and `PUT /api/ai-translate/automation` carry `excludedLocaleTagsByRepositoryId`, for example:
 
 ```json
-{"excludedLocaleTagsByRepositoryId": {"42": ["fr"]}}
+{ "excludedLocaleTagsByRepositoryId": { "42": ["fr"] } }
 ```
 
 Writes validate repository IDs and canonicalize locale tags against Mojito's locale catalog.
