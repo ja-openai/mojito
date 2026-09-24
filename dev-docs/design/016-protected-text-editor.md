@@ -70,6 +70,10 @@ Review Project translation editors size to their content with a `3rem` minimum
 editing surface. The shared editor's larger default minimum must not add empty
 space around short translations; longer translations expand naturally.
 
+The Review Project assisted-editor wrapper allows overflow so its hidden-character
+menu remains visible below the compact editor. Autosizing textareas retain their
+own overflow handling.
+
 Production surfaces use the shared editor control bar, not demo-specific
 controls:
 
