@@ -127,7 +127,7 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
             Readiness.SUSPECTED,
             "The translation appears to reverse the requested action; human assessment is pending.",
             "{\"origin\":\"AI test fixture\",\"humanApproved\":false}",
-            "codex:fr-reviewer:test-model",
+            "agent:fr-reviewer:test-model",
             null,
             null,
             null,
@@ -149,7 +149,7 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
     assertThat(queued.getDisposition()).isEqualTo(Disposition.OPEN);
     assertThat(queued.getReviewProjectId()).isNull();
     assertThat(queued.getProposedTarget()).isEqualTo(proposedTarget);
-    assertThat(queued.getProducerIdentity()).isEqualTo("codex:fr-reviewer:test-model");
+    assertThat(queued.getProducerIdentity()).isEqualTo("agent:fr-reviewer:test-model");
     assertThat(queued.getVerifierIdentity()).isNull();
     assertThat(queued.getVerificationRationale()).isNull();
     assertThat(routing.routeRun(fixture.run().id()).errors()).isEmpty();
@@ -181,7 +181,7 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
     assertThat(assigned.getDisposition()).isEqualTo(Disposition.ROUTED);
     assertThat(assigned.getReviewProjectId()).isEqualTo(created.projectIds().getFirst());
     assertThat(assigned.getIncidentId()).isEqualTo(incidentId);
-    assertThat(assigned.getProducerIdentity()).isEqualTo("codex:fr-reviewer:test-model");
+    assertThat(assigned.getProducerIdentity()).isEqualTo("agent:fr-reviewer:test-model");
     assertThat(assigned.getVerifierIdentity()).isNull();
     assertThat(assigned.getVerificationRationale()).isNull();
     assertThat(row(assigned).agentReview().proposedTarget()).isEqualTo(proposedTarget);
