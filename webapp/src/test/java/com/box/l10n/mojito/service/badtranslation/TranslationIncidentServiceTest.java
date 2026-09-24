@@ -106,7 +106,8 @@ public class TranslationIncidentServiceTest {
       var later = incident("fr", "fr-CA");
       later.setCreatedDate(ZonedDateTime.parse("2026-09-21T00:00:00Z"));
       var transaction = session.beginTransaction();
-      List.of(
+      var incidents =
+          List.of(
               resolved,
               unresolved,
               differentResolvedLocale,
@@ -116,9 +117,16 @@ public class TranslationIncidentServiceTest {
               differentReviewType,
               differentReviewRun,
               earlier,
-              later)
-          .forEach(session::persist);
+              later);
+      var createdDates = incidents.stream().map(TranslationIncident::getCreatedDate).toList();
+      incidents.forEach(session::persist);
+      session.flush();
+      // Earlier Spring tests can enable insert auditing in this JVM; restore the fixture dates.
+      for (int i = 0; i < incidents.size(); i++) {
+        incidents.get(i).setCreatedDate(createdDates.get(i));
+      }
       transaction.commit();
+      session.clear();
       var repository =
           new SimpleJpaRepository<TranslationIncident, Long>(TranslationIncident.class, session);
       when(translationIncidentRepository.findAll(
