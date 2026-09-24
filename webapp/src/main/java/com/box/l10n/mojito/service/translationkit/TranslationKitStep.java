@@ -13,8 +13,6 @@ import java.util.List;
 import net.sf.okapi.common.Event;
 import net.sf.okapi.common.pipeline.BasePipelineStep;
 import net.sf.okapi.common.resource.ITextUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 
@@ -25,8 +23,6 @@ import org.springframework.beans.factory.annotation.Configurable;
  */
 @Configurable
 public class TranslationKitStep extends BasePipelineStep {
-
-  static Logger logger = LoggerFactory.getLogger(TranslationKitStep.class);
 
   @Autowired TranslationKitService translationKitService;
 

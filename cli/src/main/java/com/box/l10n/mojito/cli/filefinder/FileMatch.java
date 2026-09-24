@@ -12,8 +12,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Contains a file match from {@link FileFinder} run.
@@ -21,9 +19,6 @@ import org.slf4j.LoggerFactory;
  * @author jaurambault
  */
 public class FileMatch implements Comparable<FileMatch> {
-
-  /** logger */
-  static Logger logger = LoggerFactory.getLogger(FileMatch.class);
 
   /** The {@code Path} of file match. */
   Path path;

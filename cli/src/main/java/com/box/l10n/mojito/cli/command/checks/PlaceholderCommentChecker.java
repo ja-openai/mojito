@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link AbstractCliChecker} that verifies that a description of a placeholder is present in the
@@ -22,8 +20,6 @@ import org.slf4j.LoggerFactory;
  * @author mallen
  */
 public class PlaceholderCommentChecker extends AbstractCliChecker {
-
-  static Logger logger = LoggerFactory.getLogger(PlaceholderCommentChecker.class);
 
   @Override
   public CliCheckResult run(List<AssetExtractionDiff> assetExtractionDiffs) {
