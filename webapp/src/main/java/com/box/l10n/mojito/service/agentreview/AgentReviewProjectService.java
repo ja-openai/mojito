@@ -159,7 +159,8 @@ public class AgentReviewProjectService {
       if (currentRow != null)
         entityManager.refresh(currentRow, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
       var current = currentRow == null ? null : currentRow.getTmTextUnitVariant();
-      if (current != null) entityManager.refresh(current);
+      if (current != null)
+        entityManager.refresh(current, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
       String currentState =
           AgentReviewStateFingerprint.of(
               unit.getId(),
@@ -170,6 +171,24 @@ public class AgentReviewProjectService {
               current == null ? null : current.getContent(),
               current == null || current.getStatus() == null ? null : current.getStatus().name(),
               current == null ? null : current.isIncludedInLocalizedFile());
+      // Check the locked current snapshot before creating or reusing any incident. A stale
+      // proposal remains durable for reassessment without creating new review work.
+      String reportedState =
+          AgentReviewStateFingerprint.of(
+              proposal.getTmTextUnitId(),
+              proposal.getLocaleId(),
+              proposal.getSource(),
+              proposal.getSourceComment(),
+              proposal.getBaselineVariantId(),
+              proposal.getBaselineTarget(),
+              proposal.getBaselineStatus(),
+              proposal.getBaselineIncludedInLocalizedFile());
+      if (!Objects.equals(reportedState, currentState)) {
+        skipped++;
+        errors.add(
+            "Finding " + proposal.getFindingId() + ": current string changed since the finding.");
+        continue;
+      }
       if (proposal.getRespondsToFeedbackId() == null
           && reviewedStates.isReviewed(run.getTeamId(), run.getReviewType(), currentState)) {
         skipped++;
@@ -193,24 +212,6 @@ public class AgentReviewProjectService {
       TranslationIncident incident =
           existingIncident.orElseGet(() -> createIncident(run, proposal));
       proposal.setIncidentId(incident.getId());
-      // Preserve historical reports, but only current snapshots may enter ordinary review work.
-      // The same fields are checked by manual/scheduled incident batching.
-      String reportedState =
-          AgentReviewStateFingerprint.of(
-              proposal.getTmTextUnitId(),
-              proposal.getLocaleId(),
-              proposal.getSource(),
-              proposal.getSourceComment(),
-              proposal.getBaselineVariantId(),
-              proposal.getBaselineTarget(),
-              proposal.getBaselineStatus(),
-              proposal.getBaselineIncludedInLocalizedFile());
-      if (!Objects.equals(reportedState, currentState)) {
-        skipped++;
-        errors.add(
-            "Finding " + proposal.getFindingId() + ": current string changed since the finding.");
-        continue;
-      }
       if (run.getRoutingPolicy() == RoutingPolicy.QUEUED) {
         // Findings become visible in the incident queue without preempting manual/cron batching.
         continue;

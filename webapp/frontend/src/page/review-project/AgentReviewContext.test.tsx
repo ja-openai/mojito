@@ -108,3 +108,11 @@ it('preserves recorded translations and agent evidence across review revisions',
     '/review-projects/8',
   );
 });
+
+it('labels a suspected finding without claiming independent or human verification', () => {
+  renderContext('details', { verificationStatus: 'SUSPECTED', disposition: 'ROUTED' });
+  expect(
+    screen.getByText('Suspected issue; not independently verified. The human reviewer decides.'),
+  ).toBeVisible();
+  expect(screen.queryByText('Human review')).not.toBeInTheDocument();
+});

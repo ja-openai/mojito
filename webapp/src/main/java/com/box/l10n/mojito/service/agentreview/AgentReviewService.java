@@ -779,8 +779,11 @@ public class AgentReviewService {
         conflict("Proposal is already routed elsewhere");
       return;
     }
-    if (proposal.getDisposition() != Disposition.OPEN || proposal.getReadiness() != Readiness.READY)
-      conflict("Only open verified proposals can be routed");
+    if (proposal.getDisposition() != Disposition.OPEN
+        || (proposal.getReadiness() != Readiness.READY
+            && proposal.getReadiness() != Readiness.SUSPECTED)
+        || proposal.getCategory() == Category.OPTIONAL_IMPROVEMENT)
+      conflict("Only open findings ready for human review can be routed");
     if (proposal.getIncidentId() != null && !Objects.equals(proposal.getIncidentId(), incidentId))
       conflict("Finding must retain its existing incident identity");
     proposal.setIncidentId(incidentId);
@@ -867,10 +870,12 @@ public class AgentReviewService {
         request.readiness() != Readiness.HUMAN_REVIEW
             && request.category() != Category.HUMAN_REVIEW,
         "Human review is reserved for explicit incident intake and Review again");
-    if (request.readiness() == Readiness.READY) {
+    if (request.readiness() == Readiness.READY || request.readiness() == Readiness.SUSPECTED) {
       require(
           request.category() != Category.OPTIONAL_IMPROVEMENT,
           "Optional improvements remain outside automatic routing");
+    }
+    if (request.readiness() == Readiness.READY) {
       text(request.verifierIdentity(), "verifierIdentity", 255, true);
       text(request.verificationRationale(), "verificationRationale", MAX_EVIDENCE_LENGTH, true);
       require(

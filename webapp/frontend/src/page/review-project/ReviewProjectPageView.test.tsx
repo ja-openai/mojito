@@ -3608,6 +3608,7 @@ describe('Agent proposal review in Review Projects', () => {
 
   it.each([
     ['READY', 'Automation'],
+    ['SUSPECTED', 'Automation'],
     ['HOLD', 'Automation'],
     ['HUMAN_REVIEW', 'Human review'],
   ])('labels %s requests without inventing an automation source', (verificationStatus, label) => {

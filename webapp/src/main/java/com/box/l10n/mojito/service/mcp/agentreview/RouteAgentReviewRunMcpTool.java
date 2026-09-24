@@ -16,7 +16,7 @@ public class RouteAgentReviewRunMcpTool
       new McpToolDescriptor(
           "agent_review.route_run",
           "Retry review project routing",
-          "Idempotently route eligible verified findings of the configured review type to human Review Projects. Already routed/resolved findings stay excluded; optional/held findings remain staged. Use to retry a reported routing error after a saved checkpoint or completed run. Requires PM/admin with run access; no TM writes or agent approval.",
+          "Idempotently route eligible suspected or verified findings of the configured review type to human Review Projects. Exact current-state checks precede incident creation; stale rows stay staged. Already routed/resolved findings stay excluded; optional/held findings remain staged. Use to retry a reported routing error after a saved checkpoint or completed run. Requires PM/admin with run access; no TM writes or agent approval.",
           false,
           false,
           List.of(runId()));

@@ -72,8 +72,9 @@ is needed for v0.
 2. Start with one reviewer per locale. Each reviewer checks meaning, grammar, context, and consistency
    together. For a large locale, split disjoint feature groups across more workers; avoid redundant
    reviews of every string by default. Keep composed messages and their dependencies together.
-3. A separate verifier challenges each finding, checks whether the original could be valid, and
-   validates the proposed replacement. A targeted cross-language/terminology pass can investigate
+3. Concrete suspected defects can enter human review as `SUSPECTED` without a second reviewer.
+   Use `READY` only when a real, distinct verifier challenges that finding, checks whether the
+   original could be valid, and validates the proposed replacement. A targeted cross-language/terminology pass can investigate
    specific consistency concerns; cross-language agreement is not proof of correctness.
 4. Record completed groups, missing inputs, findings, and unresolved questions. Zero findings is a
    valid result; missing or failed inputs never count as passed review.
@@ -95,7 +96,7 @@ until human judgment; model verification does not constitute native validation.
   severity, and producer identity, so all locale workers in a run use the same workflow type.
 - On a committed group checkpoint, create typed incidents and linked Review Projects for findings
   matching `l10n.agent-review.automatic-review-type` (default `TRANSLATION_QUALITY`), with exact
-  string/locale identity and readiness after independent verification. Claim, finish, and explicit
+  string/locale identity and explicit `SUSPECTED` or independently verified `READY` readiness. Claim, finish, and explicit
   routing calls also retry this handoff; project-creation failure does not discard saved progress.
   `routingPolicy=QUEUED` records the incidents for later manual or scheduled batch creation;
   omitted policy retains `IMMEDIATE` routing. A proposed replacement is optional. Untyped incidents
@@ -477,3 +478,22 @@ unflagged strings before drawing conclusions about accuracy or scaling up automa
 - [Review identity and concurrency](031-review-project-editing-state.md)
 - [Human feedback](029-ai-translation-feedback-evaluation.md)
 - [Future evaluation and learning](033-translation-evaluation-and-learning.md)
+
+
+### Suspected findings and freshness at delivery
+
+`SUSPECTED` means an agent reports a concrete defect for human judgment without claiming
+independent verification. It uses an ordinary defect category and retains the actual producer,
+model/prompt/context provenance in evidence, and an optional exact `proposedTarget`.
+`HUMAN_REVIEW` remains reserved for manual incident intake; `READY` retains its distinct-verifier
+requirement. Optional wording and missing-context findings remain `OPTIONAL` and `HOLD`.
+A missing or unsafe correction does not invalidate a useful suspected defect: omit the correction
+with null. An intentional empty correction is the exact empty string, preserved in API and UI.
+
+Routing compares source, comment, current variant, target, status and export inclusion under
+the existing state locks before creating or reusing an incident. A stale finding stays staged
+without a new incident or project; reassess it against the changed baseline. This guard applies
+to queued incident routing as well as immediate project routing. Existing human decisions,
+closed-incident state, idempotency keys and proposal history remain authoritative. A reused
+proposal may contain older evidence: clients must compare exact proposal and current project
+readbacks before claiming that a new correction was delivered.

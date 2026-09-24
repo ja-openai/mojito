@@ -894,7 +894,9 @@ public class IncidentReviewBatchService {
         return "Finding belongs to a different team";
       if (run.getStatus() == RunStatus.CANCELLED) return "Review run was cancelled";
       // Assignment status and pending/final human feedback were checked above.
-      if ((p.getReadiness() != Readiness.READY && p.getReadiness() != Readiness.HUMAN_REVIEW)
+      if ((p.getReadiness() != Readiness.READY
+              && p.getReadiness() != Readiness.SUSPECTED
+              && p.getReadiness() != Readiness.HUMAN_REVIEW)
           || p.getCategory() == Category.OPTIONAL_IMPROVEMENT)
         return "Finding is not ready for human review";
       CheckpointState checkpoint =

@@ -91,31 +91,42 @@ describe('AgentReviewReport', () => {
     expect(screen.queryByText('In editor')).not.toBeInTheDocument();
   });
 
-  it('distinguishes no proposal from an intentionally empty correction and honors validation errors', () => {
-    const callbacks = props();
-    const { rerender } = render(
-      <AgentReviewReport {...callbacks} proposal={{ ...proposal, proposedTarget: null }} />,
-    );
-    expect(screen.getByText('No correction proposed')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Use suggestion' })).not.toBeInTheDocument();
-    rerender(<AgentReviewReport {...callbacks} proposal={{ ...proposal, proposedTarget: '' }} />);
-    expect(screen.getByText('Empty translation')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
-    expect(callbacks.onUseSuggestion).toHaveBeenCalledOnce();
-    rerender(
-      <AgentReviewReport
-        {...callbacks}
-        originalError="The source changed."
-        suggestionError="The source changed."
-      />,
-    );
-    expect(
-      screen.queryByRole('button', { name: 'Use original translation' }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Use suggestion' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'View report →' }));
-    expect(callbacks.onOpenReport).toHaveBeenCalledOnce();
-  });
+  it.each(['READY', 'SUSPECTED'])(
+    'distinguishes no proposal from an intentionally empty correction for %s and honors validation errors',
+    (verificationStatus) => {
+      const callbacks = { ...props(), proposal: { ...proposal, verificationStatus } };
+      const { rerender } = render(
+        <AgentReviewReport
+          {...callbacks}
+          proposal={{ ...callbacks.proposal, proposedTarget: null }}
+        />,
+      );
+      expect(screen.getByText('No correction proposed')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Use suggestion' })).not.toBeInTheDocument();
+      rerender(
+        <AgentReviewReport
+          {...callbacks}
+          proposal={{ ...callbacks.proposal, proposedTarget: '' }}
+        />,
+      );
+      expect(screen.getByText('Empty translation')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+      expect(callbacks.onUseSuggestion).toHaveBeenCalledOnce();
+      rerender(
+        <AgentReviewReport
+          {...callbacks}
+          originalError="The source changed."
+          suggestionError="The source changed."
+        />,
+      );
+      expect(
+        screen.queryByRole('button', { name: 'Use original translation' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Use suggestion' })).toBeDisabled();
+      fireEvent.click(screen.getByRole('button', { name: 'View report →' }));
+      expect(callbacks.onOpenReport).toHaveBeenCalledOnce();
+    },
+  );
 
   it('selects only one identical version and neither version for a custom edit', () => {
     const callbacks = props();
@@ -141,7 +152,7 @@ describe('AgentReviewReport', () => {
       <AgentReviewReport
         {...callbacks}
         draftTarget=""
-        proposal={{ ...proposal, proposedTarget: '' }}
+        proposal={{ ...callbacks.proposal, proposedTarget: '' }}
       />,
     );
     expect(

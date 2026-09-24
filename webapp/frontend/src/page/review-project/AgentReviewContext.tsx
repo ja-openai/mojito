@@ -24,6 +24,7 @@ const LABELS: Record<string, string> = {
   REVISED_PROPOSAL: 'Revised proposal',
   CONTEXT_REQUEST: 'Requested more context',
   READY: 'Ready for human review',
+  SUSPECTED: 'Suspected issue; not independently verified',
   HOLD: 'Needs more context',
   OPTIONAL: 'Optional improvement',
   BAD: 'Has an issue',

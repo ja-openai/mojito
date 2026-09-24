@@ -50,6 +50,7 @@ public interface AgentReviewProposalRepository extends JpaRepository<AgentReview
   @Query(
       "select p from AgentReviewProposal p where p.runId = :runId and p.readiness in"
           + " (com.box.l10n.mojito.entity.agentreview.Readiness.READY,"
+          + " com.box.l10n.mojito.entity.agentreview.Readiness.SUSPECTED,"
           + " com.box.l10n.mojito.entity.agentreview.Readiness.HUMAN_REVIEW) and p.disposition ="
           + " com.box.l10n.mojito.entity.agentreview.Disposition.OPEN order by p.id")
   List<AgentReviewProposal> findReadyForUpdateByRunId(@Param("runId") Long runId);

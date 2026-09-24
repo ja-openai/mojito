@@ -102,6 +102,11 @@ public class AgentReviewMcpToolsTest {
     assertThat(proposals.at("/items/properties/source/maxLength").asInt()).isEqualTo(64000);
     assertThat(proposals.at("/items/properties/baselineTarget/anyOf/1/type").asText())
         .isEqualTo("null");
+    assertThat(proposals.at("/items/properties/proposedTarget/anyOf/1/type").asText())
+        .isEqualTo("null");
+    assertThat(proposals.at("/items/properties/readiness/enum").toString())
+        .contains("SUSPECTED")
+        .doesNotContain("HUMAN_REVIEW");
     assertThat(proposals.at("/items/properties/claim/properties/generation/type").asText())
         .isEqualTo("integer");
     var runsTool =
@@ -136,6 +141,40 @@ public class AgentReviewMcpToolsTest {
     assertThat(result.structuredContent().at("/results/1/errorCode").asText())
         .isEqualTo("409 CONFLICT");
     verify(service).submitProposals(17, List.of(first, second));
+    verifyNoInteractions(projectService);
+  }
+
+  @Test
+  public void suspectedFindingsPreserveNullAndEmptyCorrectionWithoutVerifier() {
+    var input = mapper.createObjectNode().put("runId", 17L);
+    var items = input.putArray("proposals");
+    for (String target : java.util.Arrays.asList(null, "", "  Correction\n")) {
+      var item = mapper.valueToTree(proposal("suspected-" + items.size(), "Original", target));
+      ((com.fasterxml.jackson.databind.node.ObjectNode) item).put("readiness", "SUSPECTED");
+      ((com.fasterxml.jackson.databind.node.ObjectNode) item).putNull("verifierIdentity");
+      ((com.fasterxml.jackson.databind.node.ObjectNode) item).putNull("verificationRationale");
+      items.add(item);
+    }
+    when(service.submitProposals(anyLong(), any())).thenReturn(List.of());
+
+    var result = new SubmitAgentReviewProposalsMcpTool(mapper, service).call(input);
+
+    assertThat(result.error()).isFalse();
+    @SuppressWarnings("unchecked")
+    org.mockito.ArgumentCaptor<List<SubmitProposalRequest>> captor =
+        org.mockito.ArgumentCaptor.forClass(List.class);
+    verify(service).submitProposals(org.mockito.ArgumentMatchers.eq(17L), captor.capture());
+    assertThat(captor.getValue())
+        .extracting(SubmitProposalRequest::proposedTarget)
+        .containsExactly(null, "", "  Correction\n");
+    assertThat(captor.getValue())
+        .allSatisfy(
+            proposal -> {
+              assertThat(proposal.readiness()).isEqualTo(Readiness.SUSPECTED);
+              assertThat(proposal.producerIdentity()).isEqualTo("locale-worker");
+              assertThat(proposal.verifierIdentity()).isNull();
+              assertThat(proposal.verificationRationale()).isNull();
+            });
     verifyNoInteractions(projectService);
   }
 

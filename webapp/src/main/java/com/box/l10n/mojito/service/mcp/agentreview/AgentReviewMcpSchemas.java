@@ -150,7 +150,7 @@ final class AgentReviewMcpSchemas {
     properties.put("proposedTarget", nullable(string(MAX_TEXT_LENGTH)));
     properties.put(
         "category", values("OBVIOUS_ERROR", "CONSISTENCY_ERROR", "OPTIONAL_IMPROVEMENT"));
-    properties.put("readiness", values("READY", "HOLD", "OPTIONAL"));
+    properties.put("readiness", values("READY", "SUSPECTED", "HOLD", "OPTIONAL"));
     properties.put("rationale", string(MAX_EVIDENCE_LENGTH));
     properties.put("evidenceJson", nullable(string(MAX_EVIDENCE_LENGTH)));
     properties.put("producerIdentity", string(255));

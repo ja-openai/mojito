@@ -19,7 +19,7 @@ public class SubmitAgentReviewProposalsMcpTool
       new McpToolDescriptor(
           "agent_review.submit_proposals",
           "Stage translation review proposals",
-          "Persist 1-50 independently idempotent findings outside TM. Each item retains its frozen baseline and verifier evidence; inspect every ordered result for errors. Reuse submissionKey and identical payload on retry. A revision uses previousProposalId and respondsToFeedbackId. READY requires independent verification; optional wording stays OPTIONAL. Requires PM/admin and active run claim; never applies translations.",
+          "Persist 1-50 independently idempotent findings outside TM. Each item retains its frozen baseline, producer identity, and review evidence; inspect every ordered result for errors. Reuse submissionKey and identical payload on retry. A revision uses previousProposalId and respondsToFeedbackId. Use SUSPECTED for a concrete suspected defect awaiting human judgment; no independent verification is claimed. An exact proposedTarget is optional; null means no correction and an empty string is an intentional empty correction. READY still requires a distinct verifier; optional wording stays OPTIONAL. Requires PM/admin and active run claim; never applies translations.",
           false,
           false,
           List.of(

@@ -97,6 +97,110 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
   }
 
   @Test
+  public void suspectedFindingWithoutCorrectionQueuesAndCreatesManualReviewWithoutVerification()
+      throws Exception {
+    assertSuspectedQueueToManualProject(null);
+  }
+
+  @Test
+  public void suspectedFindingWithEmptyCorrectionPreservesItThroughManualProjectAndRetries()
+      throws Exception {
+    assertSuspectedQueueToManualProject("");
+  }
+
+  private void assertSuspectedQueueToManualProject(String proposedTarget) throws Exception {
+    Fixture fixture = followUp(fixture("TRANSLATION_QUALITY"), RoutingPolicy.QUEUED);
+    var request =
+        new SubmitProposalRequest(
+            fixture.claim(),
+            "suspected-finding",
+            "group-1",
+            fixture.textUnitId(),
+            "Enable notifications",
+            null,
+            fixture.originalVariantId(),
+            "Désactiver les notifications",
+            "APPROVED",
+            true,
+            proposedTarget,
+            Category.OBVIOUS_ERROR,
+            Readiness.SUSPECTED,
+            "The translation appears to reverse the requested action; human assessment is pending.",
+            "{\"origin\":\"AI test fixture\",\"humanApproved\":false}",
+            "codex:fr-reviewer:test-model",
+            null,
+            null,
+            null,
+            null,
+            null,
+            "meaning:notification-action");
+    var submitted = reviews.submitProposal(fixture.run().id(), request);
+    assertThat(reviews.submitProposal(fixture.run().id(), request).getId())
+        .isEqualTo(submitted.getId());
+    complete(fixture);
+
+    var routed = routing.routeRun(fixture.run().id());
+    assertThat(routed.errors()).isEmpty();
+    assertThat(routed.skippedCount()).isZero();
+    assertThat(routed.projectIds()).isEmpty();
+    var queued = proposals.findById(submitted.getId()).orElseThrow();
+    Long incidentId = queued.getIncidentId();
+    assertThat(incidentId).isNotNull();
+    assertThat(queued.getDisposition()).isEqualTo(Disposition.OPEN);
+    assertThat(queued.getReviewProjectId()).isNull();
+    assertThat(queued.getProposedTarget()).isEqualTo(proposedTarget);
+    assertThat(queued.getProducerIdentity()).isEqualTo("codex:fr-reviewer:test-model");
+    assertThat(queued.getVerifierIdentity()).isNull();
+    assertThat(queued.getVerificationRationale()).isNull();
+    assertThat(routing.routeRun(fixture.run().id()).errors()).isEmpty();
+    assertThat(proposals.findById(submitted.getId()).orElseThrow().getIncidentId())
+        .isEqualTo(incidentId);
+
+    var batchRequest =
+        new IncidentReviewBatchService.Request(
+            fixture.run().repositoryIds(),
+            null,
+            List.of("fr-FR"),
+            null,
+            fixture.run().reviewType(),
+            fixture.run().teamId(),
+            "Suspected translation review",
+            ZonedDateTime.now().plusDays(3),
+            1500,
+            false,
+            ReviewProjectType.BUG_FIXES,
+            null,
+            null);
+    Long actor = teamService.getCurrentUserIdOrThrow();
+    assertThat(batches.preview(batchRequest, actor).eligibleIncidentCount()).isEqualTo(1);
+    var created = batches.create(batchRequest, actor);
+    assertThat(created.projectIds()).hasSize(1);
+    assertThat(created.eligibleIncidentCount()).isEqualTo(1);
+    assertThat(created.skipped()).isEmpty();
+    var assigned = proposals.findById(submitted.getId()).orElseThrow();
+    assertThat(assigned.getDisposition()).isEqualTo(Disposition.ROUTED);
+    assertThat(assigned.getReviewProjectId()).isEqualTo(created.projectIds().getFirst());
+    assertThat(assigned.getIncidentId()).isEqualTo(incidentId);
+    assertThat(assigned.getProducerIdentity()).isEqualTo("codex:fr-reviewer:test-model");
+    assertThat(assigned.getVerifierIdentity()).isNull();
+    assertThat(assigned.getVerificationRationale()).isNull();
+    assertThat(row(assigned).agentReview().proposedTarget()).isEqualTo(proposedTarget);
+    assertThat(row(assigned).agentReview().verificationStatus()).isEqualTo("SUSPECTED");
+    assertThat(incidents.findById(incidentId).orElseThrow().getResolutionReviewProjectId())
+        .isEqualTo(assigned.getReviewProjectId());
+    long projectCount = projectRepository.count();
+    long incidentCount = incidents.count();
+    assertThat(batches.create(batchRequest, actor).projectCount()).isZero();
+    assertThat(routing.routeRun(fixture.run().id()).proposalCount()).isZero();
+    assertThat(reviews.submitProposal(fixture.run().id(), request).getId())
+        .isEqualTo(submitted.getId());
+    assertThat(projectRepository.count()).isEqualTo(projectCount);
+    assertThat(incidents.count()).isEqualTo(incidentCount);
+    assertThat(feedback.findByProposalIdOrderByIdAsc(submitted.getId())).isEmpty();
+    assertThat(current(fixture).getId()).isEqualTo(fixture.originalVariantId());
+  }
+
+  @Test
   public void otherReviewTypesDoNotCreateIncidentsOrProjects() throws Exception {
     Fixture fixture = fixture("OTHER_REVIEW");
     AgentReviewProposal proposal = submit(fixture, null, null);
@@ -820,13 +924,12 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
   }
 
   @Test
-  public void immediateRoutingPreservesHistoricalReportsWithoutReviewingSupersededTranslations()
-      throws Exception {
+  public void immediateRoutingPreservesStaleProposalsWithoutCreatingIncidents() throws Exception {
     assertHistoricalReportsDoNotRoute(RoutingPolicy.IMMEDIATE);
   }
 
   @Test
-  public void queuedRoutingPreservesHistoricalReportsButBatchSelectsOnlyCurrentTranslation()
+  public void queuedRoutingCreatesNoStaleIncidentAndBatchSelectsOnlyCurrentTranslation()
       throws Exception {
     assertHistoricalReportsDoNotRoute(RoutingPolicy.QUEUED);
   }
@@ -873,21 +976,15 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
     assertThat(historical.getDisposition()).isEqualTo(Disposition.OPEN);
     assertThat(historical.getReviewProjectId()).isNull();
     assertThat(historical.getReviewProjectTextUnitId()).isNull();
-    var historicalIncident = incidents.findById(historical.getIncidentId()).orElseThrow();
-    assertThat(historicalIncident.getStatus()).isEqualTo(TranslationIncidentStatus.OPEN);
-    assertThat(historicalIncident.getSelectedTmTextUnitVariantId())
-        .isEqualTo(fixture.originalVariantId());
-    assertThat(historicalIncident.getSelectedTarget()).isEqualTo("Désactiver les notifications");
-    assertThat(historicalIncident.getResolutionReviewProjectId()).isNull();
+    assertThat(historical.getIncidentId()).isNull();
+    assertThat(incidents.findByReviewFindingId(historical.getFindingId())).isEmpty();
 
     var retry = routing.routeRun(historicalRun.run().id());
     assertThat(retry.projectIds()).isEmpty();
     assertThat(retry.skippedCount()).isEqualTo(1);
     assertThat(retry.errors()).containsExactlyElementsOf(historicalResult.errors());
-    assertThat(proposals.findById(historical.getId()).orElseThrow().getIncidentId())
-        .isEqualTo(historicalIncident.getId());
-    assertThat(incidents.findByReviewFindingId(historical.getFindingId()).orElseThrow().getId())
-        .isEqualTo(historicalIncident.getId());
+    assertThat(proposals.findById(historical.getId()).orElseThrow().getIncidentId()).isNull();
+    assertThat(incidents.findByReviewFindingId(historical.getFindingId())).isEmpty();
 
     Fixture currentRun = followUp(fixture, policy);
     AgentReviewProposal currentProposal = submitCurrent(currentRun);
@@ -921,10 +1018,7 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
               teamService.getCurrentUserIdOrThrow());
       assertThat(batch.eligibleIncidentCount()).isEqualTo(1);
       assertThat(batch.projectIds()).hasSize(1);
-      assertThat(batch.skipped())
-          .contains(
-              new IncidentReviewBatchService.Skipped(
-                  historicalIncident.getId(), "Current string changed since the finding"));
+      assertThat(batch.skipped()).isEmpty();
     } else {
       assertThat(currentResult.projectIds()).hasSize(1);
       assertThat(currentResult.proposalCount()).isEqualTo(1);
@@ -935,12 +1029,8 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
         .isEqualTo("Autoriser les notifications");
     assertThat(current(fixture).getId()).isEqualTo(current.getId());
     assertThat(proposals.findById(historical.getId()).orElseThrow().getReviewProjectId()).isNull();
-    assertThat(
-            incidents
-                .findById(historicalIncident.getId())
-                .orElseThrow()
-                .getResolutionReviewProjectId())
-        .isNull();
+    assertThat(proposals.findById(historical.getId()).orElseThrow().getIncidentId()).isNull();
+    assertThat(incidents.findByReviewFindingId(historical.getFindingId())).isEmpty();
   }
 
   @Test

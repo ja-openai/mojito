@@ -515,6 +515,102 @@ public class AgentReviewServiceTest {
   }
 
   @Test
+  public void suspectedFindingWithoutCorrectionKeepsAgentProvenanceAndCanRoute() {
+    assertSuspectedProposalRoundTrip(null);
+  }
+
+  @Test
+  public void suspectedFindingWithEmptyCorrectionKeepsIntentionalEmptyTarget() {
+    assertSuspectedProposalRoundTrip("");
+  }
+
+  @Test
+  public void suspectedFindingKeepsExactCorrectionWithoutAssertingVerification() {
+    assertSuspectedProposalRoundTrip("  Nouveau\n");
+  }
+
+  @Test
+  public void readyFindingStillRequiresIndependentVerification() {
+    SubmitProposalRequest request = proposal("verified");
+    assertBad(() -> service.submitProposal(run.id(), withVerification(request, null, null)));
+    assertBad(
+        () ->
+            service.submitProposal(
+                run.id(), withVerification(request, request.producerIdentity(), "Same reviewer")));
+    assertBad(
+        () -> service.submitProposal(run.id(), withVerification(request, "verifier-fr", " ")));
+
+    AgentReviewProposal verified = service.submitProposal(run.id(), request);
+    assertEquals(Readiness.READY, verified.getReadiness());
+    assertEquals("verifier-fr", verified.getVerifierIdentity());
+    assertEquals("Checked screen context", verified.getVerificationRationale());
+  }
+
+  @Test
+  public void suspectedReadinessDoesNotAllowOptionalImprovementsOrHumanIntakeImpersonation() {
+    assertBad(
+        () ->
+            service.submitProposal(
+                run.id(),
+                changed(
+                    suspected("optional", "Better"),
+                    "Better",
+                    Category.OPTIONAL_IMPROVEMENT,
+                    Readiness.SUSPECTED,
+                    null,
+                    null)));
+    assertBad(
+        () ->
+            service.submitProposal(
+                run.id(),
+                changed(
+                    suspected("human-category", null),
+                    null,
+                    Category.HUMAN_REVIEW,
+                    Readiness.SUSPECTED,
+                    null,
+                    null)));
+    assertBad(
+        () ->
+            service.submitProposal(
+                run.id(),
+                changed(
+                    suspected("human-readiness", null),
+                    null,
+                    Category.OBVIOUS_ERROR,
+                    Readiness.HUMAN_REVIEW,
+                    null,
+                    null)));
+    assertTrue(storedProposals.isEmpty());
+  }
+
+  @Test
+  public void suspectedFindingRetainsCompletedGroupAndHumanFollowUpGuards() {
+    SubmitProposalRequest request = suspected("suspected", null);
+    AgentReviewProposal saved = service.submitProposal(run.id(), request);
+    service.linkProposal(saved.getId(), 40L, 50L, 60L);
+    assertConflict(
+        () ->
+            service.submitProposal(
+                run.id(),
+                changed(
+                    suspected("revision", "Nouveau"),
+                    "Nouveau",
+                    Category.OBVIOUS_ERROR,
+                    Readiness.SUSPECTED,
+                    saved.getId(),
+                    null)));
+    String artifact = upload("{}");
+    service.checkpoint(
+        run.id(),
+        new CheckpointRequest(claim, 0, "fr/settings", GroupStatus.COMPLETED, 1, artifact, null));
+    assertEquals(saved.getId(), service.submitProposal(run.id(), request).getId());
+    assertConflict(() -> service.submitProposal(run.id(), suspected("new-finding", null)));
+    assertEquals(1, storedProposals.size());
+    assertTrue(storedFeedback.isEmpty());
+  }
+
+  @Test
   public void optionalImprovementCannotMasqueradeAsVerifiedError() {
     assertBad(
         () ->
@@ -1027,6 +1123,67 @@ public class AgentReviewServiceTest {
         p.integrityDiagnostics(),
         previous,
         respondsTo);
+  }
+
+  private SubmitProposalRequest suspected(String key, String target) {
+    return withVerification(
+        changed(proposal(key), target, Category.OBVIOUS_ERROR, Readiness.SUSPECTED, null, null),
+        null,
+        null);
+  }
+
+  private SubmitProposalRequest withVerification(
+      SubmitProposalRequest p, String verifier, String verification) {
+    return new SubmitProposalRequest(
+        p.claim(),
+        p.submissionKey(),
+        p.groupKey(),
+        p.tmTextUnitId(),
+        p.source(),
+        p.sourceComment(),
+        p.baselineVariantId(),
+        p.baselineTarget(),
+        p.baselineStatus(),
+        p.baselineIncludedInLocalizedFile(),
+        p.proposedTarget(),
+        p.category(),
+        p.readiness(),
+        p.rationale(),
+        p.evidenceJson(),
+        p.producerIdentity(),
+        verifier,
+        verification,
+        p.integrityDiagnostics(),
+        p.previousProposalId(),
+        p.respondsToFeedbackId(),
+        p.concernKey());
+  }
+
+  private void assertSuspectedProposalRoundTrip(String target) {
+    SubmitProposalRequest request = suspected("suspected", target);
+    AgentReviewProposal saved = service.submitProposal(run.id(), request);
+    assertEquals(target, saved.getProposedTarget());
+    assertEquals("locale-fr", saved.getProducerIdentity());
+    assertNull(saved.getVerifierIdentity());
+    assertNull(saved.getVerificationRationale());
+    assertEquals(Readiness.SUSPECTED, saved.getReadiness());
+    assertEquals(Category.OBVIOUS_ERROR, saved.getCategory());
+    assertEquals("Ancien", saved.getBaselineTarget());
+    assertEquals(Long.valueOf(7), saved.getBaselineVariantId());
+    assertEquals(saved.getId(), service.submitProposal(run.id(), request).getId());
+    assertConflict(
+        () -> service.submitProposal(run.id(), suspected("suspected", target == null ? "" : null)));
+
+    service.linkProposal(saved.getId(), 40L, 50L, 60L);
+    service.linkProposal(saved.getId(), 40L, 50L, 60L);
+    assertEquals(Disposition.ROUTED, saved.getDisposition());
+    assertEquals(Long.valueOf(40), saved.getIncidentId());
+    assertEquals(Long.valueOf(50), saved.getReviewProjectId());
+    assertEquals(Long.valueOf(60), saved.getReviewProjectTextUnitId());
+    assertTrue(storedFeedback.isEmpty());
+    verify(proposals).saveAndFlush(any());
+    verify(variants, never()).save(any());
+    verify(textUnits, never()).save(any());
   }
 
   private HumanFeedbackRequest human(
