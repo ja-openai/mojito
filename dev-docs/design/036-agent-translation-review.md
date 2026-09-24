@@ -379,6 +379,10 @@ runs retain the original team and review type.
   exact proposal revision/version, review revision, and a stable retry ID. Same-row Pending uses
   `/reopen`; editing a completed review uses `/reopen-and-save` to create and save its successor
   atomically under the same access and current-state checks.
+  The HTTP security filter allows translator, PM, and admin roles on these two POST actions and
+  the compatible `/review-again` action under `/api/agent-reviews/projects/{projectId}/proposals/{proposalId}`.
+  Project access and editable-locale checks still run in the service. Agent-run mutations retain
+  their manager restrictions. This also covers reason-only updates to completed reviews.
 - Review Projects use the standard editor and review chat, with a persistent original/proposal
   report strip. **Use** stages either version and **Accept** saves the decision and optional note.
   The admin-only **Report** tab contains rationale, verifier notes, optional

@@ -7,6 +7,13 @@ editor, translation search preview, and default Review Project teams. The AI Rev
 speed control saves the preset and whether automatic reviews are disabled.
 These preferences do not grant repository, locale, or team permissions.
 
+The assisted translation editor is an opt-in preference available to translators as well as
+PMs and admins. Enable it under **My Settings → Translation editor** and save changes to show
+the editor's **Hidden chars: Auto / All / Off** control. The plain editor only shows the
+**Characters** insertion menu; that menu does not control hidden-character display. The
+original/proposed comparison in the reported-issue strip renders plain text independently of
+this editor preference.
+
 The speed control beside **AI Chat Review** opens a popup with **Fastest**, **Fast**, **Balanced**,
 **Thorough**, **Deep**, and **Ultra** for admins. Other users can select **Fastest**, **Fast**, or
 **Balanced**. An independent **Automatic review** toggle is available to everyone. Balanced with

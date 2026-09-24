@@ -303,6 +303,13 @@ public class WebSecurityConfig {
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/review-project-text-units/**")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
+                // Human re-review uses the same project and locale checks as ordinary decisions.
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/agent-reviews/projects/*/proposals/*/review-again",
+                    "/api/agent-reviews/projects/*/proposals/*/reopen",
+                    "/api/agent-reviews/projects/*/proposals/*/reopen-and-save")
+                .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/glossaries/*/terms")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/glossaries/*/terms/*")

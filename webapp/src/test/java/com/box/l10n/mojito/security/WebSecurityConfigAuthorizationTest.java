@@ -43,6 +43,9 @@ public class WebSecurityConfigAuthorizationTest {
       "/api/admin/translation-corrections/apply";
   private static final String PREFERENCES_PATH = "/api/users/me/preferences";
   private static final String AI_REVIEW_JOBS_PATH = "/api/ai/review/jobs";
+  private static final String AGENT_PROPOSAL_PATH = "/api/agent-reviews/projects/7/proposals/901";
+  private static final List<String> HUMAN_REVIEW_ACTIONS =
+      List.of("review-again", "reopen", "reopen-and-save");
 
   @Autowired WebApplicationContext applicationContext;
 
@@ -135,6 +138,49 @@ public class WebSecurityConfigAuthorizationTest {
     }
   }
 
+  @Test
+  public void translationRolesCanReopenAndSaveCompletedReviews() throws Exception {
+    for (String role : List.of("TRANSLATOR", "PM", "ADMIN")) {
+      for (String action : HUMAN_REVIEW_ACTIONS) {
+        // Reason-only edits to completed reviews use reopen-and-save instead of /decision.
+        mockMvc
+            .perform(post(AGENT_PROPOSAL_PATH + "/" + action).with(user("test").roles(role)))
+            .andExpect(status().isOk());
+      }
+    }
+  }
+
+  @Test
+  public void humanReReviewRequiresAnAuthenticatedTranslationRole() throws Exception {
+    for (String action : HUMAN_REVIEW_ACTIONS) {
+      String path = AGENT_PROPOSAL_PATH + "/" + action;
+      mockMvc.perform(post(path)).andExpect(status().isForbidden());
+      mockMvc
+          .perform(post(path).with(user("reader").roles("USER")))
+          .andExpect(status().isForbidden());
+    }
+  }
+
+  @Test
+  public void humanReReviewAccessDoesNotOpenAgentRunManagementOrOtherProposalActions()
+      throws Exception {
+    for (String path :
+        List.of(
+            "/api/agent-reviews/runs",
+            "/api/agent-reviews/runs/9/proposals",
+            "/api/agent-reviews/runs/9/route",
+            AGENT_PROPOSAL_PATH + "/other-action")) {
+      for (String role : List.of("USER", "TRANSLATOR")) {
+        mockMvc
+            .perform(post(path).with(user("test").roles(role)))
+            .andExpect(status().isForbidden());
+      }
+      for (String role : List.of("PM", "ADMIN")) {
+        mockMvc.perform(post(path).with(user("test").roles(role))).andExpect(status().isOk());
+      }
+    }
+  }
+
   @Configuration
   @EnableWebMvc
   @EnableWebSecurity
@@ -155,6 +201,19 @@ public class WebSecurityConfigAuthorizationTest {
 
   @RestController
   static class LinguistTimeSpentStubController {
+
+    @PostMapping({
+      AGENT_PROPOSAL_PATH + "/review-again",
+      AGENT_PROPOSAL_PATH + "/reopen",
+      AGENT_PROPOSAL_PATH + "/reopen-and-save",
+      AGENT_PROPOSAL_PATH + "/other-action",
+      "/api/agent-reviews/runs",
+      "/api/agent-reviews/runs/9/proposals",
+      "/api/agent-reviews/runs/9/route"
+    })
+    String agentReviewAction() {
+      return "ok";
+    }
 
     @PostMapping(AI_REVIEW_JOBS_PATH)
     String startReview() {
