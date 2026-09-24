@@ -38,6 +38,24 @@ semantic prefixes and Azure destination. It uses keyset pagination, token leases
 finite retries and row/byte/time budgets. Remote I/O occurs outside DB transactions.
 Pause revokes publication permission; an in-flight immutable upload may still finish.
 
+Candidate pages select only the run's literal semantic prefixes. On MySQL, each prefix range reads
+the covering name index, takes its lowest IDs after the cursor through the pinned high-water ID,
+and merges those IDs into a globally ordered, bounded page. A single statement joins that page
+to name and expiry metadata, so concurrent deletion between separate reads cannot create a falsely
+short page. Prefix comparison is case-sensitive and requires the slash boundary; expiry does not
+filter candidates. Only selected rows have their length measured, one row per attempt, before
+checking the remaining byte budget.
+Scan completion uses that same page: an empty page or a short page whose last candidate was
+processed establishes exhaustion. A full page stays ready for a later scan, and a byte/time stop
+before the last candidate cannot claim completion. There is no separate end-of-batch source
+existence query. A length-query failure records a visible failed attempt and lets later IDs
+progress; finite retries remeasure the row. An unavailable evidence length does not mean
+NULL content: only `PRESERVED_NULL` confirms that. Unselected/control/unknown rows outside the
+run's prefixes are omitted from new snapshot pages and evidence. Existing evidence and cursors
+remain valid when resuming an older run; counters include its historical global-scan work plus
+new selected-row work. Promotion still measures current sources and reconciles every source row;
+rows with no snapshot evidence are explicitly retained as `RETAIN_DELTA`.
+
 Exact bytes are conditionally copied to
 `mblob_migration/v1/<run>/<source-id>/<sha256>`, read back and compared with current
 source metadata/content. Control, unknown, unselected, oversized, null and changed
@@ -114,6 +132,12 @@ deletion. Retained run-history rows can pin families even after that extension.
 Prefix cleanup requires policy age and actual row expiry. It preserves active task
 payloads, graphs, malformed names and missing metadata, and rechecks at deletion.
 These fixes do not enable cleanup or provider lifecycle rules.
+
+Quartz recovery of an interrupted policy cleanup disables enabled policies and marks them
+`FAILED` without starting another batch. It preserves the saved deletion counters and start
+time and records that the previous execution's batch count and commit outcome are uncertain.
+Operators must reconcile affected rows before manually restarting; saved counters alone do
+not prove whether the last deletion committed. Already disabled policies remain unchanged.
 
 The policy selector discovers at most one batch of IDs with a nonlocking name-index query,
 then locks that bounded ID set through the primary index with all eligibility predicates

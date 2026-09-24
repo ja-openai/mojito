@@ -12,6 +12,10 @@ public class DatabaseBlobPolicyCleanupJob implements Job {
 
   @Override
   public void execute(JobExecutionContext context) {
-    databaseBlobCleanupPolicyService.runEnabledPolicies();
+    if (context.isRecovering()) {
+      databaseBlobCleanupPolicyService.failEnabledPoliciesOnRecovery();
+    } else {
+      databaseBlobCleanupPolicyService.runEnabledPolicies();
+    }
   }
 }

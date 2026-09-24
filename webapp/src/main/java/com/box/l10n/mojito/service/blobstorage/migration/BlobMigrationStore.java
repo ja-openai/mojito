@@ -1,9 +1,12 @@
 package com.box.l10n.mojito.service.blobstorage.migration;
 
+import com.box.l10n.mojito.service.DBUtils;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -18,10 +21,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class BlobMigrationStore {
   private final JdbcTemplate jdbc;
   private final TransactionTemplate tx;
+  private final boolean mysql;
 
-  public BlobMigrationStore(JdbcTemplate jdbc, PlatformTransactionManager transactions) {
+  public BlobMigrationStore(
+      JdbcTemplate jdbc, PlatformTransactionManager transactions, DBUtils dbUtils) {
     this.jdbc = new JdbcTemplate(jdbc.getDataSource());
     this.jdbc.setQueryTimeout(5);
+    mysql = dbUtils.isMysql();
     tx = new TransactionTemplate(transactions);
     tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
@@ -49,8 +55,15 @@ public class BlobMigrationStore {
       long failed,
       String lastError) {}
 
-  public record Source(
-      long id, String name, Long length, Instant createdDate, Long expireSeconds) {}
+  /** A scan candidate has not read or measured the payload. */
+  public record Candidate(long id, String name, Instant createdDate, Long expireSeconds) {}
+
+  /** Payload metadata from scan/metadata/read. Use Candidate before measuring a payload. */
+  public record Source(long id, String name, Long length, Instant createdDate, Long expireSeconds) {
+    public Candidate candidate() {
+      return new Candidate(id, name, createdDate, expireSeconds);
+    }
+  }
 
   public record Evidence(
       String runId,
@@ -157,6 +170,53 @@ public class BlobMigrationStore {
 
   public List<Source> scan(Run run, int limit) {
     return scan(run.cursorId(), run.highWaterId(), limit);
+  }
+
+  public List<Candidate> scanCandidates(Run run, int limit) {
+    List<String> branches = new ArrayList<>();
+    List<Object> parameters = new ArrayList<>();
+    for (String prefix : Arrays.stream(run.allowedPrefixes().split(",")).distinct().toList()) {
+      if (!prefix.matches("[a-z][a-z0-9_]*"))
+        throw new IllegalArgumentException("Invalid snapshot semantic prefix");
+      String start = prefix + "/";
+      branches.add(
+          "(select id from mblob"
+              + (mysql ? " force index (UK__MBLOB__NAME)" : "")
+              + " where name >= ? and name < ? and "
+              + (mysql ? "binary left(name, ?) = binary ?" : "left(name, ?) = ?")
+              + " and id > ? and id <= ? order by id limit ?)");
+      parameters.addAll(
+          List.of(
+              start,
+              prefix + "0",
+              start.length(),
+              start,
+              run.cursorId(),
+              run.highWaterId(),
+              limit));
+    }
+    parameters.add(limit);
+    // Disjoint literal prefixes: every global next-N ID is in its prefix's next N.
+    // Each MySQL branch reads only the covering name index; only the final N rows need metadata.
+    // Keep selection and the metadata join in one statement snapshot: a separate fetch could lose
+    // deleted candidates, creating a falsely short page and premature scan completion.
+    String sql =
+        "select "
+            + (mysql ? "/*+ MAX_EXECUTION_TIME(5000) */ " : "")
+            + "b.id, b.name, b.created_date, b.expire_after_seconds from "
+            + "(select id from ("
+            + String.join(" union all ", branches)
+            + ") selected_ids order by id limit ?) chosen "
+            + "join mblob b on b.id = chosen.id order by b.id";
+    return jdbc.query(
+        sql,
+        (rs, n) ->
+            new Candidate(
+                rs.getLong("id"),
+                rs.getString("name"),
+                instant(rs, "created_date"),
+                rs.getObject("expire_after_seconds", Long.class)),
+        parameters.toArray());
   }
 
   public long maxSourceId() {

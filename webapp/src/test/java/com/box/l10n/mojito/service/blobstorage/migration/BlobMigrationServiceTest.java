@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
+import com.box.l10n.mojito.service.DBUtils;
 import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.migration.BlobMigrationStore.Run;
 import java.nio.charset.StandardCharsets;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
 import org.junit.Before;
@@ -26,6 +28,7 @@ import org.quartz.Trigger;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
@@ -64,7 +67,10 @@ public class BlobMigrationServiceTest {
             .replace(" bit ", " boolean ");
     new ResourceDatabasePopulator(new ByteArrayResource(ddl.getBytes(StandardCharsets.UTF_8)))
         .execute(database);
-    store = new BlobMigrationStore(jdbc, new DataSourceTransactionManager(database));
+    store =
+        spy(
+            new BlobMigrationStore(
+                jdbc, new DataSourceTransactionManager(database), mock(DBUtils.class)));
     properties = new BlobMigrationProperties();
     properties.setEnabled(true);
     azure = mock(AzureBlobStorage.class);
@@ -243,19 +249,212 @@ public class BlobMigrationServiceTest {
 
   @Test
   public void oneRowBudgetIncludesPreservedRows() {
-    insert(1, "unknown/a", bytes("a"), null);
+    insert(1, "clob_storage_ws/a", null, null);
     insert(2, "clob_storage_ws/b", bytes("b"), null);
     Run run = start(1, 100);
     service.runBatch(run.id());
     assertEquals(1, store.get(run.id()).scanned());
     assertTrue(objects.isEmpty());
+    verify(store).metadata(1);
     service.runBatch(run.id());
     assertEquals(2, store.get(run.id()).scanned());
+    assertEquals("READY", store.get(run.id()).status());
+    service.runBatch(run.id());
     assertEquals("SNAPSHOT_COMPLETE", store.get(run.id()).status());
+    assertEquals(2, store.get(run.id()).scanned());
+    verify(azure, times(1)).createSnapshotIfAbsent(anyString(), any(byte[].class));
   }
 
   @Test
-  public void preservesUnknownControlUnselectedNullAndOversizedRows() {
+  public void emptyCandidatePageCompletesWithoutReadingPayloads() {
+    Run run = start(10, 100);
+
+    service.runBatch(run.id());
+
+    Run complete = store.get(run.id());
+    assertEquals("SNAPSHOT_COMPLETE", complete.status());
+    assertEquals(0, complete.scanned());
+    assertEquals(0, complete.cursorId());
+    assertNull(complete.lastError());
+    verify(store, never()).metadata(anyLong());
+    verify(azure, never()).createSnapshotIfAbsent(anyString(), any(byte[].class));
+  }
+
+  @Test
+  public void selectedPrefixesMergeByIdAcrossUnselectedGapsAndKeepTheSameCursor() {
+    for (int id = 1; id <= 200; id++) {
+      String name =
+          switch (id) {
+            case 50 -> "multi_branch_state/z";
+            case 99 -> "clob_storage_ws/z";
+            case 150 -> "multi_branch_state/a";
+            case 200 -> "clob_storage_ws/a";
+            default -> "unknown/" + id;
+          };
+      insert(id, name, bytes("a"), id == 150 ? 60L : null);
+    }
+    Run run =
+        service.create(
+            new BlobMigrationService.CreateRequest(
+                List.of("multi_branch_state", "clob_storage_ws"), 2, 100, 30, 1));
+    store.request(run.id(), true);
+    insert(201, "clob_storage_ws/after-high-water", bytes("a"), null);
+
+    service.runBatch(run.id());
+    assertEquals(99, store.get(run.id()).cursorId());
+    assertEquals("READY", store.get(run.id()).status());
+    service.runBatch(run.id());
+    assertEquals(200, store.get(run.id()).cursorId());
+    assertEquals("READY", store.get(run.id()).status());
+    service.runBatch(run.id());
+
+    Run complete = store.get(run.id());
+    assertEquals("SNAPSHOT_COMPLETE", complete.status());
+    assertEquals(4, complete.scanned());
+    assertEquals(4, complete.verified());
+    assertEquals(0, complete.preserved());
+    assertEquals(200, complete.highWaterId());
+    assertEquals(
+        List.of(50L, 99L, 150L, 200L),
+        store.evidence(run.id(), 0, 10).stream()
+            .map(BlobMigrationStore.Evidence::sourceId)
+            .toList());
+    assertEquals(Long.valueOf(60), item(run.id(), 150).expireSeconds());
+    verify(store, times(4)).metadata(anyLong());
+    // Final promotion reconciliation must still cover the whole source, including skipped rows.
+    assertEquals(200, store.scan(0, run.highWaterId(), 1000).size());
+  }
+
+  @Test
+  public void candidateDeletedAfterPageSelectionCannotHideLaterSelectedIds() {
+    insert(1, "clob_storage_ws/a", bytes("a"), null);
+    insert(50, "unknown/gap", bytes("a"), null);
+    insert(100, "clob_storage_ws/b", bytes("b"), null);
+    insert(200, "clob_storage_ws/c", bytes("c"), null);
+    Run run = start(2, 100);
+    doAnswer(
+            invocation -> {
+              var page = invocation.callRealMethod();
+              jdbc.update("delete from mblob where id = 100");
+              return page;
+            })
+        .when(store)
+        .scanCandidates(any(Run.class), eq(2));
+
+    service.runBatch(run.id());
+
+    assertEquals("SOURCE_CHANGED", item(run.id(), 100).disposition());
+    assertEquals(100, store.get(run.id()).cursorId());
+    assertEquals("READY", store.get(run.id()).status());
+    service.runBatch(run.id());
+    assertEquals("SNAPSHOT_COMPLETE", store.get(run.id()).status());
+    assertEquals(200, store.get(run.id()).cursorId());
+    assertEquals(3, store.get(run.id()).scanned());
+    assertEquals(2, store.get(run.id()).verified());
+    assertEquals("VERIFIED_SNAPSHOT", item(run.id(), 200).disposition());
+  }
+
+  @Test
+  public void prefixSelectionIsCaseSensitiveLiteralAndRequiresTheSlashBoundary() {
+    List<String> names =
+        java.util.Arrays.asList(
+            "clob_storage_ws/valid",
+            "Clob_storage_ws/wrong-case",
+            "clobXstorage_ws/underscore-is-not-a-wildcard",
+            "clob_storage_ws0/next-range",
+            "clob_storage_ws_extra/not-selected",
+            "clob_storage_ws",
+            "clob_storage_ws/",
+            null,
+            "clob_storage_ws/\u00e9",
+            "clob_storage_ws//nested");
+    for (int i = 0; i < names.size(); i++) insert(i + 1, names.get(i), bytes("a"), null);
+    Run run = start(100, 1000);
+
+    service.runBatch(run.id());
+
+    assertEquals("SNAPSHOT_COMPLETE", store.get(run.id()).status());
+    assertEquals(
+        List.of(1L, 7L, 9L, 10L),
+        store.evidence(run.id(), 0, 100).stream()
+            .map(BlobMigrationStore.Evidence::sourceId)
+            .toList());
+    assertEquals(4, store.get(run.id()).verified());
+  }
+
+  @Test
+  public void onlyUnselectedRowsCompleteWithoutSnapshotEvidenceOrPayloadReads() {
+    insert(1, "unknown/keep", bytes("a"), null);
+    insert(2, "ai_review_execution/v1/capacity", bytes("a"), null);
+    insert(3, "multi_branch_state/keep", bytes("a"), null);
+    Run run = start(10, 100);
+
+    service.runBatch(run.id());
+
+    assertEquals("SNAPSHOT_COMPLETE", store.get(run.id()).status());
+    assertEquals(0, store.get(run.id()).scanned());
+    assertEquals(0, store.get(run.id()).cursorId());
+    assertTrue(store.evidence(run.id(), 0, 100).isEmpty());
+    assertEquals(3, (long) jdbc.queryForObject("select count(*) from mblob", Long.class));
+    verify(store, never()).metadata(anyLong());
+    verify(azure, never()).createSnapshotIfAbsent(anyString(), any(byte[].class));
+  }
+
+  @Test
+  public void fullHundredRowPageNeedsALaterEmptyScanToComplete() {
+    for (int i = 1; i <= 100; i++) insert(i, "clob_storage_ws/item-" + i, bytes("a"), null);
+    Run run = start(100, 1000);
+
+    service.runBatch(run.id());
+
+    assertEquals("READY", store.get(run.id()).status());
+    assertEquals(100, store.get(run.id()).cursorId());
+    assertEquals(100, store.get(run.id()).verified());
+    service.runBatch(run.id());
+    assertEquals("SNAPSHOT_COMPLETE", store.get(run.id()).status());
+    assertEquals(100, store.get(run.id()).scanned());
+    verify(azure, times(100)).createSnapshotIfAbsent(anyString(), any(byte[].class));
+  }
+
+  @Test
+  public void timeBudgetStoppingShortPageDoesNotClaimCompletion() {
+    insert(1, "clob_storage_ws/a", bytes("a"), null);
+    insert(2, "clob_storage_ws/b", bytes("b"), null);
+    Run run = start(10, 100);
+    service = spy(service);
+    doReturn(0L, 0L, TimeUnit.SECONDS.toNanos(30)).when(service).nanoTime();
+
+    service.runBatch(run.id());
+
+    assertEquals("READY", store.get(run.id()).status());
+    assertEquals(1, store.get(run.id()).cursorId());
+    assertEquals(1, store.get(run.id()).scanned());
+    service.runBatch(run.id());
+    assertEquals("SNAPSHOT_COMPLETE", store.get(run.id()).status());
+    assertEquals(2, store.get(run.id()).verified());
+    verify(azure, times(2)).createSnapshotIfAbsent(anyString(), any(byte[].class));
+  }
+
+  @Test
+  public void candidateScanFailureStillPausesAndPropagates() {
+    insert(1, "clob_storage_ws/a", bytes("a"), null);
+    Run run = start(10, 100);
+    QueryTimeoutException failure = new QueryTimeoutException("private query details");
+    doThrow(failure).when(store).scanCandidates(any(), anyInt());
+
+    assertSame(
+        failure, assertThrows(QueryTimeoutException.class, () -> service.runBatch(run.id())));
+
+    Run paused = store.get(run.id());
+    assertEquals("PAUSED", paused.status());
+    assertEquals("QueryTimeoutException", paused.lastError());
+    assertEquals(0, paused.scanned());
+    assertEquals(0, paused.cursorId());
+    verify(azure, never()).createSnapshotIfAbsent(anyString(), any(byte[].class));
+  }
+
+  @Test
+  public void skipsUnselectedAndPreservesSelectedNullAndOversizedRows() {
     insert(1, "unknown/keep", bytes("a"), null);
     insert(2, "ai_review_execution/v1/capacity", bytes("a"), null);
     insert(3, "ai_review_submission_rate/v1/user/1", bytes("a"), null);
@@ -265,19 +464,126 @@ public class BlobMigrationServiceTest {
     Run run = start(10, 5);
     service.runBatch(run.id());
     assertEquals(
-        List.of(
-            "PRESERVED_UNKNOWN",
-            "PRESERVED_CONTROL",
-            "PRESERVED_CONTROL",
-            "PRESERVED_NOT_SELECTED",
-            "PRESERVED_NULL",
-            "PRESERVED_OVERSIZE"),
+        List.of("PRESERVED_NULL", "PRESERVED_OVERSIZE"),
         store.evidence(run.id(), 0, 10).stream()
             .map(BlobMigrationStore.Evidence::disposition)
             .toList());
-    assertEquals(6, store.get(run.id()).preserved());
+    assertEquals(2, store.get(run.id()).preserved());
+    assertEquals(2, store.get(run.id()).scanned());
+    assertEquals(6, store.get(run.id()).cursorId());
+    assertEquals("SNAPSHOT_COMPLETE", store.get(run.id()).status());
     assertEquals(6, (long) jdbc.queryForObject("select count(*) from mblob", Long.class));
+    for (long id = 1; id <= 4; id++) {
+      verify(store, never()).metadata(id);
+    }
+    verify(store).metadata(5);
+    assertNull(item(run.id(), 5).length());
     verify(azure, never()).createSnapshotIfAbsent(anyString(), any(byte[].class));
+  }
+
+  @Test
+  public void candidateScanDoesNotRequireThePayloadColumn() {
+    insert(1, "clob_storage_ws/a", bytes("one"), 60L);
+    insert(2, "clob_storage_ws/b", bytes("two"), null);
+    Run run = start(1, 100);
+    insert(3, "clob_storage_ws/beyond-high-water", bytes("three"), null);
+    jdbc.execute("alter table mblob drop column content");
+    var candidates = store.scanCandidates(run, 1);
+    assertEquals(1, candidates.size());
+    assertEquals(1, candidates.getFirst().id());
+    assertEquals("clob_storage_ws/a", candidates.getFirst().name());
+    assertEquals(Long.valueOf(60), candidates.getFirst().expireSeconds());
+    assertEquals(Instant.parse("2025-01-01T00:00:00Z"), candidates.getFirst().createdDate());
+    jdbc.update("update mblob_migration_run set cursor_id = 1 where id = ?", run.id());
+    assertEquals(2, store.scanCandidates(store.get(run.id()), 10).getFirst().id());
+    jdbc.update("update mblob_migration_run set cursor_id = 2 where id = ?", run.id());
+    assertTrue(store.scanCandidates(store.get(run.id()), 10).isEmpty());
+  }
+
+  @Test
+  public void failedLengthMeasurementAdvancesAndRetryMeasuresBeforeCopying() {
+    insert(1, "clob_storage_ws/a", bytes("a"), 60L);
+    insert(2, "clob_storage_ws/b", bytes("b"), null);
+    doThrow(new QueryTimeoutException("private query details"))
+        .doCallRealMethod()
+        .when(store)
+        .metadata(1);
+    Run run = start(10, 100);
+    service.runBatch(run.id());
+    assertEquals(2, store.get(run.id()).cursorId());
+    assertEquals(1, store.get(run.id()).verified());
+    assertEquals(1, store.get(run.id()).failed());
+    assertEquals("READY", store.get(run.id()).status());
+    var failed = item(run.id(), 1);
+    assertEquals("FAILED", failed.disposition());
+    assertEquals("SOURCE_METADATA_QueryTimeoutException", failed.error());
+    assertNull(failed.length());
+    assertEquals(Long.valueOf(60), failed.expireSeconds());
+    service.runBatch(run.id());
+    assertEquals("SNAPSHOT_COMPLETE", store.get(run.id()).status());
+    assertEquals(2, store.get(run.id()).scanned());
+    assertEquals(2, store.get(run.id()).verified());
+    assertEquals(2, store.get(run.id()).verifiedBytes());
+    assertEquals(0, store.get(run.id()).preserved());
+    assertEquals(0, store.get(run.id()).failed());
+    assertEquals(2, item(run.id(), 1).attempts());
+    verify(store, times(2)).metadata(1);
+  }
+
+  @Test
+  public void exhaustedLengthMeasurementIsFailureRatherThanNullOrComplete() {
+    insert(1, "clob_storage_ws/a", bytes("a"), null);
+    doThrow(new QueryTimeoutException("private query details")).when(store).metadata(1);
+    Run created =
+        service.create(
+            new BlobMigrationService.CreateRequest(List.of("clob_storage_ws"), 10, 100, 30, 1));
+    store.request(created.id(), true);
+    service.runBatch(created.id());
+    Run result = store.get(created.id());
+    assertEquals("SNAPSHOT_WITH_FAILURES", result.status());
+    assertEquals(1, result.cursorId());
+    assertEquals(1, result.failed());
+    assertEquals(0, result.preserved());
+    assertEquals(0, result.verifiedBytes());
+    assertArrayEquals(
+        bytes("a"), jdbc.queryForObject("select content from mblob where id = 1", byte[].class));
+    verify(store, never()).read(anyLong(), anyLong());
+    verify(azure, never()).createSnapshotIfAbsent(anyString(), any(byte[].class));
+  }
+
+  @Test
+  public void rowChangedBetweenCandidateScanAndMeasurementIsNotCopied() {
+    insert(1, "clob_storage_ws/a", bytes("a"), null);
+    doAnswer(
+            call -> {
+              jdbc.update("update mblob set name = 'clob_storage_ws/changed' where id = 1");
+              return call.callRealMethod();
+            })
+        .when(store)
+        .metadata(1);
+    Run run = start(10, 100);
+    service.runBatch(run.id());
+    assertEquals("SOURCE_CHANGED", item(run.id(), 1).disposition());
+    assertEquals("clob_storage_ws/a", item(run.id(), 1).name());
+    assertEquals(0, store.get(run.id()).verified());
+    verify(store, never()).read(anyLong(), anyLong());
+    verify(azure, never()).createSnapshotIfAbsent(anyString(), any(byte[].class));
+  }
+
+  @Test
+  public void retryStillComparesThePreviouslyMeasuredLength() {
+    insert(1, "clob_storage_ws/a", bytes("a"), null);
+    when(azure.createSnapshotIfAbsent(anyString(), any(byte[].class)))
+        .thenThrow(new IllegalStateException());
+    Run run = start(10, 100);
+    service.runBatch(run.id());
+    assertEquals(Long.valueOf(1), item(run.id(), 1).length());
+    jdbc.update("update mblob set content = ? where id = 1", bytes("changed"));
+    service.runBatch(run.id());
+    assertEquals("SOURCE_CHANGED", item(run.id(), 1).disposition());
+    assertEquals(Long.valueOf(1), item(run.id(), 1).length());
+    assertEquals(0, store.get(run.id()).failed());
+    verify(azure, times(1)).createSnapshotIfAbsent(anyString(), any(byte[].class));
   }
 
   @Test
@@ -446,6 +752,12 @@ public class BlobMigrationServiceTest {
     assertThrows(IllegalArgumentException.class, () -> service.create(request(1, 268435457)));
     assertThrows(IllegalArgumentException.class, () -> service.evidence("x", 0, 1001));
     assertTrue(store.list().isEmpty());
+  }
+
+  BlobMigrationStore.Evidence item(String runId, long sourceId) {
+    var evidence = store.evidence(runId, sourceId - 1, 1).getFirst();
+    assertEquals(sourceId, evidence.sourceId());
+    return evidence;
   }
 
   Run start(int rows, long bytes) {

@@ -35,6 +35,7 @@ import org.hsqldb.jdbc.JDBCDataSource;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.quartz.JobExecutionContext;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.QueryTimeoutException;
@@ -418,6 +419,87 @@ public class DatabaseBlobCleanupPolicyBudgetTest {
     assertEquals(18, failed.getTotalDeletedCount());
     assertEquals(1, failed.getLastDeletedCount());
     assertTrue(phaseLog().contains("phase=finish, failed=true"));
+  }
+
+  @Test
+  public void recoveredJobDisablesWithoutDeletingOrResettingPriorProgress() {
+    jdbc.update(
+        "update policy set status='RUNNING', last_count=7, total=24, started=?, error='old failure'",
+        Timestamp.valueOf("2026-09-21 12:00:00"));
+    DatabaseBlobCleanupPolicy before = readPolicy();
+
+    executeJob(true);
+    service.runEnabledPolicies();
+
+    DatabaseBlobCleanupPolicy failed = readPolicy();
+    assertFalse(failed.isEnabled());
+    assertFalse(failed.isStopRequested());
+    assertEquals("FAILED", failed.getStatus());
+    assertEquals(before.getLastDeletedCount(), failed.getLastDeletedCount());
+    assertEquals(before.getTotalDeletedCount(), failed.getTotalDeletedCount());
+    assertEquals(before.getLastStartedDate(), failed.getLastStartedDate());
+    assertNotNull(failed.getLastFinishedDate());
+    assertTrue(failed.getLastError().contains("Quartz recovery"));
+    assertTrue(failed.getLastError().contains("reconcile deleted rows"));
+    assertTrue(failed.getLastError().contains("uncertain"));
+    assertEquals(1, blobCount());
+    assertTrue(selectionTimeouts.isEmpty());
+    verify(service, never()).runPolicy(anyLong());
+    verify(blobs, never()).deleteExpiredByIds(anyList(), any());
+  }
+
+  @Test
+  public void recoveredJobLeavesDisabledPolicyUnchanged() {
+    jdbc.update(
+        "update policy set enabled=false, status='STOPPED', stop_requested=true, last_count=7, total=24, started=?, finished=?, error='prior error'",
+        Timestamp.valueOf("2026-09-21 12:00:00"),
+        Timestamp.valueOf("2026-09-21 12:01:00"));
+    var before = jdbc.queryForMap("select * from policy");
+
+    executeJob(true);
+
+    assertEquals(before, jdbc.queryForMap("select * from policy"));
+    assertEquals(1, blobCount());
+    verify(policies, never()).save(any());
+    verify(service, never()).runEnabledPolicies();
+    verify(blobs, never()).deleteExpiredByIds(anyList(), any());
+  }
+
+  @Test
+  public void recoveryDisableFailurePropagatesWithoutDeletingOrResettingProgress() {
+    jdbc.update(
+        "update policy set status='RUNNING', last_count=7, total=24, started=?",
+        Timestamp.valueOf("2026-09-21 12:00:00"));
+    var before = jdbc.queryForMap("select * from policy");
+    failDisable = true;
+
+    assertThrows(QueryTimeoutException.class, () -> executeJob(true));
+
+    assertEquals(before, jdbc.queryForMap("select * from policy"));
+    assertEquals(1, blobCount());
+    verify(service, never()).runEnabledPolicies();
+    verify(blobs, never()).deleteExpiredByIds(anyList(), any());
+  }
+
+  @Test
+  public void normalJobRetainsItsFiniteBatchExecution() {
+    executeJob(false);
+
+    assertEquals(0, blobCount());
+    DatabaseBlobCleanupPolicy completed = readPolicy();
+    assertEquals("PAUSED", completed.getStatus());
+    assertEquals(1, completed.getLastDeletedCount());
+    assertEquals(18, completed.getTotalDeletedCount());
+    verify(service, never()).failEnabledPoliciesOnRecovery();
+    verify(blobs, times(1)).deleteExpiredByIds(anyList(), any());
+  }
+
+  private void executeJob(boolean recovering) {
+    JobExecutionContext context = mock(JobExecutionContext.class);
+    when(context.isRecovering()).thenReturn(recovering);
+    DatabaseBlobPolicyCleanupJob job = new DatabaseBlobPolicyCleanupJob();
+    job.databaseBlobCleanupPolicyService = service;
+    job.execute(context);
   }
 
   @Test

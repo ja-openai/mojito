@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.blobstorage.migration;
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage;
+import com.box.l10n.mojito.service.blobstorage.migration.BlobMigrationStore.Candidate;
 import com.box.l10n.mojito.service.blobstorage.migration.BlobMigrationStore.Evidence;
 import com.box.l10n.mojito.service.blobstorage.migration.BlobMigrationStore.Run;
 import com.box.l10n.mojito.service.blobstorage.migration.BlobMigrationStore.Snapshot;
@@ -147,24 +148,22 @@ public class BlobMigrationService {
           "Migration destination changed; restore the pinned account/container/prefix");
     String token = store.claim(id, properties.getLeaseSeconds());
     if (token == null) return;
-    long start = System.nanoTime();
+    long start = nanoTime();
     scope = store.get(id);
     long bytes = 0;
     int rows = 0;
     try {
       // New source IDs make progress even when the oldest row fails. Each retry is counted against
       // the same row/byte/time budgets; exhausted failures remain visible, never silently skipped.
-      List<Source> candidates = store.scan(scope, scope.maxRows());
-      for (Source source : candidates) {
+      List<Candidate> candidates = store.scanCandidates(scope, scope.maxRows());
+      for (Candidate candidate : candidates) {
         if (!withinBudget(scope, start, rows)) break;
-        if (needsCopy(scope, source)
-            && source.length() != null
-            && source.length() <= scope.maxBytes()
-            && source.length() > scope.maxBytes() - bytes) break;
         store.renew(id, token, properties.getLeaseSeconds());
         requireEnabled();
-        Evidence result = copy(scope, source, 1, azure);
-        bytes += attemptedBytes(scope, source);
+        Attempt attempt = attempt(scope, candidate, null, 1, scope.maxBytes() - bytes, azure);
+        if (attempt == null) break;
+        Evidence result = attempt.evidence();
+        bytes += attempt.bytes();
         rows++;
         store.record(scope, token, result, true);
         if ("VERIFICATION_FAILED".equals(result.error())) {
@@ -177,18 +176,32 @@ public class BlobMigrationService {
       if (candidates.isEmpty()) {
         for (Evidence failed : store.retryable(progressed, scope.maxRows())) {
           if (!withinBudget(scope, start, rows)) break;
-          Source source =
-              new Source(
-                  failed.sourceId(),
-                  failed.name(),
-                  failed.length(),
-                  failed.createdDate(),
-                  failed.expireSeconds());
-          if (source.length() != null && source.length() > scope.maxBytes() - bytes) break;
+          Candidate candidate =
+              new Candidate(
+                  failed.sourceId(), failed.name(), failed.createdDate(), failed.expireSeconds());
+          // A measurement failure has no known length. Never interpret that as NULL content.
+          Source expected =
+              failed.length() == null
+                  ? null
+                  : new Source(
+                      failed.sourceId(),
+                      failed.name(),
+                      failed.length(),
+                      failed.createdDate(),
+                      failed.expireSeconds());
           store.renew(id, token, properties.getLeaseSeconds());
           requireEnabled();
-          Evidence result = copy(scope, source, failed.attempts() + 1, azure);
-          bytes += attemptedBytes(scope, source);
+          Attempt attempt =
+              attempt(
+                  scope,
+                  candidate,
+                  expected,
+                  failed.attempts() + 1,
+                  scope.maxBytes() - bytes,
+                  azure);
+          if (attempt == null) break;
+          Evidence result = attempt.evidence();
+          bytes += attempt.bytes();
           rows++;
           store.record(scope, token, result, false);
           if ("VERIFICATION_FAILED".equals(result.error())) {
@@ -198,7 +211,12 @@ public class BlobMigrationService {
         }
       }
       progressed = store.get(id);
-      boolean scannedAll = store.scan(progressed, 1).isEmpty();
+      // The fetched page already establishes exhaustion when it is short and fully processed.
+      // A full page needs a later scan; stopping before its last candidate never proves completion.
+      boolean scannedAll =
+          candidates.isEmpty()
+              || (candidates.size() < scope.maxRows()
+                  && progressed.cursorId() >= candidates.getLast().id());
       boolean retry = !store.retryable(progressed, 1).isEmpty();
       String status =
           !scannedAll || retry
@@ -219,13 +237,82 @@ public class BlobMigrationService {
 
   private boolean withinBudget(Run run, long started, int rows) {
     return rows < run.maxRows()
-        && System.nanoTime() - started < TimeUnit.SECONDS.toNanos(run.maxSeconds());
+        && nanoTime() - started < TimeUnit.SECONDS.toNanos(run.maxSeconds());
+  }
+
+  long nanoTime() {
+    return System.nanoTime();
+  }
+
+  private record Attempt(Evidence evidence, long bytes) {}
+
+  /** Returns null only when the next payload must wait for a fresh batch byte budget. */
+  private Attempt attempt(
+      Run scope,
+      Candidate candidate,
+      Source expected,
+      int attempts,
+      long remainingBytes,
+      AzureBlobStorage azure) {
+    if (!needsCopy(scope, candidate.name())) {
+      return new Attempt(
+          evidence(scope, candidate, null, preserveReason(candidate.name()), attempts, null), 0);
+    }
+    Source measured;
+    try {
+      // Payload length can require LOB I/O. Measure one selected row inside its attempt, not the
+      // page.
+      measured = store.metadata(candidate.id());
+    } catch (RuntimeException failure) {
+      return new Attempt(
+          evidence(
+              scope,
+              candidate,
+              expected == null ? null : expected.length(),
+              "FAILED",
+              attempts,
+              "SOURCE_METADATA_" + failure.getClass().getSimpleName()),
+          0);
+    }
+    if (measured == null
+        || !candidate.equals(measured.candidate())
+        || (expected != null && !sameMetadata(expected, measured))) {
+      return new Attempt(
+          evidence(
+              scope,
+              candidate,
+              expected == null ? null : expected.length(),
+              "SOURCE_CHANGED",
+              attempts,
+              null),
+          0);
+    }
+    if (measured.length() != null
+        && measured.length() <= scope.maxBytes()
+        && measured.length() > remainingBytes) return null;
+    return new Attempt(copy(scope, measured, attempts, azure), attemptedBytes(scope, measured));
+  }
+
+  // An unavailable evidence length is not a claim of NULL content; only PRESERVED_NULL makes that
+  // claim.
+  private static Evidence evidence(
+      Run scope, Candidate candidate, Long length, String disposition, int attempts, String error) {
+    return new Evidence(
+        scope.id(),
+        candidate.id(),
+        candidate.name(),
+        length,
+        candidate.createdDate(),
+        candidate.expireSeconds(),
+        null,
+        null,
+        disposition,
+        attempts,
+        error,
+        null);
   }
 
   private Evidence copy(Run scope, Source initial, int attempts, AzureBlobStorage azure) {
-    if (!needsCopy(scope, initial)) {
-      return evidence(scope, initial, null, null, preserveReason(initial), attempts, null, null);
-    }
     if (initial.length() == null)
       return evidence(scope, initial, null, null, "PRESERVED_NULL", attempts, null, null);
     if (initial.length() > scope.maxBytes())
@@ -289,17 +376,17 @@ public class BlobMigrationService {
     return one.equals(two);
   }
 
-  static String prefix(Source source) {
-    if (source.name() == null || !source.name().contains("/")) return "";
-    return source.name().substring(0, source.name().indexOf('/'));
+  static String prefix(String name) {
+    if (name == null || !name.contains("/")) return "";
+    return name.substring(0, name.indexOf('/'));
   }
 
-  static boolean needsCopy(Run scope, Source source) {
-    return Arrays.asList(scope.allowedPrefixes().split(",")).contains(prefix(source));
+  static boolean needsCopy(Run scope, String name) {
+    return Arrays.asList(scope.allowedPrefixes().split(",")).contains(prefix(name));
   }
 
-  static String preserveReason(Source source) {
-    String prefix = prefix(source);
+  static String preserveReason(String name) {
+    String prefix = prefix(name);
     if ("ai_review_execution".equals(prefix) || "ai_review_submission_rate".equals(prefix))
       return "PRESERVED_CONTROL";
     try {
@@ -311,7 +398,7 @@ public class BlobMigrationService {
   }
 
   static long attemptedBytes(Run scope, Source source) {
-    return needsCopy(scope, source)
+    return needsCopy(scope, source.name())
             && source.length() != null
             && source.length() <= scope.maxBytes()
         ? source.length()

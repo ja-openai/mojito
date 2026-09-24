@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
+import com.box.l10n.mojito.service.DBUtils;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage.MigrationBlob;
@@ -67,7 +68,7 @@ public class BlobMigrationPromotionServiceTest {
     new ResourceDatabasePopulator(new ByteArrayResource(ddl.getBytes(StandardCharsets.UTF_8)))
         .execute(database);
     var transactions = new DataSourceTransactionManager(database);
-    snapshots = new BlobMigrationStore(jdbc, transactions);
+    snapshots = new BlobMigrationStore(jdbc, transactions, mock(DBUtils.class));
     promotions = new BlobMigrationPromotionStore(jdbc, transactions, snapshots);
     properties = new BlobMigrationProperties();
     properties.setEnabled(true);
@@ -202,6 +203,13 @@ public class BlobMigrationPromotionServiceTest {
     insert(4, "ai_review_execution/v1/capacity", "four", null);
     insert(5, "clob_storage_ws/changed", "old", null);
     String source = snapshot(10, 100);
+    // Unselected rows have no snapshot evidence; full reconciliation still measures and retains
+    // them.
+    assertEquals(
+        List.of(1L, 2L, 5L),
+        snapshots.evidence(source, 0, 10).stream()
+            .map(BlobMigrationStore.Evidence::sourceId)
+            .toList());
     jdbc.update("update mblob set content = ? where id = 5", bytes("new"));
     insert(6, "clob_storage_ws/delta", "six", null);
     canonical.put("clob_storage_ws/conflict", remote("bad", "PERMANENT", "conflict"));
@@ -213,12 +221,14 @@ public class BlobMigrationPromotionServiceTest {
     assertEquals(6, result.retainedCount());
     assertEquals(0, result.canonicalCount());
     assertEquals(21, result.retainedBytes());
+    assertEquals(Long.valueOf(5), promotions.item(run.id(), 3).sourceLength());
+    assertEquals(Long.valueOf(4), promotions.item(run.id(), 4).sourceLength());
     assertEquals(
         List.of(
             "RETAIN_CANONICAL_CONFLICT",
             "RETAIN_RETENTION_CONFLICT",
-            "RETAIN_PRESERVED_UNKNOWN",
-            "RETAIN_PRESERVED_CONTROL",
+            "RETAIN_DELTA",
+            "RETAIN_DELTA",
             "RETAIN_SOURCE_CHANGED",
             "RETAIN_DELTA"),
         promotions.items(run.id(), 0, 10).stream()

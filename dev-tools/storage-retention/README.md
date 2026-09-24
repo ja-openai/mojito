@@ -18,9 +18,19 @@ Leave `mojito.asyncJobQueue.testcontainers` unset for routine checks.
 | Table replacement | Preserved source rows verified in replacement, maintained fence, dependency and AUTO_INCREMENT checks, atomic rename |
 | Storage reclaimed | Old table retirement explicitly approved and actual filesystem/server allocation measured |
 
-A snapshot is not a serving copy. `SNAPSHOT_COMPLETE` means the selected scan finished, including
-preserved rows. `RECONCILED` means every final source row is either canonically verified or explicitly
+A snapshot is not a serving copy. `SNAPSHOT_COMPLETE` means the selected-prefix scan finished,
+including preserved selected rows. Its cursor can jump over unselected IDs and can finish below
+the global high-water ID. New pages and evidence omit other prefixes; older run evidence remains
+valid and the run keeps its original scope, cursor and budgets. Full promotion reconciliation
+independently inventories every source row and retains rows absent from snapshot evidence.
+`RECONCILED` means every final source row is either canonically verified or explicitly
 retained; it does not mean every payload moved, the table was replaced, or disk was reclaimed.
+
+MySQL snapshot paging uses the existing `UK__MBLOB__NAME` index for each literal prefix range,
+then orders the bounded union of IDs and joins metadata in the same statement. It does not read
+payload length for unselected rows or change the five-second SQL budget. Validate the actual
+ordered query with `EXPLAIN FORMAT=JSON` and a bounded read on the deployment target; a covering
+index plan for a count or unordered range alone does not establish this query's performance.
 
 ## First deployment and upload-only canaries
 
@@ -80,6 +90,12 @@ at most 16 MiB of eligible source bytes; verification and rereads create additio
 budget is checked between items, so a bounded in-flight operation can outlast 30 seconds. Pausing
 stops subsequent publication and work; wait for in-flight calls to settle before changing destinations.
 Do not loop automatically until the first result and workload impact are reviewed.
+
+Candidate pages and completion checks do not measure blob lengths. Each selected row is measured
+inside its own attempt; measurement failures remain `FAILED` evidence and count toward the finite
+retry limit. A null evidence length can mean unmeasured, including preserved unselected rows;
+`PRESERVED_NULL` alone confirms NULL source content. Promotion rereads full metadata before retention
+or canonical verification. No TTL class is excluded from the snapshot scan.
 
 For task metadata, enable `l10n.pollable-task.archive.enabled=true` with retention 90 days,
 batch size 100, lease 300 seconds, `scheduling-enabled=false`, and `delete-source=false`.

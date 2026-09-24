@@ -189,6 +189,26 @@ public class DatabaseBlobCleanupPolicyService {
     policyIds.forEach(this::runPolicy);
   }
 
+  public void failEnabledPoliciesOnRecovery() {
+    // A recovered Quartz execution cannot reconstruct its in-memory batch count or know
+    // whether the last deletion committed. Preserve the saved progress for reconciliation.
+    transactionTemplate.executeWithoutResult(
+        status -> {
+          for (DatabaseBlobCleanupPolicy policy :
+              policyRepository.findByEnabledTrueOrderByPrefixAsc()) {
+            policy.setEnabled(false);
+            policy.setStatus(STATUS_FAILED);
+            policy.setStopRequested(false);
+            policy.setLastFinishedDate(ZonedDateTime.now());
+            policy.setLastError(
+                "Cleanup interrupted by Quartz recovery; reconcile deleted rows before manually "
+                    + "restarting. The previous execution's completed batches and commit outcome "
+                    + "may be uncertain.");
+            policyRepository.save(policy);
+          }
+        });
+  }
+
   void runPolicy(long policyId) {
     int completedBatches = 0;
     int consecutiveRetries = 0;
