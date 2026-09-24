@@ -126,6 +126,32 @@ public class HtmlTagIntegrityCheckerTest {
     checker.check(source, target);
   }
 
+  @Test
+  public void testHtmlTagCheckWorksForNestedVoidElementsWithoutTrailingSlash() {
+    String source = "<div><input ui:locked>Continue<br ui:break><img src=\"icon.png\"></div>";
+    String target = "<div><input ui:locked>Continuer<br ui:break><img src=\"icon.png\"></div>";
+
+    checker.check(source, target);
+  }
+
+  @Test
+  public void testHtmlTagCheckWorksForUppercaseVoidElements() {
+    checker.check("<div>Continue<BR ui:break></div>", "<div>Continuer<BR ui:break></div>");
+  }
+
+  @Test(expected = HtmlTagIntegrityCheckerException.class)
+  public void testHtmlTagCheckRejectsModifiedVoidElementAttributes() {
+    checker.check("<div><input ui:locked></div>", "<div><input></div>");
+  }
+
+  @Test(expected = HtmlTagIntegrityCheckerException.class)
+  public void testHtmlTagCheckDoesNotTreatCustomTagPrefixAsVoid() {
+    String source = "<div><input-control ui:locked>Continue</input-control></div>";
+    String target = "<div><input-control ui:locked>Continuer</div></input-control>";
+
+    checker.check(source, target);
+  }
+
   @Test(expected = HtmlTagIntegrityCheckerException.class)
   public void testHtmlTagCheckRejectsModifiedNamespacedAttributes() {
     String source = "Status <icon ui:variant=\"compact\"/>";

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,12 @@ import org.slf4j.LoggerFactory;
  * @author jyi
  */
 public class HtmlTagIntegrityChecker extends RegexIntegrityChecker {
+
+  // HTML void elements do not have closing tags, even without a trailing slash.
+  private static final Pattern VOID_ELEMENT_START =
+      Pattern.compile(
+          "^<(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)(?:\\s|/?>)",
+          Pattern.CASE_INSENSITIVE);
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(HtmlTagIntegrityChecker.class);
@@ -117,7 +124,7 @@ public class HtmlTagIntegrityChecker extends RegexIntegrityChecker {
 
     for (String tag : tags) {
       if (!tag.startsWith("</")) {
-        if (!tag.endsWith("/>")) {
+        if (!tag.endsWith("/>") && !VOID_ELEMENT_START.matcher(tag).find()) {
           stack.push(tag);
         }
       } else {
