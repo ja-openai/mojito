@@ -23,6 +23,32 @@ If you want to use different path to store the override configuration, you can s
     -Dspring.config.location=file:/${YOUR_PATH}/application.properties
 
 
+## REST client recovery
+
+The Java CLI retries failed API GETs for HTTP 429, 502, 503 and 504, and temporary
+connection or interrupted-download failures. Each GET has one 180-second retry
+window, including time spent in requests, and at most 20 attempts. Backoff grows
+from 1–2 seconds to 10–20 seconds with jitter. `Retry-After` seconds and HTTP dates
+are honored; a delay beyond the remaining budget stops the request. The final
+error and response body are preserved. Authentication, validation, malformed JSON
+and other HTTP errors are not retried by this policy.
+
+No new attempt starts after the retry window. This is not a hard deadline for a
+download already in progress: GET connection-pool waits, connections and TLS
+handshakes have 10-second timeouts, and GET response inactivity has a 30-second
+timeout. Polling and output downloads keep the existing task ID. Writes do not
+use this policy; the legacy synchronous pull command retains its separate retry
+behavior. Avoid wrapping a whole publication job in `mojito retry`: replaying a
+job can repeat uploads, task creation and publication after a lost response.
+
+The generated installer uses curl's bounded download retries and an initial
+0–2-second jitter. It validates a temporary JAR with `java -jar ... --version`
+before atomically replacing the installed JAR. Failed downloads and invalid JARs
+leave the previous JAR intact. The download allows eight retries within 150
+seconds, with a 30-second limit per attempt (at most 182 seconds including the
+initial jitter); validation runs separately. Connection resets or partial
+transfers that curl cannot retry fail safely and can be installed again later.
+
 ## Database Configuration
 
 The default database configuration of {{ site.mojito_green }} is in-memory HSQL database.

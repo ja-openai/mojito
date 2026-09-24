@@ -55,6 +55,8 @@ public class AuthenticatedRestTemplate {
   /** Will delegate calls to the {@link RestTemplate} instance that was configured */
   @Autowired CookieStoreRestTemplate restTemplate;
 
+  GetRequestRetry getRequestRetry = new GetRequestRetry();
+
   /** Used to intercept requests and inject CSRF token */
   @Autowired
   FormLoginAuthenticationCsrfTokenInterceptor formLoginAuthenticationCsrfTokenInterceptor;
@@ -229,14 +231,16 @@ public class AuthenticatedRestTemplate {
    * @throws RestClientException
    */
   public <T> T getForObject(String resourcePath, Class<T> responseType) throws RestClientException {
-    return restTemplate.getForObject(getURIForResource(resourcePath), responseType);
+    String uri = getURIForResource(resourcePath);
+    return getRequestRetry.execute(uri, () -> restTemplate.getForObject(uri, responseType));
   }
 
   protected <T> T getForObjectWithQueryStringParams(
       String resourcePath, Class<T> responseType, Map<String, ?> queryStringParams)
       throws RestClientException {
-    return restTemplate.getForObject(
-        getURIForResourceAndQueryStringParams(resourcePath, queryStringParams), responseType);
+    URI uri = getURIForResourceAndQueryStringParams(resourcePath, queryStringParams);
+    return getRequestRetry.execute(
+        uri.toString(), () -> restTemplate.getForObject(uri, responseType));
   }
 
   /**
@@ -269,7 +273,8 @@ public class AuthenticatedRestTemplate {
    */
   public <T> ResponseEntity<T> getForEntity(String resourcePath, Class<T> responseType)
       throws RestClientException {
-    return restTemplate.getForEntity(getURIForResource(resourcePath), responseType);
+    String uri = getURIForResource(resourcePath);
+    return getRequestRetry.execute(uri, () -> restTemplate.getForEntity(uri, responseType));
   }
 
   /**
@@ -291,11 +296,10 @@ public class AuthenticatedRestTemplate {
       ParameterizedTypeReference<T> responseType,
       Map<String, ?> queryStringParams)
       throws RestClientException {
-    return restTemplate.exchange(
-        getURIForResourceAndQueryStringParams(resourcePath, queryStringParams),
-        HttpMethod.GET,
-        HttpEntity.EMPTY,
-        responseType);
+    URI uri = getURIForResourceAndQueryStringParams(resourcePath, queryStringParams);
+    return getRequestRetry.execute(
+        uri.toString(),
+        () -> restTemplate.exchange(uri, HttpMethod.GET, HttpEntity.EMPTY, responseType));
   }
 
   /**

@@ -67,5 +67,29 @@ CURL_HEADERS=(
 )
 {{/hasHeaders}}
 
-# Download/Upgrade the jar file if needed to match server version
-mojito --check-server-version 2>/dev/null || curl -L -s{{#hasHeaders}} "${CURL_HEADERS[@]}"{{/hasHeaders}} -o {{installDirectory}}/mojito-cli.jar "{{scheme}}://{{host}}:{{port}}/cli/mojito-cli.jar?v={{cliFileCacheKey}}"
+# Download/Upgrade the jar file if needed to match server version.
+if ! mojito --check-server-version 2>/dev/null; then
+  (
+    # Keep the installed JAR intact until its replacement has downloaded and runs.
+    jar_download=$(mktemp "{{installDirectory}}/mojito-cli.jar.XXXXXX") || exit 1
+    trap 'rm -f "$jar_download"' EXIT
+
+    # Randomize the start, then let curl back off and honor Retry-After. At most
+    # 182 seconds: 2 seconds of jitter + 150 retry seconds + a final 30-second try.
+    sleep "$((RANDOM % 3))"
+    if curl --fail --location --show-error --no-progress-meter \
+      --connect-timeout 10 --max-time 30 \
+      --retry 8 --retry-max-time 150 --retry-connrefused{{#hasHeaders}} "${CURL_HEADERS[@]}"{{/hasHeaders}} \
+      --output "$jar_download" "{{scheme}}://{{host}}:{{port}}/cli/mojito-cli.jar?v={{cliFileCacheKey}}"; then
+      if ! java -jar "$jar_download" --version >/dev/null; then
+        echo "Downloaded Mojito CLI JAR is invalid; keeping the existing installation." >&2
+        exit 1
+      fi
+      chmod 644 "$jar_download" && mv -f "$jar_download" "{{installDirectory}}/mojito-cli.jar"
+    else
+      download_status=$?
+      echo "Mojito CLI download failed; keeping the existing installation." >&2
+      exit "$download_status"
+    fi
+  )
+fi

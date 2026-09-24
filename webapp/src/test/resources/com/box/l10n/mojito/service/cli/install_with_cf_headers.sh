@@ -61,5 +61,29 @@ CURL_HEADERS=(
   -H "CF-Access-Client-Secret: $L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_CLIENT_SECRET"
 )
 
-# Download/Upgrade the jar file if needed to match server version
-mojito --check-server-version 2>/dev/null || curl -L -s "${CURL_HEADERS[@]}" -o ${PWD}/.mojito/mojito-cli.jar "http://localhost:8080/cli/mojito-cli.jar?v=test-git-commit"
+# Download/Upgrade the jar file if needed to match server version.
+if ! mojito --check-server-version 2>/dev/null; then
+  (
+    # Keep the installed JAR intact until its replacement has downloaded and runs.
+    jar_download=$(mktemp "${PWD}/.mojito/mojito-cli.jar.XXXXXX") || exit 1
+    trap 'rm -f "$jar_download"' EXIT
+
+    # Randomize the start, then let curl back off and honor Retry-After. At most
+    # 182 seconds: 2 seconds of jitter + 150 retry seconds + a final 30-second try.
+    sleep "$((RANDOM % 3))"
+    if curl --fail --location --show-error --no-progress-meter \
+      --connect-timeout 10 --max-time 30 \
+      --retry 8 --retry-max-time 150 --retry-connrefused "${CURL_HEADERS[@]}" \
+      --output "$jar_download" "http://localhost:8080/cli/mojito-cli.jar?v=test-git-commit"; then
+      if ! java -jar "$jar_download" --version >/dev/null; then
+        echo "Downloaded Mojito CLI JAR is invalid; keeping the existing installation." >&2
+        exit 1
+      fi
+      chmod 644 "$jar_download" && mv -f "$jar_download" "${PWD}/.mojito/mojito-cli.jar"
+    else
+      download_status=$?
+      echo "Mojito CLI download failed; keeping the existing installation." >&2
+      exit "$download_status"
+    fi
+  )
+fi
