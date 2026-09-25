@@ -69,7 +69,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.base.Stopwatch;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.http.HttpTimeoutException;
@@ -1283,11 +1282,6 @@ public class AiTranslateService {
       }
     }
     return glossaryTrie;
-  }
-
-  private boolean isRetryableException(Throwable throwable) {
-    Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
-    return cause instanceof IOException || cause instanceof TimeoutException;
   }
 
   public AiTranslateRunTotals aiTranslateBatch(
