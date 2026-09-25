@@ -139,6 +139,57 @@ public class HtmlTagIntegrityCheckerTest {
     checker.check("<div>Continue<BR ui:break></div>", "<div>Continuer<BR ui:break></div>");
   }
 
+  @Test
+  public void testHtmlTagCheckWorksForPairedRichTextLink() {
+    checker.check("Read <link>the guide</link>.", "请参阅<link>指南</link>。");
+  }
+
+  @Test
+  public void testHtmlTagCheckWorksForPairedVoidNames() {
+    for (String tag : List.of("link", "source", "input", "LINK")) {
+      checker.check(
+          "Read <" + tag + " ui:label=\"guide\">the guide</" + tag + ">.",
+          "Consultez <" + tag + " ui:label=\"guide\">le guide</" + tag + ">.");
+    }
+  }
+
+  @Test
+  public void testHtmlTagCheckWorksForRichTextLinkContainingVoidElement() {
+    checker.check(
+        "<div><link>Read<br>the guide</link></div>",
+        "<div><link>Consultez<br>le guide</link></div>");
+  }
+
+  @Test
+  public void testHtmlTagCheckWorksForSelfClosingAndPairedLinks() {
+    checker.check(
+        "<div><link/>Read <link>the guide</link></div>",
+        "<div><link/>Consultez <link>le guide</link></div>");
+  }
+
+  @Test
+  public void testHtmlTagCheckWorksForUnpairedHtmlLink() {
+    checker.check(
+        "<div><link rel=\"stylesheet\" href=\"theme.css\">Read the guide</div>",
+        "<div><link rel=\"stylesheet\" href=\"theme.css\">Consultez le guide</div>");
+  }
+
+  @Test(expected = HtmlTagIntegrityCheckerException.class)
+  public void testHtmlTagCheckRejectsReversedRichTextLink() {
+    checker.check("Read <link>the guide</link>.", "Consultez </link>le guide<link>.");
+  }
+
+  @Test(expected = HtmlTagIntegrityCheckerException.class)
+  public void testHtmlTagCheckRejectsCrossedRichTextLink() {
+    checker.check(
+        "<div><link>Read the guide</link></div>", "<div><link>Consultez le guide</div></link>");
+  }
+
+  @Test(expected = HtmlTagIntegrityCheckerException.class)
+  public void testHtmlTagCheckRejectsMissingRichTextLinkClosingTag() {
+    checker.check("Read <link>the guide</link>.", "Consultez <link>le guide.");
+  }
+
   @Test(expected = HtmlTagIntegrityCheckerException.class)
   public void testHtmlTagCheckRejectsModifiedVoidElementAttributes() {
     checker.check("<div><input ui:locked></div>", "<div><input></div>");

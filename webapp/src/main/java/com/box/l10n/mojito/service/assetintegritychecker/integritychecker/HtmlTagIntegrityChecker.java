@@ -22,10 +22,10 @@ import org.slf4j.LoggerFactory;
  */
 public class HtmlTagIntegrityChecker extends RegexIntegrityChecker {
 
-  // HTML void elements do not have closing tags, even without a trailing slash.
+  // HTML void elements can omit the trailing slash; explicit closing tags imply rich-text pairs.
   private static final Pattern VOID_ELEMENT_START =
       Pattern.compile(
-          "^<(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)(?:\\s|/?>)",
+          "^<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)(?:\\s|/?>)",
           Pattern.CASE_INSENSITIVE);
 
   /** logger */
@@ -121,10 +121,14 @@ public class HtmlTagIntegrityChecker extends RegexIntegrityChecker {
     boolean res = true;
 
     ArrayDeque<String> stack = new ArrayDeque<>();
+    Set<String> closingTags =
+        tags.stream().filter(tag -> tag.startsWith("</")).collect(Collectors.toSet());
 
     for (String tag : tags) {
       if (!tag.startsWith("</")) {
-        if (!tag.endsWith("/>") && !VOID_ELEMENT_START.matcher(tag).find()) {
+        Matcher voidElement = VOID_ELEMENT_START.matcher(tag);
+        if (!tag.endsWith("/>")
+            && (!voidElement.find() || closingTags.contains("</" + voidElement.group(1) + ">"))) {
           stack.push(tag);
         }
       } else {

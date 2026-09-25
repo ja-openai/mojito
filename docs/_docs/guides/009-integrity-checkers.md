@@ -63,6 +63,13 @@ Missing curly braces or translating elements within the curly braces also cause 
 | <small>{numFiles, plural, one{one file} other{# files}}</small> | <small>{numFiles, plural, un{un fichier} autre{# fichiers}}</small>  | <small>FAIL translating quantity elements</small> |
 
 
+### HTML Tag Integrity Checker
+
+`HTML_TAG` preserves exact tag counts and attributes between source and translation, and checks
+tag nesting. HTML void elements such as `<br>` can omit the trailing slash. Names with an
+explicit closing tag remain paired rich-text tags, including `<link>the guide</link>`; their
+closing tags must still appear in the correct order.
+
 ### FormatJS Rich-Text Integrity Checker
 
 FormatJS rich-text integrity checker rejects translations containing a single ASCII apostrophe
