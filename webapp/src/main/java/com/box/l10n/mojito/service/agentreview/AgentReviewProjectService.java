@@ -361,9 +361,6 @@ public class AgentReviewProjectService {
 
   @Transactional(readOnly = true)
   public List<FeedbackView> history(long projectId, long proposalId, long afterId, int limit) {
-    if (!users.isCurrentUserAdmin()) {
-      throw new AccessDeniedException("Review reports are only available to administrators");
-    }
     if (afterId < 0 || limit < 1 || limit > 200) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "afterId must be nonnegative and limit between 1 and 200");
@@ -383,6 +380,7 @@ public class AgentReviewProjectService {
                 () ->
                     new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Proposal not found in project"));
+    boolean canViewEvidence = users.isCurrentUserAdmin();
     List<Object[]> rows =
         entityManager
             .createQuery(
@@ -408,7 +406,7 @@ public class AgentReviewProjectService {
                   f.getOriginalAssessment() == null ? null : f.getOriginalAssessment().name(),
                   f.getSuggestionAssessment() == null ? null : f.getSuggestionAssessment().name(),
                   f.getExplanation(),
-                  f.getEvidenceJson(),
+                  canViewEvidence ? f.getEvidenceJson() : null,
                   f.getFinalTarget(),
                   f.getCreatedDate(),
                   f.getRespondsToFeedbackId(),

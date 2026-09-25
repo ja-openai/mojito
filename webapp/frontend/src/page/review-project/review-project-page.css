@@ -1609,6 +1609,12 @@
   color: var(--color-text-muted);
 }
 
+.review-project-detail__context-heading {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
 .review-project-detail__field--icu-tab .icu-preview-section__action {
   display: none;
 }

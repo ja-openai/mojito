@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_SELF;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -32,9 +34,11 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.server.ResponseStatusException;
 
 public class AgentReviewReportAccessTest {
   private final UserService users = mock(UserService.class);
@@ -82,7 +86,7 @@ public class AgentReviewReportAccessTest {
     feedback.setRequestKey("decision-retry-id");
     feedback.setActorType(ActorType.HUMAN);
     feedback.setAction(FeedbackAction.KEEP_CURRENT);
-    feedback.setExplanation("Private review feedback");
+    feedback.setExplanation("Saved reviewer comment");
 
     TypedQuery<AgentReviewProposal> proposalQuery = mock(TypedQuery.class, RETURNS_SELF);
     when(entityManager.createQuery(anyString(), eq(AgentReviewProposal.class)))
@@ -150,34 +154,80 @@ public class AgentReviewReportAccessTest {
   }
 
   @Test
-  public void projectAssignmentDoesNotGrantNonAdministratorsFeedbackHistoryAccess() {
-    for (Role role : List.of(Role.ROLE_TRANSLATOR, Role.ROLE_PM, Role.ROLE_USER)) {
+  public void authorizedTranslatorsAndProjectManagersCanReadCommentsWithoutEvidence() {
+    givenFeedbackHistory();
+    for (Role role : List.of(Role.ROLE_TRANSLATOR, Role.ROLE_PM)) {
       setRole(role);
-      assertThatThrownBy(() -> reports.history(10L, 20L))
+      List<AgentReviewProjectService.FeedbackView> history = reports.history(10L, 20L, 0, 50);
+      assertThat(history)
           .as(role.name())
-          .isInstanceOf(AccessDeniedException.class);
-      assertThatThrownBy(() -> reports.history(10L, 20L, 0, 50))
+          .extracting(AgentReviewProjectService.FeedbackView::explanation)
+          .containsExactly("Saved reviewer comment", "Could you clarify the intended meaning?");
+      assertThat(history)
           .as(role.name())
-          .isInstanceOf(AccessDeniedException.class);
+          .allSatisfy(entry -> assertThat(entry.evidenceJson()).isNull());
     }
-    verifyNoInteractions(projects, proposals, reviewProjects, entityManager);
+    verify(reviewProjects, times(2)).assertCurrentUserCanReadProject(project);
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void administratorsCanReadFeedbackForTheAuthorizedProjectProposal() {
     setRole(Role.ROLE_ADMIN);
+    givenFeedbackHistory();
+
+    List<AgentReviewProjectService.FeedbackView> history = reports.history(10L, 20L);
+    assertThat(history)
+        .extracting(AgentReviewProjectService.FeedbackView::explanation)
+        .containsExactly("Saved reviewer comment", "Could you clarify the intended meaning?");
+    assertThat(history)
+        .last()
+        .extracting(AgentReviewProjectService.FeedbackView::evidenceJson)
+        .isEqualTo("{\"diagnostics\":\"Private evidence\"}");
+    verify(reviewProjects).assertCurrentUserCanReadProject(project);
+  }
+
+  @Test
+  public void unauthorizedProjectReadersCannotReadOrDiscoverFeedback() {
+    setRole(Role.ROLE_TRANSLATOR);
+    when(projects.findById(10L)).thenReturn(Optional.of(project));
+    doThrow(new AccessDeniedException("Review project access denied"))
+        .when(reviewProjects)
+        .assertCurrentUserCanReadProject(project);
+
+    assertThatThrownBy(() -> reports.history(10L, 20L)).isInstanceOf(AccessDeniedException.class);
+    verifyNoInteractions(proposals, entityManager);
+  }
+
+  @Test
+  public void aProposalFromAnotherProjectDoesNotGrantFeedbackAccess() {
+    setRole(Role.ROLE_TRANSLATOR);
+    when(projects.findById(10L)).thenReturn(Optional.of(project));
+    proposal.setReviewProjectId(99L);
+    when(proposals.findById(20L)).thenReturn(Optional.of(proposal));
+
+    assertThatThrownBy(() -> reports.history(10L, 20L))
+        .isInstanceOfSatisfying(
+            ResponseStatusException.class,
+            exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+    verify(reviewProjects).assertCurrentUserCanReadProject(project);
+    verifyNoInteractions(entityManager);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void givenFeedbackHistory() {
     when(projects.findById(10L)).thenReturn(Optional.of(project));
     when(proposals.findById(20L)).thenReturn(Optional.of(proposal));
+    AgentReviewFeedback response = new AgentReviewFeedback();
+    response.setId(41L);
+    response.setProposalId(20L);
+    response.setActorType(ActorType.AGENT);
+    response.setAction(FeedbackAction.CONTEXT_REQUEST);
+    response.setExplanation("Could you clarify the intended meaning?");
+    response.setEvidenceJson("{\"diagnostics\":\"Private evidence\"}");
     TypedQuery<Object[]> historyQuery = mock(TypedQuery.class, RETURNS_SELF);
     when(entityManager.createQuery(anyString(), eq(Object[].class))).thenReturn(historyQuery);
-    when(historyQuery.getResultList()).thenReturn(List.<Object[]>of(new Object[] {feedback, 2}));
-
-    assertThat(reports.history(10L, 20L))
-        .singleElement()
-        .extracting(AgentReviewProjectService.FeedbackView::explanation)
-        .isEqualTo("Private review feedback");
-    verify(reviewProjects).assertCurrentUserCanReadProject(project);
+    when(historyQuery.getResultList())
+        .thenReturn(List.of(new Object[] {feedback, 2}, new Object[] {response, 2}));
   }
 
   private void setRole(Role role) {

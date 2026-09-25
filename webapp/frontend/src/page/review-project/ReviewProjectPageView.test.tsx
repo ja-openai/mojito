@@ -3366,9 +3366,25 @@ function renderReviewWithRetainedNotes(
 }
 
 describe('Agent proposal review in Review Projects', () => {
-  it.each(['ROLE_USER', 'ROLE_TRANSLATOR', 'ROLE_PM'] as const)(
-    'hides the report and its link from %s while preserving normal incident review',
+  it.each(['ROLE_TRANSLATOR', 'ROLE_PM'] as const)(
+    'lets %s read saved feedback in History while keeping report evidence private',
     async (role) => {
+      fetchAgentReviewFeedbackMock.mockResolvedValue([
+        {
+          id: 81,
+          proposalId: 901,
+          proposalRevision: 1,
+          actorType: 'HUMAN',
+          actorIdentity: 'Earlier reviewer',
+          createdDate: '2026-09-24T11:00:00Z',
+          action: 'ACCEPT',
+          explanation: 'The saved correction uses the approved payment term.',
+          finalTarget: 'Pague {price} agora',
+          evidenceJson: JSON.stringify([
+            { label: 'Private response evidence', url: 'https://example.com/evidence' },
+          ]),
+        },
+      ]);
       const onRequestDecisionState =
         vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
       renderAgentReview(
@@ -3394,6 +3410,18 @@ describe('Agent proposal review in Review Projects', () => {
       expect(screen.queryByText('Confirmed this is a payment action.')).not.toBeInTheDocument();
       expect(screen.queryByText('Checkout screenshot')).not.toBeInTheDocument();
       expect(fetchAgentReviewFeedbackMock).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('tab', { name: 'History' }));
+      const history = within(screen.getByRole('region', { name: 'Feedback and agent responses' }));
+      expect(
+        await history.findByText('The saved correction uses the approved payment term.'),
+      ).toBeVisible();
+      expect(history.getByText('Pague {price} agora')).toBeVisible();
+      expect(fetchAgentReviewFeedbackMock).toHaveBeenCalledWith(7, 901, expect.any(AbortSignal));
+      expect(screen.queryByRole('tab', { name: 'Report' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Response evidence')).not.toBeInTheDocument();
+      expect(screen.queryByText('Private response evidence')).not.toBeInTheDocument();
+      expect(screen.queryByText('Checkout screenshot')).not.toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
       expect(onRequestDecisionState).toHaveBeenCalledTimes(1);
@@ -3549,7 +3577,7 @@ describe('Agent proposal review in Review Projects', () => {
     expect(requestAiReviewMock).not.toHaveBeenCalled();
   });
 
-  it('lets admins open full report details while keeping History dedicated to translation history', async () => {
+  it('shows feedback and translations in History while keeping admin evidence in Report', async () => {
     fetchTextUnitHistoryMock.mockResolvedValue([
       {
         id: 29,
@@ -3558,20 +3586,42 @@ describe('Agent proposal review in Review Projects', () => {
         createdByUser: { username: 'Earlier translator' },
       },
     ]);
+    fetchAgentReviewFeedbackMock.mockResolvedValue([
+      {
+        id: 81,
+        proposalId: 901,
+        proposalRevision: 1,
+        actorType: 'HUMAN',
+        actorIdentity: 'Earlier reviewer',
+        createdDate: '2026-09-24T11:00:00Z',
+        action: 'ACCEPT',
+        explanation: 'The correction was checked against the payment screen.',
+        evidenceJson: JSON.stringify([
+          { label: 'Private response evidence', url: 'https://example.com/evidence' },
+        ]),
+      },
+    ]);
     renderAdminAgentReview();
     fireEvent.click(screen.getByRole('tab', { name: 'History' }));
     expect(await screen.findByText('Earlier approved translation')).toBeVisible();
     expect(fetchTextUnitHistoryMock).toHaveBeenCalledWith(3, 'pt-PT');
-    expect(fetchAgentReviewFeedbackMock).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText('The correction was checked against the payment screen.'),
+    ).toBeVisible();
+    expect(fetchAgentReviewFeedbackMock).toHaveBeenCalledTimes(1);
     expect(
       screen.queryByRole('region', { name: 'Evidence and verification' }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Review feedback')).not.toBeInTheDocument();
+    expect(screen.queryByText('Response evidence')).not.toBeInTheDocument();
+    expect(screen.queryByText('Private response evidence')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View report →' }));
     expect(screen.getByRole('tab', { name: 'Report' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('region', { name: 'Evidence and verification' })).toBeVisible();
     expect(screen.getByRole('region', { name: 'Feedback and agent responses' })).toBeVisible();
     expect(screen.getByText('Review feedback')).toBeVisible();
+    fireEvent.click(screen.getByText('Response evidence'));
+    expect(screen.getByRole('link', { name: 'Private response evidence' })).toBeVisible();
     await waitFor(() => expect(fetchAgentReviewFeedbackMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByText('Earlier approved translation')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start a new review' })).not.toBeInTheDocument();
@@ -4163,6 +4213,139 @@ describe('Agent proposal review in Review Projects', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Reset$/ }));
     expect(screen.getByRole('button', { name: /^Pending$/ })).toBeEnabled();
     expect(history.getByText('The current wording was approved.')).toBeVisible();
+  });
+
+  it('lets a translator recover an accepted correction note from History after a fresh visit', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const correction = 'Pague {price} imediatamente';
+    const note = 'Use the approved payment term for this action.';
+    let liveProject: ApiReviewProjectDetail = {
+      ...project,
+      reviewProjectTextUnits: [buildAgentTextUnit()],
+    };
+    const savedFeedback: AgentReviewsApi.ApiAgentReviewFeedback[] = [];
+    fetchAgentReviewFeedbackMock.mockImplementation(() => Promise.resolve([...savedFeedback]));
+    saveReviewProjectTextUnitDecisionMock.mockImplementation(
+      (request: Parameters<typeof ReviewProjectsApi.saveReviewProjectTextUnitDecision>[0]) => {
+        const currentRow = liveProject.reviewProjectTextUnits![0];
+        const variant = {
+          id: 31,
+          content: request.target,
+          comment: request.comment,
+          status: request.status,
+          includedInLocalizedFile: request.includedInLocalizedFile,
+        };
+        const savedRow: ApiReviewProjectTextUnit = {
+          ...currentRow,
+          currentTmTextUnitVariant: variant,
+          reviewStateRevision: 'agent-saved-v2',
+          reviewProjectTextUnitDecision: {
+            decisionState: request.decisionState,
+            decisionTmTextUnitVariant: variant,
+            notes: request.decisionNotes,
+          },
+          agentReview: {
+            ...currentRow.agentReview!,
+            proposalVersion: currentRow.agentReview!.proposalVersion + 1,
+            disposition: 'RESOLVED',
+            canReviewAgain: true,
+            lastFeedbackRequestId: request.agentReview!.requestId,
+          },
+        };
+        savedFeedback.push({
+          id: 81,
+          proposalId: request.agentReview!.proposalId,
+          proposalRevision: request.agentReview!.proposalRevision,
+          actorType: 'HUMAN',
+          actorIdentity: user.username,
+          createdDate: '2026-09-25T11:00:00Z',
+          action: request.agentReview!.action,
+          explanation: request.agentReview!.explanation,
+          finalTarget: request.target,
+          evidenceJson: null,
+        });
+        liveProject = { ...project, reviewProjectTextUnits: [savedRow] };
+        return Promise.resolve(savedRow);
+      },
+    );
+    function LiveReview() {
+      const { data } = useQuery({
+        queryKey: [...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id],
+        queryFn: () => Promise.resolve(liveProject),
+        staleTime: Infinity,
+      });
+      return (
+        <ReviewProjectPageView
+          projectId={project.id}
+          project={data ?? null}
+          mutations={useReviewProjectMutations(project.id)}
+          selectedTextUnitQueryId={null}
+          onSelectedTextUnitIdChange={noop}
+          openRequestDetailsQuery={false}
+          requestDetailsSource={null}
+          onRequestDetailsQueryHandled={noop}
+          onRequestDetailsFlowFinished={noop}
+        />
+      );
+    }
+    function mountReview() {
+      const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+      queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], liveProject);
+      const view = render(
+        <QueryClientProvider client={queryClient}>
+          <UserContext.Provider value={user}>
+            <MemoryRouter>
+              <LiveReview />
+            </MemoryRouter>
+          </UserContext.Provider>
+        </QueryClientProvider>,
+      );
+      return { ...view, queryClient };
+    }
+
+    const firstVisit = mountReview();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: correction },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Terminology' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'AI feedback note' }), {
+      target: { value: note },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+    await waitFor(() => expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce());
+    expect(saveReviewProjectTextUnitDecisionMock.mock.calls[0][0]).toMatchObject({
+      target: correction,
+      agentReview: { action: 'ACCEPT', explanation: note },
+      reviewFeedback: { reason: 'TERMINOLOGY', note },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Decided$/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue(''),
+    );
+    expect(
+      firstVisit.queryClient.getQueryCache().findAll({ queryKey: ['review-project-draft'] }),
+    ).toHaveLength(0);
+    firstVisit.unmount();
+    firstVisit.queryClient.clear();
+
+    // Recover from the API with no prior component state or cached draft to supply the note.
+    mountReview();
+    expect(screen.getByRole('textbox', { name: 'AI feedback note' })).toHaveValue('');
+    fireEvent.click(screen.getByRole('tab', { name: 'History' }));
+    const history = within(screen.getByRole('region', { name: 'Feedback and agent responses' }));
+    expect(await history.findByText(note)).toBeVisible();
+    expect(history.getByText(correction)).toBeVisible();
+    expect(fetchAgentReviewFeedbackMock).toHaveBeenCalledWith(7, 901, expect.any(AbortSignal));
+    expect(screen.queryByRole('tab', { name: 'Report' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View report →' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Response evidence')).not.toBeInTheDocument();
+    expect(screen.queryByText('Checkout screenshot')).not.toBeInTheDocument();
+    expect(saveAgentReviewOutcomeMock).not.toHaveBeenCalled();
   });
 
   it('loads saved Report history on revisit and records a new explanation after Pending', async () => {

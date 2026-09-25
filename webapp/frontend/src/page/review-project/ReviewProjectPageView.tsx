@@ -5610,13 +5610,31 @@ function DetailPane({
               ) : null}
 
               {activeContextTab === 'history' ? (
-                <TextUnitHistoryTimeline
-                  isLoading={historyQuery.isLoading}
-                  errorMessage={historyQuery.isError ? historyErrorMessage : null}
-                  entries={historyRows}
-                  initialDate={formatDateTime(textUnit.tmTextUnit?.createdDate)}
-                  emptyMessage="No history yet."
-                />
+                <div className="review-project-detail__context-stack">
+                  {agentReview ? (
+                    <AgentReviewContext
+                      projectId={projectId}
+                      proposal={agentReview}
+                      localeTag={localeTag}
+                      view="history"
+                      showEvidence={false}
+                    />
+                  ) : null}
+                  <div className="review-project-detail__context-stack">
+                    {agentReview ? (
+                      <h3 className="review-project-detail__context-heading">
+                        Translation history
+                      </h3>
+                    ) : null}
+                    <TextUnitHistoryTimeline
+                      isLoading={historyQuery.isLoading}
+                      errorMessage={historyQuery.isError ? historyErrorMessage : null}
+                      entries={historyRows}
+                      initialDate={formatDateTime(textUnit.tmTextUnit?.createdDate)}
+                      emptyMessage="No history yet."
+                    />
+                  </div>
+                </div>
               ) : null}
 
               {activeContextTab === 'incident' && canViewAgentReport && agentReview ? (

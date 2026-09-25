@@ -269,7 +269,8 @@ existing project shell. Batch creation and assignment do not imply table-based e
 - Restore the normal **Pending / Decided** controls. Pending starts a linked round on the same
   row in the same open project, keeps the current translation, and updates project progress.
   Decided reviews the unchanged current translation without changing its text or status. Previous
-  proposals and feedback remain in **Report**. A superseded finding is reviewed in its newer round.
+  decisions and feedback remain in **History**, alongside translation history. A superseded finding
+  is reviewed in its newer round; admins can also inspect its technical evidence in **Report**.
   Reopening an unchanged source/current translation preserves its reported suggestion, evidence
   and automation origin. Changed source, context or translation still requires a fresh review.
 - Keep **View report** as the only action in the report header; there is no separate note icon or
@@ -277,7 +278,8 @@ existing project shell. Batch creation and assignment do not imply table-based e
   **Accept** action saves them with the decision. Record the observed choice
   (`KEEP_CURRENT`, `ACCEPT`, or `EDIT_ACCEPT`); do not infer that either version is linguistically
   wrong merely from the choice. Exact reviewed-state receipts continue to prevent repeat reports.
-  After completion, saved outcomes and notes remain in **Report**. Use the ordinary **Pending**
+  After completion, saved outcomes and notes remain in **History** for authorized project readers.
+  Admins can also read them in **Report**. Use the ordinary **Pending**
   control to reopen the latest round. Earlier decisions remain in history.
   The report header shows **Reviewed**, **Awaiting feedback**, or **Replaced** as appropriate and
   remains accessible in every state. Do not invent a confidence percentage.
@@ -295,8 +297,11 @@ existing project shell. Batch creation and assignment do not imply table-based e
   unchanged just by adding notes. An assessment of an earlier original does not carry onto a
   different translation when a completed review starts a new round.
   Resetting a translation edit preserves feedback; a subsequent feedback-only Reset clears it.
-- **Report** retains the human decisions and agent responses. The ordinary **History**
-  tab shows translation history. Keep the UI to the compact report strip and normal editing;
+- **History** shows saved human decisions, explanations, agent responses and saved translations
+  across review rounds, followed by translation history. This remains available to authorized
+  project readers after Accept clears the submitted draft and on a fresh visit, independently of
+  whether the inline feedback widget is visible. Technical response evidence remains in the
+  admin-only **Report**, which also retains the feedback history. Keep the UI to the compact report strip and normal editing;
   clarification uses the existing chat. The backend follow-up APIs remain available, but there are
   no **Ask for another proposal** or **Defer** controls in this UI. Pending and editing keep the
   current project; the older separate-project REST endpoint remains compatible with existing callers.
@@ -388,8 +393,10 @@ runs retain the original team and review type.
   report strip. **Use** stages either version and **Accept** saves the decision and optional note.
   The admin-only **Report** tab contains rationale, verifier notes, optional
   assessments, and feedback history. Non-admin project responses omit verifier notes,
-  integrity diagnostics, and evidence; project feedback-history and evidence-artifact reads
-  require admin access. The compact original/proposal/finding strip and guarded review decisions
+  integrity diagnostics, and evidence. Project feedback-history reads require project access and
+  a matching proposal, and omit response evidence for non-admins. Evidence-artifact reads still
+  require admin access. The ordinary **History** tab exposes saved decisions and comments to
+  authorized reviewers. The compact original/proposal/finding strip and guarded review decisions
   remain available to assigned reviewers. A current source, context comment, or translation
   change blocks acceptance of the old proposal. Structural integrity checks apply to every accepting
   reviewer, including administrators.

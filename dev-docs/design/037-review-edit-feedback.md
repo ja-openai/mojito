@@ -40,7 +40,10 @@ silently. In these feedback flows, the widget replaces the bottom Comment on tra
 and Decision notes fields. Ordinary reviews without the new feedback flow retain their
 standard fields. Unsent older comments or notes remain recoverable in a compact Unsent notes
 disclosure; a note already represented in the widget is not shown twice. Existing agent
-notes share the feedback text draft; saved notes/history remain accessible in the report.
+notes share the feedback text draft. Saved incident notes and decisions remain accessible to
+authorized project readers in History after Accept clears the submitted draft and on a fresh
+visit, even when the feedback widget is absent. Technical response evidence stays in the
+admin-only Report.
 Editing only the widget feedback on a completed editable review uses the existing guarded
 reopen-and-save operation, retaining the current translation and the earlier review history.
 Chat usage and use of a chat suggestion are optional client observations, explicitly labeled

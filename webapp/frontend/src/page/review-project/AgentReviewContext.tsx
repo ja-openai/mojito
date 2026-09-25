@@ -111,6 +111,7 @@ type AgentReviewContextProps = {
   proposal: ApiAgentReviewContext;
   localeTag: string;
   view: 'details' | 'history';
+  showEvidence?: boolean;
   onReconsider?: () => void;
 };
 
@@ -152,6 +153,7 @@ function AgentReviewHistory({
   projectId,
   proposal,
   localeTag,
+  showEvidence = true,
   onReconsider,
 }: Omit<AgentReviewContextProps, 'view'>) {
   const feedback = useQuery({
@@ -198,7 +200,7 @@ function AgentReviewHistory({
                 <div>Suggestion: {label(entry.suggestionAssessment)}</div>
               ) : null}
               {entry.explanation ? <p>{entry.explanation}</p> : null}
-              {entry.evidenceJson ? (
+              {showEvidence && entry.evidenceJson ? (
                 <details className="agent-review-context__details">
                   <summary>Response evidence</summary>
                   <EvidenceList entries={readEvidence(entry.evidenceJson)} />
