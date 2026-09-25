@@ -165,7 +165,9 @@ export function buildGlossaryContextMessage(
     } else if (match.target?.trim()) {
       parts.push(`required target: ${match.target.trim()}`);
     } else {
-      parts.push('required target: translator review needed');
+      parts.push(
+        'target translation: not provided (context only; no required wording or translation defect implied)',
+      );
     }
 
     if (match.targetComment?.trim()) {

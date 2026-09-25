@@ -301,7 +301,11 @@ JSON/blob DTO cache already supports cross-pod hydration and database delta
 refresh without introducing a second serialization or invalidation contract.
 
 Review project detail and text-unit detail can show matched glossary terms and
-include glossary context in AI review requests.
+include glossary context in AI review requests. Missing or blank localized
+targets are labeled as context only, with no required target wording and no
+implied translation defect. Definitions and source notes remain available to
+help assess meaning; supplied targets and explicit do-not-translate instructions
+retain their existing constraints.
 
 Matched-term cards order hard-enforced terms first (red stripe), soft-enforced
 terms next (amber stripe), and recommendations (`REVIEW_ONLY`) last (gray stripe).

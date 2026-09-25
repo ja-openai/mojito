@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ApiMatchedGlossaryTerm } from '../api/glossaries';
-import { getGlossaryVisibleText, prepareGlossaryMatches } from './glossary-matches';
+import {
+  buildGlossaryContextMessage,
+  getGlossaryVisibleText,
+  prepareGlossaryMatches,
+} from './glossary-matches';
 
 const baseMatch: ApiMatchedGlossaryTerm = {
   glossaryId: 1,
@@ -25,6 +29,57 @@ const baseMatch: ApiMatchedGlossaryTerm = {
   matchedText: 'Key',
   evidence: [],
 };
+
+describe('buildGlossaryContextMessage', () => {
+  it.each([null, '', ' \t '])(
+    'keeps a missing target (%j) as context without inventing required wording',
+    (target) => {
+      const message = buildGlossaryContextMessage([
+        {
+          ...baseMatch,
+          source: 'tool',
+          matchedText: 'tool',
+          endIndex: 8,
+          target,
+          doNotTranslate: false,
+          enforcement: 'SOFT',
+          definition: 'A callable app capability.',
+        },
+      ]);
+
+      expect(message?.content).toContain('tool [4-8]');
+      expect(message?.content).toContain('definition: A callable app capability.');
+      expect(message?.content).toContain('enforcement: SOFT');
+      expect(message?.content).toContain('target translation: not provided');
+      expect(message?.content).toContain('no required wording or translation defect implied');
+      expect(message?.content).not.toContain('required target:');
+      expect(message?.content).not.toContain('translator review needed');
+    },
+  );
+
+  it('retains a supplied target and its locale-specific note', () => {
+    const message = buildGlossaryContextMessage([
+      {
+        ...baseMatch,
+        target: ' 工具 ',
+        targetComment: 'Use for callable app capabilities.',
+        doNotTranslate: false,
+      },
+    ]);
+
+    expect(message?.content).toContain('required target: 工具');
+    expect(message?.content).toContain('target note: Use for callable app capabilities.');
+    expect(message?.content).not.toContain('target translation: not provided');
+  });
+
+  it('preserves do-not-translate instructions even without a localized target', () => {
+    const message = buildGlossaryContextMessage([{ ...baseMatch, target: null }]);
+
+    expect(message?.content).toContain('required action: DO NOT TRANSLATE');
+    expect(message?.content).not.toContain('required target:');
+    expect(message?.content).not.toContain('target translation: not provided');
+  });
+});
 
 describe('prepareGlossaryMatches', () => {
   it('dedupes repeated spans by glossary term id', () => {
