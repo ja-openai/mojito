@@ -65,7 +65,7 @@ public class ControlCharacterChecker extends AbstractCliChecker {
 
   private String getNotificationText(List<String> failures) {
     StringBuilder sb = new StringBuilder();
-    sb.append(failures.stream().collect(Collectors.joining(System.lineSeparator()))).toString();
+    sb.append(failures.stream().collect(Collectors.joining(System.lineSeparator())));
     sb.append(System.lineSeparator() + System.lineSeparator());
     sb.append("Please remove control characters from source strings.");
     return sb.toString();
