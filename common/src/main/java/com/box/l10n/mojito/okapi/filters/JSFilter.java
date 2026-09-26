@@ -55,7 +55,6 @@ public class JSFilter extends AbstractFilter {
   private String lineBreak;
 
   EncoderManager encoderManager;
-  private IFilterWriter filterWriter;
   private LinkedList<Event> queue;
   private int parseState = 0;
 
@@ -129,9 +128,6 @@ public class JSFilter extends AbstractFilter {
 
   @Override
   public IFilterWriter createFilterWriter() {
-    if (filterWriter != null) {
-      return filterWriter;
-    }
     return new GenericFilterWriter(createSkeletonWriter(), getEncoderManager());
   }
 
