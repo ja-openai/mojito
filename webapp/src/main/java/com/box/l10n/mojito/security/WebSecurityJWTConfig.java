@@ -293,20 +293,6 @@ public class WebSecurityJWTConfig {
     return null;
   }
 
-  private String firstNonBlankLabeled(String... labelValuePairs) {
-    if (labelValuePairs == null) {
-      return null;
-    }
-    for (int i = 0; i + 1 < labelValuePairs.length; i += 2) {
-      String label = labelValuePairs[i];
-      String value = labelValuePairs[i + 1];
-      if (StringUtils.hasText(value)) {
-        return label;
-      }
-    }
-    return null;
-  }
-
   private String localPart(String value) {
     if (!StringUtils.hasText(value)) {
       return null;
