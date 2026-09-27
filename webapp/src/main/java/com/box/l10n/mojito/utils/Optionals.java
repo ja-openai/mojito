@@ -21,6 +21,6 @@ public class Optionals {
   }
 
   public static <T> Optional<List<T>> optionalToOptionalList(Optional<T> optional) {
-    return Optional.ofNullable(optional.map(Collections::singletonList).orElse(null));
+    return optional.map(Collections::singletonList);
   }
 }
