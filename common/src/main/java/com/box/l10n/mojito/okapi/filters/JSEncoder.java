@@ -9,26 +9,9 @@ public class JSEncoder extends SimpleEncoder {
 
   @Override
   public String encode(char value, EncoderContext context) {
-    String res;
-
-    switch (value) {
-      case '\n':
-        res = "\\n";
-        break;
-      case '\r':
-        res = "\\r";
-        break;
-      case '"':
-        res = "\\\"";
-        break;
-      case '`':
-        res = "\\`";
-        break;
-      default:
-        res = String.valueOf(value);
-        break;
+    if (value == '`') {
+      return "\\`";
     }
-
-    return res;
+    return super.encode(value, context);
   }
 }
