@@ -15,8 +15,6 @@ public class CSVFilter extends CommaSeparatedValuesFilter {
   public static final String FILTER_CONFIG_ID = "okf_table_csv@mojito";
   public static final String FILTER_CONFIG_ID_ADOBE_MAGENTO = "okf_table_csv@mojito_adobe_magento";
 
-  net.sf.okapi.filters.table.csv.Parameters parameters;
-
   public CSVFilter() {
     super();
 
