@@ -29,6 +29,10 @@ still allow feedback on unchanged text, and explanations entered in the Report t
 justify keeping the original. Submitted assessments acknowledge independently of a paused
 correction note. Drafts update as the reviewer types; there is one draft per review, not
 per-edit history or a save-on-blur mechanism.
+Reason for change and the Report explanation remain editable during input-method
+composition. Composition guards save, navigation and translation replacement without
+disabling the active input. Acceptance resumes after the final composed text reaches
+the draft, preserving the complete note in the normal save payload.
 Translation warnings show a compact count and the first message in the existing editor
 controls, sharing a reserved slot with saving progress. The message stays on one line and
 truncates when space is limited; hover shows the full text and clicking opens the existing

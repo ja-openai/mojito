@@ -3811,6 +3811,107 @@ describe('Agent proposal review in Review Projects', () => {
     expect(saved.decisionNotes).toBe('Use the approved product term.');
   });
 
+  it.each([
+    { review: 'ordinary', note: '결제 용어를 수정했습니다.' },
+    { review: 'incident', note: 'கட்டணச் சொல்லைத் திருத்தினேன்.' },
+  ])(
+    'keeps Reason for change editable during IME input and saves the committed note in $review review',
+    async ({ review, note: committedNote }) => {
+      visibleTextEditorEnabledMock.mockReturnValue(false);
+      const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+      const onRequestDecisionState =
+        vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
+      const mutations = buildMutations({ onRequestSaveDecision, onRequestDecisionState });
+      if (review === 'incident') {
+        renderAgentReview({}, mutations);
+        fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+      } else {
+        fetchReviewFeedbackBaselineMock.mockResolvedValue({
+          target: 'Pay {price} now',
+          ai: true,
+          kind: 'AI_TRANSLATE',
+        });
+        renderReviewProjectPageView({ mutations });
+        fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+          target: { value: 'Pague {price} agora' },
+        });
+      }
+      const feedback = within(
+        await screen.findByRole('region', { name: 'AI translation feedback' }),
+      );
+      fireEvent.click(feedback.getByRole('button', { name: 'Terminology' }));
+      const note = feedback.getByRole('textbox', { name: 'AI feedback note' });
+      const accept = screen.getByRole('button', { name: /^Accept$/ });
+      act(() => note.focus());
+      fireEvent.compositionStart(note);
+      expect(note).toBeEnabled();
+      expect(note).toHaveFocus();
+      fireEvent.change(note, { target: { value: committedNote.slice(0, 2) } });
+      expect(note).toBeEnabled();
+      expect(accept).toBeDisabled();
+      fireEvent.click(accept);
+      fireEvent.keyDown(note, { key: 'Enter', ctrlKey: true });
+      fireEvent.keyDown(note, { key: 'Enter', metaKey: true });
+      fireEvent.keyDown(note, { key: 'Enter', ctrlKey: true, shiftKey: true });
+      fireEvent.keyDown(window, { key: 'a' });
+      expect(onRequestSaveDecision).not.toHaveBeenCalled();
+      expect(onRequestDecisionState).not.toHaveBeenCalled();
+
+      fireEvent.compositionEnd(note, { data: committedNote });
+      expect(note).toBeEnabled();
+      expect(accept).toBeDisabled();
+      fireEvent.keyDown(note, { key: 'Enter', ctrlKey: true });
+      expect(onRequestSaveDecision).not.toHaveBeenCalled();
+      // Browsers may publish the final input after compositionend.
+      fireEvent.change(note, { target: { value: committedNote } });
+      await waitFor(() => expect(accept).toBeEnabled());
+      expect(note).toHaveValue(committedNote);
+      expect(note).toHaveFocus();
+      fireEvent.click(accept);
+      expect(onRequestSaveDecision).toHaveBeenCalledOnce();
+      const saved = onRequestSaveDecision.mock.calls[0][0];
+      expect(saved.reviewFeedback).toMatchObject({
+        reason: 'TERMINOLOGY',
+        note: committedNote,
+      });
+      if (review === 'incident') {
+        expect(saved.agentReview).toMatchObject({ action: 'ACCEPT', explanation: committedNote });
+      } else {
+        expect(saved.decisionNotes).toBe(committedNote);
+      }
+      expect(onRequestDecisionState).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps acceptance blocked when a new Reason for change composition starts before the prior one settles', async () => {
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    renderAgentReview({}, buildMutations({ onRequestSaveDecision }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+    const note = screen.getByRole('textbox', { name: 'AI feedback note' });
+    const accept = screen.getByRole('button', { name: /^Accept$/ });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      fireEvent.compositionStart(note);
+      fireEvent.change(note, { target: { value: '용어' } });
+      fireEvent.compositionEnd(note, { data: '용어' });
+      fireEvent.compositionStart(note);
+      await act(() => vi.advanceTimersByTime(0));
+      expect(note).toBeEnabled();
+      expect(accept).toBeDisabled();
+      fireEvent.keyDown(note, { key: 'Enter', ctrlKey: true });
+      expect(onRequestSaveDecision).not.toHaveBeenCalled();
+      fireEvent.compositionEnd(note, { data: '수정' });
+      fireEvent.change(note, { target: { value: '용어 수정' } });
+      await act(() => vi.advanceTimersByTime(0));
+      expect(accept).toBeEnabled();
+      fireEvent.click(accept);
+      expect(onRequestSaveDecision).toHaveBeenCalledOnce();
+      expect(onRequestSaveDecision.mock.calls[0][0].reviewFeedback?.note).toBe('용어 수정');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps standard note fields for ordinary reviews without an AI baseline', async () => {
     renderReviewProjectPageView();
     await waitFor(() => expect(fetchReviewFeedbackBaselineMock).toHaveBeenCalledOnce());
@@ -4526,7 +4627,7 @@ describe('Agent proposal review in Review Projects', () => {
     expect(unload.defaultPrevented).toBe(false);
   });
 
-  it('allows choosing the original and editing Report feedback but blocks changes during composition', async () => {
+  it('keeps Report feedback editable during composition while blocking decisions and proposal changes', async () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
     renderAdminAgentReview({}, buildMutations({ onRequestDecisionState }));
@@ -4541,13 +4642,33 @@ describe('Agent proposal review in Review Projects', () => {
     expect(onRequestDecisionState).not.toHaveBeenCalled();
     expect(screen.getByRole('textbox', { name: 'Explanation' })).toBeEnabled();
     fireEvent.compositionStart(editor);
-    expect(screen.getByRole('textbox', { name: 'Explanation' })).toBeDisabled();
+    const explanation = screen.getByRole('textbox', { name: 'Explanation' });
+    expect(explanation).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Use suggestion' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
     expect(editor).toHaveValue('Pay {price} now');
     expect(onRequestDecisionState).not.toHaveBeenCalled();
     fireEvent.compositionEnd(editor);
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Explanation' })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Accept$/ })).toBeEnabled());
+
+    act(() => explanation.focus());
+    fireEvent.compositionStart(explanation);
+    expect(explanation).toBeEnabled();
+    expect(explanation).toHaveFocus();
+    fireEvent.change(explanation, { target: { value: '원문' } });
+    expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
+    fireEvent.keyDown(explanation, { key: 'Enter', ctrlKey: true });
+    expect(onRequestDecisionState).not.toHaveBeenCalled();
+    fireEvent.compositionEnd(explanation, { data: '원문 확인' });
+    fireEvent.change(explanation, { target: { value: '원문 확인' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Accept$/ })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+    expect(onRequestDecisionState).toHaveBeenCalledOnce();
+    expect(onRequestDecisionState.mock.calls[0][0].agentReview).toMatchObject({
+      action: 'KEEP_CURRENT',
+      explanation: '원문 확인',
+    });
   });
 
   it('blocks editing Report feedback and choosing report text during a save', () => {

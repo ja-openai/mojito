@@ -22,7 +22,7 @@ and [additional failure evidence](../investigations/2026-09-01-review-project-fo
 | --- | --- | --- |
 | Latest server row | Project query cache | Receiving it does not implicitly replace a dirty draft. A refresh failure keeps the mounted editor. A delayed acknowledgement cannot replace an already observed different source or third revision. |
 | Translation, status, comment, notes and reviewed source/revision | Row editing session | The draft and its original source identity and base are kept together. Clean sessions may adopt a refresh; dirty sessions retain their base until explicit reset or a matched successful save. |
-| Input composition and editor callbacks | Row detail session | Incomplete composition cannot submit, navigate or insert an editor line break. The structured editor stops composition events before its keymaps without canceling native input-method handling. Callbacks from a previous row cannot edit the active session. |
+| Input composition and editor callbacks | Row detail session | Incomplete composition cannot submit, navigate or insert an editor line break. Translation and review-feedback inputs remain editable throughout composition so the input method can finish publishing its text. The structured editor stops composition events before its keymaps without canceling native input-method handling. Callbacks from a previous row cannot edit the active session. |
 | AI conversation and suggestions | Row, locale and reviewed context | Old content cannot be paired with the new row's target-change handler. |
 | Save/check/conflict/failure/success | One mutation operation | Each operation freezes its request before yielding and carries a stable operation ID through explicit recovery. Each attempt has its own ID. |
 | Use external discard choice | Accepted recovery request | Capture the field values when that request starts. Its acknowledgement replaces only fields unchanged since that choice; newer edits remain unsaved. |
@@ -194,6 +194,13 @@ filter changes, and synthetic IME composition. Separate browser checks exercise
 the actual editors and virtual list with controlled responses. Database tests
 must demonstrate concurrent writes against local MySQL, including absent current
 translations and revision changes without a new translation variant.
+
+Composition coverage includes Reason for change and the Report explanation, as well
+as translation editors. These fields remain enabled while composing; acceptance,
+shortcuts, navigation and translation replacement stay guarded until the committed
+input has reached the draft. A new composition before the deferred release keeps
+that guard active. Saving, inactive feedback and access restrictions retain their
+normal input locks.
 
 The carryover regressions also invert project-row and TM-ID ordering in both sort
 directions, exercise detached editor callbacks and undo/redo after navigation,

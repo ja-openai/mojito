@@ -2472,6 +2472,8 @@ function DetailPane({
     },
     [updateTranslationDraft],
   );
+  // Composition blocks actions that save or replace the draft, not the inputs publishing it.
+  // Disabling an active input interrupts the native IME before it can commit its final text.
   const compositionRef = useRef(false);
   const compositionEndTimerRef = useRef<number | null>(null);
   const [isComposing, setIsComposing] = useState(false);
@@ -5439,9 +5441,7 @@ function DetailPane({
                       agentFeedback.updateValues((values) => ({ ...values, explanation: note }));
                     else setDraftDecisionNotes(note);
                   }}
-                  disabled={
-                    !editFeedbackActive || isSavingGlobal || isComposing || agentReviewReadOnly
-                  }
+                  disabled={!editFeedbackActive || isSavingGlobal || agentReviewReadOnly}
                 />
               ) : null}
               {aiReviewPanel}
@@ -5654,7 +5654,7 @@ function DetailPane({
                         }
                         agentFeedback.updateValues(() => values);
                       }}
-                      disabled={isSavingGlobal || isComposing}
+                      disabled={isSavingGlobal}
                       showSuggestion={agentReview.proposedTarget !== null}
                     />
                   ) : null}
