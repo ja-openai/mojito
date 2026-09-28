@@ -107,6 +107,49 @@ public class TextUnitWSIntegrityOverrideWSTest extends WSTestBase {
   }
 
   @Test
+  public void translatorCanSaveMixedTemplateBracesWithoutChangingStoredText() throws Exception {
+    String source = "Confirm {{type}}: {{{ verifyUrl }}}; cancel: {{{ noVerifyUrl }}}.";
+    String target = "დაადასტურეთ {{type}}: {{{ verifyUrl }}}; გაუქმება: {{{ noVerifyUrl }}}.";
+    Fixture fixture =
+        createFixture(
+            source,
+            "Previous translation",
+            Role.ROLE_TRANSLATOR,
+            true,
+            IntegrityCheckerType.MESSAGE_FORMAT_DOUBLE_BRACES);
+    logInAs(fixture.user());
+    assertEquals(Boolean.TRUE, check(fixture, target).getCheckResult());
+
+    ResponseEntity<TextUnitDTO> response = save(fixture, target);
+
+    assertSaved(fixture, target, response);
+    assertEquals(target, response.getBody().getTarget());
+  }
+
+  @Test
+  public void translatorCannotReplaceTripleBracesWithDoubleBraces() throws Exception {
+    String source = "Confirm {{type}}: {{{ verifyUrl }}}; cancel: {{{ noVerifyUrl }}}.";
+    String target = "დაადასტურეთ {{type}}: {{ verifyUrl }}; გაუქმება: {{{ noVerifyUrl }}}.";
+    Fixture fixture =
+        createFixture(
+            source,
+            "Previous translation",
+            Role.ROLE_TRANSLATOR,
+            true,
+            IntegrityCheckerType.MESSAGE_FORMAT_DOUBLE_BRACES);
+    logInAs(fixture.user());
+    TMTextUnitIntegrityCheckResult result = check(fixture, target);
+    assertEquals(Boolean.FALSE, result.getCheckResult());
+    assertTrue(result.getFailureDetail().contains("triple-brace variables do not match source"));
+
+    HttpClientErrorException exception =
+        assertSaveRejectedWithoutWrites(fixture, target, HttpStatus.UNPROCESSABLE_ENTITY);
+
+    assertTrue(
+        exception.getResponseBodyAsString().contains("triple-brace variables do not match source"));
+  }
+
+  @Test
   public void adminOverrideStillRequiresLocalePermission() throws Exception {
     Fixture fixture = createFixture(PERCENTAGE_SOURCE, PERCENTAGE_TARGET, Role.ROLE_ADMIN, false);
     logInAs(fixture.user());
@@ -142,6 +185,12 @@ public class TextUnitWSIntegrityOverrideWSTest extends WSTestBase {
 
   private Fixture createFixture(String source, String target, Role role, boolean allLocales)
       throws Exception {
+    return createFixture(source, target, role, allLocales, IntegrityCheckerType.PRINTF_LIKE);
+  }
+
+  private Fixture createFixture(
+      String source, String target, Role role, boolean allLocales, IntegrityCheckerType checkerType)
+      throws Exception {
     Repository repository =
         repositoryService.createRepository(testIdWatcher.getEntityName("repository"));
     repositoryService.addRepositoryLocale(repository, "ka");
@@ -161,7 +210,7 @@ public class TextUnitWSIntegrityOverrideWSTest extends WSTestBase {
     AssetIntegrityChecker checker = new AssetIntegrityChecker();
     checker.setRepository(repository);
     checker.setAssetExtension("strings");
-    checker.setIntegrityCheckerType(IntegrityCheckerType.PRINTF_LIKE);
+    checker.setIntegrityCheckerType(checkerType);
     checkerRepository.saveAndFlush(checker);
 
     User user =

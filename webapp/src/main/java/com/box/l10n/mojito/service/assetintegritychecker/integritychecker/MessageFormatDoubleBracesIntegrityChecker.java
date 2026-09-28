@@ -2,7 +2,9 @@ package com.box.l10n.mojito.service.assetintegritychecker.integritychecker;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,12 +13,16 @@ import java.util.regex.Pattern;
  * target content.
  *
  * <p>Verifies correct number of brackets in string then replaces double braces with a single brace
- * and runs the {@link MessageFormatIntegrityChecker} checks.
+ * and runs the {@link MessageFormatIntegrityChecker} checks. Sources that cannot be parsed this way
+ * can also use simple Mustache triple-brace variables, whose names and counts must be preserved.
  */
 public class MessageFormatDoubleBracesIntegrityChecker extends MessageFormatIntegrityChecker {
 
   private static final Pattern MUSTACHE_PARTIAL_PATTERN =
       Pattern.compile("\\{\\{\\s*>\\s*([^{}]+?)\\s*\\}\\}");
+
+  private static final Pattern MUSTACHE_TRIPLE_VARIABLE_PATTERN =
+      Pattern.compile("\\{\\{\\{\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*\\}\\}\\}(?!\\})");
 
   @Override
   public void check(String source, String content) throws MessageFormatIntegrityCheckerException {
@@ -25,9 +31,69 @@ public class MessageFormatDoubleBracesIntegrityChecker extends MessageFormatInte
     verifyMustachePartialsMatch(source, content);
     String compatibleSource = replaceMustachePartialsWithCompatiblePlaceholders(source);
     String compatibleContent = replaceMustachePartialsWithCompatiblePlaceholders(content);
+
+    // Adjacent ICU branch/argument braces and quoted literals can look like Mustache variables.
+    // Keep the legacy interpretation whenever the source already parses; never retry a failed
+    // target under a different interpretation.
+    if (source.contains("{{{") && !isLegacyMessageFormat(compatibleSource)) {
+      Map<String, Integer> sourceVariables = new LinkedHashMap<>();
+      String maskedSource = maskMustacheTripleVariables(source, sourceVariables);
+      if (!sourceVariables.isEmpty()) {
+        Map<String, Integer> contentVariables = new LinkedHashMap<>();
+        String maskedContent = maskMustacheTripleVariables(content, contentVariables);
+        if (!sourceVariables.equals(contentVariables)) {
+          throw new MessageFormatIntegrityCheckerException(
+              "Mustache triple-brace variables do not match source. Found: "
+                  + contentVariables
+                  + ", expected: "
+                  + sourceVariables);
+        }
+        compatibleSource = replaceMustachePartialsWithCompatiblePlaceholders(maskedSource);
+        compatibleContent = replaceMustachePartialsWithCompatiblePlaceholders(maskedContent);
+      }
+    }
+
     super.check(
         replaceDoubleBracesWithSingle(compatibleSource),
         replaceDoubleBracesWithSingle(compatibleContent));
+  }
+
+  private boolean isLegacyMessageFormat(String source) {
+    String compatibleSource = replaceDoubleBracesWithSingle(source);
+    try {
+      super.check(compatibleSource, compatibleSource);
+      return true;
+    } catch (MessageFormatIntegrityCheckerException e) {
+      return false;
+    }
+  }
+
+  private String maskMustacheTripleVariables(String text, Map<String, Integer> variables) {
+    StringBuilder masked = new StringBuilder(text.length());
+    Matcher matcher = MUSTACHE_TRIPLE_VARIABLE_PATTERN.matcher(text);
+    int depth = 0;
+    for (int i = 0; i < text.length(); i++) {
+      // Only top-level variables are supported: braces inside an ICU branch belong to ICU.
+      if (depth == 0 && text.startsWith("{{{", i)) {
+        if (!matcher.region(i, text.length()).lookingAt()) {
+          throw new MessageFormatIntegrityCheckerException(
+              "Invalid or unsupported Mustache triple-brace variable at index " + i);
+        }
+        variables.merge(matcher.group(1), 1, Integer::sum);
+        // A literal cannot collide with ICU argument names. This is only a validation copy.
+        masked.append("mojitoMustacheVariable");
+        i = matcher.end() - 1;
+      } else {
+        char c = text.charAt(i);
+        if (c == '{') {
+          depth++;
+        } else if (c == '}') {
+          depth--;
+        }
+        masked.append(c);
+      }
+    }
+    return masked.toString();
   }
 
   private void verifyEqualNumberOfBraces(String str) throws MessageFormatIntegrityCheckerException {

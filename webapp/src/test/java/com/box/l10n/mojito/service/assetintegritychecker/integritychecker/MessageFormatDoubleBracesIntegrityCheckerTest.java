@@ -1,11 +1,172 @@
 package com.box.l10n.mojito.service.assetintegritychecker.integritychecker;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
 public class MessageFormatDoubleBracesIntegrityCheckerTest {
+
+  private final MessageFormatDoubleBracesIntegrityChecker checker =
+      new MessageFormatDoubleBracesIntegrityChecker();
+
+  @Test
+  public void acceptsMixedTemplateVariablesWithoutChangingTheirContents() {
+    checker.check(
+        "Request {{type}}: {{{ verifyUrl }}}. Cancel: {{{ noVerifyUrl }}}.",
+        "Annuler : {{{noVerifyUrl}}}. Demande {{ type }} : {{{verifyUrl}}}.");
+  }
+
+  @Test
+  public void acceptsRepeatedTripleVariablesAndSurroundingApostrophes() {
+    checker.check(
+        "{{{url}}} and <a href='{{{ url }}}'>{{title}}</a>",
+        "<a href='{{{url}}}'>{{title}}</a> et {{{ url }}}");
+  }
+
+  @Test
+  public void rejectsChangedTripleVariableNamesCountsAndBraceWidths() {
+    String source = "{{{first}}} {{{first}}} {{{second}}} {{name}}";
+    for (String target :
+        new String[] {
+          "{{{renamed}}} {{{first}}} {{{second}}} {{name}}",
+          "{{{first}}} {{{second}}} {{name}}",
+          "{{{first}}} {{{first}}} {{{first}}} {{{second}}} {{name}}",
+          "{{{first}}} {{{second}}} {{{second}}} {{name}}",
+          "{{first}} {{first}} {{{second}}} {{name}}",
+          "{first} {first} {{{second}}} {{name}}",
+          "{{{first}}} {{{first}}} {{{second}}} {{{name}}}",
+          "{{{first}}} {{{first}}} {{{second}}} {{name}} {{{extra}}}"
+        }) {
+      assertThrows(
+          target,
+          MessageFormatIntegrityCheckerException.class,
+          () -> checker.check(source, target));
+    }
+  }
+
+  @Test
+  public void stillChecksSingleAndDoubleBraceArgumentsAlongsideTripleVariables() {
+    String source = "{{{url}}} {{name}} {count}";
+    for (String target :
+        new String[] {
+          "{{{url}}} {{otherName}} {count}",
+          "{{{url}}} {{name}} {otherCount}",
+          "{{{url}}} {count}",
+          "{{{url}}} {{name}}"
+        }) {
+      assertThrows(
+          target,
+          MessageFormatIntegrityCheckerException.class,
+          () -> checker.check(source, target));
+    }
+  }
+
+  @Test
+  public void keepsPartialValidationAlongsideTripleVariables() {
+    String source = "{{> header}} {{{url}}} {{> footer}}";
+    checker.check(source, "{{> header }}Lien : {{{ url }}}{{> footer }}");
+    for (String target :
+        new String[] {
+          "{{> footer}} {{{url}}} {{> header}}",
+          "{{> header}} {{{url}}} {{footer}}",
+          "{{> header}} {{{url}}} {{> renamed}}"
+        }) {
+      assertThrows(
+          target,
+          MessageFormatIntegrityCheckerException.class,
+          () -> checker.check(source, target));
+    }
+  }
+
+  @Test
+  public void keepsIcuPluralValidationAlongsideTripleVariables() {
+    String source = "{count, plural, one{One file} other{# files}} {{{url}}}";
+    checker.check(source, "{count, plural, one{Un fichier} other{# fichiers}} {{{ url }}}");
+    assertThrows(
+        MessageFormatIntegrityCheckerException.class,
+        () -> checker.check(source, "{count, plural, one{Un fichier}} {{{url}}}"));
+    assertThrows(
+        MessageFormatIntegrityCheckerException.class,
+        () ->
+            checker.check(
+                source, "{renamed, plural, one{Un fichier} other{# fichiers}} {{{url}}}"));
+  }
+
+  @Test
+  public void doesNotMaskNestedIcuBracesWhenTopLevelTripleVariablesActivateFallback() {
+    String source = "{n,plural,one{{{first}}} other{{{second}}}} at {{{url}}}";
+    checker.check(source, "À {{{ url }}} : {n,plural,one{{{first}}} other{{{second}}}}");
+    assertThrows(
+        MessageFormatIntegrityCheckerException.class,
+        () -> checker.check(source, "{n,plural,one{{{first}}} autre{{{second}}}} {{{url}}}"));
+  }
+
+  @Test
+  public void preservesLegacyNestedIcuAndQuotedLiteralInterpretations() {
+    for (String source :
+        new String[] {
+          "{n, plural, other{{{value}}}}",
+          "{{n, plural, other{{{value}}}}}",
+          "{n,plural,one{{{first}}} other{{{second}}}}"
+        }) {
+      checker.check(source, source);
+    }
+    checker.check("'{{{literal}}}'", "'{{{texte}}}'");
+    checker.check("<a href='{{{url}}}'>Link</a>", "<a href='{{{url}}}'>Lien</a>");
+  }
+
+  @Test
+  public void neverReinterpretsARejectedTargetForAnExistingValidSource() {
+    for (String[] pair :
+        new String[][] {
+          {"{{name}}", "{{{name}}}"},
+          {"{name}", "{{{name}}}"},
+          {"{n,plural,one{{{first}}} other{{{second}}}}", "{n,plural,one{{{first}}}}"}
+        }) {
+      assertThrows(
+          MessageFormatIntegrityCheckerException.class, () -> checker.check(pair[0], pair[1]));
+    }
+  }
+
+  @Test
+  public void rejectsMalformedAndUnsupportedTripleVariables() {
+    for (String malformed :
+        new String[] {
+          "{{{url}}",
+          "{{url}}}",
+          "{{{{url}}}}",
+          "{{{}}}",
+          "{{{two words}}}",
+          "{{{url,number}}}",
+          "{{{user.url}}}",
+          "{{{> partial}}}",
+          "{{{#section}}}"
+        }) {
+      assertThrows(
+          malformed,
+          MessageFormatIntegrityCheckerException.class,
+          () -> checker.check("{{{url}}}", malformed));
+      // A valid top-level variable must not hide another malformed source fragment.
+      String malformedSource = "{{{valid}}} " + malformed;
+      assertThrows(
+          malformedSource,
+          MessageFormatIntegrityCheckerException.class,
+          () -> checker.check(malformedSource, malformedSource));
+    }
+  }
+
+  @Test
+  public void quotedMalformedTripleVariablesCannotBypassTemplateValidation() {
+    for (String malformed :
+        new String[] {"{{{}}}", "{{{user.url}}}", "{{{{url}}}}", "{{{extra} }}"}) {
+      assertThrows(
+          malformed,
+          MessageFormatIntegrityCheckerException.class,
+          () -> checker.check("{{{url}}}", "{{{url}}} '" + malformed + "'"));
+    }
+  }
 
   @Test
   public void testCompilationCheckWorks() throws IntegrityCheckException {

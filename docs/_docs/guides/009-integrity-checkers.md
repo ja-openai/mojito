@@ -63,6 +63,25 @@ Missing curly braces or translating elements within the curly braces also cause 
 | <small>{numFiles, plural, one{one file} other{# files}}</small> | <small>{numFiles, plural, un{un fichier} autre{# fichiers}}</small>  | <small>FAIL translating quantity elements</small> |
 
 
+### Message Format Double-Braces Integrity Checker
+
+`MESSAGE_FORMAT_DOUBLE_BRACES` supports double-brace arguments and the existing ICU message
+syntax. When a source cannot be parsed using that syntax, it also supports top-level Mustache
+triple-brace variables such as `{% raw %}{{{ verifyUrl }}}{% endraw %}` alongside ordinary
+arguments and Mustache partials.
+
+Triple-brace variable names must use ASCII letters, digits, or underscores and start with a
+letter or underscore. Their names, occurrence counts, and triple-brace form must match the
+source. Variables can move and have whitespace inside their delimiters. Missing, renamed,
+duplicated, or double-brace replacements are rejected. Unsupported triple-brace expressions
+are rejected in this template mode, including when surrounded by apostrophes.
+
+Sources that already pass the existing ICU validation retain that interpretation, including
+quoted literal braces and adjacent braces in nested plural/select branches. Triple-brace
+template variables inside ICU branches are not added by this support. The checker only
+normalizes temporary validation copies; saved translations and exported text are not rewritten.
+Other configured checkers and save/import status policies continue to apply.
+
 ### HTML Tag Integrity Checker
 
 `HTML_TAG` preserves exact tag counts and attributes between source and translation, and checks
