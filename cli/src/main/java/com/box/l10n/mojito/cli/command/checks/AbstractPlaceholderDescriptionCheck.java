@@ -12,27 +12,24 @@ public abstract class AbstractPlaceholderDescriptionCheck {
   public abstract Set<String> checkCommentForDescriptions(String source, String comment);
 
   public Optional<String> getFailureText(String placeholder) {
-    String failureText = null;
+    String placeholderKind;
     if (StringUtils.isNumeric(placeholder)) {
-      failureText =
-          "Missing description for placeholder number "
-              + QUOTE_MARKER
-              + placeholder
-              + QUOTE_MARKER
-              + " in comment. Please add a description in the string comment in the form "
-              + placeholder
-              + ":<description>";
+      placeholderKind = "number";
     } else if (!placeholder.trim().isEmpty()) {
-      failureText =
-          "Missing description for placeholder with name "
-              + QUOTE_MARKER
-              + placeholder
-              + QUOTE_MARKER
-              + " in comment. Please add a description in the string comment in the form "
-              + placeholder
-              + ":<description>";
+      placeholderKind = "with name";
+    } else {
+      return Optional.empty();
     }
-    return Optional.ofNullable(failureText);
+    return Optional.of(
+        "Missing description for placeholder "
+            + placeholderKind
+            + " "
+            + QUOTE_MARKER
+            + placeholder
+            + QUOTE_MARKER
+            + " in comment. Please add a description in the string comment in the form "
+            + placeholder
+            + ":<description>");
   }
 
   protected boolean isPlaceholderDescriptionMissingInComment(String comment, String placeholder) {
