@@ -14,8 +14,8 @@ public class MessageFormatDoubleBracesIntegrityCheckerTest {
   @Test
   public void acceptsMixedTemplateVariablesWithoutChangingTheirContents() {
     checker.check(
-        "Request {{type}}: {{{ verifyUrl }}}. Cancel: {{{ noVerifyUrl }}}.",
-        "Annuler : {{{noVerifyUrl}}}. Demande {{ type }} : {{{verifyUrl}}}.");
+        "Request {{type}}: {{{ confirmationUrl }}}. Cancel: {{{ cancelUrl }}}.",
+        "Annuler : {{{cancelUrl}}}. Demande {{ type }} : {{{confirmationUrl}}}.");
   }
 
   @Test

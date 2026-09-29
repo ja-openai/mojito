@@ -67,7 +67,7 @@ Missing curly braces or translating elements within the curly braces also cause 
 
 `MESSAGE_FORMAT_DOUBLE_BRACES` supports double-brace arguments and the existing ICU message
 syntax. When a source cannot be parsed using that syntax, it also supports top-level Mustache
-triple-brace variables such as `{% raw %}{{{ verifyUrl }}}{% endraw %}` alongside ordinary
+triple-brace variables such as `{% raw %}{{{ confirmationUrl }}}{% endraw %}` alongside ordinary
 arguments and Mustache partials.
 
 Triple-brace variable names must use ASCII letters, digits, or underscores and start with a

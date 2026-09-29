@@ -108,8 +108,8 @@ public class TextUnitWSIntegrityOverrideWSTest extends WSTestBase {
 
   @Test
   public void translatorCanSaveMixedTemplateBracesWithoutChangingStoredText() throws Exception {
-    String source = "Confirm {{type}}: {{{ verifyUrl }}}; cancel: {{{ noVerifyUrl }}}.";
-    String target = "დაადასტურეთ {{type}}: {{{ verifyUrl }}}; გაუქმება: {{{ noVerifyUrl }}}.";
+    String source = "Confirm {{type}}: {{{ confirmationUrl }}}; cancel: {{{ cancelUrl }}}.";
+    String target = "დაადასტურეთ {{type}}: {{{ confirmationUrl }}}; გაუქმება: {{{ cancelUrl }}}.";
     Fixture fixture =
         createFixture(
             source,
@@ -128,8 +128,8 @@ public class TextUnitWSIntegrityOverrideWSTest extends WSTestBase {
 
   @Test
   public void translatorCannotReplaceTripleBracesWithDoubleBraces() throws Exception {
-    String source = "Confirm {{type}}: {{{ verifyUrl }}}; cancel: {{{ noVerifyUrl }}}.";
-    String target = "დაადასტურეთ {{type}}: {{ verifyUrl }}; გაუქმება: {{{ noVerifyUrl }}}.";
+    String source = "Confirm {{type}}: {{{ confirmationUrl }}}; cancel: {{{ cancelUrl }}}.";
+    String target = "დაადასტურეთ {{type}}: {{ confirmationUrl }}; გაუქმება: {{{ cancelUrl }}}.";
     Fixture fixture =
         createFixture(
             source,
