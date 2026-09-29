@@ -74,7 +74,7 @@ public class AuthenticatedRestTemplate {
     logger.debug("Create the RestTemplate instance that will be wrapped");
 
     makeRestTemplateWithCustomObjectMapper(restTemplate);
-    setErrorHandlerWithLogging(restTemplate);
+    setErrorHandlerWithLogging();
 
     ResttemplateConfig.AuthenticationMode mode = resttemplateConfig.getAuthenticationMode();
 
@@ -117,7 +117,7 @@ public class AuthenticatedRestTemplate {
     }
   }
 
-  void setErrorHandlerWithLogging(RestTemplate restTemplate) {
+  void setErrorHandlerWithLogging() {
     this.restTemplate.setErrorHandler(
         new DefaultResponseErrorHandler() {
           @Override
