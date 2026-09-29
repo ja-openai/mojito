@@ -5943,3 +5943,43 @@ it('keeps follow-up rows read-only until the agent has answered the human round'
   expect(screen.getByRole('button', { name: /^Accept$/ })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Use suggestion' })).toBeDisabled();
 });
+
+describe('review project status permissions', () => {
+  it('lets a PM without translation locales confirm closing a project with pending items', () => {
+    const onRequestProjectStatus = vi.fn();
+    renderReviewProjectPageView(
+      { mutations: buildMutations({ onRequestProjectStatus }) },
+      { ...user, role: 'ROLE_PM', canTranslateAllLocales: false, userLocales: [] },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close project' }));
+    expect(onRequestProjectStatus).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('alertdialog', { name: 'Close with pending items?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close project' }));
+    expect(onRequestProjectStatus).toHaveBeenCalledWith('CLOSED');
+  });
+
+  it('lets a PM without translation locales reopen a project', () => {
+    const onRequestProjectStatus = vi.fn();
+    renderReviewProjectPageView(
+      {
+        project: { ...project, status: 'CLOSED' },
+        mutations: buildMutations({ onRequestProjectStatus }),
+      },
+      { ...user, role: 'ROLE_PM', canTranslateAllLocales: false, userLocales: [] },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen project' }));
+    expect(onRequestProjectStatus).toHaveBeenCalledWith('OPEN');
+  });
+
+  it('keeps translators from closing a project with pending items', () => {
+    const onRequestProjectStatus = vi.fn();
+    renderReviewProjectPageView({ mutations: buildMutations({ onRequestProjectStatus }) });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close project' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Project is not ready to close' });
+    expect(within(dialog).queryByRole('button', { name: 'Close project' })).not.toBeInTheDocument();
+    expect(onRequestProjectStatus).not.toHaveBeenCalled();
+  });
+});

@@ -2036,7 +2036,7 @@ public class ReviewProjectService {
                         "reviewProject with id: " + projectId + " not found"));
     assertCurrentUserCanReadProject(reviewProject);
 
-    if (!userService.isCurrentUserAdmin()) {
+    if (!userService.isCurrentUserAdminOrPm()) {
       userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
     }
     if (status == ReviewProjectStatus.CLOSED
@@ -2441,7 +2441,9 @@ public class ReviewProjectService {
   @Transactional
   public int adminBatchUpdateStatus(
       List<Long> projectIds, ReviewProjectStatus status, String closeReason) {
-    requireAdmin();
+    if (!userService.isCurrentUserAdminOrPm()) {
+      throw new AccessDeniedException("Admin or PM role required");
+    }
     if (CollectionUtils.isEmpty(projectIds)) {
       return 0;
     }
@@ -2455,6 +2457,7 @@ public class ReviewProjectService {
     }
 
     List<ReviewProject> projects = reviewProjectRepository.findAllById(distinctIds);
+    projects.forEach(this::assertCurrentUserCanReadProject);
     for (ReviewProject project : projects) {
       project.setStatus(status);
       if (status == ReviewProjectStatus.OPEN) {

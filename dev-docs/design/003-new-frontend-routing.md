@@ -49,6 +49,14 @@ Open questions
 - Where should shared tokens live long-term (global CSS vs. theming system)?
 - Keep legacy route aliases explicit in `NewFrontendController` and redirect them in the SPA when there is a current replacement route.
 
+Review project status permissions
+- PMs can close and reopen projects assigned to them or belonging to their PM teams, without
+  needing translation-locale permissions. Admins retain access to all projects.
+- The project list exposes selection and batch Close/Reopen actions to PMs. The service checks
+  access to every selected project before changing any status. Delete, request editing, and
+  decided-count recomputation remain admin-only in the list.
+- Translators keep their existing single-project locale checks and can close only completed projects.
+
 Team settings navigation
 - Team details keep the title and section tabs visible above a scrolling content pane.
 - General, Translators, and the admin-only PM and Slack sections show one panel at a time;

@@ -129,13 +129,14 @@ export type ReviewProjectRow = {
 
 export type ReviewProjectsAdminControls = {
   enabled: boolean;
+  canEditRequest: boolean;
   selectedProjectIds: number[];
   onToggleProjectSelection: (projectId: number) => void;
   onSetProjectSelection?: (projectIds: number[], selected: boolean) => void;
   onSelectAllVisible: () => void;
   onClearSelection: () => void;
   onBatchStatus: (status: ApiReviewProjectStatus) => void;
-  onBatchDelete: () => void;
+  onBatchDelete?: () => void;
   onRecomputeRequestStats?: (requestId: number) => void;
   recomputingRequestId?: number | null;
   isSaving: boolean;
@@ -319,7 +320,7 @@ function AdminBar({
   const disabled = adminControls.isSaving;
 
   return (
-    <div className="review-projects-page__admin-bar" role="region" aria-label="Admin actions">
+    <div className="review-projects-page__admin-bar" role="region" aria-label="Project actions">
       <div className="review-projects-page__admin-left">
         <span className="review-projects-page__admin-count">
           {hasSelection ? `${selectedCount} selected` : 'No selection'}
@@ -358,14 +359,16 @@ function AdminBar({
         >
           Reopen
         </button>
-        <button
-          type="button"
-          className="review-projects-page__admin-button review-projects-page__admin-button--danger"
-          onClick={adminControls.onBatchDelete}
-          disabled={!hasSelection || disabled}
-        >
-          Delete
-        </button>
+        {adminControls.onBatchDelete ? (
+          <button
+            type="button"
+            className="review-projects-page__admin-button review-projects-page__admin-button--danger"
+            onClick={adminControls.onBatchDelete}
+            disabled={!hasSelection || disabled}
+          >
+            Delete
+          </button>
+        ) : null}
       </div>
       {adminControls.errorMessage ? (
         <div className="review-projects-page__admin-error">{adminControls.errorMessage}</div>
@@ -393,7 +396,7 @@ function ContentSection({
   assignmentControls?: ReviewProjectsAssignmentControls;
   reviewProjectsSessionKey?: string | null;
 }) {
-  const isAdmin = adminControls?.enabled ?? false;
+  const canSelectProjects = adminControls?.enabled ?? false;
   const canReassignTranslator = assignmentControls?.canReassignTranslator ?? false;
   const canClaimTranslator = assignmentControls?.canClaimTranslator ?? false;
   const queryClient = useQueryClient();
@@ -582,7 +585,7 @@ function ContentSection({
                 return (
                   <ReviewProjectRowView
                     project={project}
-                    isAdmin={isAdmin}
+                    canSelectProjects={canSelectProjects}
                     isSelected={selectedProjectIdSet.has(project.id)}
                     onToggleSelection={adminControls?.onToggleProjectSelection}
                     translatorAssignmentAction={translatorAssignmentAction}
@@ -1408,7 +1411,7 @@ function EmptyState() {
 
 function ReviewProjectRowView({
   project,
-  isAdmin,
+  canSelectProjects,
   isSelected,
   onToggleSelection,
   translatorAssignmentAction,
@@ -1417,7 +1420,7 @@ function ReviewProjectRowView({
   reviewProjectsSessionKey,
 }: {
   project: ReviewProjectRow;
-  isAdmin: boolean;
+  canSelectProjects: boolean;
   isSelected: boolean;
   onToggleSelection?: (projectId: number) => void;
   translatorAssignmentAction?: TranslatorAssignmentAction;
@@ -1448,7 +1451,7 @@ function ReviewProjectRowView({
       <div className="review-projects-page__row-grid">
         <div className="review-projects-page__project">
           <div className="review-projects-page__id-row">
-            {isAdmin ? (
+            {canSelectProjects ? (
               <label className="review-projects-page__select">
                 <input
                   type="checkbox"
@@ -1655,7 +1658,7 @@ function RequestGroupsSection({
   reviewProjectsSessionKey?: string | null;
 }) {
   const resolveLocaleDisplayName = useLocaleDisplayNameResolver();
-  const isAdmin = adminControls?.enabled ?? false;
+  const canSelectProjects = adminControls?.enabled ?? false;
   const canReassignPm = assignmentControls?.canReassignPm ?? false;
   const canReassignTranslator = assignmentControls?.canReassignTranslator ?? false;
   const canClaimTranslator = assignmentControls?.canClaimTranslator ?? false;
@@ -2085,7 +2088,7 @@ function RequestGroupsSection({
                 >
                   <div className="review-projects-page__project">
                     <div className="review-projects-page__id-row">
-                      {isAdmin ? (
+                      {canSelectProjects ? (
                         <SelectionCheckbox
                           className="review-projects-page__select--request-group"
                           checked={allSelectedInGroup}
@@ -2123,12 +2126,12 @@ function RequestGroupsSection({
                             Request #{group.requestId}
                           </button>
                         ) : null}
-                        {isAdmin && requestEditProjectId != null ? (
+                        {adminControls?.canEditRequest && requestEditProjectId != null ? (
                           <span className="review-projects-page__request-dot" aria-hidden="true">
                             ·
                           </span>
                         ) : null}
-                        {isAdmin && requestEditProjectId != null ? (
+                        {adminControls?.canEditRequest && requestEditProjectId != null ? (
                           <Link
                             to={buildReviewProjectDetailPath(
                               requestEditProjectId,
@@ -2140,12 +2143,12 @@ function RequestGroupsSection({
                             Edit
                           </Link>
                         ) : null}
-                        {group.requestId != null && isAdmin ? (
+                        {group.requestId != null && adminControls?.onRecomputeRequestStats ? (
                           <span className="review-projects-page__request-dot" aria-hidden="true">
                             ·
                           </span>
                         ) : null}
-                        {group.requestId != null && isAdmin ? (
+                        {group.requestId != null && adminControls?.onRecomputeRequestStats ? (
                           <button
                             type="button"
                             className="review-projects-page__request-link review-projects-page__request-action"
@@ -2310,7 +2313,7 @@ function RequestGroupsSection({
                       const isTranslatorClaimAction = translatorAssignmentAction === 'claim';
                       return (
                         <div key={project.id} className="review-projects-page__request-project-row">
-                          {isAdmin ? (
+                          {canSelectProjects ? (
                             <SelectionCheckbox
                               className="review-projects-page__select--request-row"
                               checked={isSelected}

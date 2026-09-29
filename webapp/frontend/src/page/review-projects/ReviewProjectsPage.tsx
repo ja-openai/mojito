@@ -268,6 +268,7 @@ export function ReviewProjectsPage() {
   const queryClient = useQueryClient();
   const isAdmin = user.role === 'ROLE_ADMIN';
   const isPm = user.role === 'ROLE_PM';
+  const canUpdateProjectStatus = isAdmin || isPm;
   const isTranslator = user.role === 'ROLE_TRANSLATOR';
   const canUseRequestMode = isAdmin || user.role === 'ROLE_PM';
   const canUseTeamFilter = isAdmin || isPm;
@@ -817,11 +818,11 @@ export function ReviewProjectsPage() {
   const visibleProjectIdSet = useMemo(() => new Set(visibleProjectIds), [visibleProjectIds]);
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!canUpdateProjectStatus) {
       return;
     }
     setSelectedProjectIds((prev) => prev.filter((id) => visibleProjectIdSet.has(id)));
-  }, [isAdmin, visibleProjectIdSet]);
+  }, [canUpdateProjectStatus, visibleProjectIdSet]);
 
   useEffect(() => {
     if (!isAdmin || selectedProjectIds.length === 0) {
@@ -962,12 +963,12 @@ export function ReviewProjectsPage() {
 
   const requestBatchStatus = useCallback(
     (nextStatus: ApiReviewProjectStatus) => {
-      if (!isAdmin || selectedProjectIds.length === 0 || isBatchSaving) {
+      if (!canUpdateProjectStatus || selectedProjectIds.length === 0 || isBatchSaving) {
         return;
       }
       batchStatusMutation.mutate({ projectIds: [...selectedProjectIds], status: nextStatus });
     },
-    [batchStatusMutation, isAdmin, isBatchSaving, selectedProjectIds],
+    [batchStatusMutation, canUpdateProjectStatus, isBatchSaving, selectedProjectIds],
   );
 
   const requestBatchDelete = useCallback(() => {
@@ -1000,17 +1001,18 @@ export function ReviewProjectsPage() {
     [isAdmin, isBatchSaving, recomputeRequestStatsMutation],
   );
 
-  const adminControls: ReviewProjectsAdminControls | undefined = isAdmin
+  const adminControls: ReviewProjectsAdminControls | undefined = canUpdateProjectStatus
     ? {
         enabled: true,
+        canEditRequest: isAdmin,
         selectedProjectIds,
         onToggleProjectSelection: toggleProjectSelection,
         onSetProjectSelection: setProjectSelection,
         onSelectAllVisible: selectAllVisibleProjects,
         onClearSelection: clearProjectSelection,
         onBatchStatus: requestBatchStatus,
-        onBatchDelete: requestBatchDelete,
-        onRecomputeRequestStats: handleRecomputeRequestStats,
+        onBatchDelete: isAdmin ? requestBatchDelete : undefined,
+        onRecomputeRequestStats: isAdmin ? handleRecomputeRequestStats : undefined,
         recomputingRequestId: recomputeRequestStatsMutation.isPending
           ? (recomputeRequestStatsMutation.variables?.requestId ?? null)
           : null,

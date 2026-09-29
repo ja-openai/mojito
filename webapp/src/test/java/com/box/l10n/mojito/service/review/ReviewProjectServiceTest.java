@@ -279,11 +279,13 @@ public class ReviewProjectServiceTest {
 
     assertEquals(ReviewProjectStatus.CLOSED, project.getStatus());
     verify(reviewProjectRepository).save(project);
+    verify(userService).checkUserCanEditLocale(13L);
   }
 
   @Test
   public void pmCanCloseIncompleteProject() {
     setCurrentUserRole(false, true, false);
+    currentUser.setCanTranslateAllLocales(false);
     ReviewProject project = project(11L, team(7L), locale(13L, "fr-FR"), currentUser, null);
     project.setTextUnitCount(3);
     project.setDecidedCount(2L);
@@ -293,6 +295,121 @@ public class ReviewProjectServiceTest {
 
     assertEquals(ReviewProjectStatus.CLOSED, project.getStatus());
     verify(reviewProjectRepository).save(project);
+    verify(userService, never()).checkUserCanEditLocale(anyLong());
+  }
+
+  @Test
+  public void pmCanReopenTeamProjectWithoutTranslationLocaleAccess() {
+    setCurrentUserRole(false, true, false);
+    currentUser.setCanTranslateAllLocales(false);
+    Team team = team(7L);
+    ReviewProject project = project(11L, team, locale(13L, "fr-FR"), null, null);
+    project.setStatus(ReviewProjectStatus.CLOSED);
+    project.setCloseReason("Closed early");
+    when(reviewProjectRepository.findById(11L)).thenReturn(Optional.of(project));
+    when(teamUserRepository.findByUserIdAndRole(99L, TeamUserRole.PM))
+        .thenReturn(List.of(teamUser(team, currentUser, TeamUserRole.PM)));
+
+    reviewProjectService.updateProjectStatus(11L, ReviewProjectStatus.OPEN, null);
+
+    assertEquals(ReviewProjectStatus.OPEN, project.getStatus());
+    assertNull(project.getCloseReason());
+    verify(reviewProjectRepository).save(project);
+    verify(userService, never()).checkUserCanEditLocale(anyLong());
+  }
+
+  @Test
+  public void pmCannotChangeStatusOfProjectOutsideTheirScope() {
+    setCurrentUserRole(false, true, false);
+    ReviewProject project = project(11L, team(7L), locale(13L, "fr-FR"), null, null);
+    when(reviewProjectRepository.findById(11L)).thenReturn(Optional.of(project));
+
+    for (ReviewProjectStatus status : ReviewProjectStatus.values()) {
+      assertThrows(
+          AccessDeniedException.class,
+          () -> reviewProjectService.updateProjectStatus(11L, status, null));
+    }
+
+    verify(reviewProjectRepository, never()).save(any());
+  }
+
+  @Test
+  public void pmCanBatchCloseAndReopenAccessibleProjectsWithoutTranslationLocaleAccess() {
+    setCurrentUserRole(false, true, false);
+    currentUser.setCanTranslateAllLocales(false);
+    Team team = team(7L);
+    ReviewProject assignedProject = project(11L, team(8L), locale(13L, "fr-FR"), currentUser, null);
+    assignedProject.setTextUnitCount(3);
+    assignedProject.setDecidedCount(2L);
+    ReviewProject teamProject = project(12L, team, locale(14L, "ja-JP"), null, null);
+    List<ReviewProject> projects = List.of(assignedProject, teamProject);
+    when(reviewProjectRepository.findAllById(List.of(11L, 12L))).thenReturn(projects);
+    when(teamUserRepository.findByUserIdAndRole(99L, TeamUserRole.PM))
+        .thenReturn(List.of(teamUser(team, currentUser, TeamUserRole.PM)));
+
+    assertEquals(
+        2,
+        reviewProjectService.adminBatchUpdateStatus(
+            List.of(11L, 12L), ReviewProjectStatus.CLOSED, " Closed early "));
+    for (ReviewProject project : projects) {
+      assertEquals(ReviewProjectStatus.CLOSED, project.getStatus());
+      assertEquals("Closed early", project.getCloseReason());
+    }
+
+    assertEquals(
+        2,
+        reviewProjectService.adminBatchUpdateStatus(
+            List.of(11L, 12L), ReviewProjectStatus.OPEN, null));
+    for (ReviewProject project : projects) {
+      assertEquals(ReviewProjectStatus.OPEN, project.getStatus());
+      assertNull(project.getCloseReason());
+    }
+    verify(reviewProjectRepository, times(2)).saveAll(projects);
+    verify(userService, never()).checkUserCanEditLocale(anyLong());
+  }
+
+  @Test
+  public void pmBatchStatusChecksAllProjectsBeforeChangingAny() {
+    setCurrentUserRole(false, true, false);
+    ReviewProject accessible = project(11L, team(7L), locale(13L, "fr-FR"), currentUser, null);
+    ReviewProject inaccessible = project(12L, team(8L), locale(13L, "fr-FR"), null, null);
+    when(reviewProjectRepository.findAllById(List.of(11L, 12L)))
+        .thenReturn(List.of(accessible, inaccessible));
+
+    for (ReviewProjectStatus status : ReviewProjectStatus.values()) {
+      assertThrows(
+          AccessDeniedException.class,
+          () -> reviewProjectService.adminBatchUpdateStatus(List.of(11L, 12L), status, null));
+    }
+
+    assertEquals(ReviewProjectStatus.OPEN, accessible.getStatus());
+    assertEquals(ReviewProjectStatus.OPEN, inaccessible.getStatus());
+    verify(reviewProjectRepository, never()).saveAll(any());
+  }
+
+  @Test
+  public void translatorCannotBatchChangeProjectStatus() {
+    setCurrentUserRole(false, false, true);
+
+    assertThrows(
+        AccessDeniedException.class,
+        () ->
+            reviewProjectService.adminBatchUpdateStatus(
+                List.of(11L), ReviewProjectStatus.CLOSED, null));
+
+    verify(reviewProjectRepository, never()).findAllById(any());
+  }
+
+  @Test
+  public void pmCannotDeleteProjectsOrRecomputeDecidedCounts() {
+    setCurrentUserRole(false, true, false);
+
+    assertThrows(
+        AccessDeniedException.class,
+        () -> reviewProjectService.adminBatchDeleteProjects(List.of(11L)));
+    assertThrows(
+        AccessDeniedException.class,
+        () -> reviewProjectService.adminRecomputeRequestDecidedCounts(1L));
   }
 
   @Test
