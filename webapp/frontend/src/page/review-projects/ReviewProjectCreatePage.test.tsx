@@ -200,6 +200,22 @@ function selectIncidentSource() {
   fireEvent.click(screen.getByRole('button', { name: 'Review team (#31)' }));
 }
 
+describe('review project terminology creation', () => {
+  it('creates a normal translation review with the Terminology label', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Type' }));
+    expect(screen.queryByRole('button', { name: 'Glossary review' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Terminology' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() =>
+      expect(createRequestMock).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'TERMINOLOGY_CLEANUP' }),
+      ),
+    );
+  });
+});
+
 describe('incident review project creation', () => {
   it('creates directly with one whole-scope request without previewing', async () => {
     renderPage('REPOSITORIES');

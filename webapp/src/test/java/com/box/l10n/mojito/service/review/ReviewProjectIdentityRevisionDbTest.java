@@ -7,7 +7,6 @@ import static org.mockito.Mockito.doAnswer;
 
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.review.ReviewProject;
-import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
@@ -305,7 +304,6 @@ public class ReviewProjectIdentityRevisionDbTest extends ServiceTestBase {
     ReviewProject project = new ReviewProject();
     project.setLocale(locale);
     project.setType(ReviewProjectType.TERMINOLOGY);
-    project.setTerminologyPhase(ReviewProjectTerminologyPhase.PM_RESOLUTION);
     project.setDueDate(ZonedDateTime.now().plusDays(1));
     project = projectRepository.saveAndFlush(project);
     ReviewProjectTextUnit row = new ReviewProjectTextUnit();

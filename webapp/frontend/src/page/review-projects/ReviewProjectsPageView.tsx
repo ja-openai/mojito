@@ -12,7 +12,7 @@ import {
   type ApiReviewProjectTerminologyPhase,
   type ApiReviewProjectType,
   claimReviewProjectTranslatorAssignment,
-  isTerminologyReviewProject,
+  isTerminologyReviewProjectType,
   REVIEW_PROJECT_STATUS_LABELS,
   REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
@@ -421,10 +421,7 @@ function ContentSection({
   }, [reassignProject]);
 
   const activeTeamId = reassignProject?.teamId ?? null;
-  const isTerminologyReassignProject = isTerminologyReviewProject(
-    reassignProject?.type,
-    reassignProject?.terminologyPhase,
-  );
+  const isTerminologyReassignProject = isTerminologyReviewProjectType(reassignProject?.type);
   const isTranslatorClaimProject =
     reassignProject != null && !canReassignTranslator && canClaimTranslator;
   const teamTranslatorUsersQuery = useQuery({
@@ -892,7 +889,7 @@ function getRequestGroupTypeBadge(group: ReviewProjectRequestGroupRow): {
 }
 
 function isTerminologyProject(project: ReviewProjectRow) {
-  return isTerminologyReviewProject(project.type, project.terminologyPhase);
+  return isTerminologyReviewProjectType(project.type);
 }
 
 function isTerminologyRequestGroup(group: ReviewProjectRequestGroupRow) {
@@ -918,7 +915,7 @@ function getTerminologyGroupSummary(group: ReviewProjectRequestGroupRow) {
 
 function getTerminologyProjectPhaseLabel(project: ReviewProjectRow) {
   return project.terminologyPhase == null
-    ? 'Terminology'
+    ? REVIEW_PROJECT_TYPE_LABELS[project.type]
     : REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS[project.terminologyPhase];
 }
 
@@ -2003,10 +2000,11 @@ function RequestGroupsSection({
   }, [reassignMutation.isPending]);
 
   const isSpecialistReassignTarget =
-    reassignTarget?.kind === 'translator' && isTerminologyProject(reassignTarget.project);
+    reassignTarget?.kind === 'translator' &&
+    isTerminologyReviewProjectType(reassignTarget.project.type);
   const isTerminologyReassignTarget =
     reassignTarget?.kind === 'translator'
-      ? isTerminologyProject(reassignTarget.project)
+      ? isTerminologyReviewProjectType(reassignTarget.project.type)
       : (reassignTarget?.projects.length ?? 0) > 0 &&
         reassignTarget?.projects.every(isTerminologyProject);
   const translatorRoleLabel = isSpecialistReassignTarget ? 'Advisor' : 'Translator';

@@ -662,6 +662,12 @@ public class TeamSlackNotificationService {
     if (type == null) {
       return "Unknown";
     }
+    if (type == ReviewProjectType.TERMINOLOGY_CLEANUP) {
+      return "Terminology";
+    }
+    if (type == ReviewProjectType.TERMINOLOGY) {
+      return "Glossary review";
+    }
     String[] parts = type.name().split("_");
     List<String> words = new ArrayList<>();
     for (String part : parts) {

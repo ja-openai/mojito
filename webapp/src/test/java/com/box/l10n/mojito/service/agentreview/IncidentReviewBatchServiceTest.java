@@ -24,18 +24,21 @@ public class IncidentReviewBatchServiceTest {
   public void terminologyLabelCanCreateIncidentTranslationReview() {
     authorize();
 
-    service.validateRequest(request(ReviewProjectType.TERMINOLOGY), 7L);
+    service.validateRequest(request(ReviewProjectType.TERMINOLOGY_CLEANUP), 7L);
 
     verify(teams).assertCurrentUserCanAccessTeam(3L);
   }
 
   @Test
-  public void termCandidateProjectsCannotCreateIncidentTranslationReview() {
+  public void glossaryProjectTypesCannotCreateIncidentTranslationReview() {
     authorize();
 
-    assertThatThrownBy(() -> service.validateRequest(request(ReviewProjectType.TERM_CANDIDATE), 7L))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Incident review does not use term candidate projects");
+    for (ReviewProjectType type :
+        List.of(ReviewProjectType.TERMINOLOGY, ReviewProjectType.TERM_CANDIDATE)) {
+      assertThatThrownBy(() -> service.validateRequest(request(type), 7L))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessage("Incident review does not use terminology project types");
+    }
   }
 
   private void authorize() {

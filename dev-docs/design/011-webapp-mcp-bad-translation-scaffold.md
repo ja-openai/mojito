@@ -47,7 +47,7 @@ What this scaffold includes
   - require explicit confirmation and, per row, the Review Project, Review Project text unit,
     repository id and name, locale, TM text unit, current variant, exact old target, and replacement
   - accept target-locale translation Review Projects (`EMERGENCY`, `NORMAL`, `BUG_FIXES`, and
-    `TERMINOLOGY` without a glossary phase); reject repository source locales, phased
+    `TERMINOLOGY_CLEANUP`); reject repository source locales,
     `TERMINOLOGY` glossary reviews, `TERM_CANDIDATE`, and fail-closed `UNKNOWN`
   - lock the current variant first, then lock and re-read the complete audited identity graph before
     comparing every identity and the exact stored old target; normalize only the replacement before

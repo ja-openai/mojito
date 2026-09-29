@@ -87,53 +87,6 @@ beforeEach(() => {
 });
 
 describe('review project batch permissions', () => {
-  it.each([
-    { mode: 'requests', terminologyPhase: null, translator: 'translator', pm: 'PM' },
-    { mode: 'list', terminologyPhase: null, translator: 'translator', pm: 'PM' },
-    {
-      mode: 'requests',
-      terminologyPhase: 'SPECIALIST_INPUT',
-      translator: 'advisor',
-      pm: 'decider',
-    },
-    { mode: 'list', terminologyPhase: 'SPECIALIST_INPUT', translator: 'advisor', pm: 'decider' },
-  ] as const)(
-    'uses the correct Terminology roles with phase $terminologyPhase in $mode mode',
-    async ({ mode, terminologyPhase, translator, pm }) => {
-      const terminologyProject: ReviewProjectsApi.ApiReviewProjectSummary = {
-        ...project,
-        type: 'TERMINOLOGY',
-        terminologyPhase,
-        assignment: { assignedPmUsername: 'alice', assignedTranslatorUsername: 'bob' },
-      };
-      mocks.searchProjects.mockResolvedValue({ reviewProjects: [terminologyProject] });
-      mocks.searchRequests.mockResolvedValue({
-        requestGroups: [
-          { requestId: 70, requestName: 'Checkout review', reviewProjects: [terminologyProject] },
-        ],
-      });
-      renderPage('ROLE_ADMIN');
-      await screen.findByRole('region', { name: 'Project actions' });
-      if (mode === 'list') {
-        fireEvent.click(screen.getByRole('button', { name: 'List' }));
-      } else {
-        expect(
-          await screen.findByRole('button', { name: `Reassign ${pm} for this request` }),
-        ).toBeInTheDocument();
-        fireEvent.click(screen.getByText('Checkout review'));
-      }
-
-      expect(
-        await screen.findByRole('button', { name: `Reassign ${translator}` }),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole('button', {
-          name: `Reassign ${translator === 'advisor' ? 'translator' : 'advisor'}`,
-        }),
-      ).not.toBeInTheDocument();
-    },
-  );
-
   it.each(['requests', 'list'] as const)(
     'lets a PM close and reopen projects in %s mode without admin actions',
     async (mode) => {

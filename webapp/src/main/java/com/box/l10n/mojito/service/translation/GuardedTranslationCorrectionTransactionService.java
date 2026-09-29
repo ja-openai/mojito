@@ -7,6 +7,7 @@ import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
+import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
@@ -331,7 +332,7 @@ public class GuardedTranslationCorrectionTransactionService {
       return conflict(
           index, correction, "TM_TEXT_UNIT_ID_MISMATCH", "TM text-unit identity changed");
     }
-    if (!isTranslationReviewProject(reviewProject)) {
+    if (!isTranslationReviewProjectType(reviewProject.getType())) {
       return conflict(
           index,
           correction,
@@ -434,11 +435,10 @@ public class GuardedTranslationCorrectionTransactionService {
     return value != null && value > 0;
   }
 
-  private static boolean isTranslationReviewProject(ReviewProject project) {
-    return switch (project.getType()) {
-      case EMERGENCY, NORMAL, BUG_FIXES -> true;
-      case TERMINOLOGY -> project.getTerminologyPhase() == null;
-      case TERM_CANDIDATE, UNKNOWN -> false;
+  private static boolean isTranslationReviewProjectType(ReviewProjectType type) {
+    return switch (type) {
+      case EMERGENCY, NORMAL, BUG_FIXES, TERMINOLOGY_CLEANUP -> true;
+      case TERMINOLOGY, TERM_CANDIDATE, UNKNOWN -> false;
     };
   }
 

@@ -21,20 +21,18 @@ export const REVIEW_PROJECT_TYPES = [
   'EMERGENCY',
   'NORMAL',
   'BUG_FIXES',
+  'TERMINOLOGY_CLEANUP',
   'TERMINOLOGY',
   'TERM_CANDIDATE',
   'UNKNOWN',
 ] as const;
 export type ApiReviewProjectType = (typeof REVIEW_PROJECT_TYPES)[number];
 
+export const isTerminologyReviewProjectType = (type?: ApiReviewProjectType | null) =>
+  type === 'TERMINOLOGY' || type === 'TERM_CANDIDATE';
+
 export const REVIEW_PROJECT_TERMINOLOGY_PHASES = ['SPECIALIST_INPUT', 'PM_RESOLUTION'] as const;
 export type ApiReviewProjectTerminologyPhase = (typeof REVIEW_PROJECT_TERMINOLOGY_PHASES)[number];
-
-// The Terminology label uses translation review unless the glossary workflow sets a phase.
-export const isTerminologyReviewProject = (
-  type: ApiReviewProjectType | null | undefined,
-  terminologyPhase: ApiReviewProjectTerminologyPhase | null | undefined,
-) => type === 'TERM_CANDIDATE' || (type === 'TERMINOLOGY' && terminologyPhase != null);
 
 export const REVIEW_PROJECT_TEXT_UNIT_SUGGESTION_SOURCES = ['FIND_REPLACE', 'AI_REVIEW'] as const;
 export type ApiReviewProjectTextUnitSuggestionSource =
@@ -62,7 +60,8 @@ export const REVIEW_PROJECT_TYPE_LABELS: Record<ApiReviewProjectType, string> = 
   NORMAL: 'Normal',
   EMERGENCY: 'Emergency',
   BUG_FIXES: 'Bug fixes',
-  TERMINOLOGY: 'Terminology',
+  TERMINOLOGY_CLEANUP: 'Terminology',
+  TERMINOLOGY: 'Glossary review',
   TERM_CANDIDATE: 'Term candidates',
   UNKNOWN: 'Unknown',
 };

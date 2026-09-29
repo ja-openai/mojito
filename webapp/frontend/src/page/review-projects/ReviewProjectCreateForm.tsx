@@ -671,7 +671,8 @@ export function ReviewProjectCreateForm({
               label="Type"
               className="review-create__select-dropdown"
               options={REVIEW_PROJECT_TYPES.filter(
-                (option) => option !== 'UNKNOWN' && option !== 'TERM_CANDIDATE',
+                (option) =>
+                  option !== 'UNKNOWN' && option !== 'TERMINOLOGY' && option !== 'TERM_CANDIDATE',
               ).map((option) => ({
                 value: option,
                 label: REVIEW_PROJECT_TYPE_LABELS[option],

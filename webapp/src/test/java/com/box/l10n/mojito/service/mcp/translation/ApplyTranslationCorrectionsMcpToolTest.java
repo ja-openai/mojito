@@ -52,7 +52,13 @@ public class ApplyTranslationCorrectionsMcpToolTest {
     assertThat(tool.descriptor().readOnly()).isFalse();
     assertThat(tool.descriptor().dryRunByDefault()).isFalse();
     assertThat(tool.descriptor().description())
-        .contains("EMERGENCY", "NORMAL", "BUG_FIXES", "Source-locale", "all other");
+        .contains(
+            "EMERGENCY",
+            "NORMAL",
+            "BUG_FIXES",
+            "TERMINOLOGY_CLEANUP",
+            "Source-locale",
+            "all other");
     McpToolParameter corrections =
         tool.descriptor().parameters().stream()
             .filter(parameter -> "corrections".equals(parameter.name()))

@@ -11,7 +11,6 @@ import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.review.ReviewProject;
-import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
@@ -119,7 +118,7 @@ public class GuardedTranslationCorrectionTransactionServiceDbTest extends Servic
   }
 
   @Test
-  public void fullyMatchingGlossaryProjectRequestsConflictWithoutChangingTargetVariant()
+  public void fullyMatchingTerminologyProjectRequestsConflictWithoutChangingTargetVariant()
       throws Exception {
     for (ReviewProjectType type :
         List.of(ReviewProjectType.TERMINOLOGY, ReviewProjectType.TERM_CANDIDATE)) {
@@ -360,9 +359,6 @@ public class GuardedTranslationCorrectionTransactionServiceDbTest extends Servic
 
     ReviewProject reviewProject = new ReviewProject();
     reviewProject.setType(projectType);
-    if (projectType == ReviewProjectType.TERMINOLOGY) {
-      reviewProject.setTerminologyPhase(ReviewProjectTerminologyPhase.SPECIALIST_INPUT);
-    }
     reviewProject.setLocale(locale);
     reviewProject.setDueDate(ZonedDateTime.now().plusDays(1));
     reviewProject = reviewProjectRepository.saveAndFlush(reviewProject);

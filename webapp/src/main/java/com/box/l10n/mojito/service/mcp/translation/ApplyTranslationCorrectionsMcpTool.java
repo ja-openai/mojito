@@ -26,7 +26,7 @@ public class ApplyTranslationCorrectionsMcpTool
       new McpToolDescriptor(
           "translation.apply_corrections",
           "Apply guarded translation corrections",
-          "Apply reviewed target-locale translation replacements only for EMERGENCY, NORMAL, or BUG_FIXES Review Projects and when every repository, locale, TM text-unit, current-variant, and exact-old-target guard still matches. Source-locale and all other Review Project types are rejected. Each row is independently locked, written as REVIEW_NEEDED, and read back. Requires an admin and confirmApply=true.",
+          "Apply reviewed target-locale translation replacements only for EMERGENCY, NORMAL, BUG_FIXES, or TERMINOLOGY_CLEANUP Review Projects and when every repository, locale, TM text-unit, current-variant, and exact-old-target guard still matches. Source-locale and all other Review Project types are rejected. Each row is independently locked, written as REVIEW_NEEDED, and read back. Requires an admin and confirmApply=true.",
           false,
           false,
           List.of(
