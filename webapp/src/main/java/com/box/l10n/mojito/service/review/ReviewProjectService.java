@@ -500,8 +500,25 @@ public class ReviewProjectService {
     return fallbackDueDate == null ? ZonedDateTime.now().plusDays(2) : fallbackDueDate;
   }
 
-  private boolean isTerminologyWorkflowType(ReviewProjectType type) {
-    return type == ReviewProjectType.TERMINOLOGY || type == ReviewProjectType.TERM_CANDIDATE;
+  private boolean isSourceTerminologyReviewProject(ReviewProject project) {
+    return project.getType() == ReviewProjectType.TERM_CANDIDATE
+        || (project.getType() == ReviewProjectType.TERMINOLOGY
+            && project.getTerminologyPhase() != null);
+  }
+
+  private void validateTerminologyProjectSpecs(
+      ReviewProjectType type, List<CreateReviewProjectRequestCommand.ProjectSpec> projectSpecs) {
+    if (CollectionUtils.isEmpty(projectSpecs)) {
+      return;
+    }
+    if (type != ReviewProjectType.TERMINOLOGY && type != ReviewProjectType.TERM_CANDIDATE) {
+      throw new IllegalArgumentException(
+          "projectSpecs are only supported for terminology projects");
+    }
+    if (projectSpecs.stream()
+        .anyMatch(projectSpec -> projectSpec == null || projectSpec.terminologyPhase() == null)) {
+      throw new IllegalArgumentException("Each terminology projectSpec must include a phase");
+    }
   }
 
   private List<CreateReviewProjectRequestCommand.ProjectSpec> buildTerminologyProjectSpecs(
@@ -590,6 +607,7 @@ public class ReviewProjectService {
     if (request.type() == null) {
       throw new IllegalArgumentException("type must be provided");
     }
+    validateTerminologyProjectSpecs(request.type(), request.projectSpecs());
 
     if (request.requestedByUserId() == null) {
       throw new IllegalArgumentException("requestedByUserId must be provided");
@@ -1762,7 +1780,8 @@ public class ReviewProjectService {
       Join<ReviewProject, Locale> localeJoin,
       List<String> localeTags) {
     return cb.or(
-        localeJoin.get(Locale_.bcp47Tag).in(localeTags), buildTerminologyWorkflowPredicate(root));
+        localeJoin.get(Locale_.bcp47Tag).in(localeTags),
+        buildTerminologyWorkflowPredicate(cb, root));
   }
 
   private Predicate buildTranslatorLocaleAccessPredicate(
@@ -1773,7 +1792,7 @@ public class ReviewProjectService {
     if (accessContext.canTranslateAllLocales()) {
       return cb.conjunction();
     }
-    Predicate terminologyPredicate = buildTerminologyWorkflowPredicate(root);
+    Predicate terminologyPredicate = buildTerminologyWorkflowPredicate(cb, root);
     if (accessContext.editableLocaleIds().isEmpty()) {
       return terminologyPredicate;
     }
@@ -1781,9 +1800,13 @@ public class ReviewProjectService {
         localeJoin.get(Locale_.id).in(accessContext.editableLocaleIds()), terminologyPredicate);
   }
 
-  private Predicate buildTerminologyWorkflowPredicate(Root<ReviewProject> root) {
-    return root.get(ReviewProject_.type)
-        .in(ReviewProjectType.TERMINOLOGY, ReviewProjectType.TERM_CANDIDATE);
+  private Predicate buildTerminologyWorkflowPredicate(
+      CriteriaBuilder cb, Root<ReviewProject> root) {
+    return cb.or(
+        cb.equal(root.get(ReviewProject_.type), ReviewProjectType.TERM_CANDIDATE),
+        cb.and(
+            cb.equal(root.get(ReviewProject_.type), ReviewProjectType.TERMINOLOGY),
+            cb.isNotNull(root.get(ReviewProject_.terminologyPhase))));
   }
 
   private ProjectAccessContext createProjectAccessContext() {
@@ -1878,7 +1901,7 @@ public class ReviewProjectService {
         return true;
       }
       boolean localeAllowed =
-          isTerminologyWorkflowType(reviewProject.getType())
+          isSourceTerminologyReviewProject(reviewProject)
               || accessContext.canTranslateAllLocales()
               || (localeId != null && accessContext.editableLocaleIds().contains(localeId));
       if (localeAllowed && teamId != null && accessContext.translatorTeamIds().contains(teamId)) {
@@ -2365,8 +2388,7 @@ public class ReviewProjectService {
     if (isPm) {
       teamService.assertCurrentUserCanAccessTeam(teamId);
     }
-    boolean terminologyRequest =
-        projects.stream().allMatch(project -> isTerminologyWorkflowType(project.getType()));
+    boolean terminologyRequest = projects.stream().allMatch(this::isSourceTerminologyReviewProject);
     if (nextAssignedPm != null) {
       boolean isPmMember =
           teamService.isUserInTeamRole(teamId, nextAssignedPm.getId(), TeamUserRole.PM);
@@ -3030,9 +3052,9 @@ public class ReviewProjectService {
                             + " not found"));
     ReviewProject project = textUnit.getReviewProject();
     assertCurrentUserCanReadProject(project);
-    if (!isTerminologyWorkflowType(project.getType())) {
+    if (!isSourceTerminologyReviewProject(project)) {
       throw new IllegalArgumentException(
-          "Terminology feedback is only supported for terminology projects");
+          "Terminology feedback is only supported for source terminology projects");
     }
     if (project.getTerminologyPhase() == ReviewProjectTerminologyPhase.PM_RESOLUTION) {
       throw new IllegalArgumentException(
@@ -3105,9 +3127,9 @@ public class ReviewProjectService {
     if (!userService.isCurrentUserAdminOrPm()) {
       throw new AccessDeniedException("Only admins and PMs can resolve terminology");
     }
-    if (!isTerminologyWorkflowType(project.getType())) {
+    if (!isSourceTerminologyReviewProject(project)) {
       throw new IllegalArgumentException(
-          "Terminology resolution is only supported for terminology projects");
+          "Terminology resolution is only supported for source terminology projects");
     }
     if (project.getTerminologyPhase() == ReviewProjectTerminologyPhase.SPECIALIST_INPUT) {
       throw new IllegalArgumentException(
@@ -3271,9 +3293,9 @@ public class ReviewProjectService {
     if (!userService.isCurrentUserAdminOrPm()) {
       throw new AccessDeniedException("Only admins and PMs can edit terminology metadata");
     }
-    if (!isTerminologyWorkflowType(project.getType())) {
+    if (!isSourceTerminologyReviewProject(project)) {
       throw new IllegalArgumentException(
-          "Terminology metadata edits are only supported for terminology projects");
+          "Terminology metadata edits are only supported for source terminology projects");
     }
 
     Long originalTmTextUnitId = textUnit.getTmTextUnit().getId();
@@ -3487,7 +3509,7 @@ public class ReviewProjectService {
   private Map<Long, List<ReviewProjectTextUnitFeedback>>
       getTerminologyFeedbacksByReviewProjectTextUnitId(
           ReviewProject reviewProject, List<ReviewProjectTextUnitDetail> textUnitDetails) {
-    if (!isTerminologyWorkflowType(reviewProject.getType())) {
+    if (!isSourceTerminologyReviewProject(reviewProject)) {
       return Map.of();
     }
 
@@ -3543,7 +3565,7 @@ public class ReviewProjectService {
   private Map<Long, GetProjectDetailView.TerminologyTerm>
       getTerminologyTermsByReviewProjectTextUnitId(
           ReviewProject reviewProject, List<ReviewProjectTextUnitDetail> textUnitDetails) {
-    if (!isTerminologyWorkflowType(reviewProject.getType()) || textUnitDetails.isEmpty()) {
+    if (!isSourceTerminologyReviewProject(reviewProject) || textUnitDetails.isEmpty()) {
       return Map.of();
     }
 
@@ -4120,7 +4142,9 @@ public class ReviewProjectService {
 
   private List<TextUnitDTO> getTextUnitReviewCandidates(
       CreateReviewProjectRequestCommand request, Locale locale) {
-    if (isTerminologyWorkflowType(request.type())) {
+    if (request.type() == ReviewProjectType.TERM_CANDIDATE
+        || (request.type() == ReviewProjectType.TERMINOLOGY
+            && !CollectionUtils.isEmpty(request.projectSpecs()))) {
       return getSourceTerminologyReviewCandidates(request.tmTextUnitIds());
     }
     return searchReviewCandidates(request.tmTextUnitIds(), locale, request.statusFilter());
@@ -4636,12 +4660,12 @@ public class ReviewProjectService {
         boolean isPmMember =
             teamService.isUserInTeamRole(effectiveTeamId, nextAssignedPm.getId(), TeamUserRole.PM);
         boolean isTranslatorDecider =
-            isTerminologyWorkflowType(reviewProject.getType())
+            isSourceTerminologyReviewProject(reviewProject)
                 && teamService.isUserInTeamRole(
                     effectiveTeamId, nextAssignedPm.getId(), TeamUserRole.TRANSLATOR);
         if (!isPmMember && !isTranslatorDecider) {
           throw new IllegalArgumentException(
-              isTerminologyWorkflowType(reviewProject.getType())
+              isSourceTerminologyReviewProject(reviewProject)
                   ? "Assigned decider is not a PM or translator member of team "
                       + effectiveTeamId
                       + ": "
@@ -4728,16 +4752,10 @@ public class ReviewProjectService {
               null, defaultDueDate, assignmentDefaults.defaultPmUser(), assignedTranslatorUser));
     }
 
-    if (!isTerminologyWorkflowType(type)) {
-      throw new IllegalArgumentException(
-          "projectSpecs are only supported for terminology projects");
-    }
+    validateTerminologyProjectSpecs(type, projectSpecs);
 
     List<ResolvedProjectSpec> resolvedProjectSpecs = new ArrayList<>();
     for (CreateReviewProjectRequestCommand.ProjectSpec projectSpec : projectSpecs) {
-      if (projectSpec == null) {
-        continue;
-      }
       resolvedProjectSpecs.add(
           new ResolvedProjectSpec(
               projectSpec.terminologyPhase(),
@@ -4748,9 +4766,6 @@ public class ReviewProjectService {
               projectSpec.assignedTranslatorUserId() == null
                   ? null
                   : resolveUser(projectSpec.assignedTranslatorUserId(), "assignedTranslatorUser")));
-    }
-    if (resolvedProjectSpecs.isEmpty()) {
-      throw new IllegalArgumentException("At least one projectSpec must be provided");
     }
     return resolvedProjectSpecs;
   }

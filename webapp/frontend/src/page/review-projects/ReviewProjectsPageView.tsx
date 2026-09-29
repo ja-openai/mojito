@@ -12,7 +12,7 @@ import {
   type ApiReviewProjectTerminologyPhase,
   type ApiReviewProjectType,
   claimReviewProjectTranslatorAssignment,
-  isTerminologyReviewProjectType,
+  isTerminologyReviewProject,
   REVIEW_PROJECT_STATUS_LABELS,
   REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
@@ -421,7 +421,10 @@ function ContentSection({
   }, [reassignProject]);
 
   const activeTeamId = reassignProject?.teamId ?? null;
-  const isTerminologyReassignProject = isTerminologyReviewProjectType(reassignProject?.type);
+  const isTerminologyReassignProject = isTerminologyReviewProject(
+    reassignProject?.type,
+    reassignProject?.terminologyPhase,
+  );
   const isTranslatorClaimProject =
     reassignProject != null && !canReassignTranslator && canClaimTranslator;
   const teamTranslatorUsersQuery = useQuery({
@@ -889,7 +892,7 @@ function getRequestGroupTypeBadge(group: ReviewProjectRequestGroupRow): {
 }
 
 function isTerminologyProject(project: ReviewProjectRow) {
-  return isTerminologyReviewProjectType(project.type);
+  return isTerminologyReviewProject(project.type, project.terminologyPhase);
 }
 
 function isTerminologyRequestGroup(group: ReviewProjectRequestGroupRow) {
@@ -2000,11 +2003,10 @@ function RequestGroupsSection({
   }, [reassignMutation.isPending]);
 
   const isSpecialistReassignTarget =
-    reassignTarget?.kind === 'translator' &&
-    isTerminologyReviewProjectType(reassignTarget.project.type);
+    reassignTarget?.kind === 'translator' && isTerminologyProject(reassignTarget.project);
   const isTerminologyReassignTarget =
     reassignTarget?.kind === 'translator'
-      ? isTerminologyReviewProjectType(reassignTarget.project.type)
+      ? isTerminologyProject(reassignTarget.project)
       : (reassignTarget?.projects.length ?? 0) > 0 &&
         reassignTarget?.projects.every(isTerminologyProject);
   const translatorRoleLabel = isSpecialistReassignTarget ? 'Advisor' : 'Translator';

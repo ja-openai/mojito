@@ -18,6 +18,7 @@ import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.review.ReviewProject;
+import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
@@ -92,10 +93,7 @@ public class GuardedTranslationCorrectionTransactionServiceTest {
   @Test
   public void nonTranslationProjectTypesCannotAuthorizeTranslationCorrections() {
     for (ReviewProjectType type :
-        List.of(
-            ReviewProjectType.TERMINOLOGY,
-            ReviewProjectType.TERM_CANDIDATE,
-            ReviewProjectType.UNKNOWN)) {
+        List.of(ReviewProjectType.TERM_CANDIDATE, ReviewProjectType.UNKNOWN)) {
       Fixture fixture = new Fixture();
       fixture.reviewProject.setType(type);
 
@@ -109,10 +107,29 @@ public class GuardedTranslationCorrectionTransactionServiceTest {
   }
 
   @Test
+  public void glossaryTerminologyPhasesCannotAuthorizeTranslationCorrections() {
+    for (ReviewProjectTerminologyPhase phase : ReviewProjectTerminologyPhase.values()) {
+      Fixture fixture = new Fixture();
+      fixture.reviewProject.setType(ReviewProjectType.TERMINOLOGY);
+      fixture.reviewProject.setTerminologyPhase(phase);
+
+      ItemResult result = fixture.service.apply(0, fixture.correction("ancien", "caf\u00e9"), 9L);
+
+      assertThat(result.outcome()).as(phase.name()).isEqualTo(Outcome.CONFLICT);
+      assertThat(result.code()).isEqualTo("UNSUPPORTED_REVIEW_PROJECT_TYPE");
+      verifyNoInteractions(
+          fixture.currentVariantRepository, fixture.integrityCheckService, fixture.tmService);
+    }
+  }
+
+  @Test
   public void allTranslationReviewProjectTypesRemainEligible() {
     for (ReviewProjectType type :
         List.of(
-            ReviewProjectType.EMERGENCY, ReviewProjectType.NORMAL, ReviewProjectType.BUG_FIXES)) {
+            ReviewProjectType.EMERGENCY,
+            ReviewProjectType.NORMAL,
+            ReviewProjectType.BUG_FIXES,
+            ReviewProjectType.TERMINOLOGY)) {
       Fixture fixture = new Fixture();
       fixture.reviewProject.setType(type);
 

@@ -659,7 +659,9 @@ public class ReviewProjectServiceTest {
     ReviewProject projectA = project(21L, team, locale(31L, "en"), null, user(103L, "advisor-a"));
     ReviewProject projectB = project(22L, team, locale(31L, "en"), null, user(104L, "advisor-b"));
     projectA.setType(ReviewProjectType.TERMINOLOGY);
+    projectA.setTerminologyPhase(ReviewProjectTerminologyPhase.SPECIALIST_INPUT);
     projectB.setType(ReviewProjectType.TERMINOLOGY);
+    projectB.setTerminologyPhase(ReviewProjectTerminologyPhase.PM_RESOLUTION);
     projectA.setReviewProjectRequest(request);
     projectB.setReviewProjectRequest(request);
 
@@ -684,6 +686,7 @@ public class ReviewProjectServiceTest {
     User advisor = user(103L, "advisor-a");
     ReviewProject project = project(21L, team, locale(31L, "en"), null, advisor);
     project.setType(ReviewProjectType.TERMINOLOGY);
+    project.setTerminologyPhase(ReviewProjectTerminologyPhase.PM_RESOLUTION);
 
     when(reviewProjectRepository.findById(21L)).thenReturn(Optional.of(project));
     when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team));
@@ -698,6 +701,44 @@ public class ReviewProjectServiceTest {
     assertEquals(decider, project.getAssignedPmUser());
     verify(reviewProjectAssignmentHistoryRepository)
         .save(any(ReviewProjectAssignmentHistory.class));
+  }
+
+  @Test
+  public void unphasedTerminologyProjectRequiresPmForPmAssignment() {
+    Team team = team(7L);
+    User translator = user(202L, "translator");
+    ReviewProject project = project(21L, team, locale(31L, "fr-FR"), null, null);
+    project.setType(ReviewProjectType.TERMINOLOGY);
+    when(reviewProjectRepository.findById(21L)).thenReturn(Optional.of(project));
+    when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team));
+    when(userRepository.findById(202L)).thenReturn(Optional.of(translator));
+    when(teamService.isUserInTeamRole(7L, 202L, TeamUserRole.TRANSLATOR)).thenReturn(true);
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> reviewProjectService.updateProjectAssignment(21L, 7L, 202L, null, null));
+
+    assertEquals("Assigned PM is not a PM member of team 7: 202", error.getMessage());
+    verify(reviewProjectRepository, never()).save(any());
+  }
+
+  @Test
+  public void onlyPhasedTerminologyProjectsBypassTranslatorLocaleScope() {
+    setCurrentUserRole(false, false, true);
+    currentUser.setCanTranslateAllLocales(false);
+    Team team = team(7L);
+    ReviewProject project = project(21L, team, locale(31L, "fr-FR"), null, null);
+    project.setType(ReviewProjectType.TERMINOLOGY);
+    when(teamUserRepository.findByUserIdAndRole(99L, TeamUserRole.TRANSLATOR))
+        .thenReturn(List.of(teamUser(team, currentUser, TeamUserRole.TRANSLATOR)));
+
+    assertThrows(
+        AccessDeniedException.class,
+        () -> reviewProjectService.assertCurrentUserCanReadProject(project));
+
+    project.setTerminologyPhase(ReviewProjectTerminologyPhase.SPECIALIST_INPUT);
+    reviewProjectService.assertCurrentUserCanReadProject(project);
   }
 
   @Test
@@ -949,17 +990,26 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
-  public void createReviewProjectRequestUsesSourceTextUnitsForTerminologyProjects() {
-    Locale locale = locale(41L, "en");
+  public void createReviewProjectRequestUsesTranslationsForUnphasedTerminologyProjects() {
+    Locale locale = locale(41L, "fr-FR");
     TMTextUnit tmTextUnit = new TMTextUnit();
     tmTextUnit.setId(1001L);
     tmTextUnit.setName("term.acme");
     tmTextUnit.setContent("Acme");
     tmTextUnit.setComment("Brand term");
 
-    when(localeService.findByBcp47Tag("en")).thenReturn(locale);
-    when(tmTextUnitRepository.findByIdIn(List.of(1001L))).thenReturn(List.of(tmTextUnit));
+    TextUnitDTO translated = new TextUnitDTO();
+    translated.setTmTextUnitId(1001L);
+    translated.setSource("Acme");
+    translated.setTarget("Acme FR");
+    translated.setTmTextUnitVariantId(2001L);
+    TMTextUnitVariant baseline = new TMTextUnitVariant();
+    baseline.setId(2001L);
+    when(localeService.findByBcp47Tag("fr-FR")).thenReturn(locale);
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
+        .thenReturn(List.of(translated));
     when(entityManager.getReference(TMTextUnit.class, 1001L)).thenReturn(tmTextUnit);
+    when(entityManager.getReference(TMTextUnitVariant.class, 2001L)).thenReturn(baseline);
     when(reviewProjectRequestRepository.save(any(ReviewProjectRequest.class)))
         .thenAnswer(
             invocation -> {
@@ -979,7 +1029,7 @@ public class ReviewProjectServiceTest {
     CreateReviewProjectRequestResult result =
         reviewProjectService.createReviewProjectRequest(
             new CreateReviewProjectRequestCommand(
-                List.of("en"),
+                List.of("fr-FR"),
                 null,
                 List.of(1001L),
                 null,
@@ -988,7 +1038,7 @@ public class ReviewProjectServiceTest {
                 ReviewProjectType.TERMINOLOGY,
                 ZonedDateTime.parse("2026-03-30T12:00:00Z"),
                 List.of(),
-                "Terminology source review",
+                "Terminology cleanup",
                 null,
                 false,
                 99L,
@@ -996,13 +1046,53 @@ public class ReviewProjectServiceTest {
 
     assertEquals(List.of(12L), result.projectIds());
     assertEquals(1, result.createdLocaleCount());
-    verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
-    verify(reviewProjectTextUnitRepository).save(any(ReviewProjectTextUnit.class));
+    ArgumentCaptor<TextUnitSearcherParameters> search =
+        ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
+    verify(textUnitSearcher).search(search.capture());
+    assertEquals(Long.valueOf(41L), search.getValue().getLocaleId());
+    assertEquals(List.of(1001L), search.getValue().getTmTextUnitIds());
+    assertEquals(StatusFilter.ALL, search.getValue().getStatusFilter());
+    verify(tmTextUnitRepository, never()).findByIdIn(any());
+    ArgumentCaptor<ReviewProjectTextUnit> row =
+        ArgumentCaptor.forClass(ReviewProjectTextUnit.class);
+    verify(reviewProjectTextUnitRepository).save(row.capture());
+    assertEquals(baseline, row.getValue().getTmTextUnitVariant());
+    assertEquals(ReviewProjectType.TERMINOLOGY, row.getValue().getReviewProject().getType());
+    assertNull(row.getValue().getReviewProject().getTerminologyPhase());
   }
 
   @Test
   public void createReviewProjectRequestCreatesTerminologyPhaseProjects() {
     assertTerminologyPhaseProjects(null, 2);
+  }
+
+  @Test
+  public void createReviewProjectRequestRejectsTerminologySpecsWithoutPhase() {
+    var request =
+        new CreateReviewProjectRequestCommand(
+            List.of("fr-FR"),
+            null,
+            List.of(1001L),
+            null,
+            StatusFilter.ALL,
+            false,
+            ReviewProjectType.TERMINOLOGY,
+            ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+            List.of(),
+            "Terminology cleanup",
+            null,
+            false,
+            99L,
+            List.of(new CreateReviewProjectRequestCommand.ProjectSpec(null, null, null, null)));
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> reviewProjectService.createReviewProjectRequest(request));
+
+    assertEquals("Each terminology projectSpec must include a phase", error.getMessage());
+    verify(textUnitSearcher, never()).search(any());
+    verify(reviewProjectRequestRepository, never()).save(any());
   }
 
   @Test
@@ -1094,6 +1184,7 @@ public class ReviewProjectServiceTest {
       assertEquals(pmDueDate, pm.getDueDate());
       assertNull(pm.getAssignedPmUser());
     }
+    verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
     verify(reviewProjectTextUnitRepository, times(4)).save(any(ReviewProjectTextUnit.class));
   }
 
@@ -1435,9 +1526,19 @@ public class ReviewProjectServiceTest {
 
   @Test
   public void saveDecisionRecordsSuccessPhaseMetrics() {
+    assertSaveTranslationDecision(ReviewProjectType.NORMAL);
+  }
+
+  @Test
+  public void saveDecisionForUnphasedTerminologyProjectWritesTranslation() {
+    assertSaveTranslationDecision(ReviewProjectType.TERMINOLOGY);
+  }
+
+  private void assertSaveTranslationDecision(ReviewProjectType type) {
     Team team = team(7L);
     Locale locale = locale(14L, "ja-JP");
     ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+    reviewProject.setType(type);
 
     TM tm = new TM();
     tm.setId(91L);
@@ -1498,7 +1599,11 @@ public class ReviewProjectServiceTest {
         .capture(
             eq(reviewProjectTextUnit), any(), any(), any(), eq("Bonjour"), eq(99L), any(), any());
     assertEquals(Long.valueOf(55L), detail.id());
-    verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(any());
+    ArgumentCaptor<ReviewProjectTextUnitDecision> decision =
+        ArgumentCaptor.forClass(ReviewProjectTextUnitDecision.class);
+    verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(decision.capture());
+    assertEquals(decisionVariant, decision.getValue().getDecisionVariant());
+    verify(glossaryTermMetadataRepository, never()).saveAndFlush(any());
     verify(reviewProjectRepository).incrementDecidedProgress(12L, 7L);
     assertEquals(1L, saveDecisionDurationCount("initialRead", "success", true));
     assertEquals(1L, saveDecisionDurationCount("currentVariantWrite", "success", true));
@@ -1830,6 +1935,7 @@ public class ReviewProjectServiceTest {
     ReviewProject reviewProject =
         project(12L, team(7L), locale(14L, "en"), user(101L, "pm-a"), currentUser);
     reviewProject.setType(ReviewProjectType.TERMINOLOGY);
+    reviewProject.setTerminologyPhase(ReviewProjectTerminologyPhase.SPECIALIST_INPUT);
     ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
     reviewProjectTextUnit.setId(55L);
     reviewProjectTextUnit.setReviewProject(reviewProject);
@@ -1861,10 +1967,35 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void unphasedTerminologyProjectCannotWriteSourceTermFeedbackOrResolution() {
+    ReviewProject project =
+        project(12L, team(7L), locale(14L, "fr-FR"), user(101L, "pm-a"), currentUser);
+    project.setType(ReviewProjectType.TERMINOLOGY);
+    ReviewProjectTextUnit row = new ReviewProjectTextUnit();
+    row.setId(55L);
+    row.setReviewProject(project);
+    when(reviewProjectTextUnitRepository.findById(55L)).thenReturn(Optional.of(row));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            reviewProjectService.saveTerminologyFeedback(
+                55L, ReviewProjectTextUnitFeedback.Recommendation.APPROVE, 5, null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> reviewProjectService.saveTerminologyResolution(55L, 17L, "APPROVED", null, null));
+
+    verify(reviewProjectTextUnitFeedbackRepository, never()).saveAndFlush(any());
+    verify(glossaryTermMetadataRepository, never()).saveAndFlush(any());
+    verify(reviewProjectTextUnitDecisionRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
   public void saveTerminologyResolutionUpdatesGlossaryStatusAndMarksDecided() {
     ReviewProject reviewProject =
         project(12L, team(7L), locale(14L, "en"), user(101L, "pm-a"), currentUser);
     reviewProject.setType(ReviewProjectType.TERMINOLOGY);
+    reviewProject.setTerminologyPhase(ReviewProjectTerminologyPhase.PM_RESOLUTION);
     TMTextUnit tmTextUnit = new TMTextUnit();
     tmTextUnit.setId(321L);
     tmTextUnit.setWordCount(7);
@@ -2232,6 +2363,7 @@ public class ReviewProjectServiceTest {
   public void getTerminologyTermsIncludesGlossaryEvidence() {
     ReviewProject reviewProject = new ReviewProject();
     reviewProject.setType(ReviewProjectType.TERMINOLOGY);
+    reviewProject.setTerminologyPhase(ReviewProjectTerminologyPhase.PM_RESOLUTION);
     ReviewProjectTextUnitDetail detail = reviewProjectTextUnitDetail(55L);
 
     Glossary glossary = new Glossary();

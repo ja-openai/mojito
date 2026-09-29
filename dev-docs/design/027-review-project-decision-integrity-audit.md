@@ -131,9 +131,10 @@ translation row, then locks and reloads the complete Review Project/repository i
 revalidating every guard, the expected variant, and the byte-for-byte old target. A missing or
 changed guard is an ordered `CONFLICT` result and never a write. The expected old target is not
 normalized; only the replacement follows Mojito's normal NFC storage semantics. Only target-locale
-translation Review Projects are eligible: `EMERGENCY`, `NORMAL`, and `BUG_FIXES` remain supported,
-while repository source locales, `TERMINOLOGY`, `TERM_CANDIDATE`, and fail-closed `UNKNOWN` are
-rejected before the current translation is locked or written.
+translation Review Projects are eligible: `EMERGENCY`, `NORMAL`, `BUG_FIXES`, and phase-less
+`TERMINOLOGY` projects are supported. Repository source locales, phased `TERMINOLOGY` glossary
+reviews, `TERM_CANDIDATE`, and fail-closed `UNKNOWN` are rejected before the current translation
+is locked or written.
 
 Applied rows use the ordinary `TMService` persistence path without an override, always create a
 `REVIEW_NEEDED` variant, preserve the previous inclusion flag and comment, and do not rewrite the

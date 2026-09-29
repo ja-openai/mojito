@@ -46,8 +46,9 @@ What this scaffold includes
     `POST /api/admin/translation-corrections/apply` through REST
   - require explicit confirmation and, per row, the Review Project, Review Project text unit,
     repository id and name, locale, TM text unit, current variant, exact old target, and replacement
-  - accept target-locale translation Review Projects (`EMERGENCY`, `NORMAL`, and `BUG_FIXES`);
-    reject repository source locales, `TERMINOLOGY`, `TERM_CANDIDATE`, and fail-closed `UNKNOWN`
+  - accept target-locale translation Review Projects (`EMERGENCY`, `NORMAL`, `BUG_FIXES`, and
+    `TERMINOLOGY` without a glossary phase); reject repository source locales, phased
+    `TERMINOLOGY` glossary reviews, `TERM_CANDIDATE`, and fail-closed `UNKNOWN`
   - lock the current variant first, then lock and re-read the complete audited identity graph before
     comparing every identity and the exact stored old target; normalize only the replacement before
     applying it

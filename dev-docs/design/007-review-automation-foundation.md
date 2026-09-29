@@ -78,6 +78,7 @@ Backend Notes
 - Detail, create/update, and batch export/upsert expose `excludedLocaleTags`. Omitted or null values default to an empty list on create and preserve the saved list on update; an explicit empty list clears it. Locale tags are trimmed, validated against the catalog, canonicalized, and deduplicated.
 - Migration `V114__Review_Automation_Excluded_Locales.sql` adds a nullable JSON-text column to `review_automation`. Existing rows read as an empty exclusion list; apply the migration with the backend release before using the new form.
 - Manual and automated creation can skip default translator assignment while still keeping team and PM assignment.
+- **Terminology** is an ordinary translation-review label for manual and incident projects, with the same locale access, translation decisions, and assignments as Normal/Emergency/Bug Fix. The dedicated glossary workflow requires an explicit Advisor/Decider phase; the label alone does not select it.
 - Manual creation accepts an optional `maxWordCountPerProject` and reuses automation's source-word splitter for selected text units, repositories, and review features. Omitted or null means no splitting; a supplied limit must be a positive integer. Strings stay whole, so one string can exceed the limit. Locale results count all generated projects.
 
 Slack Notifications

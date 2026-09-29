@@ -456,9 +456,8 @@ public class IncidentReviewBatchService {
       throw new IllegalArgumentException("maxWordCountPerProject must be between 1 and 100000");
     if (request.maxIncidentCount() != null && request.maxIncidentCount() < 1)
       throw new IllegalArgumentException("maxIncidentCount must be a positive integer");
-    if (request.type() == ReviewProjectType.TERMINOLOGY
-        || request.type() == ReviewProjectType.TERM_CANDIDATE)
-      throw new IllegalArgumentException("Incident review does not use terminology project types");
+    if (request.type() == ReviewProjectType.TERM_CANDIDATE)
+      throw new IllegalArgumentException("Incident review does not use term candidate projects");
     if (request.reviewType() != null
         && !request.reviewType().isBlank()
         && !request.reviewType().matches("[A-Z][A-Z0-9_]{0,63}"))

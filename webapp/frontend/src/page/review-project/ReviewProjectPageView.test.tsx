@@ -124,6 +124,7 @@ vi.mock('../../api/review-projects', async (importActual) => {
     ...actual,
     saveReviewProjectTextUnitDecision: saveReviewProjectTextUnitDecisionMock,
     fetchReviewProjectDocuments: fetchReviewProjectDocumentsMock,
+    fetchReviewProjectAssignmentHistory: vi.fn().mockResolvedValue({ entries: [] }),
   };
 });
 
@@ -667,6 +668,64 @@ function buildNavigableMdxProject() {
 }
 
 describe('ReviewProjectPageView', () => {
+  it.each([null, undefined])(
+    'edits and accepts translations in a Terminology project with phase %s',
+    async (terminologyPhase) => {
+      visibleTextEditorEnabledMock.mockReturnValue(false);
+      const onRequestSaveDecision = vi.fn();
+      const onRequestTerminologyFeedback = vi.fn();
+      const onRequestTerminologyResolution = vi.fn();
+      renderReviewProjectPageView({
+        project: { ...project, type: 'TERMINOLOGY', terminologyPhase },
+        mutations: buildMutations({
+          onRequestSaveDecision,
+          onRequestTerminologyFeedback,
+          onRequestTerminologyResolution,
+        }),
+      });
+
+      const editor = await screen.findByRole('textbox', { name: 'Translation' });
+      fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+
+      expect(onRequestSaveDecision).toHaveBeenCalledWith(
+        expect.objectContaining({
+          textUnitId: textUnit.id,
+          target: 'Pague {price} agora',
+          status: 'APPROVED',
+          decisionState: 'DECIDED',
+        }),
+      );
+      expect(onRequestTerminologyFeedback).not.toHaveBeenCalled();
+      expect(onRequestTerminologyResolution).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { terminologyPhase: null, pm: 'pm', translator: 'translator' },
+    { terminologyPhase: 'SPECIALIST_INPUT', pm: 'decider', translator: 'advisor' },
+    { terminologyPhase: 'PM_RESOLUTION', pm: 'decider', translator: 'advisor' },
+  ] as const)(
+    'uses the correct assignment roles for Terminology phase $terminologyPhase',
+    async ({ terminologyPhase, pm, translator }) => {
+      renderReviewProjectPageView(
+        { project: { ...project, type: 'TERMINOLOGY', terminologyPhase } },
+        adminUser,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Edit assignment' }));
+
+      const assignment = within(
+        await screen.findByRole('dialog', { name: 'Edit project assignment' }),
+      );
+      expect(assignment.getByRole('button', { name: `Select ${pm}` })).toBeInTheDocument();
+      expect(assignment.getByRole('button', { name: `Select ${translator}` })).toBeInTheDocument();
+      if (terminologyPhase != null) {
+        expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+      }
+    },
+  );
+
   it('switches preview pages without losing a draft and resumes its original page', async () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     const onRequestSaveDecision = vi.fn();

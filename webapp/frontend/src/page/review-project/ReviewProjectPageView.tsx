@@ -50,7 +50,7 @@ import type {
 import {
   fetchReviewProjectAssignmentHistory,
   fetchReviewProjectDocuments,
-  isTerminologyReviewProjectType,
+  isTerminologyReviewProject,
   REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
   REVIEW_PROJECT_TYPES,
@@ -930,7 +930,8 @@ export function ReviewProjectPageView({
   const reviewProjectsSessionKey = searchParams.get(REVIEW_PROJECTS_SESSION_QUERY_KEY);
   const locale = project?.locale ?? null;
   const localeTag = locale?.bcp47Tag ?? '';
-  const isProjectTerminology = project != null && isTerminologyReviewProjectType(project.type);
+  const isProjectTerminology =
+    project != null && isTerminologyReviewProject(project.type, project.terminologyPhase);
   const textUnits = useMemo<ApiReviewProjectTextUnit[]>(
     () => project?.reviewProjectTextUnits ?? [],
     [project?.reviewProjectTextUnits],
@@ -2133,7 +2134,7 @@ function DetailPane({
   const aiPreferencesReady = aiSettings.ready;
   const aiAutomaticDisabled = aiSettings.automaticDisabled;
   const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
-  const isTerminologyProject = isTerminologyReviewProjectType(projectType);
+  const isTerminologyProject = isTerminologyReviewProject(projectType, terminologyPhase);
   const isTermCandidateProject = projectType === 'TERM_CANDIDATE';
   const isSpecialistTerminologyProject = terminologyPhase === 'SPECIALIST_INPUT';
   const isPmTerminologyProject = terminologyPhase === 'PM_RESOLUTION';
@@ -6007,7 +6008,7 @@ function ReviewProjectHeader({
     [project.reviewProjectRequest?.screenshotImageIds],
   );
   const assignment = project.assignment ?? null;
-  const isTerminologyProject = isTerminologyReviewProjectType(type);
+  const isTerminologyProject = isTerminologyReviewProject(type, terminologyPhase);
   const pmAssignmentLabel = isTerminologyProject ? 'Decider' : 'PM';
   const translatorAssignmentLabel = isTerminologyProject ? 'Advisor' : 'Translator';
   const teamDisplayName =

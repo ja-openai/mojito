@@ -25,6 +25,19 @@ feature shape was still moving.
 
 The workspace owns term operations. Settings should not duplicate term curation.
 
+### Terminology review projects
+
+The **Terminology** type in ordinary review-project creation is a label for
+translation cleanup. It uses the same locale targets, translation editor,
+decisions, and PM/translator assignments as Normal, Emergency, and Bug Fix.
+
+Glossary-launched source-term reviews retain their explicit Advisor
+(`SPECIALIST_INPUT`) and Decider (`PM_RESOLUTION`) phases. Those phases select
+the glossary workflow, including term recommendations and final glossary
+status, instead of translation editing. Existing phased projects and
+`TERM_CANDIDATE` reviews keep that behavior. A `TERMINOLOGY` project without a
+phase uses ordinary translation review; no database migration is required.
+
 ### Workspace layout
 
 The glossary workspace is a two-pane surface:
