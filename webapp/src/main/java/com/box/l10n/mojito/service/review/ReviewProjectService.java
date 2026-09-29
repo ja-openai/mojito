@@ -2322,7 +2322,7 @@ public class ReviewProjectService {
                         "reviewProject with id: " + projectId + " not found"));
     assertCurrentUserCanReadProject(reviewProject);
 
-    if (!userService.isCurrentUserAdmin()) {
+    if (!userService.isCurrentUserAdminOrPm()) {
       userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
     }
 

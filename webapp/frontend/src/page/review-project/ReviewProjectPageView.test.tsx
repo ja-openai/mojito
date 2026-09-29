@@ -5983,3 +5983,66 @@ describe('review project status permissions', () => {
     expect(onRequestProjectStatus).not.toHaveBeenCalled();
   });
 });
+
+describe('review project due date permissions', () => {
+  it.each(['ROLE_PM', 'ROLE_ADMIN'] as const)(
+    'lets %s extend a project due date without changing the request',
+    async (role) => {
+      const onRequestProjectDueDateUpdate = vi.fn().mockResolvedValue(undefined);
+      const onRequestProjectRequestUpdate = vi.fn();
+      renderReviewProjectPageView(
+        {
+          project: { ...project, dueDate: '2026-09-29T12:00:00Z' },
+          mutations: buildMutations({
+            onRequestProjectDueDateUpdate,
+            onRequestProjectRequestUpdate,
+          }),
+        },
+        { ...user, role, canTranslateAllLocales: false, userLocales: [] },
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /^Due / }));
+      const dialog = screen.getByRole('dialog', { name: 'Edit project due date' });
+      fireEvent.change(within(dialog).getByLabelText('Project due date'), {
+        target: { value: '2026-09-30T12:00' },
+      });
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+      await waitFor(() =>
+        expect(onRequestProjectDueDateUpdate).toHaveBeenCalledWith(
+          new Date('2026-09-30T12:00').toISOString(),
+        ),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('dialog', { name: 'Edit project due date' }),
+        ).not.toBeInTheDocument(),
+      );
+      expect(onRequestProjectRequestUpdate).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps request-wide due dates and other details read-only for PMs', () => {
+    renderReviewProjectPageView({}, { ...user, role: 'ROLE_PM' });
+
+    expect(screen.queryByRole('button', { name: 'Edit assignment' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit request details' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View request details' }));
+    const dialog = screen.getByRole('dialog', { name: 'Request details' });
+    expect(within(dialog).getByLabelText('Name')).toBeDisabled();
+    expect(within(dialog).getByLabelText('Request due date')).toBeDisabled();
+    expect(within(dialog).queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+  });
+
+  it.each(['ROLE_TRANSLATOR', 'ROLE_USER'] as const)(
+    'keeps the project due date read-only for %s',
+    (role) => {
+      renderReviewProjectPageView({}, { ...user, role });
+
+      expect(screen.queryByRole('button', { name: /^Due / })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('dialog', { name: 'Edit project due date' }),
+      ).not.toBeInTheDocument();
+    },
+  );
+});

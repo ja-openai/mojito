@@ -413,6 +413,58 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void pmCanExtendAssignedProjectDueDateWithoutTranslationLocaleAccess() {
+    setCurrentUserRole(false, true, false);
+    currentUser.setCanTranslateAllLocales(false);
+    ReviewProject project = project(11L, team(7L), locale(13L, "fr-FR"), currentUser, null);
+    ZonedDateTime originalDueDate = ZonedDateTime.parse("2026-09-29T17:00:00Z");
+    project.setDueDate(originalDueDate);
+    when(reviewProjectRepository.findById(11L)).thenReturn(Optional.of(project));
+
+    reviewProjectService.updateProjectDueDate(11L, originalDueDate.plusDays(2));
+
+    assertEquals(originalDueDate.plusDays(2), project.getDueDate());
+    verify(reviewProjectRepository).save(project);
+    verify(reviewProjectRepository, never()).saveAll(any());
+    verify(userService, never()).checkUserCanEditLocale(anyLong());
+  }
+
+  @Test
+  public void pmCanExtendTeamProjectDueDateWithoutTranslationLocaleAccess() {
+    setCurrentUserRole(false, true, false);
+    currentUser.setCanTranslateAllLocales(false);
+    Team team = team(7L);
+    ReviewProject project = project(11L, team, locale(13L, "fr-FR"), null, null);
+    ZonedDateTime originalDueDate = ZonedDateTime.parse("2026-09-29T17:00:00Z");
+    project.setDueDate(originalDueDate);
+    when(reviewProjectRepository.findById(11L)).thenReturn(Optional.of(project));
+    when(teamUserRepository.findByUserIdAndRole(99L, TeamUserRole.PM))
+        .thenReturn(List.of(teamUser(team, currentUser, TeamUserRole.PM)));
+
+    reviewProjectService.updateProjectDueDate(11L, originalDueDate.plusDays(2));
+
+    assertEquals(originalDueDate.plusDays(2), project.getDueDate());
+    verify(reviewProjectRepository).save(project);
+    verify(userService, never()).checkUserCanEditLocale(anyLong());
+  }
+
+  @Test
+  public void pmCannotExtendDueDateOfProjectOutsideTheirScope() {
+    setCurrentUserRole(false, true, false);
+    ReviewProject project = project(11L, team(7L), locale(13L, "fr-FR"), null, null);
+    ZonedDateTime originalDueDate = ZonedDateTime.parse("2026-09-29T17:00:00Z");
+    project.setDueDate(originalDueDate);
+    when(reviewProjectRepository.findById(11L)).thenReturn(Optional.of(project));
+
+    assertThrows(
+        AccessDeniedException.class,
+        () -> reviewProjectService.updateProjectDueDate(11L, originalDueDate.plusDays(2)));
+
+    assertEquals(originalDueDate, project.getDueDate());
+    verify(reviewProjectRepository, never()).save(any());
+  }
+
+  @Test
   public void updateProjectAssignmentNotifiesWhenTranslatorChanges() {
     Team team = team(7L);
     User pm = user(101L, "pm-a");

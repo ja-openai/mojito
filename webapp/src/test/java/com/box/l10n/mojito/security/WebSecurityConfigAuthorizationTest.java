@@ -43,6 +43,7 @@ public class WebSecurityConfigAuthorizationTest {
       "/api/admin/translation-corrections/apply";
   private static final String PREFERENCES_PATH = "/api/users/me/preferences";
   private static final String AI_REVIEW_JOBS_PATH = "/api/ai/review/jobs";
+  private static final String PROJECT_DUE_DATE_PATH = "/api/review-projects/7/due-date";
   private static final String AGENT_PROPOSAL_PATH = "/api/agent-reviews/projects/7/proposals/901";
   private static final List<String> HUMAN_REVIEW_ACTIONS =
       List.of("review-again", "reopen", "reopen-and-save");
@@ -69,6 +70,21 @@ public class WebSecurityConfigAuthorizationTest {
     }
     mockMvc.perform(post(AI_REVIEW_JOBS_PATH)).andExpect(status().isForbidden());
     mockMvc.perform(get(AI_REVIEW_JOBS_PATH + "/91")).andExpect(status().isForbidden());
+  }
+
+  @Test
+  public void onlyProjectManagersAndAdminsCanUpdateProjectDueDates() throws Exception {
+    for (String role : List.of("PM", "ADMIN")) {
+      mockMvc
+          .perform(post(PROJECT_DUE_DATE_PATH).with(user("test").roles(role)))
+          .andExpect(status().isOk());
+    }
+    for (String role : List.of("USER", "TRANSLATOR")) {
+      mockMvc
+          .perform(post(PROJECT_DUE_DATE_PATH).with(user("test").roles(role)))
+          .andExpect(status().isForbidden());
+    }
+    mockMvc.perform(post(PROJECT_DUE_DATE_PATH)).andExpect(status().isForbidden());
   }
 
   @Test
@@ -201,6 +217,11 @@ public class WebSecurityConfigAuthorizationTest {
 
   @RestController
   static class LinguistTimeSpentStubController {
+
+    @PostMapping(PROJECT_DUE_DATE_PATH)
+    String updateProjectDueDate() {
+      return "ok";
+    }
 
     @PostMapping({
       AGENT_PROPOSAL_PATH + "/review-again",

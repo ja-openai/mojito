@@ -920,6 +920,7 @@ export function ReviewProjectPageView({
 }: Props) {
   const user = useUser();
   const canEditRequest = user.role === 'ROLE_ADMIN';
+  const canEditProjectDueDate = canEditRequest || user.role === 'ROLE_PM';
   const defaultShortcutHelpPreference = getDefaultReviewProjectShortcutHelpPreference(user.role);
   const { data: preferences } = useUserPreferences();
   const savePreferences = useSaveUserPreferences();
@@ -1560,6 +1561,7 @@ export function ReviewProjectPageView({
         textUnits={textUnits}
         mutations={mutations}
         canEditRequest={canEditRequest}
+        canEditProjectDueDate={canEditProjectDueDate}
         isTranslator={user.role === 'ROLE_TRANSLATOR'}
         reviewProjectsSessionKey={reviewProjectsSessionKey}
         openRequestDetailsQuery={openRequestDetailsQuery}
@@ -5965,6 +5967,7 @@ function ReviewProjectHeader({
   textUnits: textUnitsProp,
   mutations,
   canEditRequest,
+  canEditProjectDueDate,
   isTranslator,
   reviewProjectsSessionKey,
   openRequestDetailsQuery,
@@ -5980,6 +5983,7 @@ function ReviewProjectHeader({
   textUnits: ApiReviewProjectTextUnit[];
   mutations: ReviewProjectMutationControls;
   canEditRequest: boolean;
+  canEditProjectDueDate: boolean;
   isTranslator: boolean;
   reviewProjectsSessionKey: string | null;
   openRequestDetailsQuery: boolean;
@@ -6588,7 +6592,7 @@ function ReviewProjectHeader({
   ]);
 
   const saveProjectDueDate = useCallback(async () => {
-    if (!canEditRequest) {
+    if (!canEditProjectDueDate) {
       return;
     }
     if (!projectDueDateDraft) {
@@ -6610,7 +6614,7 @@ function ReviewProjectHeader({
         error instanceof Error ? error.message : 'Failed to update project due date.',
       );
     }
-  }, [canEditRequest, mutations, projectDueDateDraft]);
+  }, [canEditProjectDueDate, mutations, projectDueDateDraft]);
 
   const saveProjectAssignment = useCallback(async () => {
     if (!canEditRequest) {
@@ -6772,7 +6776,7 @@ function ReviewProjectHeader({
                 •
               </span>
             ) : null}
-            {canEditRequest ? (
+            {canEditProjectDueDate ? (
               <button
                 type="button"
                 className="review-project-page__header-link"
