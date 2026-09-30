@@ -14,6 +14,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.Asset;
@@ -36,6 +37,7 @@ import com.box.l10n.mojito.entity.review.ReviewFeature;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
+import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentWindowEndReason;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequestScreenshot;
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
@@ -280,6 +282,10 @@ public class ReviewProjectServiceTest {
     assertEquals(ReviewProjectStatus.CLOSED, project.getStatus());
     verify(reviewProjectRepository).save(project);
     verify(userService).checkUserCanEditLocale(13L);
+    verify(reviewProjectAssignmentWindowService)
+        .closeOpenWindow(project, ReviewProjectAssignmentWindowEndReason.PROJECT_CLOSED);
+    verify(reviewProjectTimeSpentStatService)
+        .computeProjectStats(eq(project), any(ZonedDateTime.class));
   }
 
   @Test
@@ -303,7 +309,8 @@ public class ReviewProjectServiceTest {
     setCurrentUserRole(false, true, false);
     currentUser.setCanTranslateAllLocales(false);
     Team team = team(7L);
-    ReviewProject project = project(11L, team, locale(13L, "fr-FR"), null, null);
+    User translator = user(103L, "translator-a");
+    ReviewProject project = project(11L, team, locale(13L, "fr-FR"), null, translator);
     project.setStatus(ReviewProjectStatus.CLOSED);
     project.setCloseReason("Closed early");
     when(reviewProjectRepository.findById(11L)).thenReturn(Optional.of(project));
@@ -316,6 +323,8 @@ public class ReviewProjectServiceTest {
     assertNull(project.getCloseReason());
     verify(reviewProjectRepository).save(project);
     verify(userService, never()).checkUserCanEditLocale(anyLong());
+    verify(reviewProjectAssignmentWindowService)
+        .syncTranslatorAssignmentWindow(project, null, translator);
   }
 
   @Test
@@ -338,10 +347,12 @@ public class ReviewProjectServiceTest {
     setCurrentUserRole(false, true, false);
     currentUser.setCanTranslateAllLocales(false);
     Team team = team(7L);
-    ReviewProject assignedProject = project(11L, team(8L), locale(13L, "fr-FR"), currentUser, null);
+    User translator = user(103L, "translator-a");
+    ReviewProject assignedProject =
+        project(11L, team(8L), locale(13L, "fr-FR"), currentUser, translator);
     assignedProject.setTextUnitCount(3);
     assignedProject.setDecidedCount(2L);
-    ReviewProject teamProject = project(12L, team, locale(14L, "ja-JP"), null, null);
+    ReviewProject teamProject = project(12L, team, locale(14L, "ja-JP"), null, translator);
     List<ReviewProject> projects = List.of(assignedProject, teamProject);
     when(reviewProjectRepository.findAllById(List.of(11L, 12L))).thenReturn(projects);
     when(teamUserRepository.findByUserIdAndRole(99L, TeamUserRole.PM))
@@ -351,9 +362,17 @@ public class ReviewProjectServiceTest {
         2,
         reviewProjectService.adminBatchUpdateStatus(
             List.of(11L, 12L), ReviewProjectStatus.CLOSED, " Closed early "));
+    InOrder closeLifecycle =
+        inOrder(reviewProjectAssignmentWindowService, reviewProjectTimeSpentStatService);
     for (ReviewProject project : projects) {
       assertEquals(ReviewProjectStatus.CLOSED, project.getStatus());
       assertEquals("Closed early", project.getCloseReason());
+      closeLifecycle
+          .verify(reviewProjectAssignmentWindowService)
+          .closeOpenWindow(project, ReviewProjectAssignmentWindowEndReason.PROJECT_CLOSED);
+      closeLifecycle
+          .verify(reviewProjectTimeSpentStatService)
+          .computeProjectStats(eq(project), any(ZonedDateTime.class));
     }
 
     assertEquals(
@@ -363,9 +382,30 @@ public class ReviewProjectServiceTest {
     for (ReviewProject project : projects) {
       assertEquals(ReviewProjectStatus.OPEN, project.getStatus());
       assertNull(project.getCloseReason());
+      verify(reviewProjectRepository, times(2)).save(project);
+      verify(reviewProjectAssignmentWindowService)
+          .syncTranslatorAssignmentWindow(project, null, translator);
     }
-    verify(reviewProjectRepository, times(2)).saveAll(projects);
     verify(userService, never()).checkUserCanEditLocale(anyLong());
+  }
+
+  @Test
+  public void batchStatusDoesNotRepeatLifecycleWhenStatusIsUnchanged() {
+    ReviewProject openProject = project(11L, team(7L), locale(13L, "fr-FR"), null, currentUser);
+    ReviewProject closedProject = project(12L, team(7L), locale(14L, "ja-JP"), null, currentUser);
+    closedProject.setStatus(ReviewProjectStatus.CLOSED);
+    closedProject.setCloseReason("Already completed");
+    when(reviewProjectRepository.findAllById(List.of(11L))).thenReturn(List.of(openProject));
+    when(reviewProjectRepository.findAllById(List.of(12L))).thenReturn(List.of(closedProject));
+
+    reviewProjectService.adminBatchUpdateStatus(List.of(11L), ReviewProjectStatus.OPEN, null);
+    reviewProjectService.adminBatchUpdateStatus(List.of(12L), ReviewProjectStatus.CLOSED, null);
+
+    assertEquals(ReviewProjectStatus.OPEN, openProject.getStatus());
+    assertNull(openProject.getCloseReason());
+    assertEquals(ReviewProjectStatus.CLOSED, closedProject.getStatus());
+    assertEquals("Already completed", closedProject.getCloseReason());
+    verifyNoInteractions(reviewProjectAssignmentWindowService, reviewProjectTimeSpentStatService);
   }
 
   @Test
@@ -384,7 +424,8 @@ public class ReviewProjectServiceTest {
 
     assertEquals(ReviewProjectStatus.OPEN, accessible.getStatus());
     assertEquals(ReviewProjectStatus.OPEN, inaccessible.getStatus());
-    verify(reviewProjectRepository, never()).saveAll(any());
+    verify(reviewProjectRepository, never()).save(any());
+    verifyNoInteractions(reviewProjectAssignmentWindowService, reviewProjectTimeSpentStatService);
   }
 
   @Test

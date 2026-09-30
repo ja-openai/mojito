@@ -2049,6 +2049,12 @@ public class ReviewProjectService {
           "Translators can only close projects after they are 100% complete");
     }
 
+    applyProjectStatusChange(reviewProject, status, closeReason);
+    return getProjectDetail(projectId);
+  }
+
+  private void applyProjectStatusChange(
+      ReviewProject reviewProject, ReviewProjectStatus status, String closeReason) {
     ReviewProjectStatus previousStatus = reviewProject.getStatus();
     reviewProject.setStatus(status);
     if (status == ReviewProjectStatus.OPEN) {
@@ -2067,7 +2073,6 @@ public class ReviewProjectService {
       reviewProjectAssignmentWindowService.syncTranslatorAssignmentWindow(
           reviewProject, null, reviewProject.getAssignedTranslatorUser());
     }
-    return getProjectDetail(projectId);
   }
 
   private boolean isProjectIncomplete(ReviewProject reviewProject) {
@@ -2460,16 +2465,8 @@ public class ReviewProjectService {
     List<ReviewProject> projects = reviewProjectRepository.findAllById(distinctIds);
     projects.forEach(this::assertCurrentUserCanReadProject);
     for (ReviewProject project : projects) {
-      project.setStatus(status);
-      if (status == ReviewProjectStatus.OPEN) {
-        project.setCloseReason(null);
-      } else if (closeReason != null) {
-        String trimmed = closeReason.trim();
-        project.setCloseReason(trimmed.isEmpty() ? null : trimmed);
-      }
+      applyProjectStatusChange(project, status, closeReason);
     }
-
-    reviewProjectRepository.saveAll(projects);
     return projects.size();
   }
 

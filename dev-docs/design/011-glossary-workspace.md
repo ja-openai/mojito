@@ -35,6 +35,12 @@ and is created from the glossary workspace. Its Advisor/Decider workflow and
 existing projects are unchanged. `TERM_CANDIDATE` reviews are also unchanged.
 No database migration is required.
 
+Deploy matching backend and frontend versions before creating `TERMINOLOGY_CLEANUP`
+projects. Older backend versions read this new stored type as `UNKNOWN`, and
+editing those projects on an older version can overwrite their type. Check for
+these projects before rolling back; an older binary alone does not preserve the
+new type's behavior.
+
 ### Workspace layout
 
 The glossary workspace is a two-pane surface:

@@ -2240,7 +2240,7 @@ one {{Você tem {$count} arquivo.}}
         ...textUnit.tmTextUnit!,
         asset: {
           assetPath: 'checkout.json',
-          repository: { id: 77, name: 'chatgpt-web' },
+          repository: { id: 77, name: 'checkout-web' },
         },
       },
     };
@@ -2273,7 +2273,7 @@ one {{Você tem {$count} arquivo.}}
         ...textUnit.tmTextUnit!,
         asset: {
           assetPath: 'checkout.json',
-          repository: { id: 77, name: 'chatgpt-web' },
+          repository: { id: 77, name: 'checkout-web' },
         },
       },
     };
@@ -2647,7 +2647,7 @@ one {{Você tem {$count} arquivo.}}
         ...textUnit.tmTextUnit!,
         asset: {
           assetPath: 'checkout.json',
-          repository: { id: 77, name: 'chatgpt-web' },
+          repository: { id: 77, name: 'checkout-web' },
         },
       },
     };

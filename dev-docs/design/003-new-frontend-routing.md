@@ -55,6 +55,9 @@ Review project management permissions
 - The project list exposes selection and batch Close/Reopen actions to PMs. The service checks
   access to every selected project before changing any status. Delete, request editing, and
   decided-count recomputation remain admin-only in the list.
+- Individual and batch status changes share the same lifecycle: closing an open project closes
+  its assignment window and computes time statistics; reopening a closed project starts a new
+  window for its assigned translator. Repeating the current status does not repeat these actions.
 - Translators keep their existing single-project locale checks and can close only completed projects.
 - PMs and admins can edit an individual project's due date from its header. PMs use the same
   assignment/team access rules as status changes, without translation-locale permissions.
