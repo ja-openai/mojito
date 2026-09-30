@@ -6,7 +6,6 @@ import com.box.l10n.mojito.entity.BaseEntity;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitStatistic;
-import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.rest.textunit.ImportTextUnitStatisticsBody;
 import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
@@ -44,15 +43,11 @@ public class TMTextUnitStatisticService {
 
   @Autowired MeterRegistry meterRegistry;
 
-  @Autowired TextUnitBatchMatcher textUnitBatchMatcher;
-
   @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
 
   @Autowired TMTextUnitRepository tmTextUnitRepository;
 
   @Autowired TMTextUnitStatisticRepository tmTextUnitStatisticRepository;
-
-  @Autowired TextUnitUtils textUnitUtils;
 
   int batchSize = 1000;
 
@@ -245,12 +240,5 @@ public class TMTextUnitStatisticService {
               return new AbstractMap.SimpleEntry<>(statistics, matchedTextUnits);
             })
         .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
-  }
-
-  private String getTextUnitMd5(ImportTextUnitStatisticsBody textUnitStatistic) {
-    return textUnitUtils.computeTextUnitMD5(
-        textUnitStatistic.getName(),
-        textUnitStatistic.getContent(),
-        textUnitStatistic.getComment());
   }
 }
