@@ -27,6 +27,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -53,6 +54,9 @@ public class TranslationIncidentService {
   }
 
   public record RejectIncidentRequest(String comment) {}
+
+  public record RejectIfCurrentRequest(
+      Long expectedTmTextUnitVariantId, String expectedTarget, String comment) {}
 
   public record UpdateStatusRequest(TranslationIncidentStatus status) {}
 
@@ -337,10 +341,34 @@ public class TranslationIncidentService {
     return toDetail(intake.create(incident, validatedRequest.concernKey()));
   }
 
-  @Transactional
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public IncidentDetail rejectIncidentIfCurrent(Long incidentId, RejectIfCurrentRequest request) {
+    assertCurrentUserCanManageIncidents();
+    if (request == null
+        || request.expectedTmTextUnitVariantId() == null
+        || request.expectedTmTextUnitVariantId() <= 0
+        || request.expectedTarget() == null) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "A translation baseline is required");
+    }
+    TranslationIncident incident = getIncidentEntity(incidentId);
+    if (!Objects.equals(
+            request.expectedTmTextUnitVariantId(), incident.getSelectedTmTextUnitVariantId())
+        || !Objects.equals(request.expectedTarget(), incident.getSelectedTarget())) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT, "The incident translation baseline changed");
+    }
+    return rejectIncident(incident, new RejectIncidentRequest(request.comment()), false);
+  }
+
+  @Transactional(isolation = Isolation.READ_COMMITTED)
   public IncidentDetail rejectIncident(Long incidentId, RejectIncidentRequest request) {
     assertCurrentUserCanManageIncidents();
-    TranslationIncident incident = getIncidentEntity(incidentId);
+    return rejectIncident(getIncidentEntity(incidentId), request, true);
+  }
+
+  private IncidentDetail rejectIncident(
+      TranslationIncident incident, RejectIncidentRequest request, boolean closeAfterRejection) {
     if (incident.getStatus() == TranslationIncidentStatus.CLOSED) {
       throw new ResponseStatusException(
           HttpStatus.CONFLICT, "Reopen this incident before attempting rejection");
@@ -395,11 +423,17 @@ public class TranslationIncidentService {
       incident.setRejectAuditCommentId(result.auditCommentId());
       incident.setRejectedAt(now);
       incident.setRejectedByUsername(getCurrentUsername());
-      incident.setStatus(TranslationIncidentStatus.CLOSED);
-      incident.setClosedAt(now);
-      incident.setClosedByUsername(getCurrentUsername());
+      // Automated recovery needs a durable open receipt until retranslation and generation finish.
+      incident.setStatus(
+          closeAfterRejection ? TranslationIncidentStatus.CLOSED : TranslationIncidentStatus.OPEN);
+      incident.setClosedAt(closeAfterRejection ? now : null);
+      incident.setClosedByUsername(closeAfterRejection ? getCurrentUsername() : null);
       translationIncidentRepository.save(incident);
     } catch (RuntimeException exception) {
+      if (exception instanceof ResponseStatusException conflict
+          && conflict.getStatusCode().isSameCodeAs(HttpStatus.CONFLICT)) {
+        throw exception;
+      }
       incident.setResolution(TranslationIncidentResolution.REJECT_FAILED);
       incident.setRejectAuditComment(rejectAuditComment);
       translationIncidentRepository.save(incident);

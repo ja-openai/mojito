@@ -3,12 +3,14 @@ package com.box.l10n.mojito.rest.badtranslation;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.box.l10n.mojito.entity.TranslationIncidentStatus;
 import com.box.l10n.mojito.service.badtranslation.TranslationIncidentService;
 import java.time.LocalDate;
 import org.junit.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -50,5 +52,21 @@ public class TranslationIncidentWSTest {
     mvc.perform(get("/api/translation-incidents")).andExpect(status().isOk());
 
     verify(service).getIncidents(null, null, null, null, 0, 25, null, null, null);
+  }
+
+  @Test
+  public void forwardsGuardedRejectionBaselineOnDedicatedEndpoint() throws Exception {
+    mvc.perform(
+            post("/api/translation-incidents/91/reject-if-current")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                {"expectedTmTextUnitVariantId": 13, "expectedTarget": "bad", "comment": "invalid selector"}
+                """))
+        .andExpect(status().isOk());
+    verify(service)
+        .rejectIncidentIfCurrent(
+            91L,
+            new TranslationIncidentService.RejectIfCurrentRequest(13L, "bad", "invalid selector"));
   }
 }

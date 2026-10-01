@@ -29,6 +29,21 @@ What this scaffold includes
   - `bad_translation.reject_incident`
   - `bad_translation.create_and_reject_if_clear`
   - auto-reject only when incident creation resolves to one clear rejectable candidate
+- Incident rejection compares the saved candidate with the locked, refreshed current translation
+  before writing. The current-row id, variant id, exact source/target, comment, status, and inclusion
+  flag must still match; a stale incident returns `409` without changing the translation or incident.
+  Parent/current locks and the write share a `READ_COMMITTED` transaction, matching guarded editor
+  saves. This protection also applies to the original REST/MCP rejection entry points.
+- Automated callers use `POST /api/translation-incidents/{id}/reject-if-current` with
+  `expectedTmTextUnitVariantId`, `expectedTarget`, and optional `comment`. The caller baseline must
+  match the incident snapshot before the locked comparison. This dedicated route is unavailable on
+  older deployments: callers must fail closed on `404` or conflict and must not fall back to the
+  original rejection endpoint. A successful response is the existing audited `IncidentDetail`,
+  with status `OPEN` and resolution `REJECTED`: this durable receipt survives a caller interruption
+  before retranslation. Clients must verify that state and resume only the exact excluded variant.
+  The original manual rejection endpoint continues to close its incident. Rejection does not itself
+  enqueue translation, regenerate assets, or prove catalog delivery; automated clients close the
+  receipt only after replacement validation and successful generation.
 - A generic task-inspection workflow on top of existing pollable-task storage:
   - reuse `/api/pollableTasks/{id}` plus the stored task input/output blobs
   - add `GET /api/pollableTasks/{id}/inspection` for a compact debugging view

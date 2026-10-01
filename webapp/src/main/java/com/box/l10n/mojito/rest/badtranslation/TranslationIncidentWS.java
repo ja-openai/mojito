@@ -34,6 +34,9 @@ public class TranslationIncidentWS {
 
   public record RejectIncidentRequest(String comment) {}
 
+  public record RejectIfCurrentRequest(
+      Long expectedTmTextUnitVariantId, String expectedTarget, String comment) {}
+
   public record UpdateStatusRequest(TranslationIncidentStatus status) {}
 
   @GetMapping
@@ -81,6 +84,17 @@ public class TranslationIncidentWS {
     return translationIncidentService.rejectIncident(
         incidentId,
         new TranslationIncidentService.RejectIncidentRequest(
+            request == null ? null : request.comment()));
+  }
+
+  @PostMapping("/{incidentId}/reject-if-current")
+  public TranslationIncidentService.IncidentDetail rejectIncidentIfCurrent(
+      @PathVariable Long incidentId, @RequestBody RejectIfCurrentRequest request) {
+    return translationIncidentService.rejectIncidentIfCurrent(
+        incidentId,
+        new TranslationIncidentService.RejectIfCurrentRequest(
+            request == null ? null : request.expectedTmTextUnitVariantId(),
+            request == null ? null : request.expectedTarget(),
             request == null ? null : request.comment()));
   }
 
