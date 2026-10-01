@@ -21,11 +21,6 @@ export type VisibleIcuSyntaxDisplay =
       text: '';
     };
 
-export type VisibleIcuSyntaxLabel = {
-  argument: string;
-  form: string;
-};
-
 export type VisibleTextIcuMessage = {
   ariaLabel: string;
   checkedCount: number;
@@ -80,16 +75,6 @@ export function visibleIcuSyntaxDisplay(raw: string): VisibleIcuSyntaxDisplay {
     kind: 'form',
     text,
   };
-}
-
-export function visibleIcuSyntaxLabel(raw: string): VisibleIcuSyntaxLabel | null {
-  const display = visibleIcuSyntaxDisplay(raw);
-  return display.kind === 'argument-form'
-    ? {
-        argument: display.argument,
-        form: display.form,
-      }
-    : null;
 }
 
 export function visibleProtectedTokenText(kind: string, raw: string): string {

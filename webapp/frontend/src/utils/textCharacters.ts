@@ -47,12 +47,6 @@ export type TextAssistInsertTool = {
   group: 'space' | 'bidi-primary' | 'bidi-legacy';
 };
 
-export type TextAssistWrapTool = {
-  label: string;
-  open: string;
-  close: string;
-};
-
 type IndexedChar = {
   char: string;
   index: number;
@@ -76,23 +70,6 @@ const BIDI_LEGACY_TOOLS: TextAssistInsertTool[] = [
   { label: 'PDF', value: '\u202c', name: 'pop directional formatting', group: 'bidi-legacy' },
   { label: 'LRO', value: '\u202d', name: 'left-to-right override', group: 'bidi-legacy' },
   { label: 'RLO', value: '\u202e', name: 'right-to-left override', group: 'bidi-legacy' },
-];
-
-const SPECIAL_SPACE_TOOLS: TextAssistInsertTool[] = [
-  { label: 'NBSP', value: '\u00a0', name: 'non-breaking space', group: 'space' },
-  { label: 'NNBSP', value: '\u202f', name: 'narrow non-breaking space', group: 'space' },
-];
-
-export const TEXT_ASSIST_INSERT_TOOLS: TextAssistInsertTool[] = [
-  ...SPECIAL_SPACE_TOOLS,
-  ...BIDI_PRIMARY_TOOLS,
-  ...BIDI_LEGACY_TOOLS,
-];
-
-export const TEXT_ASSIST_WRAP_TOOLS: TextAssistWrapTool[] = [
-  { label: 'Wrap LRI...PDI', open: '\u2066', close: '\u2069' },
-  { label: 'Wrap RLI...PDI', open: '\u2067', close: '\u2069' },
-  { label: 'Wrap FSI...PDI', open: '\u2068', close: '\u2069' },
 ];
 
 const ZERO_WIDTH_LABELS = new Map<string, string>([
