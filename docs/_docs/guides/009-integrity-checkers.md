@@ -56,6 +56,13 @@ The translation gets rejected if any placeholder in the source string is missing
 
 Missing curly braces or translating elements within the curly braces also cause the translation to be rejected.
 
+The checker also rejects repeated selectors within one target `plural`, `selectordinal`, or
+`select` argument, including repeated exact-number branches such as `=0`. Locale-specific plural
+categories remain allowed. Nested arguments and separate occurrences of an argument have independent
+selector scopes. ICU4J itself accepts duplicates, so this additional check prevents translations
+that downstream consumers such as FormatJS cannot compile. It does not rewrite stored translations
+or retroactively revalidate existing targets; the normal save/import override policies still apply.
+
 | Source String                                                   | Translation                                                          | Checker           |
 |:----------------------------------------------------------------|:---------------------------------------------------------------------|:----------------- |
 | <small>{numFiles, plural, one{one file} other{# files}}</small> | <small>{numFiles, plural, one{un fichier} other{# fichiers}}</small> | <small>OK</small> |
