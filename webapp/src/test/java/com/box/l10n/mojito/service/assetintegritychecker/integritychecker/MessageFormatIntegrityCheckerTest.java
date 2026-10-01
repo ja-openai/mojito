@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.assetintegritychecker.integritychecker;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableMap;
@@ -152,10 +153,10 @@ public class MessageFormatIntegrityCheckerTest {
   /**
    * ICU4J accepts duplicate selectors in a select clause, while FormatJS rejects them.
    *
-   * <p>This documents the current Mojito behavior so the gap is explicit in tests.
+   * <p>The checker rejects these before they reach a downstream compiler.
    */
   @Test
-  public void testDuplicateSelectSelectorsAreAccepted()
+  public void testDuplicateSelectSelectorsAreRejected()
       throws MessageFormatIntegrityCheckerException {
 
     MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
@@ -163,18 +164,21 @@ public class MessageFormatIntegrityCheckerTest {
     String target =
         "{itemType, select, primary {Principal} secondary {Secondaire} secondary {Alt} other {Inconnu}}";
 
-    checker.check(source, target);
+    assertEquals(
+        "Duplicate selector 'secondary' in target argument 'itemType'",
+        assertThrows(
+                MessageFormatIntegrityCheckerException.class, () -> checker.check(source, target))
+            .getMessage());
   }
 
   /**
    * ICU4J also accepts duplicate selectors in a plural clause, while FormatJS rejects them with
    * DUPLICATE_PLURAL_ARGUMENT_SELECTOR.
    *
-   * <p>This documents the current backend gap with neutral strings so we can fix the checker
-   * intentionally.
+   * <p>Repeated categories are invalid even when all arguments are preserved.
    */
   @Test
-  public void testDuplicatePluralSelectorsAreAccepted()
+  public void testDuplicatePluralSelectorsAreRejected()
       throws MessageFormatIntegrityCheckerException {
 
     MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
@@ -183,7 +187,69 @@ public class MessageFormatIntegrityCheckerTest {
     String target =
         "Processed {itemCount, plural, one {# record} few {# records} other {# records} other {# record}} in {durationMinutes} min";
 
-    checker.check(source, target);
+    assertEquals(
+        "Duplicate selector 'other' in target argument 'itemCount'",
+        assertThrows(
+                MessageFormatIntegrityCheckerException.class, () -> checker.check(source, target))
+            .getMessage());
+  }
+
+  @Test
+  public void testRussianPluralRejectsDuplicateOneAndKeepsLocaleCategories() {
+    MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
+    String source = "{count, plural, one {One item} other {Several items}}";
+    String valid =
+        "{count, plural, one {Один элемент} few {Несколько элементов} many {Много элементов} other {Элементы}}";
+    String invalid = valid.replace("few {", "one {Несколько элементов} few {");
+
+    checker.check(source, valid);
+    assertEquals(
+        "Duplicate selector 'one' in target argument 'count'",
+        assertThrows(
+                MessageFormatIntegrityCheckerException.class, () -> checker.check(source, invalid))
+            .getMessage());
+  }
+
+  @Test
+  public void testRejectsDuplicateExactAndOrdinalSelectors() {
+    MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
+    for (String type : new String[] {"plural", "selectordinal"}) {
+      String source = "{n, " + type + ", =0 {None} one {One} other {More}}";
+      for (String selector : new String[] {"=0", "one"}) {
+        String target =
+            source.replace(selector + " {", selector + " {Duplicate} " + selector + " {");
+        assertEquals(
+            "Duplicate selector '" + selector + "' in target argument 'n'",
+            assertThrows(
+                    MessageFormatIntegrityCheckerException.class,
+                    () -> checker.check(source, target))
+                .getMessage());
+      }
+    }
+  }
+
+  @Test
+  public void testNestedAndSiblingArgumentsHaveIndependentSelectors() {
+    MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
+    String source =
+        "{kind, select, one {{n, plural, one {One} other {Many}}} other {Other}} "
+            + "{n, plural, one {One} other {Many}}";
+    checker.check(source, source);
+
+    String target = source.replace("one {One}", "one {One} one {Duplicate}");
+    assertEquals(
+        "Duplicate selector 'one' in target argument 'n'",
+        assertThrows(
+                MessageFormatIntegrityCheckerException.class, () -> checker.check(source, target))
+            .getMessage());
+  }
+
+  @Test
+  public void testQuotedSelectorTextAndChoiceSeparatorsRemainValid() {
+    MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
+    String source =
+        "'{n, plural, one {One} one {Duplicate} other {Many}}' {n,choice,0#None|1#One|1<Many}";
+    checker.check(source, source);
   }
 
   @Test(expected = IntegrityCheckException.class)

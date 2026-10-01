@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.assetintegritychecker.integritychecker;
 import com.ibm.icu.text.MessageFormat;
 import com.ibm.icu.text.MessagePattern;
 import com.ibm.icu.text.MessagePattern.Part;
+import java.util.HashSet;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ public class MessageFormatIntegrityChecker extends AbstractTextUnitIntegrityChec
     logger.debug("Check if the target pattern is valid");
     try {
       targetMessageFormat = new MessageFormat(targetContent);
+      checkUniqueTargetSelectors(new MessagePattern(targetContent));
     } catch (IllegalArgumentException iae) {
       throw new MessageFormatIntegrityCheckerException(
           String.format("Invalid pattern - %s", iae.getMessage()), iae);
@@ -72,6 +74,37 @@ public class MessageFormatIntegrityChecker extends AbstractTextUnitIntegrityChec
               + targetArgumentNames
               + ", expected: "
               + sourceArgumentNames);
+    }
+  }
+
+  /** ICU4J accepts repeated selectors, but consumers such as FormatJS reject them. */
+  private void checkUniqueTargetSelectors(MessagePattern pattern) {
+    for (int i = 0; i < pattern.countParts(); i++) {
+      Part argument = pattern.getPart(i);
+      if (argument.getType() != Part.Type.ARG_START
+          || (argument.getArgType() != MessagePattern.ArgType.PLURAL
+              && argument.getArgType() != MessagePattern.ArgType.SELECTORDINAL
+              && argument.getArgType() != MessagePattern.ArgType.SELECT)) {
+        continue;
+      }
+
+      Set<String> selectors = new HashSet<>();
+      int argumentLimit = pattern.getLimitPartIndex(i);
+      for (int j = i + 1; j < argumentLimit; j++) {
+        Part part = pattern.getPart(j);
+        if (part.getType() == Part.Type.ARG_START) {
+          // Nested arguments have independent selector scopes and are checked by the outer loop.
+          j = pattern.getLimitPartIndex(j);
+        } else if (part.getType() == Part.Type.ARG_SELECTOR
+            && !selectors.add(pattern.getSubstring(part))) {
+          throw new MessageFormatIntegrityCheckerException(
+              "Duplicate selector '"
+                  + pattern.getSubstring(part)
+                  + "' in target argument '"
+                  + pattern.getSubstring(pattern.getPart(i + 1))
+                  + "'");
+        }
+      }
     }
   }
 
