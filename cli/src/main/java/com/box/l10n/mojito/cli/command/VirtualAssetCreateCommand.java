@@ -55,8 +55,6 @@ public class VirtualAssetCreateCommand extends Command {
 
   @Autowired HttpClientErrorExceptionHelper httpClientErrorExceptionHelper;
 
-  CommandDirectories commandDirectories;
-
   @Override
   public void execute() throws CommandException {
 

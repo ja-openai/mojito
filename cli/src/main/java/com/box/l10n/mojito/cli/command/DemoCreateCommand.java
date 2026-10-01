@@ -65,8 +65,6 @@ public class DemoCreateCommand extends RepoCommand {
 
   @Autowired LocaleClient localeClient;
 
-  CommandDirectories commandDirectories;
-
   Path outputDirectoryPath;
 
   Repository repository;
