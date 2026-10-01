@@ -229,18 +229,78 @@ public class MessageFormatIntegrityCheckerTest {
   }
 
   @Test
-  public void testNestedAndSiblingArgumentsHaveIndependentSelectors() {
+  public void testRejectsUnknownPluralKeywordsIncludingNestedArguments() {
     MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
-    String source =
-        "{kind, select, one {{n, plural, one {One} other {Many}}} other {Other}} "
-            + "{n, plural, one {One} other {Many}}";
-    checker.check(source, source);
+    for (String type : new String[] {"plural", "selectordinal"}) {
+      String source = "{n, " + type + ", one {One} other {More}}";
+      for (String keyword : new String[] {"banana", "uno", "ONE"}) {
+        String target = source.replace("one {", keyword + " {");
+        String expected = "Invalid plural keyword '" + keyword + "' in target argument 'n'";
+        assertEquals(
+            expected,
+            assertThrows(
+                    MessageFormatIntegrityCheckerException.class,
+                    () -> checker.check(source, target))
+                .getMessage());
+        assertEquals(
+            expected,
+            assertThrows(
+                    MessageFormatIntegrityCheckerException.class,
+                    () ->
+                        checker.check(
+                            "{kind, select, primary {" + source + "} other {Other}}",
+                            "{kind, select, primary {" + target + "} other {Other}}"))
+                .getMessage());
+      }
+    }
+  }
 
-    String target = source.replace("one {One}", "one {One} one {Duplicate}");
+  @Test
+  public void testPluralKeywordsAndExactNumbersDoNotRestrictGenericSelectLabels() {
+    MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
+    for (String type : new String[] {"plural", "selectordinal"}) {
+      checker.check(
+          "{n, " + type + ", one {One} other {More}}",
+          "{n, "
+              + type
+              + ", =0 {None} =1.5 {Fraction} zero {Zero} one {One} two {Two} "
+              + "few {Few} many {Many} other {Other}}");
+    }
+    String select = "{kind, select, banana {Fruit} uno {First} ONE {Uppercase} other {Other}}";
+    checker.check(select, select);
+  }
+
+  @Test
+  public void testNestedAndSiblingArgumentsHaveIndependentSelectors() {
+    String plural = "{n, plural, one {One} other {Many}}";
+    String source = "{kind, select, one {" + plural + "} other {Other}} " + plural;
+    new MessageFormatIntegrityChecker().check(source, source);
+  }
+
+  @Test
+  public void testRejectsDuplicateOnlyInNestedArgument() {
+    assertRejectsDuplicateInArgumentScopes(true);
+  }
+
+  @Test
+  public void testRejectsDuplicateOnlyInSiblingArgument() {
+    assertRejectsDuplicateInArgumentScopes(false);
+  }
+
+  private void assertRejectsDuplicateInArgumentScopes(boolean nested) {
+    String valid = "{n, plural, one {One} other {Many}}";
+    String invalid = "{n, plural, one {One} one {Duplicate} other {Many}}";
+    String source = "{kind, select, one {" + valid + "} other {Other}} " + valid;
+    String target =
+        "{kind, select, one {"
+            + (nested ? invalid : valid)
+            + "} other {Other}} "
+            + (nested ? valid : invalid);
     assertEquals(
         "Duplicate selector 'one' in target argument 'n'",
         assertThrows(
-                MessageFormatIntegrityCheckerException.class, () -> checker.check(source, target))
+                MessageFormatIntegrityCheckerException.class,
+                () -> new MessageFormatIntegrityChecker().check(source, target))
             .getMessage());
   }
 

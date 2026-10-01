@@ -38,6 +38,17 @@ public class MessageFormatSelectorsBatchImportIntegrityTest {
   }
 
   @Test
+  public void unknownPluralKeywordExcludesCandidateAndRecordsDiagnostic() {
+    TextUnitForBatchMatcherImport candidate = checkImport(SOURCE.replace("one {", "uno {"));
+    assertFalse(candidate.isIncludedInLocalizedFile());
+    assertEquals(Status.TRANSLATION_NEEDED, candidate.getStatus());
+    assertEquals(1, candidate.getTmTextUnitVariantComments().size());
+    assertEquals(
+        "Invalid plural keyword 'uno' in target argument 'count'",
+        candidate.getTmTextUnitVariantComments().get(0).getContent());
+  }
+
+  @Test
   public void validRussianCategoriesRemainIncludedWithRequestedStatus() {
     TextUnitForBatchMatcherImport candidate = checkImport(TARGET);
 

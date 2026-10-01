@@ -59,8 +59,11 @@ Missing curly braces or translating elements within the curly braces also cause 
 The checker also rejects repeated selectors within one target `plural`, `selectordinal`, or
 `select` argument, including repeated exact-number branches such as `=0`. Locale-specific plural
 categories remain allowed. Nested arguments and separate occurrences of an argument have independent
-selector scopes. ICU4J itself accepts duplicates, so this additional check prevents translations
-that downstream consumers such as FormatJS cannot compile. It does not rewrite stored translations
+selector scopes. Plural and ordinal keywords must be `zero`, `one`, `two`, `few`, `many`,
+or `other`; exact numeric selectors remain valid, and generic `select` labels are unrestricted.
+ICU4J itself accepts duplicates and unknown plural keywords. Duplicate detection prevents downstream
+compile failures; keyword validation prevents branches that plural rules can never select.
+The checker does not rewrite stored translations
 or retroactively revalidate existing targets; the normal save/import override policies still apply.
 
 | Source String                                                   | Translation                                                          | Checker           |

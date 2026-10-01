@@ -3,7 +3,9 @@ package com.box.l10n.mojito.service.assetintegritychecker.integritychecker;
 import com.ibm.icu.text.MessageFormat;
 import com.ibm.icu.text.MessagePattern;
 import com.ibm.icu.text.MessagePattern.Part;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,9 @@ public class MessageFormatIntegrityChecker extends AbstractTextUnitIntegrityChec
   /** logger */
   static Logger logger = LoggerFactory.getLogger(MessageFormatIntegrityChecker.class);
 
+  private static final Set<String> PLURAL_KEYWORDS =
+      Set.of("zero", "one", "two", "few", "many", "other");
+
   private static final String REPLACEMENT_CHARS = "\u0013";
 
   @Override
@@ -36,7 +41,7 @@ public class MessageFormatIntegrityChecker extends AbstractTextUnitIntegrityChec
     logger.debug("Check if the target pattern is valid");
     try {
       targetMessageFormat = new MessageFormat(targetContent);
-      checkUniqueTargetSelectors(new MessagePattern(targetContent));
+      checkTargetSelectors(new MessagePattern(targetContent));
     } catch (IllegalArgumentException iae) {
       throw new MessageFormatIntegrityCheckerException(
           String.format("Invalid pattern - %s", iae.getMessage()), iae);
@@ -77,8 +82,8 @@ public class MessageFormatIntegrityChecker extends AbstractTextUnitIntegrityChec
     }
   }
 
-  /** ICU4J accepts repeated selectors, but consumers such as FormatJS reject them. */
-  private void checkUniqueTargetSelectors(MessagePattern pattern) {
+  /** ICU4J accepts repeated selectors and unknown plural keywords; reject both in targets. */
+  private void checkTargetSelectors(MessagePattern pattern) {
     for (int i = 0; i < pattern.countParts(); i++) {
       Part argument = pattern.getPart(i);
       if (argument.getType() != Part.Type.ARG_START
@@ -88,24 +93,42 @@ public class MessageFormatIntegrityChecker extends AbstractTextUnitIntegrityChec
         continue;
       }
 
-      Set<String> selectors = new HashSet<>();
-      int argumentLimit = pattern.getLimitPartIndex(i);
-      for (int j = i + 1; j < argumentLimit; j++) {
-        Part part = pattern.getPart(j);
-        if (part.getType() == Part.Type.ARG_START) {
-          // Nested arguments have independent selector scopes and are checked by the outer loop.
-          j = pattern.getLimitPartIndex(j);
-        } else if (part.getType() == Part.Type.ARG_SELECTOR
-            && !selectors.add(pattern.getSubstring(part))) {
+      String argumentName = pattern.getSubstring(pattern.getPart(i + 1));
+      Set<String> seen = new HashSet<>();
+      for (String selector : getArgumentSelectors(pattern, i)) {
+        if (argument.getArgType() != MessagePattern.ArgType.SELECT
+            && !selector.startsWith("=")
+            && !PLURAL_KEYWORDS.contains(selector)) {
           throw new MessageFormatIntegrityCheckerException(
-              "Duplicate selector '"
-                  + pattern.getSubstring(part)
+              "Invalid plural keyword '"
+                  + selector
                   + "' in target argument '"
-                  + pattern.getSubstring(pattern.getPart(i + 1))
+                  + argumentName
                   + "'");
+        }
+        if (!seen.add(selector)) {
+          throw new MessageFormatIntegrityCheckerException(
+              "Duplicate selector '" + selector + "' in target argument '" + argumentName + "'");
         }
       }
     }
+  }
+
+  /**
+   * Returns one argument's selectors in source order, retaining duplicates and skipping children.
+   */
+  private List<String> getArgumentSelectors(MessagePattern pattern, int argumentStart) {
+    List<String> selectors = new ArrayList<>();
+    int limit = pattern.getLimitPartIndex(argumentStart);
+    for (int i = argumentStart + 1; i < limit; i++) {
+      Part part = pattern.getPart(i);
+      if (part.getType() == Part.Type.ARG_START) {
+        i = pattern.getLimitPartIndex(i);
+      } else if (part.getType() == Part.Type.ARG_SELECTOR) {
+        selectors.add(pattern.getSubstring(part));
+      }
+    }
+    return selectors;
   }
 
   /**
