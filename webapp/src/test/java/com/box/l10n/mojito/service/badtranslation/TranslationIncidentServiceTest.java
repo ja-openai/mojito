@@ -1,8 +1,11 @@
 package com.box.l10n.mojito.service.badtranslation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.TranslationIncident;
@@ -27,6 +30,8 @@ import org.mockito.Mockito;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 public class TranslationIncidentServiceTest {
 
@@ -210,12 +215,12 @@ public class TranslationIncidentServiceTest {
   }
 
   @Test
-  public void rejectIncidentUsesStoredCandidateAndUpdatesAuditFields() {
+  public void guardedRejectionUsesStoredCandidateAndKeepsRecoveryReceiptOpen() {
     TranslationIncident incident = new TranslationIncident();
     incident.setId(91L);
     incident.setStatus(TranslationIncidentStatus.OPEN);
     incident.setResolution(TranslationIncidentResolution.READY_TO_REJECT);
-    incident.setRepositoryName("chatgpt-web");
+    incident.setRepositoryName("sample-app");
     incident.setStringId("string.id");
     incident.setObservedLocale("fr-ca");
     incident.setResolvedLocale("fr-CA");
@@ -242,18 +247,24 @@ public class TranslationIncidentServiceTest {
                 12L, 13L, 112L, 113L, "TRANSLATION_NEEDED", false, 221L, true));
 
     TranslationIncidentService.IncidentDetail detail =
-        translationIncidentService.rejectIncident(
-            91L, new TranslationIncidentService.RejectIncidentRequest("duplicate other clause"));
+        translationIncidentService.rejectIncidentIfCurrent(
+            91L,
+            new TranslationIncidentService.RejectIfCurrentRequest(
+                13L, "target", "duplicate other clause"));
 
     ArgumentCaptor<TranslationIncident> incidentCaptor =
         ArgumentCaptor.forClass(TranslationIncident.class);
     verify(translationIncidentRepository).save(incidentCaptor.capture());
-    assertThat(detail.status()).isEqualTo(TranslationIncidentStatus.CLOSED.name());
+    assertThat(detail.status()).isEqualTo(TranslationIncidentStatus.OPEN.name());
     assertThat(detail.resolution()).isEqualTo(TranslationIncidentResolution.REJECTED.name());
     assertThat(detail.rejectAuditCommentId()).isEqualTo(221L);
     assertThat(detail.rejectedByUsername()).isEqualTo("oncall");
-    assertThat(detail.closedByUsername()).isEqualTo("oncall");
-    assertThat(detail.closedAt()).isNotNull();
+    assertThat(detail.selectedTmTextUnitCurrentVariantId()).isEqualTo(112L);
+    assertThat(detail.selectedTmTextUnitVariantId()).isEqualTo(113L);
+    assertThat(detail.selectedTranslationStatus()).isEqualTo("TRANSLATION_NEEDED");
+    assertThat(detail.selectedIncludedInLocalizedFile()).isFalse();
+    assertThat(detail.closedByUsername()).isNull();
+    assertThat(detail.closedAt()).isNull();
     assertThat(detail.incidentLink())
         .isEqualTo("https://mojito.example/translation-incidents?incidentId=91");
     assertThat(detail.selectedTextUnitLink())
@@ -261,6 +272,87 @@ public class TranslationIncidentServiceTest {
     assertThat(incidentCaptor.getValue().getRejectAuditComment())
         .contains("Bad translation incident #91")
         .contains("duplicate other clause");
+  }
+
+  @Test
+  public void originalRejectionStillClosesItsIncident() {
+    var incident = new TranslationIncident();
+    incident.setStatus(TranslationIncidentStatus.OPEN);
+    incident.setResolution(TranslationIncidentResolution.READY_TO_REJECT);
+    incident.setSelectedCanReject(true);
+    incident.setSelectedTmTextUnitId(11L);
+    incident.setSelectedTmTextUnitCurrentVariantId(12L);
+    incident.setSelectedTmTextUnitVariantId(13L);
+    incident.setResolvedLocaleId(21L);
+    incident.setResolvedLocale("fr");
+    when(translationIncidentRepository.findById(91L)).thenReturn(Optional.of(incident));
+    when(badTranslationMutationService.rejectTranslation(any(), any(), any()))
+        .thenReturn(
+            new BadTranslationMutationService.RejectMutationResult(
+                12L, 13L, 112L, 113L, "TRANSLATION_NEEDED", false, 221L, true));
+
+    var detail =
+        translationIncidentService.rejectIncident(
+            91L, new TranslationIncidentService.RejectIncidentRequest("invalid selector"));
+
+    assertThat(detail.status()).isEqualTo(TranslationIncidentStatus.CLOSED.name());
+    assertThat(detail.resolution()).isEqualTo(TranslationIncidentResolution.REJECTED.name());
+    assertThat(detail.closedByUsername()).isEqualTo("oncall");
+    assertThat(detail.closedAt()).isNotNull();
+    assertThat(detail.rejectAuditCommentId()).isEqualTo(221L);
+  }
+
+  @Test
+  public void guardedRejectionRequiresExactCallerBaselineBeforeMutation() {
+    var incident = new TranslationIncident();
+    incident.setSelectedTmTextUnitVariantId(13L);
+    incident.setSelectedTarget("target");
+    when(translationIncidentRepository.findById(91L)).thenReturn(Optional.of(incident));
+
+    for (var request :
+        List.of(
+            new TranslationIncidentService.RejectIfCurrentRequest(12L, "target", null),
+            new TranslationIncidentService.RejectIfCurrentRequest(13L, "stale target", null))) {
+      assertThatThrownBy(() -> translationIncidentService.rejectIncidentIfCurrent(91L, request))
+          .isInstanceOfSatisfying(
+              ResponseStatusException.class,
+              error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+    }
+    assertThatThrownBy(() -> translationIncidentService.rejectIncidentIfCurrent(91L, null))
+        .isInstanceOfSatisfying(
+            ResponseStatusException.class,
+            error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+    verifyNoInteractions(badTranslationMutationService);
+    verify(translationIncidentRepository, never()).save(any());
+  }
+
+  @Test
+  public void concurrentCorrectionConflictDoesNotChangeIncidentOrAudit() {
+    var incident = new TranslationIncident();
+    incident.setStatus(TranslationIncidentStatus.OPEN);
+    incident.setResolution(TranslationIncidentResolution.READY_TO_REJECT);
+    incident.setSelectedCanReject(true);
+    incident.setSelectedTmTextUnitId(11L);
+    incident.setSelectedTmTextUnitCurrentVariantId(12L);
+    incident.setSelectedTmTextUnitVariantId(13L);
+    incident.setResolvedLocaleId(21L);
+    incident.setResolvedLocale("fr");
+    when(translationIncidentRepository.findById(91L)).thenReturn(Optional.of(incident));
+    when(badTranslationMutationService.rejectTranslation(any(), any(), any()))
+        .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Translation changed"));
+
+    assertThatThrownBy(
+            () ->
+                translationIncidentService.rejectIncident(
+                    91L,
+                    new TranslationIncidentService.RejectIncidentRequest("reject stale snapshot")))
+        .isInstanceOfSatisfying(
+            ResponseStatusException.class,
+            error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+    assertThat(incident.getStatus()).isEqualTo(TranslationIncidentStatus.OPEN);
+    assertThat(incident.getResolution()).isEqualTo(TranslationIncidentResolution.READY_TO_REJECT);
+    assertThat(incident.getRejectAuditComment()).isNull();
+    verify(translationIncidentRepository, never()).save(any());
   }
 
   @Test
