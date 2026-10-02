@@ -40,14 +40,6 @@ export const checkTextUnitIntegrityWithRetry = async (
   throw new Error(INTEGRITY_CHECK_UNAVAILABLE_TITLE);
 };
 
-export const formatIntegrityCheckFailureBody = (result: TextUnitIntegrityCheckResult | null) => {
-  const detail = result?.failureDetail?.trim();
-  if (detail) {
-    return `${INTEGRITY_CHECK_FAILURE_MESSAGE}\n\n${detail}`;
-  }
-  return INTEGRITY_CHECK_FAILURE_MESSAGE;
-};
-
 const escapeReportHtml = (value: string) =>
   value
     .replace(/&/g, '&amp;')
