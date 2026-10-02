@@ -160,9 +160,7 @@ public class JsonConfigLocalizationProcessorService {
             : extract(
                 new ExtractionInput(input.schemaJson(), input.sourceConfigJson(), input.profile()));
     List<JsonConfigString> strings =
-        input.strings() == null
-            ? extraction.strings()
-            : normalizeInputStrings(input.strings(), extraction.profile());
+        input.strings() == null ? extraction.strings() : normalizeInputStrings(input.strings());
     if (input.strings() != null && !nullToBlank(input.sourceConfigJson()).isBlank()) {
       validateInputStringsExistInSourceConfig(strings, extraction.strings());
     }
@@ -228,9 +226,7 @@ public class JsonConfigLocalizationProcessorService {
             : extract(
                 new ExtractionInput(input.schemaJson(), input.sourceConfigJson(), input.profile()));
     List<JsonConfigString> strings =
-        input.strings() == null
-            ? extraction.strings()
-            : normalizeInputStrings(input.strings(), extraction.profile());
+        input.strings() == null ? extraction.strings() : normalizeInputStrings(input.strings());
     if (input.strings() != null && !nullToBlank(input.sourceConfigJson()).isBlank()) {
       validateInputStringsExistInSourceConfig(strings, extraction.strings());
     }
@@ -1767,8 +1763,7 @@ public class JsonConfigLocalizationProcessorService {
         .toList();
   }
 
-  private List<JsonConfigString> normalizeInputStrings(
-      List<JsonConfigString> strings, SourceConfigProfile profile) {
+  private List<JsonConfigString> normalizeInputStrings(List<JsonConfigString> strings) {
     return strings.stream()
         .filter(JsonConfigString::used)
         .map(
