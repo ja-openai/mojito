@@ -22,8 +22,6 @@ public class ExtractionDiffNotifierGithub implements ExtractionDiffNotifier {
 
   String repository;
 
-  String messageTemplate;
-
   int prNumber;
 
   public ExtractionDiffNotifierGithub(
