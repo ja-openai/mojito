@@ -919,8 +919,9 @@ export function ReviewProjectPageView({
   onRequestDetailsFlowFinished,
 }: Props) {
   const user = useUser();
-  const canEditRequest = user.role === 'ROLE_ADMIN';
-  const canEditProjectDueDate = canEditRequest || user.role === 'ROLE_PM';
+  const canEditAssignment = user.role === 'ROLE_ADMIN';
+  const canEditRequest = canEditAssignment || user.role === 'ROLE_PM';
+  const canEditProjectDueDate = canEditRequest;
   const defaultShortcutHelpPreference = getDefaultReviewProjectShortcutHelpPreference(user.role);
   const { data: preferences } = useUserPreferences();
   const savePreferences = useSaveUserPreferences();
@@ -1561,6 +1562,7 @@ export function ReviewProjectPageView({
         textUnits={textUnits}
         mutations={mutations}
         canEditRequest={canEditRequest}
+        canEditAssignment={canEditAssignment}
         canEditProjectDueDate={canEditProjectDueDate}
         isTranslator={user.role === 'ROLE_TRANSLATOR'}
         reviewProjectsSessionKey={reviewProjectsSessionKey}
@@ -5967,6 +5969,7 @@ function ReviewProjectHeader({
   textUnits: textUnitsProp,
   mutations,
   canEditRequest,
+  canEditAssignment,
   canEditProjectDueDate,
   isTranslator,
   reviewProjectsSessionKey,
@@ -5983,6 +5986,7 @@ function ReviewProjectHeader({
   textUnits: ApiReviewProjectTextUnit[];
   mutations: ReviewProjectMutationControls;
   canEditRequest: boolean;
+  canEditAssignment: boolean;
   canEditProjectDueDate: boolean;
   isTranslator: boolean;
   reviewProjectsSessionKey: string | null;
@@ -6075,13 +6079,13 @@ function ReviewProjectHeader({
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams', 'review-project-request-details'],
     queryFn: fetchTeams,
-    enabled: canEditRequest && showDescription,
+    enabled: canEditAssignment && showDescription,
     staleTime: 30_000,
   });
   const assignmentPmUsersQuery = useQuery({
     queryKey: ['team-users', activeAssignmentTeamId, 'PM', 'review-project-detail-assignment'],
     queryFn: () => fetchTeamUsersByRole(activeAssignmentTeamId as number, 'PM'),
-    enabled: canEditRequest && isAssignmentModalOpen && activeAssignmentTeamId != null,
+    enabled: canEditAssignment && isAssignmentModalOpen && activeAssignmentTeamId != null,
     staleTime: 30_000,
   });
   const assignmentTranslatorUsersQuery = useQuery({
@@ -6092,13 +6096,13 @@ function ReviewProjectHeader({
       'review-project-detail-assignment',
     ],
     queryFn: () => fetchTeamUsersByRole(activeAssignmentTeamId as number, 'TRANSLATOR'),
-    enabled: canEditRequest && isAssignmentModalOpen && activeAssignmentTeamId != null,
+    enabled: canEditAssignment && isAssignmentModalOpen && activeAssignmentTeamId != null,
     staleTime: 30_000,
   });
   const assignmentHistoryQuery = useQuery({
     queryKey: ['review-project-assignment-history', projectId],
     queryFn: () => fetchReviewProjectAssignmentHistory(projectId),
-    enabled: canEditRequest && isAssignmentModalOpen,
+    enabled: canEditAssignment && isAssignmentModalOpen,
     staleTime: 10_000,
   });
   const requestTeamOptions = useMemo(
@@ -6161,7 +6165,7 @@ function ReviewProjectHeader({
     assignmentDraftPmUserId !== (assignment?.assignedPmUserId ?? null) ||
     assignmentDraftTranslatorUserId !== (assignment?.assignedTranslatorUserId ?? null);
   const canSaveAssignment =
-    canEditRequest &&
+    canEditAssignment &&
     assignmentIsChanged &&
     !mutations.isProjectAssignmentSaving &&
     assignmentLoadError == null &&
@@ -6617,7 +6621,7 @@ function ReviewProjectHeader({
   }, [canEditProjectDueDate, mutations, projectDueDateDraft]);
 
   const saveProjectAssignment = useCallback(async () => {
-    if (!canEditRequest) {
+    if (!canEditAssignment) {
       return;
     }
     if (assignmentHasAssigneeWithoutTeam) {
@@ -6644,7 +6648,7 @@ function ReviewProjectHeader({
     assignmentDraftPmUserId,
     assignmentDraftTranslatorUserId,
     assignmentHasAssigneeWithoutTeam,
-    canEditRequest,
+    canEditAssignment,
     mutations,
   ]);
 
@@ -6746,7 +6750,7 @@ function ReviewProjectHeader({
           </div>
 
           <div className="review-project-page__header-group review-project-page__header-group--meta">
-            {canEditRequest ? (
+            {canEditAssignment ? (
               <button
                 type="button"
                 className="review-project-page__header-link"
@@ -7221,7 +7225,7 @@ function ReviewProjectHeader({
                     noResultsLabel="No teams found"
                     buttonAriaLabel="Select request team"
                     disabled={
-                      !canEditRequest ||
+                      !canEditAssignment ||
                       mutations.isProjectRequestSaving ||
                       isAttachmentUploading ||
                       teamsQuery.isLoading

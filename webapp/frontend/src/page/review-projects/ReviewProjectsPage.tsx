@@ -1004,7 +1004,7 @@ export function ReviewProjectsPage() {
   const adminControls: ReviewProjectsAdminControls | undefined = canUpdateProjectStatus
     ? {
         enabled: true,
-        canEditRequest: isAdmin,
+        canEditRequest: isAdmin || isPm,
         selectedProjectIds,
         onToggleProjectSelection: toggleProjectSelection,
         onSetProjectSelection: setProjectSelection,

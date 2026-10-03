@@ -6044,17 +6044,51 @@ describe('review project due date permissions', () => {
     },
   );
 
-  it('keeps request-wide due dates and other details read-only for PMs', () => {
-    renderReviewProjectPageView({}, { ...user, role: 'ROLE_PM' });
+  it.each(['ROLE_PM', 'ROLE_ADMIN'] as const)(
+    'lets %s save request details while keeping team reassignment admin-only',
+    async (role) => {
+      const onRequestProjectRequestUpdate = vi.fn().mockResolvedValue(undefined);
+      renderReviewProjectPageView(
+        { mutations: buildMutations({ onRequestProjectRequestUpdate }) },
+        { ...user, role, canTranslateAllLocales: false, userLocales: [] },
+      );
 
-    expect(screen.queryByRole('button', { name: 'Edit assignment' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit request details' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'View request details' }));
-    const dialog = screen.getByRole('dialog', { name: 'Request details' });
-    expect(within(dialog).getByLabelText('Name')).toBeDisabled();
-    expect(within(dialog).getByLabelText('Request due date')).toBeDisabled();
-    expect(within(dialog).queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
-  });
+      fireEvent.click(screen.getByRole('button', { name: 'Edit request details' }));
+      const dialog = screen.getByRole('dialog', { name: 'Edit request details' });
+      fireEvent.change(within(dialog).getByLabelText('Name'), {
+        target: { value: 'Updated request' },
+      });
+      fireEvent.change(within(dialog).getByLabelText(/^Request due date/), {
+        target: { value: '2026-10-15T12:00' },
+      });
+      if (role === 'ROLE_PM') {
+        expect(screen.queryByRole('button', { name: 'Edit assignment' })).not.toBeInTheDocument();
+        expect(within(dialog).getByRole('button', { name: 'Select request team' })).toBeDisabled();
+      }
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect(onRequestProjectRequestUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'Updated request',
+            dueDate: new Date('2026-10-15T12:00').toISOString(),
+            updateTeam: false,
+          }),
+        ),
+      );
+    },
+  );
+
+  it.each(['ROLE_TRANSLATOR', 'ROLE_USER'] as const)(
+    'keeps request details read-only for %s',
+    (role) => {
+      renderReviewProjectPageView({}, { ...user, role });
+      fireEvent.click(screen.getByRole('button', { name: 'View request details' }));
+      const dialog = screen.getByRole('dialog', { name: 'Request details' });
+      expect(within(dialog).getByLabelText('Name')).toBeDisabled();
+      expect(within(dialog).getByLabelText(/^Request due date/)).toBeDisabled();
+      expect(within(dialog).queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    },
+  );
 
   it.each(['ROLE_TRANSLATOR', 'ROLE_USER'] as const)(
     'keeps the project due date read-only for %s',

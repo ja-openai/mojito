@@ -2105,7 +2105,7 @@ public class ReviewProjectService {
                         "reviewProject with id: " + projectId + " not found"));
     assertCurrentUserCanReadProject(reviewProject);
 
-    if (!userService.isCurrentUserAdmin()) {
+    if (!userService.isCurrentUserAdminOrPm()) {
       userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
     }
 
@@ -2115,15 +2115,16 @@ public class ReviewProjectService {
           "reviewProject with id: " + projectId + " has no request to update");
     }
 
+    boolean shouldUpdateTeam = Boolean.TRUE.equals(updateTeam);
+    if (shouldUpdateTeam && !userService.isCurrentUserAdmin()) {
+      throw new AccessDeniedException("Only admins can change assigned team");
+    }
+
     String trimmedNotes = notes == null ? null : notes.trim();
     request.setName(trimmedName);
     request.setNotes(trimmedNotes == null || trimmedNotes.isEmpty() ? null : trimmedNotes);
     reviewProjectRequestRepository.save(request);
 
-    boolean shouldUpdateTeam = Boolean.TRUE.equals(updateTeam);
-    if (shouldUpdateTeam && !userService.isCurrentUserAdmin()) {
-      throw new AccessDeniedException("Only admins can change assigned team");
-    }
     Team nextTeam = shouldUpdateTeam ? resolveTeam(teamId) : null;
     boolean assignmentChanged = false;
     List<ReviewProject> projects = List.of();

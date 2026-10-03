@@ -123,6 +123,15 @@ metadata responses cannot be merged into the next project's cache. These checks
 use the user identity observed by the app; unobserved browser credential changes
 are outside this boundary.
 
+## Request editing permissions
+
+Admins and PMs can open request editing from the request list and update the name,
+notes, type, attachments, and request-wide due date. The due date applies to all
+projects in that request. PM access follows project visibility rather than the
+PM's translation locales. Translators and users retain read-only request details.
+Team reassignment and the detail-page assignment editor remain admin-only;
+the server rejects request team changes before updating metadata.
+
 ## Persistence contract
 
 The current-variant comparison and decision write must run under the same

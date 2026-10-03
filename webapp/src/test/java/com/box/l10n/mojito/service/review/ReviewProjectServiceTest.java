@@ -623,6 +623,68 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void pmCanUpdateRequestDetailsAndDueDatesWithoutTranslationLocaleAccess() {
+    setCurrentUserRole(false, true, false);
+    currentUser.setCanTranslateAllLocales(false);
+    ReviewProjectRequest request = reviewProjectRequest(44L, "Catalog refresh");
+    ReviewProject projectA = project(21L, team(7L), locale(31L, "fr-FR"), currentUser, null);
+    ReviewProject projectB = project(22L, team(7L), locale(32L, "de-DE"), currentUser, null);
+    projectA.setReviewProjectRequest(request);
+    projectB.setReviewProjectRequest(request);
+    ZonedDateTime dueDate = ZonedDateTime.parse("2026-10-15T12:00:00Z");
+    when(reviewProjectRepository.findById(21L)).thenReturn(Optional.of(projectA));
+    when(reviewProjectRepository.findByRequestIdWithAssignment(44L))
+        .thenReturn(List.of(projectA, projectB));
+    Mockito.doThrow(new AccessDeniedException("No translation locale access"))
+        .when(userService)
+        .checkUserCanEditLocale(anyLong());
+
+    reviewProjectService.updateProjectRequest(
+        21L, "Updated request", "Updated notes", null, dueDate, null, null, false);
+
+    assertEquals("Updated request", request.getName());
+    assertEquals("Updated notes", request.getNotes());
+    assertEquals(dueDate, projectA.getDueDate());
+    assertEquals(dueDate, projectB.getDueDate());
+    verify(userService, never()).checkUserCanEditLocale(anyLong());
+  }
+
+  @Test
+  public void pmCannotChangeRequestTeam() {
+    setCurrentUserRole(false, true, false);
+    ReviewProjectRequest request = reviewProjectRequest(44L, "Catalog refresh");
+    ReviewProject project = project(21L, team(7L), locale(31L, "fr-FR"), currentUser, null);
+    project.setReviewProjectRequest(request);
+    when(reviewProjectRepository.findById(21L)).thenReturn(Optional.of(project));
+
+    assertThrows(
+        AccessDeniedException.class,
+        () ->
+            reviewProjectService.updateProjectRequest(
+                21L, "Updated request", "notes", null, null, null, 8L, true));
+
+    assertEquals("Catalog refresh", request.getName());
+    verify(reviewProjectRequestRepository, never()).save(any());
+  }
+
+  @Test
+  public void pmCannotUpdateAnInaccessibleRequest() {
+    setCurrentUserRole(false, true, false);
+    ReviewProjectRequest request = reviewProjectRequest(44L, "Catalog refresh");
+    ReviewProject project = project(21L, team(7L), locale(31L, "fr-FR"), user(101L, "pm-a"), null);
+    project.setReviewProjectRequest(request);
+    when(reviewProjectRepository.findById(21L)).thenReturn(Optional.of(project));
+
+    assertThrows(
+        AccessDeniedException.class,
+        () ->
+            reviewProjectService.updateProjectRequest(
+                21L, "Updated request", null, null, null, null, null, false));
+
+    verify(reviewProjectRequestRepository, never()).save(any());
+  }
+
+  @Test
   public void updateProjectRequestTeamAppliesToAllProjectsAndClearsAssignees() {
     Team previousTeam = team(7L);
     Team nextTeam = team(8L);

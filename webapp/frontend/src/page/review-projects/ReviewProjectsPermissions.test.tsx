@@ -107,7 +107,9 @@ describe('review project batch permissions', () => {
       fireEvent.click(actions.getByRole('button', { name: 'Reopen' }));
       await waitFor(() => expect(mocks.batchStatus).toHaveBeenCalledWith([7], 'OPEN'));
       expect(actions.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+      if (mode === 'requests') {
+        expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
+      }
       expect(screen.queryByRole('button', { name: 'Repair count' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'New Project' })).not.toBeInTheDocument();
     },
