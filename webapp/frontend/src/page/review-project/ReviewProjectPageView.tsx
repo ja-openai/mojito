@@ -7795,9 +7795,22 @@ const renderMedia = (key: string, className?: string, options: MediaRenderOption
         href={url}
         target="_blank"
         rel="noreferrer"
-        className={`${baseClass} review-project-media review-project-media--file`}
+        className={`${baseClass} review-project-media--reference`}
+        aria-label="View the full reference file (PDF, opens in a new tab)"
       >
-        Open attachment (PDF)
+        <span className="review-project-media__reference-preview" aria-hidden="true">
+          <object
+            className="review-project-media__reference-pdf"
+            data={`${url.split('#')[0]}#page=1&view=FitH&toolbar=0&navpanes=0`}
+            type="application/pdf"
+            tabIndex={-1}
+          >
+            <span className="review-project-media__reference-fallback">PDF reference file</span>
+          </object>
+        </span>
+        <span className="review-project-media__reference-action">
+          View the full reference file ↗
+        </span>
       </a>
     );
   }
