@@ -284,7 +284,7 @@ public class GlossaryService {
               glossary == null ? null : glossary.getName(),
               textUnitDTO.getName(),
               textUnitDTO.getSource(),
-              getGlossaryComment(textUnitDTO, metadata),
+              textUnitDTO.getComment(),
               textUnitDTO.getComment(),
               metadata == null ? null : metadata.getPartOfSpeech(),
               metadata == null ? null : metadata.getTermType(),
@@ -464,10 +464,6 @@ public class GlossaryService {
       return Boolean.TRUE.equals(metadata.getCaseSensitive());
     }
     return textUnitDTO.getComment() != null && textUnitDTO.getComment().contains("CAS");
-  }
-
-  private String getGlossaryComment(TextUnitDTO textUnitDTO, GlossaryTermMetadata metadata) {
-    return textUnitDTO.getComment();
   }
 
   public record GlossaryTerm(
