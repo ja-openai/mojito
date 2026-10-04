@@ -21,8 +21,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExtractionDiffService {
 
-  static final String DIFF_JSON = "diff.json";
-
   /** logger */
   static Logger logger = LoggerFactory.getLogger(ExtractionDiffService.class);
 
