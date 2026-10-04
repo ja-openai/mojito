@@ -208,7 +208,7 @@ public class GlossaryTermService {
     int resolvedLimit = normalizeLimit(limit, DEFAULT_TERM_LIMIT, MAX_TERM_LIMIT);
     List<TextUnitDTO> sourceTextUnits = searchAssetTextUnits(asset, null, true, SEARCH_SCAN_LIMIT);
     if (sourceTextUnits.isEmpty()) {
-      List<String> resolvedLocaleTags = resolveRequestedLocaleTags(glossary, localeTags);
+      List<String> resolvedLocaleTags = resolveRequestedLocaleTags(localeTags);
       return new SearchTermsView(List.of(), 0, resolvedLocaleTags);
     }
 
@@ -221,7 +221,7 @@ public class GlossaryTermService {
         getPrimaryLinksByMetadataId(metadataByTmTextUnitId.values());
     Map<String, TermIndexExtractedTerm> extractedTermsByNormalizedKey =
         getExtractedTermsByNormalizedKey(glossary, sourceTextUnits);
-    List<String> resolvedLocaleTags = resolveRequestedLocaleTags(glossary, localeTags);
+    List<String> resolvedLocaleTags = resolveRequestedLocaleTags(localeTags);
     Map<String, List<TextUnitDTO>> localizedByTermKey =
         loadLocalizedTextUnits(asset, resolvedLocaleTags);
     Map<Long, SourceCreatedByView> sourceCreatedByByTmTextUnitId =
@@ -269,7 +269,7 @@ public class GlossaryTermService {
         metadata == null ? Map.of() : getPrimaryLinksByMetadataId(List.of(metadata));
     Map<String, TermIndexExtractedTerm> extractedTermsByNormalizedKey =
         getExtractedTermsByNormalizedKey(glossary, List.of(sourceTextUnit));
-    List<String> resolvedLocaleTags = resolveRequestedLocaleTags(glossary, localeTags);
+    List<String> resolvedLocaleTags = resolveRequestedLocaleTags(localeTags);
     List<TextUnitDTO> localizedTextUnits =
         loadLocalizedTextUnits(asset, resolvedLocaleTags)
             .getOrDefault(sourceTextUnit.getName(), List.of());
@@ -1556,8 +1556,7 @@ public class GlossaryTermService {
     return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedSearchQuery);
   }
 
-  private List<String> resolveRequestedLocaleTags(
-      Glossary glossary, List<String> requestedLocaleTags) {
+  private List<String> resolveRequestedLocaleTags(List<String> requestedLocaleTags) {
     LinkedHashMap<String, String> normalizedRequested = new LinkedHashMap<>();
     for (String requestedLocaleTag :
         requestedLocaleTags == null ? List.<String>of() : requestedLocaleTags) {
