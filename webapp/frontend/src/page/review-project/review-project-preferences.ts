@@ -47,18 +47,3 @@ export function loadReviewProjectShortcutHelpPreference(
     defaultPreference,
   );
 }
-
-export function saveReviewProjectShortcutHelpPreference(
-  value: ReviewProjectShortcutHelpPreference,
-  defaultPreference: ReviewProjectShortcutHelpPreference = DEFAULT_REVIEW_PROJECT_SHORTCUT_HELP,
-): void {
-  const storage = getStorage();
-  if (!storage) {
-    return;
-  }
-  if (value === defaultPreference) {
-    storage.removeItem(REVIEW_PROJECT_SHORTCUT_HELP_KEY);
-    return;
-  }
-  storage.setItem(REVIEW_PROJECT_SHORTCUT_HELP_KEY, value);
-}
