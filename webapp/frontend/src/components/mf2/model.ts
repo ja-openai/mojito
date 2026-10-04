@@ -440,12 +440,6 @@ export function sourceInputContractItems(model: EditorModel | null) {
   return rows;
 }
 
-export function placeholderInsertionNames(model: EditorModel | null) {
-  if (!model) return [];
-  const names = placeholderInsertionNameSet(model);
-  return [...names].sort();
-}
-
 export function placeholderInsertionNamesForActiveSource(
   model: EditorModel | null,
   sourcePattern: string,
@@ -2179,15 +2173,6 @@ export function formLabel(keys: Array<string> = [], selectors: Array<string> = [
     .join(' / ');
 }
 
-export function sourceVariantForTargetKeys(
-  sourceModel: EditorModel | null,
-  targetKeys: Array<string> = [],
-) {
-  if (!sourceModel) return null;
-  if (sourceModel.type !== 'select') return { keys: [], value: sourceModel.pattern };
-  return bestVariantForKeys(sourceModel, targetKeys);
-}
-
 export function sourceVariantForTargetModel(
   sourceModel: EditorModel | null,
   targetModel: EditorModel | null,
@@ -2203,17 +2188,6 @@ export function sourceVariantForTargetModel(
     return null;
   }
   return bestVariantForKeys(sourceModel, targetKeys);
-}
-
-export function sourceFormLabelForTargetKeys(
-  sourceModel: EditorModel | null,
-  targetKeys: Array<string> = [],
-) {
-  if (!sourceModel || sourceModel.type !== 'select') return 'Message';
-  const sourceVariant = sourceVariantForTargetKeys(sourceModel, targetKeys);
-  return sourceVariant
-    ? formLabel(sourceVariant.keys, sourceModel.selectors)
-    : 'No matching source form';
 }
 
 export function sourceFormLabelForTargetModel(
