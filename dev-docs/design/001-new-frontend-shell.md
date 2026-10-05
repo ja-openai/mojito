@@ -15,6 +15,8 @@ Decisions
 - Legacy prefix: `NewFrontendController` redirects old `/n` links to their root-path equivalents.
 - Legacy route aliases: `/project-requests`, `/branches`, `/screenshots-legacy`, `/settings/user-management`, and `/settings/box` load the SPA and redirect client-side to current routes.
 - Runtime config: `/api/frontend/config` exposes the app config that used to be embedded in the legacy server-rendered template.
+- Logout: the account menu uses the configured auth method: Cloudflare Access's origin-root `/cdn-cgi/access/logout`, MSAL's `logoutRedirect`, or a CSRF-protected POST to Spring's `/logout` (with the application context path).
+- For MSAL, register the application's `/login?logout` URL (including any context path) as a reply URL to return to Mojito after provider logout.
 - Security: root-path SPA routes and legacy `/n` redirects are allowlisted in `WebSecurityJWTConfig` so the SPA can load under stateless JWT mode.
 
 Dev Workflow
