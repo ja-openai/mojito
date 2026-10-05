@@ -56,6 +56,43 @@ export async function loginWithStatelessProvider(returnTo?: string): Promise<voi
   });
 }
 
+export async function logout(): Promise<void> {
+  if (!frontendConfig) {
+    throw new Error('Frontend auth is not initialized');
+  }
+
+  if (isCloudflareStateless(frontendConfig)) {
+    // Access owns the cookie; its logout endpoint is at the origin root.
+    window.location.assign('/cdn-cgi/access/logout');
+    return;
+  }
+
+  if (isMsalStateless(frontendConfig)) {
+    const instance = await ensureMsalReady(frontendConfig);
+    await instance.logoutRedirect({
+      account: instance.getActiveAccount(),
+      postLogoutRedirectUri: `${window.location.origin}${getContextPath(frontendConfig)}/login?logout`,
+    });
+    return;
+  }
+
+  // Submit a real form so Spring clears the session and redirects to the login page.
+  const form = document.createElement('form');
+  form.method = 'post';
+  form.action = `${getContextPath(frontendConfig)}/logout`;
+  const csrf = document.createElement('input');
+  csrf.type = 'hidden';
+  csrf.name = '_csrf';
+  csrf.value = frontendConfig.csrfToken ?? '';
+  form.appendChild(csrf);
+  document.body.appendChild(form);
+  try {
+    form.submit();
+  } finally {
+    form.remove();
+  }
+}
+
 function installAuthenticatedFetch(config: FrontendConfig) {
   if (originalFetch || typeof window === 'undefined') {
     return;

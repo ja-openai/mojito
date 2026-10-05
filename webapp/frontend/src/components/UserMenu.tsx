@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { ApiUserProfile } from '../api/users';
+import { logout } from '../auth/frontend-auth';
 import { useUser } from '../hooks/useUser';
 
 function formatRole(role: ApiUserProfile['role']) {
@@ -22,6 +23,8 @@ function formatRole(role: ApiUserProfile['role']) {
 export function UserMenu() {
   const user = useUser();
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 
@@ -69,6 +72,17 @@ export function UserMenu() {
   const handleNavigate = (path: string) => {
     setOpen(false);
     void navigate(path);
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    setLogoutError(false);
+    try {
+      await logout();
+    } catch {
+      setLoggingOut(false);
+      setLogoutError(true);
+    }
   };
 
   const insightsLinks = canAccessStatistics
@@ -173,24 +187,6 @@ export function UserMenu() {
                   </div>
                 </>
               ) : null}
-              {accountLinks.length > 0 ? (
-                <>
-                  <div className="user-menu__section-label">Account</div>
-                  <div className="user-menu__actions" role="none">
-                    {accountLinks.map((item) => (
-                      <button
-                        key={item.path}
-                        type="button"
-                        className="user-menu__action"
-                        role="menuitem"
-                        onClick={() => handleNavigate(item.path)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : null}
               {adminLinks.length > 0 ? (
                 <>
                   <div className="user-menu__section-label">Admin</div>
@@ -210,9 +206,37 @@ export function UserMenu() {
                 </>
               ) : null}
             </>
-          ) : (
-            <div className="user-menu__hint">More account actions will land here soon.</div>
-          )}
+          ) : null}
+          {accountLinks.length > 0 ? (
+            <>
+              <div className="user-menu__section-label">Account</div>
+              <div className="user-menu__actions" role="none">
+                {accountLinks.map((item) => (
+                  <button
+                    key={item.path}
+                    type="button"
+                    className="user-menu__action"
+                    role="menuitem"
+                    onClick={() => handleNavigate(item.path)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+          <div className="user-menu__actions" role="none">
+            <button
+              type="button"
+              className="user-menu__action"
+              role="menuitem"
+              disabled={loggingOut}
+              onClick={() => void handleLogout()}
+            >
+              {loggingOut ? 'Logging out…' : 'Log out'}
+            </button>
+          </div>
+          {logoutError ? <div role="alert">Could not log out. Please try again.</div> : null}
         </div>
       ) : null}
     </div>
