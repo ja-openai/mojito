@@ -141,16 +141,14 @@ public class GithubPRInfoCommand extends Command {
     prComments.stream()
         .filter(ghIssueComment -> ghIssueComment.getBody().contains(SKIP_I18N_CHECKS_FLAG))
         .findFirst()
-        .map(ghIssueComment -> addReactionToComment(ghIssueComment));
+        .ifPresent(GithubPRInfoCommand::addReactionToComment);
   }
 
-  private static GHIssueComment addReactionToComment(GHIssueComment ghIssueComment) {
+  private static void addReactionToComment(GHIssueComment ghIssueComment) {
     try {
       ghIssueComment.createReaction(ReactionContent.PLUS_ONE);
-      return ghIssueComment;
     } catch (IOException e) {
       logger.error("Error adding reaction to PR comment: " + e.getMessage());
     }
-    return ghIssueComment;
   }
 }
