@@ -442,6 +442,42 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void batchStatusRejectsMissingProjectsBeforeChangingAny() {
+    ReviewProject openProject = project(11L, team(7L), locale(13L, "fr-FR"), null, currentUser);
+    ReviewProject closedProject = project(12L, team(7L), locale(14L, "ja-JP"), null, currentUser);
+    closedProject.setStatus(ReviewProjectStatus.CLOSED);
+    closedProject.setCloseReason("Already completed");
+    when(reviewProjectRepository.findAllById(List.of(11L, 12L, 13L)))
+        .thenReturn(List.of(openProject, closedProject));
+
+    for (ReviewProjectStatus status : ReviewProjectStatus.values()) {
+      assertThrows(
+          IllegalArgumentException.class,
+          () -> reviewProjectService.adminBatchUpdateStatus(List.of(11L, 12L, 13L), status, null));
+    }
+
+    assertEquals(ReviewProjectStatus.OPEN, openProject.getStatus());
+    assertEquals(ReviewProjectStatus.CLOSED, closedProject.getStatus());
+    assertEquals("Already completed", closedProject.getCloseReason());
+    verify(reviewProjectRepository, never()).save(any());
+    verifyNoInteractions(reviewProjectAssignmentWindowService, reviewProjectTimeSpentStatService);
+  }
+
+  @Test
+  public void batchStatusDeduplicatesProjectIdsBeforeCheckingCompleteness() {
+    ReviewProject project = project(11L, team(7L), locale(13L, "fr-FR"), null, currentUser);
+    when(reviewProjectRepository.findAllById(List.of(11L))).thenReturn(List.of(project));
+
+    assertEquals(
+        1,
+        reviewProjectService.adminBatchUpdateStatus(
+            List.of(11L, 11L), ReviewProjectStatus.CLOSED, "Completed"));
+
+    assertEquals(ReviewProjectStatus.CLOSED, project.getStatus());
+    verify(reviewProjectRepository).save(project);
+  }
+
+  @Test
   public void pmCannotDeleteProjectsOrRecomputeDecidedCounts() {
     setCurrentUserRole(false, true, false);
 
