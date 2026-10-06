@@ -229,22 +229,18 @@ public class StatsigJsonConfigLocalizationService {
 
   public StatsigPushResult push(Long repositoryId, StatsigPushInput input) {
     JsonConfigLocalization setup = jsonConfigLocalizationService.getByRepositoryId(repositoryId);
-    return push(repositoryId, input, setup, false);
+    return push(input, setup, false);
   }
 
   public StatsigPushResult pushForSetup(Long setupId, StatsigPushInput input) {
     JsonConfigLocalization setup = jsonConfigLocalizationService.getById(setupId);
-    return push(setup.repository().id(), input, setup, false);
+    return push(input, setup, false);
   }
 
   public StatsigPushResult pushForSystem(Long repositoryId) {
     JsonConfigLocalization setup =
         jsonConfigLocalizationService.getByRepositoryIdForSystem(repositoryId);
-    return push(
-        repositoryId,
-        new StatsigPushInput(setup.providerConfigId(), null, null, null),
-        setup,
-        true);
+    return push(new StatsigPushInput(setup.providerConfigId(), null, null, null), setup, true);
   }
 
   public StatsigPushResult pushForSetupForSystem(Long setupId) {
@@ -259,17 +255,13 @@ public class StatsigJsonConfigLocalizationService {
       Long setupId, boolean updateSchema, boolean pushConfig) {
     JsonConfigLocalization setup = jsonConfigLocalizationService.getByIdForSystem(setupId);
     return push(
-        setup.repository().id(),
         new StatsigPushInput(setup.providerConfigId(), null, updateSchema, pushConfig),
         setup,
         true);
   }
 
   private StatsigPushResult push(
-      Long repositoryId,
-      StatsigPushInput input,
-      JsonConfigLocalization setup,
-      boolean systemAccess) {
+      StatsigPushInput input, JsonConfigLocalization setup, boolean systemAccess) {
     String configId =
         requireConfigId(
             firstNonBlank(input == null ? null : input.configId(), setup.providerConfigId()));
