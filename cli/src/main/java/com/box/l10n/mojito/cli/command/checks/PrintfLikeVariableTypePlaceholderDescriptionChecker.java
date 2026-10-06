@@ -24,7 +24,7 @@ public class PrintfLikeVariableTypePlaceholderDescriptionChecker
   @Override
   public Set<String> checkCommentForDescriptions(String source, String comment) {
     Matcher placeHolderMatcher = pattern.matcher(source);
-    return getPlaceholderNames(source, placeHolderMatcher).stream()
+    return getPlaceholderNames(placeHolderMatcher).stream()
         .filter(placeholder -> isPlaceholderDescriptionMissingInComment(comment, placeholder))
         .map(placeholder -> getFailureText(placeholder))
         .filter(Optional::isPresent)
@@ -32,14 +32,11 @@ public class PrintfLikeVariableTypePlaceholderDescriptionChecker
         .collect(Collectors.toSet());
   }
 
-  private List<String> getPlaceholderNames(String source, Matcher placeHolderMatcher) {
+  private List<String> getPlaceholderNames(Matcher placeHolderMatcher) {
     List<String> placeholderNames = new ArrayList<>();
     int placeholderCount = 0;
     while (placeHolderMatcher.find()) {
-      placeholderNames.add(
-          getPlaceholderName(
-              source.substring(placeHolderMatcher.start(), placeHolderMatcher.end()),
-              placeholderCount));
+      placeholderNames.add(getPlaceholderName(placeHolderMatcher.group(), placeholderCount));
       placeholderCount++;
     }
     return placeholderNames;
@@ -49,7 +46,7 @@ public class PrintfLikeVariableTypePlaceholderDescriptionChecker
     String name;
     Matcher nameMatcher = namePattern.matcher(placeholderText);
     if (nameMatcher.find()) {
-      name = placeholderText.substring(nameMatcher.start(), nameMatcher.end());
+      name = nameMatcher.group();
     } else {
       name = Integer.toString(placeholderCount);
     }
