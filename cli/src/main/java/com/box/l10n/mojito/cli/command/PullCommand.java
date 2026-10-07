@@ -416,39 +416,6 @@ public class PullCommand extends Command {
   }
 
   /**
-   * Gets the {@link RepositoryLocale} that correspond to the output BCP47 tag
-   * based on the {@link #localeMappings
-   *
-   * @param outputBcp47tag
-   * @return the repository locale to be used for the output BCP47 tag
-   * @throws CommandException if the mapping is invalid
-   */
-  RepositoryLocale getRepositoryLocaleForOutputBcp47Tag(String outputBcp47tag)
-      throws CommandException {
-
-    String repositoryLocaleBcp47Tag = localeMappings.get(outputBcp47tag);
-
-    RepositoryLocale repositoryLocale;
-
-    if (rootRepositoryLocale.getLocale().getBcp47Tag().equals(outputBcp47tag)) {
-      repositoryLocale = rootRepositoryLocale;
-    } else {
-      repositoryLocale = repositoryLocalesWithoutRootLocale.get(repositoryLocaleBcp47Tag);
-    }
-
-    if (repositoryLocale == null) {
-      throw new CommandException(
-          "Invalid locale mapping for tag: "
-              + outputBcp47tag
-              + ", locale: "
-              + repositoryLocaleBcp47Tag
-              + " is not available in the repository locales");
-    }
-
-    return repositoryLocale;
-  }
-
-  /**
    * Gets the list of {@link RepositoryLocale}s of a {@link Repository} excluding the root locale
    * (the only locale that has no parent locale).
    *
