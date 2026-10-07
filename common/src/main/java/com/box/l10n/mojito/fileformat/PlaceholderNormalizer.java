@@ -53,15 +53,6 @@ final class PlaceholderNormalizer {
     return normalize(input, placeholders, forcedName, pluralPosition, null, false);
   }
 
-  static String normalizeSubstitution(
-      String input,
-      List<LocalizationPlaceholder> placeholders,
-      String forcedName,
-      int substitutionPosition) {
-    return normalize(
-        input, placeholders, forcedName, substitutionPosition, substitutionPosition, false);
-  }
-
   private static String normalize(
       String input,
       List<LocalizationPlaceholder> placeholders,
