@@ -175,21 +175,6 @@ export async function fetchJsonConfigLocalizations(): Promise<ApiJsonConfigLocal
   return getJson<ApiJsonConfigLocalization[]>('/api/json-config-localizations');
 }
 
-export async function fetchJsonConfigLocalizationByRepository(
-  repositoryId: number,
-): Promise<ApiJsonConfigLocalization | null> {
-  try {
-    return await getJson<ApiJsonConfigLocalization>(
-      `/api/json-config-localizations/repositories/${repositoryId}`,
-    );
-  } catch (error) {
-    if (isHttpStatus(error, 404)) {
-      return null;
-    }
-    throw error;
-  }
-}
-
 export async function fetchJsonConfigLocalizationSetupsByRepository(
   repositoryId: number,
 ): Promise<ApiJsonConfigLocalization[]> {
@@ -231,16 +216,6 @@ export async function createJsonConfigLocalization(
   );
 }
 
-export async function upsertJsonConfigLocalization(
-  repositoryId: number,
-  input: ApiJsonConfigLocalizationInput,
-): Promise<ApiJsonConfigLocalization> {
-  return putJson<ApiJsonConfigLocalization>(
-    `/api/json-config-localizations/repositories/${repositoryId}`,
-    input,
-  );
-}
-
 export async function updateJsonConfigLocalization(
   setupId: number,
   input: ApiJsonConfigLocalizationInput,
@@ -249,10 +224,6 @@ export async function updateJsonConfigLocalization(
     `/api/json-config-localizations/setups/${setupId}`,
     input,
   );
-}
-
-export async function deleteJsonConfigLocalization(repositoryId: number): Promise<void> {
-  return deleteJson(`/api/json-config-localizations/repositories/${repositoryId}`);
 }
 
 export async function deleteJsonConfigLocalizationSetup(setupId: number): Promise<void> {
@@ -376,16 +347,6 @@ export async function pullJsonConfigFromStatsigForSetup(
     }
   }
   return result;
-}
-
-export async function pushJsonConfigToStatsig(
-  repositoryId: number,
-  input: ApiStatsigPushInput,
-): Promise<ApiStatsigPushResult> {
-  return postJson<ApiStatsigPushResult>(
-    `/api/json-config-localizations/repositories/${repositoryId}/statsig/push`,
-    input,
-  );
 }
 
 export async function pushJsonConfigToStatsigForSetup(

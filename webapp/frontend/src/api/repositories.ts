@@ -52,14 +52,3 @@ export const fetchRepositories = async (): Promise<ApiRepository[]> => {
 
   return (await response.json()) as ApiRepository[];
 };
-
-export const fetchRepositoryById = async (repositoryId: number): Promise<ApiRepository> => {
-  const response = await fetch(`/api/repositories/${repositoryId}`);
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load repository');
-  }
-
-  return (await response.json()) as ApiRepository;
-};
