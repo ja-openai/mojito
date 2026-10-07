@@ -5330,6 +5330,137 @@ describe('Agent proposal review in Review Projects', () => {
     expect(unload.defaultPrevented).toBe(false);
   });
 
+  it('starts a fresh pending review from the current translation before allowing an edited acceptance', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
+    const onRequestDecisionState = vi.fn<ReviewProjectMutationControls['onRequestDecisionState']>();
+    const row = buildAgentTextUnit({
+      stale: true,
+      canReviewAgain: true,
+      reviewedTarget: 'Earlier translation',
+    });
+    const queryClient = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const props: ReviewProjectPageViewProps = {
+      projectId: 7,
+      project: { ...project, reviewProjectTextUnits: [row] },
+      mutations: buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
+      selectedTextUnitQueryId: null,
+      onSelectedTextUnitIdChange: noop,
+      openRequestDetailsQuery: false,
+      requestDetailsSource: null,
+      onRequestDetailsQueryHandled: noop,
+      onRequestDetailsFlowFinished: noop,
+    };
+    const view = render(renderReviewProjectPageViewNode(props, queryClient));
+    expect(screen.getByRole('button', { name: 'Use suggestion' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Pending$/ })).toBeDisabled();
+    reopenAgentFindingMock.mockRejectedValueOnce(new Error('Retry the fresh review.'));
+    fireEvent.click(screen.getByRole('button', { name: 'Review latest translation' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Retry the fresh review.');
+    const request = reopenAgentFindingMock.mock.calls[0][2];
+    expect(request.requestKey).toEqual(expect.any(String));
+    expect(reopenAgentFindingMock.mock.calls[0]).toEqual([
+      7,
+      901,
+      expect.objectContaining({
+        expectedProposalVersion: 2,
+        expectedCurrentVariantId: 30,
+        expectedSource: 'Pay {price} now',
+        expectedSourceComment: 'Checkout payment copy',
+        expectedCurrentTarget: 'Pay {price} now',
+        expectedCurrentStatus: 'REVIEW_NEEDED',
+        expectedCurrentIncludedInLocalizedFile: true,
+      }),
+    ]);
+    reopenAgentFindingMock.mockResolvedValueOnce({
+      projectId: 7,
+      proposalId: 902,
+      proposalRevision: 2,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Review latest translation' }));
+    await waitFor(() => expect(reopenAgentFindingMock).toHaveBeenCalledTimes(2));
+    expect(reopenAgentFindingMock.mock.calls[1][2]).toEqual(request);
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: [...REVIEW_PROJECT_DETAIL_QUERY_KEY, 7],
+        exact: true,
+      }),
+    );
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    expect(onRequestDecisionState).not.toHaveBeenCalled();
+    view.rerender(
+      renderReviewProjectPageViewNode(
+        {
+          ...props,
+          project: {
+            ...project,
+            reviewProjectTextUnits: [
+              {
+                ...row,
+                reviewStateRevision: 'agent-row-v2',
+                agentReview: {
+                  ...row.agentReview!,
+                  proposalId: 902,
+                  previousProposalId: 901,
+                  proposalRevision: 2,
+                  proposalVersion: 0,
+                  reviewedTarget: 'Pay {price} now',
+                  proposedTarget: null,
+                  stale: false,
+                  canReviewAgain: false,
+                },
+              },
+            ],
+          },
+        },
+        queryClient,
+      ),
+    );
+    expect(screen.queryByRole('button', { name: 'Review latest translation' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Use suggestion' })).toBeNull();
+    const editor = screen.getByRole('textbox', { name: 'Translation' });
+    expect(editor).toHaveValue('Pay {price} now');
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'AI feedback note' }), {
+      target: { value: 'Use the payment action.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Accept$/ }));
+    expect(onRequestSaveDecision.mock.calls[0][0]).toMatchObject({
+      target: 'Pague {price} agora',
+      expectedCurrentTmTextUnitVariantId: 30,
+      agentReview: {
+        action: 'ACCEPT',
+        proposalId: 902,
+        proposalRevision: 2,
+        proposalVersion: 0,
+        explanation: 'Use the payment action.',
+      },
+    });
+    expect(onRequestSaveDecision.mock.calls[0][0].reopenAgentReview).toBeUndefined();
+  });
+
+  it('protects drafts and composition before starting a fresh pending review', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    renderAgentReview({ stale: true, canReviewAgain: true });
+    const refresh = screen.getByRole('button', { name: 'Review latest translation' });
+    const editor = screen.getByRole('textbox', { name: 'Translation' });
+    fireEvent.compositionStart(editor);
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(reopenAgentFindingMock).not.toHaveBeenCalled();
+    fireEvent.compositionEnd(editor);
+    await waitFor(() => expect(refresh).toBeEnabled());
+    fireEvent.change(editor, { target: { value: 'Unsaved correction' } });
+    expect(refresh).toBeDisabled();
+    expect(screen.getByText('Copy any draft you need, then Reset before starting.')).toBeVisible();
+    fireEvent.click(refresh);
+    expect(reopenAgentFindingMock).not.toHaveBeenCalled();
+    expect(editor).toHaveValue('Unsaved correction');
+    fireEvent.click(screen.getByRole('button', { name: /^Reset$/ }));
+    expect(refresh).toBeEnabled();
+  });
+
   it('blocks stale suggestion use and edited acceptance including shortcuts', async () => {
     visibleTextEditorEnabledMock.mockReturnValue(false);
     const onRequestSaveDecision = vi.fn<ReviewProjectMutationControls['onRequestSaveDecision']>();
@@ -5338,6 +5469,7 @@ describe('Agent proposal review in Review Projects', () => {
       { stale: true, reviewedTarget: 'Earlier translation' },
       buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
     );
+    expect(screen.queryByRole('button', { name: 'Review latest translation' })).toBeNull();
     expect(await screen.findByRole('button', { name: 'Use suggestion' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Use original translation' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Use original translation' }));

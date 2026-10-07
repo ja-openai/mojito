@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.box.l10n.mojito.entity.*;
+import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.agentreview.*;
 import com.box.l10n.mojito.entity.review.*;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
@@ -146,6 +147,7 @@ public class AgentReviewReopenServiceTest {
               rowRevision = "pending-revision";
               return row;
             });
+    when(projects.refreshPendingHumanReviewRow(row, current)).thenReturn(row);
     when(projects.getReviewProjectTextUnit(8L)).thenAnswer(call -> detail());
     service =
         new AgentReviewReReviewService(
@@ -258,6 +260,160 @@ public class AgentReviewReopenServiceTest {
     useUnchangedReport();
     original.setBaselineVariantId(19L);
     assertFreshHumanReview(stored.get(service.reopen(7L, 10L, request("variant")).proposalId()));
+  }
+
+  @Test
+  public void stalePendingReviewStartsFreshRoundWithoutAcceptingOrReusingOldAdvice() {
+    useUnchangedReport();
+    original.setDisposition(Disposition.ROUTED);
+    original.setBaselineVariantId(19L);
+    var request = request("refresh-pending");
+
+    var result = service.reopen(7L, 10L, request);
+    AgentReviewProposal next = stored.get(result.proposalId());
+
+    assertFreshHumanReview(next);
+    assertThat(next.getReviewProjectTextUnitId()).isEqualTo(row.getId());
+    assertThat(next.getPreviousProposalId()).isEqualTo(original.getId());
+    assertThat(next.getProposalRevision()).isEqualTo(2);
+    assertThat(next.getBaselineVariantId()).isEqualTo(current.getId());
+    assertThat(next.getBaselineTarget()).isEqualTo(current.getContent());
+    assertThat(next.getRationale()).doesNotContain(original.getRationale());
+    assertThat(original.getDisposition()).isEqualTo(Disposition.SUPERSEDED);
+    assertThat(original.getProposedTarget()).isEqualTo("Une autre proposition");
+    assertThat(original.getEvidenceJson()).contains("https://example.com/evidence");
+    assertThat(current.getId()).isEqualTo(20L);
+    assertThat(current.getContent()).isEqualTo("Activer les notifications");
+    assertThat(events)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getAction()).isEqualTo(FeedbackAction.REVIEW_AGAIN);
+              assertThat(event.getResponseProposalId()).isEqualTo(next.getId());
+            });
+    verify(projects).refreshPendingHumanReviewRow(row, current);
+    verify(projects, never()).reopenHumanReviewRow(any(), any());
+    verify(projects, never()).createHumanReReviewProject(any(), any());
+    verify(projects, never()).getReviewProjectTextUnit(anyLong());
+
+    assertThat(service.reopen(7L, 10L, request)).isEqualTo(result);
+    verify(projects, times(1)).refreshPendingHumanReviewRow(row, current);
+    assertThat(events).hasSize(1);
+    assertThatThrownBy(() -> service.reopen(7L, 10L, request("competing-round")))
+        .hasMessageContaining("finding changed");
+  }
+
+  @Test
+  public void refreshInvalidatesOlderTabsKeepCurrentAndDeferWithoutChangingTranslation() {
+    useUnchangedReport();
+    original.setDisposition(Disposition.ROUTED);
+    original.setBaselineVariantId(19L);
+    Locale locale = new Locale();
+    locale.setId(3L);
+    row.getReviewProject().setLocale(locale);
+    var decisions =
+        new AgentReviewDecisionService(
+            mock(AgentReviewService.class),
+            proposals,
+            feedback,
+            mock(AgentReviewRunRepository.class),
+            incidents,
+            mock(com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService.class),
+            users,
+            new com.box.l10n.mojito.json.ObjectMapper());
+    List<Runnable> olderTabDecisions = new ArrayList<>();
+    Long previousVariantId = current.getId();
+    String previousRowRevision = rowRevision;
+    for (var action :
+        List.of(
+            AgentReviewDecisionRequest.Action.KEEP_CURRENT,
+            AgentReviewDecisionRequest.Action.DEFER)) {
+      var oldRequest =
+          new AgentReviewDecisionRequest(
+              original.getId(),
+              original.getProposalRevision(),
+              original.getVersion(),
+              "older-tab-" + action.name(),
+              action,
+              null,
+              null,
+              null);
+      olderTabDecisions.add(
+          () ->
+              decisions.prepare(
+                  row,
+                  current,
+                  oldRequest,
+                  null,
+                  null,
+                  null,
+                  null,
+                  action == AgentReviewDecisionRequest.Action.DEFER
+                      ? DecisionState.PENDING
+                      : DecisionState.DECIDED,
+                  previousVariantId,
+                  previousRowRevision,
+                  null));
+    }
+    // Both actions are permitted against the current translation before the explicit refresh.
+    olderTabDecisions.forEach(Runnable::run);
+
+    var request = request("refresh-before-older-tab-decision");
+    var result = service.reopen(7L, 10L, request);
+
+    assertThat(rowRevision).isEqualTo("reviewed-revision");
+    assertThat(current.getId()).isEqualTo(20L);
+    for (var oldDecision : olderTabDecisions) {
+      assertThatThrownBy(oldDecision::run).hasMessageContaining("proposal has changed");
+    }
+    assertThat(original.getDisposition()).isEqualTo(Disposition.SUPERSEDED);
+    assertThat(stored.get(result.proposalId()).getDisposition()).isEqualTo(Disposition.ROUTED);
+    assertThat(events)
+        .singleElement()
+        .extracting(AgentReviewFeedback::getAction)
+        .isEqualTo(FeedbackAction.REVIEW_AGAIN);
+    assertThat(service.reopen(7L, 10L, request)).isEqualTo(result);
+    verify(projects, times(1)).refreshPendingHumanReviewRow(row, current);
+  }
+
+  @Test
+  public void unchangedPendingReviewCannotStartAnotherRound() {
+    useUnchangedReport();
+    original.setDisposition(Disposition.ROUTED);
+    assertThatThrownBy(() -> service.reopen(7L, 10L, request("unchanged-pending")))
+        .hasMessageContaining("has not been reviewed");
+    verify(projects, never()).refreshPendingHumanReviewRow(any(), any());
+    assertThat(stored).hasSize(1);
+    assertThat(events).isEmpty();
+  }
+
+  @Test
+  public void pendingRefreshRequiresTheExactLatestSourceAndCurrentSnapshot() {
+    useUnchangedReport();
+    original.setDisposition(Disposition.ROUTED);
+    original.setBaselineVariantId(19L);
+    current.setContent("Changed elsewhere");
+    assertThatThrownBy(() -> service.reopen(7L, 10L, request("stale-pending-snapshot")))
+        .hasMessageContaining("source or current translation changed");
+    verify(projects, never()).refreshPendingHumanReviewRow(any(), any());
+    assertThat(stored).hasSize(1);
+    assertThat(events).isEmpty();
+  }
+
+  @Test
+  public void stalePendingReviewCannotBeImplicitlyAcceptedOrCreateAnotherProject() {
+    useUnchangedReport();
+    original.setDisposition(Disposition.ROUTED);
+    original.setBaselineVariantId(19L);
+    assertThatThrownBy(() -> service.reopenAndSave(7L, 10L, editRequest()))
+        .hasMessageContaining("has not been reviewed");
+    assertThatThrownBy(() -> service.reviewAgain(7L, 10L, request("other-project")))
+        .hasMessageContaining("has not been reviewed");
+    verify(projects, never()).refreshPendingHumanReviewRow(any(), any());
+    verify(projects, never()).reopenHumanReviewRow(any(), any());
+    verify(projects, never()).createHumanReReviewProject(any(), any());
+    assertThat(stored).hasSize(1);
+    assertThat(events).isEmpty();
   }
 
   @Test

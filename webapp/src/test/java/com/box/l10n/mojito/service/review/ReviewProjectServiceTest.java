@@ -2504,6 +2504,75 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void refreshPendingIncidentPreservesProgressWithoutCreatingADecision() {
+    when(userService.isCurrentUserTranslationRole()).thenReturn(true);
+    ReviewProject project = project(12L, team(7L), locale(13L, "fr"), null, null);
+    project.setAgentReviewRunId(1L);
+    ReviewProjectTextUnit row = new ReviewProjectTextUnit();
+    row.setId(55L);
+    row.setReviewProject(project);
+    TMTextUnitVariant current = new TMTextUnitVariant();
+    current.setId(30L);
+
+    assertEquals(
+        row, inTransaction(() -> reviewProjectService.refreshPendingHumanReviewRow(row, current)));
+
+    assertEquals(current, row.getTmTextUnitVariant());
+    verify(reviewProjectTextUnitRepository).save(row);
+    verify(reviewProjectTextUnitDecisionRepository, never()).saveAndFlush(any());
+    verify(reviewProjectRepository, never()).decrementDecidedProgress(anyLong(), anyLong());
+    verify(userService).checkUserCanEditLocale(13L);
+  }
+
+  @Test
+  public void refreshPendingIncidentPreservesPendingDecisionEvidence() {
+    when(userService.isCurrentUserTranslationRole()).thenReturn(true);
+    ReviewProject project = project(12L, team(7L), locale(13L, "fr"), null, null);
+    project.setAgentReviewRunId(1L);
+    ReviewProjectTextUnit row = new ReviewProjectTextUnit();
+    row.setId(55L);
+    row.setReviewProject(project);
+    ReviewProjectTextUnitDecision decision = new ReviewProjectTextUnitDecision();
+    decision.setDecisionState(ReviewProjectTextUnitDecision.DecisionState.PENDING);
+    decision.setNotes("Retained draft note");
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(decision));
+    TMTextUnitVariant current = new TMTextUnitVariant();
+    current.setId(30L);
+
+    inTransaction(() -> reviewProjectService.refreshPendingHumanReviewRow(row, current));
+
+    assertEquals(current, row.getTmTextUnitVariant());
+    assertEquals(ReviewProjectTextUnitDecision.DecisionState.PENDING, decision.getDecisionState());
+    assertEquals("Retained draft note", decision.getNotes());
+    verify(reviewProjectTextUnitDecisionRepository, never()).saveAndFlush(any());
+    verify(reviewProjectRepository, never()).decrementDecidedProgress(anyLong(), anyLong());
+  }
+
+  @Test
+  public void refreshPendingIncidentCannotReopenADecidedRow() {
+    when(userService.isCurrentUserTranslationRole()).thenReturn(true);
+    ReviewProject project = project(12L, team(7L), locale(13L, "fr"), null, null);
+    project.setAgentReviewRunId(1L);
+    ReviewProjectTextUnit row = new ReviewProjectTextUnit();
+    row.setId(55L);
+    row.setReviewProject(project);
+    ReviewProjectTextUnitDecision decision = new ReviewProjectTextUnitDecision();
+    decision.setDecisionState(ReviewProjectTextUnitDecision.DecisionState.DECIDED);
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(decision));
+
+    assertThrows(
+        org.springframework.web.server.ResponseStatusException.class,
+        () -> inTransaction(() -> reviewProjectService.refreshPendingHumanReviewRow(row, null)));
+
+    assertEquals(ReviewProjectTextUnitDecision.DecisionState.DECIDED, decision.getDecisionState());
+    verify(reviewProjectTextUnitRepository, never()).save(any());
+    verify(reviewProjectTextUnitDecisionRepository, never()).saveAndFlush(any());
+    verify(reviewProjectRepository, never()).decrementDecidedProgress(anyLong(), anyLong());
+  }
+
+  @Test
   public void reopenIncidentReviewRequiresOpenProjectAndTranslationRole() {
     when(userService.isCurrentUserTranslationRole()).thenReturn(true);
     ReviewProject project = project(12L, team(7L), locale(13L, "fr"), null, null);
@@ -2515,11 +2584,17 @@ public class ReviewProjectServiceTest {
     assertThrows(
         org.springframework.web.server.ResponseStatusException.class,
         () -> inTransaction(() -> reviewProjectService.reopenHumanReviewRow(row, null)));
+    assertThrows(
+        org.springframework.web.server.ResponseStatusException.class,
+        () -> inTransaction(() -> reviewProjectService.refreshPendingHumanReviewRow(row, null)));
     project.setStatus(ReviewProjectStatus.OPEN);
     when(userService.isCurrentUserTranslationRole()).thenReturn(false);
     assertThrows(
         AccessDeniedException.class,
         () -> inTransaction(() -> reviewProjectService.reopenHumanReviewRow(row, null)));
+    assertThrows(
+        AccessDeniedException.class,
+        () -> inTransaction(() -> reviewProjectService.refreshPendingHumanReviewRow(row, null)));
     verify(reviewProjectTextUnitDecisionRepository, never()).saveAndFlush(any());
     verify(reviewProjectRepository, never()).decrementDecidedProgress(anyLong(), anyLong());
   }

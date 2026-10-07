@@ -2261,6 +2261,10 @@ function DetailPane({
   const snapshot = useMemo(() => buildSnapshot(textUnit, projectId), [textUnit, projectId]);
   const agentProposalStale =
     agentReview != null && (agentReview.stale || agentReview.reviewedSource !== snapshot.source);
+  const canRefreshStaleReview =
+    agentProposalStale &&
+    agentReview?.disposition === 'ROUTED' &&
+    agentReview.canReviewAgain === true;
   const draft = useReviewProjectDraft(user.username, projectId, textUnit.id, snapshot);
   const sourceChanged = draft.sourceChanged;
   const { base: draftBase, values: translationDraft } = draft.session;
@@ -4860,6 +4864,25 @@ function DetailPane({
       ) : null}
       <div className="review-project-detail__layout">
         <div className="review-project-detail__main">
+          {canRefreshStaleReview ? (
+            <div className="review-project-detail__conflict">
+              <div>
+                Start a new review from the current translation. Earlier feedback stays in History.
+                The old suggestion will not carry over.
+              </div>
+              {isDirty ? <div>Copy any draft you need, then Reset before starting.</div> : null}
+              <div className="review-project-detail__conflict-actions">
+                <button
+                  type="button"
+                  className="review-project-detail__actions-button"
+                  onClick={() => void reopenReview()}
+                  disabled={isSavingGlobal || isComposing || isDirty}
+                >
+                  Review latest translation
+                </button>
+              </div>
+            </div>
+          ) : null}
           {!isTerminologyProject && sourceChanged ? (
             <div className="review-project-detail__error" role="alert">
               <div>
@@ -5304,7 +5327,8 @@ function DetailPane({
                         isDirty ||
                         isSavingGlobal ||
                         isComposing ||
-                        (agentReview != null && !agentReview.canReviewAgain)
+                        (agentReview != null &&
+                          (!agentReviewCompleted || !agentReview.canReviewAgain))
                       }
                       aria-pressed={snapshot.decisionState === 'PENDING'}
                     >

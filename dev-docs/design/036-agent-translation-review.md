@@ -273,6 +273,13 @@ existing project shell. Batch creation and assignment do not imply table-based e
   is reviewed in its newer round; admins can also inspect its technical evidence in **Report**.
   Reopening an unchanged source/current translation preserves its reported suggestion, evidence
   and automation origin. Changed source, context or translation still requires a fresh review.
+  A pending finding that changed since review offers **Review latest translation**. This explicitly
+  starts a linked human review on the same row using the current source and translation, without
+  applying a correction or retaining the stale suggestion as current advice. Earlier proposals
+  and feedback remain preserved. Drafts must be reset first, and composition or an in-flight save
+  blocks the action. The server checks the exact current state and proposal version under the
+  existing locks; a concurrent change fails without creating a round. This recovery does not
+  allow edited acceptance of the stale proposal itself.
 - Keep **View report** as the only action in the report header; there is no separate note icon or
   popover. Optional explanations remain under **Report → Review feedback** and the ordinary
   **Accept** action saves them with the decision. Record the observed choice

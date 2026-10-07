@@ -267,9 +267,21 @@ public class AgentReviewReReviewService {
       }
       return replay;
     }
+    var unit = previousRow.getTmTextUnit();
+    boolean refreshPending =
+        sameRow
+            && decision == null
+            && previous.getDisposition() == Disposition.ROUTED
+            && AgentReviewDecisionService.stale(
+                previous,
+                unit.getContent(),
+                unit.getComment(),
+                current == null ? null : current.getId(),
+                current == null ? null : current.getContent());
     if (previous.getVersion() != request.expectedProposalVersion()
         || (previous.getDisposition() != Disposition.RESOLVED
-            && previous.getDisposition() != Disposition.FOLLOW_UP)) {
+            && previous.getDisposition() != Disposition.FOLLOW_UP
+            && !refreshPending)) {
       throw conflict(
           "This finding changed or has not been reviewed; refresh before starting another round");
     }
@@ -287,7 +299,6 @@ public class AgentReviewReReviewService {
             request.expectedCurrentVariantId(), currentVariantId(currentDetail), currentDetail);
       }
     }
-    var unit = previousRow.getTmTextUnit();
     if (!Objects.equals(request.expectedSource(), unit.getContent())
         || !Objects.equals(request.expectedSourceComment(), unit.getComment())
         || !Objects.equals(
@@ -304,7 +315,9 @@ public class AgentReviewReReviewService {
     }
     ReviewProjectTextUnit nextRow =
         sameRow
-            ? projects.reopenHumanReviewRow(previousRow, current)
+            ? refreshPending
+                ? projects.refreshPendingHumanReviewRow(previousRow, current)
+                : projects.reopenHumanReviewRow(previousRow, current)
             : projects.createHumanReReviewProject(previousRow, current);
     AgentReviewProposal next = new AgentReviewProposal();
     next.setRunId(previous.getRunId());
@@ -346,14 +359,21 @@ public class AgentReviewReReviewService {
     next.setIntegrityDiagnostics(preserveReport ? previous.getIntegrityDiagnostics() : null);
     next.setDisposition(Disposition.ROUTED);
     next.setRationale(
-        sameRow
-            ? previous.getRationale()
-            : "Review requested again using the current translation. Previous finding: "
-                + previous.getRationale());
+        refreshPending
+            ? "Review the current source and translation. The previous report used an older version."
+            : sameRow
+                ? previous.getRationale()
+                : "Review requested again using the current translation. Previous finding: "
+                    + previous.getRationale());
     next.setProducerIdentity(preserveReport ? previous.getProducerIdentity() : reviewerIdentity);
     next.setIncidentId(previous.getIncidentId());
     next.setReviewProjectId(nextRow.getReviewProject().getId());
     next.setReviewProjectTextUnitId(nextRow.getId());
+    if (refreshPending) {
+      // The translation and row revision may be unchanged. Retire the old proposal so an older
+      // tab cannot still decide this row using KEEP_CURRENT or DEFER from that review round.
+      previous.setDisposition(Disposition.SUPERSEDED);
+    }
     proposals.saveAndFlush(next);
     AgentReviewFeedback event = new AgentReviewFeedback();
     event.setProposalId(previous.getId());

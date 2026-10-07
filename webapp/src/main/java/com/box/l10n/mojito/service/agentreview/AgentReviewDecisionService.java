@@ -432,6 +432,14 @@ public class AgentReviewDecisionService {
       AgentReviewFeedback latestFeedback,
       Long nextProjectId,
       boolean canViewReport) {
+    boolean stale =
+        proposal.getDisposition() != Disposition.RESOLVED
+            && stale(
+                proposal,
+                row.tmTextUnitContent(),
+                row.tmTextUnitComment(),
+                row.currentTmTextUnitVariantId(),
+                row.currentTmTextUnitVariantContent());
     return new AgentReviewProposalView(
         proposal.getId(),
         proposal.getPreviousProposalId(),
@@ -450,18 +458,15 @@ public class AgentReviewDecisionService {
         canViewReport ? proposal.getIntegrityDiagnostics() : null,
         canViewReport ? evidence(proposal) : List.of(),
         proposal.getDisposition().name(),
-        proposal.getDisposition() != Disposition.RESOLVED
-            && stale(
-                proposal,
-                row.tmTextUnitContent(),
-                row.tmTextUnitComment(),
-                row.currentTmTextUnitVariantId(),
-                row.currentTmTextUnitVariantContent()),
+        stale,
         lastRequestId,
         canReconsider(proposal, latestFeedback),
         nextProjectId == null
             && (proposal.getDisposition() == Disposition.RESOLVED
-                || proposal.getDisposition() == Disposition.FOLLOW_UP),
+                || proposal.getDisposition() == Disposition.FOLLOW_UP
+                || (proposal.getDisposition() == Disposition.ROUTED
+                    && stale
+                    && row.decisionState() != DecisionState.DECIDED)),
         nextProjectId);
   }
 
@@ -521,7 +526,7 @@ public class AgentReviewDecisionService {
             || latest.getAction() == FeedbackAction.CONTEXT_REQUEST);
   }
 
-  private boolean stale(
+  static boolean stale(
       AgentReviewProposal proposal,
       String source,
       String sourceComment,

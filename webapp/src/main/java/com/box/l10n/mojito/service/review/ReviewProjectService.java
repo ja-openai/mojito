@@ -973,6 +973,18 @@ public class ReviewProjectService {
   @Transactional(propagation = Propagation.MANDATORY)
   public ReviewProjectTextUnit reopenHumanReviewRow(
       ReviewProjectTextUnit row, TMTextUnitVariant current) {
+    return reopenHumanReviewRow(row, current, false);
+  }
+
+  /** Refreshes an undecided incident row without inventing a decision or changing progress. */
+  @Transactional(propagation = Propagation.MANDATORY)
+  public ReviewProjectTextUnit refreshPendingHumanReviewRow(
+      ReviewProjectTextUnit row, TMTextUnitVariant current) {
+    return reopenHumanReviewRow(row, current, true);
+  }
+
+  private ReviewProjectTextUnit reopenHumanReviewRow(
+      ReviewProjectTextUnit row, TMTextUnitVariant current, boolean refreshPending) {
     ReviewProject project = row.getReviewProject();
     entityManager.refresh(project, LockModeType.PESSIMISTIC_WRITE);
     if (!userService.isCurrentUserTranslationRole())
@@ -988,10 +1000,20 @@ public class ReviewProjectService {
     ReviewProjectTextUnitDecision decision =
         reviewProjectTextUnitDecisionRepository
             .findByReviewProjectTextUnitId(row.getId())
-            .orElseThrow(
-                () ->
-                    new ResponseStatusException(
-                        HttpStatus.CONFLICT, "This row has not been reviewed"));
+            .orElse(null);
+    if (refreshPending) {
+      if (decision != null && decision.getDecisionState() != DecisionState.PENDING) {
+        throw new ResponseStatusException(
+            HttpStatus.CONFLICT,
+            "This row has been reviewed; refresh before starting another round");
+      }
+      row.setTmTextUnitVariant(current);
+      reviewProjectTextUnitRepository.save(row);
+      return row;
+    }
+    if (decision == null) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "This row has not been reviewed");
+    }
     boolean wasDecided = decision.getDecisionState() == DecisionState.DECIDED;
     row.setTmTextUnitVariant(current);
     reviewProjectTextUnitRepository.save(row);

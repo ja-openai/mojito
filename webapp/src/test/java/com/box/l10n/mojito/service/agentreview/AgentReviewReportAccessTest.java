@@ -21,6 +21,7 @@ import com.box.l10n.mojito.entity.agentreview.Disposition;
 import com.box.l10n.mojito.entity.agentreview.FeedbackAction;
 import com.box.l10n.mojito.entity.agentreview.Readiness;
 import com.box.l10n.mojito.entity.review.ReviewProject;
+import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.security.Role;
 import com.box.l10n.mojito.service.review.ReviewProjectRepository;
@@ -51,6 +52,7 @@ public class AgentReviewReportAccessTest {
   private final AgentReviewProposal proposal = new AgentReviewProposal();
   private final AgentReviewFeedback feedback = new AgentReviewFeedback();
   private final ReviewProjectTextUnitDetail row = mock(ReviewProjectTextUnitDetail.class);
+  private TypedQuery<AgentReviewProposal> proposalQuery;
   private AgentReviewDecisionService decisions;
   private AgentReviewProjectService reports;
 
@@ -88,7 +90,7 @@ public class AgentReviewReportAccessTest {
     feedback.setAction(FeedbackAction.KEEP_CURRENT);
     feedback.setExplanation("Saved reviewer comment");
 
-    TypedQuery<AgentReviewProposal> proposalQuery = mock(TypedQuery.class, RETURNS_SELF);
+    proposalQuery = mock(TypedQuery.class, RETURNS_SELF);
     when(entityManager.createQuery(anyString(), eq(AgentReviewProposal.class)))
         .thenReturn(proposalQuery);
     when(proposalQuery.getResultList()).thenReturn(List.of(proposal));
@@ -138,6 +140,54 @@ public class AgentReviewReportAccessTest {
       assertThat(view.lastFeedbackRequestId()).isEqualTo("decision-retry-id");
       assertThat(view.canReviewAgain()).isTrue();
     }
+  }
+
+  @Test
+  public void latestStalePendingProposalOffersExplicitRefresh() {
+    setRole(Role.ROLE_TRANSLATOR);
+    proposal.setDisposition(Disposition.ROUTED);
+    proposal.setBaselineVariantId(50L);
+    when(row.tmTextUnitContent()).thenReturn(proposal.getSource());
+    when(row.currentTmTextUnitVariantId()).thenReturn(51L);
+    when(row.currentTmTextUnitVariantContent()).thenReturn(proposal.getBaselineTarget());
+
+    AgentReviewProposalView view = decisions.views(project, List.of(row)).get(11L);
+
+    assertThat(view.stale()).isTrue();
+    assertThat(view.canReviewAgain()).isTrue();
+    when(row.decisionState()).thenReturn(DecisionState.PENDING);
+    assertThat(decisions.views(project, List.of(row)).get(11L).canReviewAgain()).isTrue();
+    when(row.decisionState()).thenReturn(DecisionState.DECIDED);
+    assertThat(decisions.views(project, List.of(row)).get(11L).canReviewAgain()).isFalse();
+  }
+
+  @Test
+  public void unchangedPendingProposalDoesNotOfferAnotherRound() {
+    proposal.setDisposition(Disposition.ROUTED);
+    proposal.setBaselineVariantId(50L);
+    when(row.tmTextUnitContent()).thenReturn(proposal.getSource());
+    when(row.currentTmTextUnitVariantId()).thenReturn(50L);
+    when(row.currentTmTextUnitVariantContent()).thenReturn(proposal.getBaselineTarget());
+
+    AgentReviewProposalView view = decisions.views(project, List.of(row)).get(11L);
+
+    assertThat(view.stale()).isFalse();
+    assertThat(view.canReviewAgain()).isFalse();
+  }
+
+  @Test
+  public void stalePendingProposalWithANewerRoundCannotBeRefreshedAgain() {
+    proposal.setDisposition(Disposition.ROUTED);
+    AgentReviewProposal next = new AgentReviewProposal();
+    next.setPreviousProposalId(proposal.getId());
+    next.setReviewProjectId(60L);
+    when(proposalQuery.getResultStream()).thenAnswer(ignored -> Stream.of(next));
+
+    AgentReviewProposalView view = decisions.views(project, List.of(row)).get(11L);
+
+    assertThat(view.stale()).isTrue();
+    assertThat(view.canReviewAgain()).isFalse();
+    assertThat(view.nextReviewProjectId()).isEqualTo(60L);
   }
 
   @Test
