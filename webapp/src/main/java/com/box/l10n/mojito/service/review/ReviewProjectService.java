@@ -2486,6 +2486,9 @@ public class ReviewProjectService {
     }
 
     List<ReviewProject> projects = reviewProjectRepository.findAllById(distinctIds);
+    if (projects.size() != distinctIds.size()) {
+      throw new IllegalArgumentException("One or more review projects were not found");
+    }
     projects.forEach(this::assertCurrentUserCanReadProject);
     for (ReviewProject project : projects) {
       applyProjectStatusChange(project, status, closeReason);
