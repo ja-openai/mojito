@@ -2,6 +2,7 @@ package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEFAULTS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -158,7 +159,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
   @Test
   public void reportStatusCountsRecordsFailureCounterWithoutThrowing() {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobStore asyncJobStore = mockStore();
     when(asyncJobStore.countByStatus("assetlocalize"))
         .thenThrow(new IllegalStateException("database unavailable"));
 
@@ -173,7 +174,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
   @Test
   public void reportStatusCountsContinuesAfterOneQueueFails() {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobStore asyncJobStore = mockStore();
     when(asyncJobStore.countByStatus("broken"))
         .thenThrow(new IllegalStateException("database unavailable"));
     when(asyncJobStore.countByStatus("assetlocalize"))
@@ -206,7 +207,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
   @Test
   public void reportStatusCountsRecordsNonFatalStoreErrorAndContinuesAfterQueueFails() {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobStore asyncJobStore = mockStore();
     when(asyncJobStore.countByStatus("broken")).thenThrow(new AssertionError("store invariant"));
     when(asyncJobStore.countByStatus("assetlocalize"))
         .thenReturn(List.of(new AsyncJobStatusCount(AsyncJobStatus.FAILED, 3)));
@@ -251,7 +252,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
   @Test
   public void reportStatusCountsPropagatesFatalJvmErrors() {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobStore asyncJobStore = mockStore();
     FatalTestError fatalTestError = new FatalTestError("fatal");
     when(asyncJobStore.countByStatus("assetlocalize")).thenThrow(fatalTestError);
 
@@ -351,6 +352,12 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertNoFailedCounter("broken");
   }
 
+  private AsyncJobStore mockStore() {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    when(store.statusSample(anyString())).thenCallRealMethod();
+    return store;
+  }
+
   private AsyncJobStore storeWithFirstQueueFailure(Throwable failure) {
     AsyncJobStore store = spy(new InMemoryAsyncJobStore());
     doThrow(failure).when(store).countByStatus("broken");
@@ -416,7 +423,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
   @Test
   public void reportStatusCountsDeduplicatesConfiguredAndHandlerQueues() {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobStore asyncJobStore = mockStore();
     Instant observedAt = Instant.parse("2026-05-23T00:00:00Z");
     when(asyncJobStore.countByStatus("assetlocalize"))
         .thenReturn(List.of(new AsyncJobStatusCount(AsyncJobStatus.QUEUED, 1)));
@@ -433,6 +440,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
     reporter.reportStatusCounts();
 
+    verify(asyncJobStore, times(1)).statusSample("assetlocalize");
     verify(asyncJobStore, times(1)).countByStatus("assetlocalize");
     verify(asyncJobStore, times(1)).readyStatus("assetlocalize");
     verify(asyncJobStore, times(1)).expiredLeaseStatus("assetlocalize");

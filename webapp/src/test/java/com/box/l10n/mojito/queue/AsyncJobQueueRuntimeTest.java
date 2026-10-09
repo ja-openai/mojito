@@ -7,10 +7,12 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.Gauge;
@@ -1798,139 +1800,53 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
-  public void executorSubmitRuntimeExceptionRequeuesAndReleasesCapacity() throws Exception {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
-    AsyncJobRecord claimedJob = claimedJob(1);
-    CountDownLatch requeued = new CountDownLatch(1);
-    AtomicInteger handlerInvocations = new AtomicInteger();
-
-    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
-        .thenReturn(List.of(claimedJob));
-    when(asyncJobStore.requeueAfter(
-            anyString(),
-            any(AsyncJobId.class),
-            anyString(),
-            anyString(),
-            any(Duration.class),
-            any(),
-            anyString()))
-        .thenAnswer(
-            invocation -> {
-              requeued.countDown();
-              return true;
-            });
-
-    ThreadPoolTaskExecutor failingExecutor =
-        newFailingSubmitExecutor(new IllegalStateException("executor unavailable"));
-    AsyncJobQueueRuntime asyncJobQueueRuntime =
-        runtime(
-            asyncJobStore,
-            queueSettings(100, 1_000, 1, 1, 10_000, 0),
-            handler(
-                asyncJobRecord -> {
-                  handlerInvocations.incrementAndGet();
-                  return AsyncJobHandlerResult.done();
-                }),
-            mock(TaskScheduler.class),
-            failingExecutor);
-
-    asyncJobQueueRuntime.pollOnce();
-
-    assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
-    waitForInFlightCount(asyncJobQueueRuntime, 0);
-    assertThat(handlerInvocations.get()).isZero();
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.executor.submit.failed")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.retried")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
-    verify(asyncJobStore)
-        .requeueAfter(
-            anyString(),
-            any(AsyncJobId.class),
-            anyString(),
-            anyString(),
-            any(Duration.class),
-            any(),
-            contains("executor unavailable"));
-    failingExecutor.shutdown();
+  public void executorSubmitRuntimeExceptionRequeuesAndReleasesCapacity() {
+    assertExecutorSubmitFailureRequeues(new IllegalStateException("executor unavailable"));
   }
 
   @Test
-  public void executorSubmitNonFatalErrorRequeuesAndReleasesCapacity() throws Exception {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
-    AsyncJobRecord claimedJob = claimedJob(1);
-    CountDownLatch requeued = new CountDownLatch(1);
-    AtomicInteger handlerInvocations = new AtomicInteger();
+  public void executorSubmitNonFatalErrorRequeuesAndReleasesCapacity() {
+    assertExecutorSubmitFailureRequeues(new NonFatalTestError("executor invariant"));
+  }
 
-    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
-        .thenReturn(List.of(claimedJob));
-    when(asyncJobStore.requeueAfter(
-            anyString(),
-            any(AsyncJobId.class),
-            anyString(),
-            anyString(),
-            any(Duration.class),
-            any(),
-            anyString()))
-        .thenAnswer(
-            invocation -> {
-              requeued.countDown();
-              return true;
-            });
+  private void assertExecutorSubmitFailureRequeues(Throwable failure) {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobRecord job = claimedJob(1);
+    AsyncJobHandler handler = mock(AsyncJobHandler.class);
+    when(store.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(job));
+    when(store.requeueAfter(
+            anyString(), any(), anyString(), anyString(), any(), any(), anyString()))
+        .thenReturn(true);
+    ThreadPoolTaskExecutor failingExecutor = newFailingSubmitExecutor(failure);
+    try {
+      AsyncJobQueueRuntime runtime =
+          runtime(
+              store,
+              queueSettings(100, 1_000, 1, 1, 10_000, 0),
+              handler,
+              mock(TaskScheduler.class),
+              failingExecutor);
 
-    ThreadPoolTaskExecutor failingExecutor =
-        newFailingSubmitExecutor(new NonFatalTestError("executor invariant"));
-    AsyncJobQueueRuntime asyncJobQueueRuntime =
-        runtime(
-            asyncJobStore,
-            queueSettings(100, 1_000, 1, 1, 10_000, 0),
-            handler(
-                asyncJobRecord -> {
-                  handlerInvocations.incrementAndGet();
-                  return AsyncJobHandlerResult.done();
-                }),
-            mock(TaskScheduler.class),
-            failingExecutor);
+      runtime.pollOnce();
 
-    asyncJobQueueRuntime.pollOnce();
-
-    assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
-    waitForInFlightCount(asyncJobQueueRuntime, 0);
-    assertThat(handlerInvocations.get()).isZero();
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.executor.submit.failed")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.retried")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
-    verify(asyncJobStore)
-        .requeueAfter(
-            anyString(),
-            any(AsyncJobId.class),
-            anyString(),
-            anyString(),
-            any(Duration.class),
-            any(),
-            contains("executor invariant"));
-    failingExecutor.shutdown();
+      // Submission failure is handled on the polling thread before pollOnce returns.
+      assertThat(runtime.inFlightCount()).isZero();
+      verifyNoInteractions(handler);
+      assertRuntimeCounter("asyncJobQueue.executor.submit.failed", 1);
+      assertRuntimeCounter("asyncJobQueue.retried", 1);
+      verify(store)
+          .requeueAfter(
+              eq("assetlocalize"),
+              eq(job.id()),
+              eq(job.workerId()),
+              eq(job.leaseToken()),
+              any(Duration.class),
+              isNull(),
+              contains(failure.getMessage()));
+    } finally {
+      failingExecutor.shutdown();
+    }
   }
 
   @Test
@@ -2471,197 +2387,60 @@ public class AsyncJobQueueRuntimeTest {
 
   @Test
   public void heartbeatScheduleFailureRequeuesWithoutProcessing() throws Exception {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
-    AsyncJobRecord claimedJob = claimedJob(1);
-    CountDownLatch requeued = new CountDownLatch(1);
-    Duration[] observedDelay = new Duration[1];
-    AtomicInteger handlerInvocations = new AtomicInteger();
-
-    TaskScheduler taskScheduler = mock(TaskScheduler.class);
-    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
-        .thenThrow(new IllegalStateException("scheduler unavailable"));
-    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
-        .thenReturn(List.of(claimedJob));
-    when(asyncJobStore.requeueAfter(
-            anyString(),
-            any(AsyncJobId.class),
-            anyString(),
-            anyString(),
-            any(Duration.class),
-            any(),
-            anyString()))
-        .thenAnswer(
-            invocation -> {
-              observedDelay[0] = invocation.getArgument(4);
-              requeued.countDown();
-              return true;
-            });
-    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(100, 1_000, 1, 1, 200, 25);
-    queueSettings.setRetryJitterPercent(0);
-
-    AsyncJobQueueRuntime asyncJobQueueRuntime =
-        runtime(
-            asyncJobStore,
-            queueSettings,
-            handler(
-                asyncJobRecord -> {
-                  handlerInvocations.incrementAndGet();
-                  return AsyncJobHandlerResult.done();
-                }),
-            taskScheduler,
-            executor);
-
-    asyncJobQueueRuntime.pollOnce();
-
-    assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
-    assertThat(observedDelay[0]).isEqualTo(Duration.ofMillis(100));
-    waitForInFlightCount(asyncJobQueueRuntime, 0);
-    assertThat(handlerInvocations.get()).isZero();
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.heartbeat.schedule.failed")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.retried")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
+    assertHeartbeatScheduleFailureRequeues(new IllegalStateException("scheduler unavailable"));
   }
 
   @Test
   public void heartbeatScheduleNonFatalErrorRequeuesWithoutProcessingOrHandlerFailure()
       throws Exception {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
-    AsyncJobRecord claimedJob = claimedJob(1);
-    CountDownLatch requeued = new CountDownLatch(1);
-    AtomicInteger handlerInvocations = new AtomicInteger();
-
-    TaskScheduler taskScheduler = mock(TaskScheduler.class);
-    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
-        .thenThrow(new NonFatalTestError("scheduler invariant"));
-    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
-        .thenReturn(List.of(claimedJob));
-    when(asyncJobStore.requeueAfter(
-            anyString(),
-            any(AsyncJobId.class),
-            anyString(),
-            anyString(),
-            any(Duration.class),
-            any(),
-            anyString()))
-        .thenAnswer(
-            invocation -> {
-              requeued.countDown();
-              return true;
-            });
-    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(100, 1_000, 1, 1, 200, 25);
-    queueSettings.setRetryJitterPercent(0);
-
-    AsyncJobQueueRuntime asyncJobQueueRuntime =
-        runtime(
-            asyncJobStore,
-            queueSettings,
-            handler(
-                asyncJobRecord -> {
-                  handlerInvocations.incrementAndGet();
-                  return AsyncJobHandlerResult.done();
-                }),
-            taskScheduler,
-            executor);
-
-    asyncJobQueueRuntime.pollOnce();
-
-    assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
-    waitForInFlightCount(asyncJobQueueRuntime, 0);
-    assertThat(handlerInvocations.get()).isZero();
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.heartbeat.schedule.failed")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.retried")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
-    assertThat(
-            meterRegistry
-                .find("asyncJobQueue.handler.failed")
-                .tag("queueName", "assetlocalize")
-                .counter())
-        .isNull();
+    assertHeartbeatScheduleFailureRequeues(new NonFatalTestError("scheduler invariant"));
   }
 
   @Test
   public void heartbeatScheduleNullFutureRequeuesWithoutProcessing() throws Exception {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
-    AsyncJobRecord claimedJob = claimedJob(1);
-    CountDownLatch requeued = new CountDownLatch(1);
-    AtomicInteger handlerInvocations = new AtomicInteger();
+    assertHeartbeatScheduleFailureRequeues(null);
+  }
 
-    TaskScheduler taskScheduler = mock(TaskScheduler.class);
-    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
-        .thenReturn(null);
-    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
-        .thenReturn(List.of(claimedJob));
-    when(asyncJobStore.requeueAfter(
-            anyString(),
-            any(AsyncJobId.class),
-            anyString(),
-            anyString(),
-            any(Duration.class),
-            any(),
-            anyString()))
+  private void assertHeartbeatScheduleFailureRequeues(Throwable failure) throws Exception {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobRecord job = claimedJob(1);
+    CountDownLatch requeued = new CountDownLatch(1);
+    AsyncJobHandler handler = mock(AsyncJobHandler.class);
+    TaskScheduler scheduler = mock(TaskScheduler.class);
+    if (failure != null) {
+      when(scheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
+          .thenThrow(failure);
+    }
+    when(store.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(job));
+    when(store.requeueAfter(
+            anyString(), any(), anyString(), anyString(), any(), any(), anyString()))
         .thenAnswer(
             invocation -> {
               requeued.countDown();
               return true;
             });
-    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(100, 1_000, 1, 1, 200, 25);
-    queueSettings.setRetryJitterPercent(0);
+    AsyncJobQueueProperties.QueueSettings settings = queueSettings(100, 1_000, 1, 1, 200, 25);
+    settings.setRetryJitterPercent(0);
+    AsyncJobQueueRuntime runtime = runtime(store, settings, handler, scheduler, executor);
 
-    AsyncJobQueueRuntime asyncJobQueueRuntime =
-        runtime(
-            asyncJobStore,
-            queueSettings,
-            handler(
-                asyncJobRecord -> {
-                  handlerInvocations.incrementAndGet();
-                  return AsyncJobHandlerResult.done();
-                }),
-            taskScheduler,
-            executor);
-
-    asyncJobQueueRuntime.pollOnce();
+    runtime.pollOnce();
 
     assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
-    waitForInFlightCount(asyncJobQueueRuntime, 0);
-    assertThat(handlerInvocations.get()).isZero();
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.heartbeat.schedule.failed")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
-    verify(asyncJobStore)
+    waitForInFlightCount(runtime, 0);
+    verifyNoInteractions(handler);
+    assertRuntimeCounter("asyncJobQueue.heartbeat.schedule.failed", 1);
+    assertRuntimeCounter("asyncJobQueue.retried", 1);
+    assertThat(meterRegistry.find("asyncJobQueue.handler.failed").counter()).isNull();
+    verify(store)
         .requeueAfter(
-            anyString(),
-            any(AsyncJobId.class),
-            anyString(),
-            anyString(),
+            eq("assetlocalize"),
+            eq(job.id()),
+            eq(job.workerId()),
+            eq(job.leaseToken()),
             eq(Duration.ofMillis(100)),
-            any(),
-            contains("null heartbeat ScheduledFuture"));
+            isNull(),
+            contains(failure == null ? "null heartbeat ScheduledFuture" : failure.getMessage()));
   }
 
   @Test
@@ -3593,58 +3372,15 @@ public class AsyncJobQueueRuntimeTest {
 
   @Test
   public void triggerPollNowPreservesExistingPollWhenImmediateScheduleFails() {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
-    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
-        .thenReturn(List.of());
-
-    TaskScheduler taskScheduler = mock(TaskScheduler.class);
-    Runnable[] firstScheduledPoll = new Runnable[1];
-    DummyScheduledFuture firstScheduledFuture = new DummyScheduledFuture();
-    AtomicInteger scheduleInvocations = new AtomicInteger();
-    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
-        .thenAnswer(
-            invocation -> {
-              int invocationCount = scheduleInvocations.incrementAndGet();
-              if (invocationCount == 1) {
-                firstScheduledPoll[0] = invocation.getArgument(0);
-                return firstScheduledFuture;
-              }
-              if (invocationCount == 2) {
-                throw new IllegalStateException("scheduler unavailable");
-              }
-              return new DummyScheduledFuture();
-            });
-
-    AsyncJobQueueRuntime asyncJobQueueRuntime =
-        runtime(
-            asyncJobStore,
-            queueSettings(100, 1_000, 1, 1, 10_000, 0),
-            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
-            taskScheduler,
-            executor,
-            delayMs -> delayMs);
-
-    asyncJobQueueRuntime.start();
-    asyncJobQueueRuntime.triggerPollNow();
-
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.trigger.failed")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
-    assertThat(firstScheduledFuture.isCancelled()).isFalse();
-
-    firstScheduledPoll[0].run();
-
-    verify(asyncJobStore, times(1))
-        .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
-    assertThat(scheduleInvocations.get()).isEqualTo(3);
+    assertTriggerFailurePreservesPoll(new IllegalStateException("scheduler unavailable"));
   }
 
   @Test
   public void triggerPollNowPreservesExistingPollWhenImmediateScheduleThrowsNonFatalError() {
+    assertTriggerFailurePreservesPoll(new AssertionError("scheduler invariant"));
+  }
+
+  private void assertTriggerFailurePreservesPoll(Throwable failure) {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
         .thenReturn(List.of());
@@ -3662,7 +3398,7 @@ public class AsyncJobQueueRuntimeTest {
                 return firstScheduledFuture;
               }
               if (invocationCount == 2) {
-                throw new AssertionError("scheduler invariant");
+                throw failure;
               }
               return new DummyScheduledFuture();
             });

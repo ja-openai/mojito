@@ -3,9 +3,13 @@ package com.box.l10n.mojito.queue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
@@ -1531,6 +1535,51 @@ public class JdbcAsyncJobStoreTest {
     } finally {
       registry.close();
     }
+  }
+
+  @Test
+  public void statusSampleSharesOneDatabaseTimeAndTransaction() throws Exception {
+    AsyncJobId expired = jdbcAsyncJobStore.enqueueNow("assetlocalize", "{}");
+    jdbcAsyncJobStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofHours(1));
+    jdbcTemplate.update(
+        "UPDATE async_job_queue SET lease_until = ? WHERE id = ?",
+        Timestamp.from(Instant.now().minusSeconds(30)),
+        Long.parseLong(expired.value()));
+    jdbcAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(60));
+    jdbcAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().plusSeconds(3600));
+    jdbcAsyncJobStore.enqueueNow("other-queue", "{}");
+    DataSource dataSource = mock(DataSource.class, delegatesTo(jdbcTemplate.getDataSource()));
+    NamedParameterJdbcTemplate jdbc = spy(new NamedParameterJdbcTemplate(dataSource));
+    doAnswer(
+            invocation -> {
+              assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue();
+              return invocation.callRealMethod();
+            })
+        .when(jdbc)
+        .queryForObject(
+            eq(AsyncJobQueueJdbcDialect.HSQL.currentTimestampSql()),
+            any(SqlParameterSource.class),
+            any(RowMapper.class));
+    JdbcAsyncJobStore store =
+        new JdbcAsyncJobStore(
+            jdbc, AsyncJobQueueJdbcDialect.HSQL, new DataSourceTransactionManager(dataSource));
+
+    AsyncJobStatusSample sample = store.statusSample("assetlocalize");
+
+    assertThat(sample.counts())
+        .containsExactlyInAnyOrder(
+            new AsyncJobStatusCount(AsyncJobStatus.QUEUED, 2),
+            new AsyncJobStatusCount(AsyncJobStatus.RUNNING, 1));
+    assertThat(sample.ready().count()).isEqualTo(1);
+    assertThat(sample.expiredLeases().count()).isEqualTo(1);
+    assertThat(sample.ready().observedAt()).isEqualTo(sample.expiredLeases().observedAt());
+    assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+    verify(dataSource, times(1)).getConnection();
+    verify(jdbc, times(1))
+        .queryForObject(
+            eq(AsyncJobQueueJdbcDialect.HSQL.currentTimestampSql()),
+            any(SqlParameterSource.class),
+            any(RowMapper.class));
   }
 
   @Test

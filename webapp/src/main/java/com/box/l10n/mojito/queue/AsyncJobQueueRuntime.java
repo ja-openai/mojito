@@ -668,35 +668,7 @@ class AsyncJobQueueRuntime {
           queueName,
           asyncJobRecord.attemptCount(),
           e);
-      boolean markedFailed;
-      try {
-        markedFailed =
-            asyncJobStore.markFailed(
-                queueName,
-                asyncJobRecord.id(),
-                asyncJobRecord.workerId(),
-                asyncJobRecord.leaseToken(),
-                null,
-                errorMessage);
-      } catch (Throwable transitionException) {
-        if (isJvmFatal(transitionException)) {
-          throw (Error) transitionException;
-        }
-        logger.warn(
-            "Failed to mark executor-submit-failed job {} failed for queue {}",
-            asyncJobRecord.id(),
-            queueName,
-            transitionException);
-        recordTransitionFailure(failedTransition);
-        return;
-      }
-      if (!markedFailed) {
-        logger.warn(
-            "Failed to mark executor-submit-failed job {} failed for queue {}",
-            asyncJobRecord.id(),
-            queueName);
-        recordTransitionFailure(failedTransition);
-      } else {
+      if (markFailed(asyncJobRecord, null, errorMessage, failedTransition)) {
         incrementCounter("asyncJobQueue.failed");
         notifyJobFailedPermanently(
             failedCallbackRecord(asyncJobRecord, null, errorMessage), e, errorMessage);
@@ -710,36 +682,12 @@ class AsyncJobQueueRuntime {
         asyncJobRecord.id(),
         queueName,
         e);
-    boolean requeued;
-    try {
-      requeued =
-          asyncJobStore.requeueAfter(
-              queueName,
-              asyncJobRecord.id(),
-              asyncJobRecord.workerId(),
-              asyncJobRecord.leaseToken(),
-              Duration.ofMillis(retryDelayMs(asyncJobRecord.attemptCount())),
-              null,
-              errorMessage);
-    } catch (Throwable transitionException) {
-      if (isJvmFatal(transitionException)) {
-        throw (Error) transitionException;
-      }
-      logger.warn(
-          "Failed to requeue executor-submit-failed job {} for queue {}",
-          asyncJobRecord.id(),
-          queueName,
-          transitionException);
-      recordTransitionFailure(requeueTransition);
-      return;
-    }
-    if (!requeued) {
-      logger.warn(
-          "Failed to requeue executor-submit-failed job {} for queue {}",
-          asyncJobRecord.id(),
-          queueName);
-      recordTransitionFailure(requeueTransition);
-    } else {
+    if (requeueWithDelay(
+        asyncJobRecord,
+        retryDelayMs(asyncJobRecord.attemptCount()),
+        null,
+        errorMessage,
+        requeueTransition)) {
       incrementCounter("asyncJobQueue.retried");
     }
   }
@@ -850,35 +798,7 @@ class AsyncJobQueueRuntime {
         asyncJobRecord.attemptCount());
     incrementCounter("asyncJobQueue.attempt.exhausted");
 
-    boolean markedFailed;
-    try {
-      markedFailed =
-          asyncJobStore.markFailed(
-              queueName,
-              asyncJobRecord.id(),
-              asyncJobRecord.workerId(),
-              asyncJobRecord.leaseToken(),
-              null,
-              errorMessage);
-    } catch (Throwable e) {
-      if (isJvmFatal(e)) {
-        throw (Error) e;
-      }
-      logger.warn(
-          "Failed to mark attempt-budget-exhausted job {} failed for queue {}",
-          asyncJobRecord.id(),
-          queueName,
-          e);
-      recordTransitionFailure("attemptBudgetExhausted");
-      return;
-    }
-    if (!markedFailed) {
-      logger.warn(
-          "Failed to mark attempt-budget-exhausted job {} failed for queue {}",
-          asyncJobRecord.id(),
-          queueName);
-      recordTransitionFailure("attemptBudgetExhausted");
-    } else {
+    if (markFailed(asyncJobRecord, null, errorMessage, "attemptBudgetExhausted")) {
       incrementCounter("asyncJobQueue.failed");
       notifyJobFailedPermanently(
           failedCallbackRecord(asyncJobRecord, null, errorMessage),
@@ -898,35 +818,7 @@ class AsyncJobQueueRuntime {
           asyncJobRecord.id(),
           asyncJobRecord.attemptCount(),
           e);
-      boolean markedFailed;
-      try {
-        markedFailed =
-            asyncJobStore.markFailed(
-                queueName,
-                asyncJobRecord.id(),
-                asyncJobRecord.workerId(),
-                asyncJobRecord.leaseToken(),
-                null,
-                errorMessage);
-      } catch (Throwable transitionException) {
-        if (isJvmFatal(transitionException)) {
-          throw (Error) transitionException;
-        }
-        logger.warn(
-            "Failed to mark heartbeat-schedule-failed job {} failed for queue {}",
-            asyncJobRecord.id(),
-            queueName,
-            transitionException);
-        recordTransitionFailure("heartbeatScheduleFailed");
-        return;
-      }
-      if (!markedFailed) {
-        logger.warn(
-            "Failed to mark heartbeat-schedule-failed job {} failed for queue {}",
-            asyncJobRecord.id(),
-            queueName);
-        recordTransitionFailure("heartbeatScheduleFailed");
-      } else {
+      if (markFailed(asyncJobRecord, null, errorMessage, "heartbeatScheduleFailed")) {
         incrementCounter("asyncJobQueue.failed");
         notifyJobFailedPermanently(
             failedCallbackRecord(asyncJobRecord, null, errorMessage), e, errorMessage);
@@ -1050,35 +942,8 @@ class AsyncJobQueueRuntime {
         queueName,
         asyncJobRecord.id(),
         asyncJobRecord.attemptCount());
-    boolean markedFailed;
-    try {
-      markedFailed =
-          asyncJobStore.markFailed(
-              queueName,
-              asyncJobRecord.id(),
-              asyncJobRecord.workerId(),
-              asyncJobRecord.leaseToken(),
-              asyncJobHandlerResult.jobData(),
-              errorMessage);
-    } catch (Throwable e) {
-      if (isJvmFatal(e)) {
-        throw (Error) e;
-      }
-      logger.warn(
-          "Failed to mark requeue-exhausted async job {} failed for queue {}",
-          asyncJobRecord.id(),
-          queueName,
-          e);
-      recordTransitionFailure("requeueExhausted");
-      return;
-    }
-    if (!markedFailed) {
-      logger.warn(
-          "Failed to mark requeue-exhausted async job {} failed for queue {}",
-          asyncJobRecord.id(),
-          queueName);
-      recordTransitionFailure("requeueExhausted");
-    } else {
+    if (markFailed(
+        asyncJobRecord, asyncJobHandlerResult.jobData(), errorMessage, "requeueExhausted")) {
       heartbeatState.transitionSucceeded();
       incrementCounter("asyncJobQueue.failed");
       notifyJobFailedPermanently(
@@ -1162,33 +1027,7 @@ class AsyncJobQueueRuntime {
               ? "handler declared permanent failure"
               : "attempt budget exhausted",
           e);
-      boolean markedFailed;
-      try {
-        markedFailed =
-            asyncJobStore.markFailed(
-                queueName,
-                asyncJobRecord.id(),
-                asyncJobRecord.workerId(),
-                asyncJobRecord.leaseToken(),
-                null,
-                errorMessage);
-      } catch (Throwable transitionException) {
-        if (isJvmFatal(transitionException)) {
-          throw (Error) transitionException;
-        }
-        logger.warn(
-            "Failed to mark async job {} failed for queue {}",
-            asyncJobRecord.id(),
-            queueName,
-            transitionException);
-        recordTransitionFailure("failed");
-        return;
-      }
-      if (!markedFailed) {
-        logger.warn(
-            "Failed to mark async job {} failed for queue {}", asyncJobRecord.id(), queueName);
-        recordTransitionFailure("failed");
-      } else {
+      if (markFailed(asyncJobRecord, null, errorMessage, "failed")) {
         heartbeatState.transitionSucceeded();
         incrementCounter("asyncJobQueue.failed");
         notifyJobFailedPermanently(
@@ -1209,6 +1048,35 @@ class AsyncJobQueueRuntime {
       heartbeatState.transitionSucceeded();
       incrementCounter("asyncJobQueue.retried");
     }
+  }
+
+  /** Only an acknowledged transition permits terminal callbacks or lease-release bookkeeping. */
+  private boolean markFailed(
+      AsyncJobRecord job, String jobData, String lastError, String transition) {
+    boolean markedFailed;
+    try {
+      markedFailed =
+          asyncJobStore.markFailed(
+              queueName, job.id(), job.workerId(), job.leaseToken(), jobData, lastError);
+    } catch (Throwable failure) {
+      if (isJvmFatal(failure)) {
+        throw (Error) failure;
+      }
+      logger.warn(
+          "Failed to mark async job {} failed for queue {} ({})",
+          job.id(),
+          queueName,
+          transition,
+          failure);
+      recordTransitionFailure(transition);
+      return false;
+    }
+    if (!markedFailed) {
+      logger.warn(
+          "Failed to mark async job {} failed for queue {} ({})", job.id(), queueName, transition);
+      recordTransitionFailure(transition);
+    }
+    return markedFailed;
   }
 
   private boolean requeueWithDelay(

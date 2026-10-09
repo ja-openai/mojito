@@ -681,6 +681,19 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   }
 
   @Override
+  public AsyncJobStatusSample statusSample(String queueName) {
+    return inTransaction(
+        () -> {
+          AsyncJobQueueValidation.validateQueueName(queueName);
+          Instant now = databaseNow();
+          return new AsyncJobStatusSample(
+              countByStatusInTransaction(queueName),
+              readyStatusAt(queueName, now),
+              expiredLeaseStatusAt(queueName, now));
+        });
+  }
+
+  @Override
   public List<AsyncJobStatusCount> countByStatus(String queueName) {
     return inTransaction(() -> countByStatusInTransaction(queueName));
   }
@@ -711,7 +724,10 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
 
   private AsyncJobReadyStatus readyStatusInTransaction(String queueName) {
     AsyncJobQueueValidation.validateQueueName(queueName);
-    Instant now = databaseNow();
+    return readyStatusAt(queueName, databaseNow());
+  }
+
+  private AsyncJobReadyStatus readyStatusAt(String queueName, Instant now) {
     String sql =
         """
         SELECT COUNT(*) AS count, MIN(available_at) AS oldest_available_at
@@ -740,7 +756,10 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
 
   private AsyncJobExpiredLeaseStatus expiredLeaseStatusInTransaction(String queueName) {
     AsyncJobQueueValidation.validateQueueName(queueName);
-    Instant now = databaseNow();
+    return expiredLeaseStatusAt(queueName, databaseNow());
+  }
+
+  private AsyncJobExpiredLeaseStatus expiredLeaseStatusAt(String queueName, Instant now) {
     String sql =
         """
         SELECT COUNT(*) AS count, MIN(lease_until) AS oldest_lease_until

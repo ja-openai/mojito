@@ -149,6 +149,18 @@ public interface AsyncJobStore {
       String jobData,
       String lastError);
 
+  /**
+   * Collects all status metrics before the caller publishes them.
+   *
+   * <p>The default preserves compatibility with custom stores. JDBC overrides it to share one
+   * transaction and database observation time across its separate, index-friendly queries. Even
+   * there, READ_COMMITTED permits rows to change between queries; this is not an atomic snapshot.
+   */
+  default AsyncJobStatusSample statusSample(String queueName) {
+    return new AsyncJobStatusSample(
+        countByStatus(queueName), readyStatus(queueName), expiredLeaseStatus(queueName));
+  }
+
   /** Returns per-status counters for a queue at query time. */
   List<AsyncJobStatusCount> countByStatus(String queueName);
 

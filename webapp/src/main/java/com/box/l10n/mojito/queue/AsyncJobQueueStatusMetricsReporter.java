@@ -77,17 +77,18 @@ public class AsyncJobQueueStatusMetricsReporter {
 
   private void reportStatusCounts(String queueName) {
     AtomicLong lastSuccess = lastSuccessEpochSecondsGauge(queueName);
+    AsyncJobStatusSample sample = asyncJobStore.statusSample(queueName);
     Map<AsyncJobStatus, Long> countsByStatus = zeroCountsByStatus();
-    for (AsyncJobStatusCount statusCount : asyncJobStore.countByStatus(queueName)) {
+    for (AsyncJobStatusCount statusCount : sample.counts()) {
       countsByStatus.put(statusCount.status(), statusCount.count());
     }
 
-    AsyncJobReadyStatus readyStatus = asyncJobStore.readyStatus(queueName);
-    AsyncJobExpiredLeaseStatus expiredLeaseStatus = asyncJobStore.expiredLeaseStatus(queueName);
+    AsyncJobReadyStatus readyStatus = sample.ready();
+    AsyncJobExpiredLeaseStatus expiredLeaseStatus = sample.expiredLeases();
     long readyAgeMs = readyOldestAgeMs(readyStatus);
     long expiredAgeMs = expiredLeaseOldestAgeMs(expiredLeaseStatus);
 
-    // Finish all reads before publishing. These queries are still not a transactional snapshot.
+    // The store finishes all reads before publishing; a failed read preserves the previous sample.
     countsByStatus.forEach(
         (status, count) ->
             statusGauge(queueName, status).set(count == null ? 0L : Math.max(0L, count)));
