@@ -213,9 +213,18 @@ The translation gets rejected if any placeholder in the source string is missing
 
 ### Whitespace Integrity Checker
 
-Whitespace integrity checker validates that the leading and trailing whitespaces in the source string exist in the translation.
+`WHITESPACE` requires the translation's leading and trailing whitespace to match the source
+exactly. It uses the same boundary-whitespace evaluator as `FORMATJS` and `DOLLAR_TEMPLATE`,
+without enabling their message syntax, placeholder, tag, or literal checks.
 
-The translation gets rejected if any leading or traingling whitespace in the source string is missing in the translation.
+Added, removed, or changed boundary whitespace is rejected, including in multiline strings and
+for Unicode whitespace such as nonbreaking spaces. Matching source whitespace is preserved;
+internal spacing and line breaks are not compared. Whitespace-only strings must match exactly.
+Empty strings have no boundary whitespace; use a separate empty-target checker when needed.
+
+This checker only validates: it does not apply the evaluator's suggested repair or rewrite stored
+translations or generated files. The existing `WHITESPACE` configuration name is unchanged.
+The separate `TRAILING_WHITESPACE` checker is unchanged.
 
 | Source String                                          | Translation                                                           | Checker           |
 |:-------------------------------------------------------|:----------------------------------------------------------------------|:------------------|
