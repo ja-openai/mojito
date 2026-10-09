@@ -32,7 +32,6 @@ vi.mock('../../api/glossaries', async (importActual) => ({
   matchGlossaryTerms: vi.fn().mockResolvedValue({ matchedTerms: [] }),
 }));
 vi.mock('../../api/ai-review', () => ({
-  fetchPrecomputedAiReview: vi.fn().mockResolvedValue(null),
   formatAiReviewError: () => ({ message: 'Fixture AI error', detail: null }),
   requestAiReview: vi.fn().mockResolvedValue({
     message: { role: 'assistant', content: 'No issues found.' },
@@ -325,6 +324,8 @@ describe.each(carryoverFixtures)('Review Project $projectId carryover matrix', (
       fireEvent(window, new Event('blur'));
       fireEvent(document, new Event('visibilitychange'));
       fireEvent(window, new Event('focus'));
+      // The next editor can mount before the previous save has finished settling.
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Accept' })).toBeEnabled());
       accept();
       await waitFor(() => expect(saveMock).toHaveBeenCalledTimes(2));
       expectNextPayload(fixture);

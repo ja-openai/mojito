@@ -360,12 +360,17 @@ recording fails; a `best_effort` admission need not have a capacity reservation.
 Use this data to measure adoption, follow-up use, failures, and latency by selected model; it does
 not measure linguistic quality or establish that one model is better.
 
+The frontend uses `useAiReviewRequest` for request ownership, cancellation and reply/error
+conversion on both review pages. Each page still owns its prompt context, conversation retention
+and suggestion provenance. Automatic-effect cleanup only cancels the request it started.
+
 ### Legacy precompute
 
 Review Project and text-unit details bypass legacy precomputed reviews for every request, including
 targets without extra page context. Existing cache rows lack model/settings provenance, so they
 cannot be attributed to the selected model. The proto API and stored `for-frontend-v2` runs remain
 available to existing callers; their lookup counters do not measure cache use by these pages.
+The unused frontend precomputed-response adapter and its dedicated tests have been removed.
 The reserved `for-frontend` name still maps to `for-frontend-v2` for new precompute work, while old
 in-flight batches and custom run names retain their namespaces. Reuse requires model/settings and
 prompt/glossary/context freshness checks plus a safe scoped PM/admin/scheduled precompute trigger;

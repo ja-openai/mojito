@@ -58,7 +58,6 @@ vi.mock('../../api/agent-reviews', async (importActual) => ({
 }));
 
 const matchGlossaryTermsMock = vi.hoisted(() => vi.fn());
-const fetchPrecomputedAiReviewMock = vi.hoisted(() => vi.fn());
 const requestAiReviewMock = vi.hoisted(() => vi.fn());
 const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
 const fetchReviewProjectDocumentsMock = vi.hoisted(() => vi.fn());
@@ -102,7 +101,6 @@ vi.mock('../../api/text-units', async (importActual) => ({
 }));
 
 vi.mock('../../api/ai-review', () => ({
-  fetchPrecomputedAiReview: fetchPrecomputedAiReviewMock,
   formatAiReviewError: (error: unknown) => ({
     message: error instanceof Error ? error.message : 'Unable to run AI review.',
     detail: null,
@@ -323,8 +321,6 @@ beforeEach(() => {
   fetchUserPreferencesMock.mockReset();
   fetchUserPreferencesMock.mockResolvedValue(preferences);
   saveUserPreferencesMock.mockReset();
-  fetchPrecomputedAiReviewMock.mockReset();
-  fetchPrecomputedAiReviewMock.mockResolvedValue(null);
   requestAiReviewMock.mockReset();
   requestAiReviewMock.mockResolvedValue({
     message: { role: 'assistant', content: 'No issues found.' },
@@ -2424,14 +2420,9 @@ one {{Você tem {$count} arquivo.}}
     );
   });
 
-  it('bypasses untagged precomputed reviews and sends the selected preset and default style', async () => {
-    fetchPrecomputedAiReviewMock.mockResolvedValue({
-      message: { role: 'assistant', content: 'Cached review from an unknown version.' },
-      suggestions: [],
-    });
+  it('sends the selected preset and default style', async () => {
     renderReviewProjectPageView();
     await screen.findByText('No issues found.');
-    expect(fetchPrecomputedAiReviewMock).not.toHaveBeenCalled();
     expect(requestAiReviewMock).toHaveBeenCalledWith(
       expect.objectContaining({
         presetId: 'balanced',
@@ -2444,7 +2435,6 @@ one {{Você tem {$count} arquivo.}}
     expect(requestAiReviewMock.mock.calls[0][0]).not.toHaveProperty('profileId');
     expect(requestAiReviewMock.mock.calls[0][0]).not.toHaveProperty('reasoningEffort');
     expect(requestAiReviewMock.mock.calls[0][0]).not.toHaveProperty('modelName');
-    expect(screen.queryByText('Cached review from an unknown version.')).not.toBeInTheDocument();
   });
 
   it('waits for account settings and keeps manual review and Ask available when automatic review is off', async () => {
@@ -2735,12 +2725,7 @@ one {{Você tem {$count} arquivo.}}
     });
   });
 
-  it('skips precomputed AI review when glossary context is available', async () => {
-    fetchPrecomputedAiReviewMock.mockResolvedValue({
-      message: { role: 'assistant', content: 'Cached review without glossary context.' },
-      suggestions: [],
-      review: null,
-    });
+  it('includes matched glossary context in automatic AI review', async () => {
     requestAiReviewMock.mockResolvedValue({
       message: { role: 'assistant', content: 'Live review with glossary context.' },
       suggestions: [],
@@ -2793,7 +2778,6 @@ one {{Você tem {$count} arquivo.}}
     await waitFor(() => {
       expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
     });
-    expect(fetchPrecomputedAiReviewMock).not.toHaveBeenCalled();
     const [requestPayload] = requestAiReviewMock.mock.calls[0] as [
       { messages: Array<{ role: string; content: string }> },
     ];
@@ -2801,12 +2785,7 @@ one {{Você tem {$count} arquivo.}}
     expect(await screen.findByText('Live review with glossary context.')).toBeInTheDocument();
   });
 
-  it('skips precomputed AI review when warning context is available', async () => {
-    fetchPrecomputedAiReviewMock.mockResolvedValue({
-      message: { role: 'assistant', content: 'Cached review without warning context.' },
-      suggestions: [],
-      review: null,
-    });
+  it('includes deterministic warnings in automatic AI review', async () => {
     requestAiReviewMock.mockResolvedValue({
       message: { role: 'assistant', content: 'Live review with warning context.' },
       suggestions: [],
@@ -2830,7 +2809,6 @@ one {{Você tem {$count} arquivo.}}
     await waitFor(() => {
       expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
     });
-    expect(fetchPrecomputedAiReviewMock).not.toHaveBeenCalled();
     const [requestPayload] = requestAiReviewMock.mock.calls[0] as [
       { messages: Array<{ role: string; content: string }> },
     ];
@@ -2912,7 +2890,6 @@ one {{Você tem {$count} arquivo.}}
       });
 
       await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
-      expect(fetchPrecomputedAiReviewMock).not.toHaveBeenCalled();
       const [payload] = requestAiReviewMock.mock.calls[0] as [AiReviewRequest];
       expect(payload.target).toBe(target);
       expect(payload.localeTag).toBe(locale);

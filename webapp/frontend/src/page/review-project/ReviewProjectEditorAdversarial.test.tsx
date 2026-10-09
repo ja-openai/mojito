@@ -35,7 +35,6 @@ const integrityMock = vi.hoisted(() =>
   vi.fn<typeof IntegrityCheck.checkTextUnitIntegrityWithRetry>(),
 );
 const assistedMock = vi.hoisted(() => vi.fn(() => false));
-const fetchAiMock = vi.hoisted(() => vi.fn());
 const requestAiMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../api/review-projects', async (importActual) => ({
@@ -53,7 +52,6 @@ vi.mock('../../utils/integrityCheck', async (importActual) => ({
   checkTextUnitIntegrityWithRetry: integrityMock,
 }));
 vi.mock('../../api/ai-review', () => ({
-  fetchPrecomputedAiReview: fetchAiMock,
   formatAiReviewError: () => ({ message: 'Fixture AI error', detail: null }),
   requestAiReview: requestAiMock,
 }));
@@ -107,7 +105,6 @@ beforeEach(() => {
   integrityMock.mockReset();
   integrityMock.mockResolvedValue({ checkResult: true });
   assistedMock.mockReturnValue(false);
-  fetchAiMock.mockReset().mockResolvedValue(null);
   requestAiMock.mockReset().mockResolvedValue(aiResponse('Current review'));
 });
 

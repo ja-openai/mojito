@@ -23,7 +23,6 @@ vi.mock('../../api/glossaries', async (importActual) => ({
   matchGlossaryTerms: vi.fn().mockResolvedValue({ matchedTerms: [] }),
 }));
 vi.mock('../../api/ai-review', () => ({
-  fetchPrecomputedAiReview: vi.fn().mockResolvedValue(null),
   formatAiReviewError: () => ({ message: 'Fixture AI error', detail: null }),
   requestAiReview: vi.fn(),
 }));

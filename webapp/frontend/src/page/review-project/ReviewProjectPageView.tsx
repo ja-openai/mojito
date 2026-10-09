@@ -13,12 +13,7 @@ import {
   type AgentReviewAgainRequest,
   reopenAgentFinding,
 } from '../../api/agent-reviews';
-import {
-  type AiReviewMessage,
-  type AiReviewSuggestion,
-  formatAiReviewError,
-  requestAiReview,
-} from '../../api/ai-review';
+import { type AiReviewMessage, type AiReviewSuggestion } from '../../api/ai-review';
 import {
   type ApiGlossaryTerm,
   type ApiMatchedGlossaryTerm,
@@ -116,6 +111,7 @@ import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useAiReviewPreferences } from '../../hooks/useAiReviewPreferences';
+import { useAiReviewRequest } from '../../hooks/useAiReviewRequest';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import {
@@ -2162,7 +2158,11 @@ function DetailPane({
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
   const [aiInput, setAiInput] = useState('');
-  const [isAiResponding, setIsAiResponding] = useState(false);
+  const {
+    start: startAiReview,
+    cancel: cancelAiReview,
+    isResponding: isAiResponding,
+  } = useAiReviewRequest();
   const heroRef = useRef<HTMLDivElement | null>(null);
   const translationRef = useRef<TranslationEditorHandle | null>(null);
   const setTranslationRef = useCallback((editor: TranslationEditorHandle | null) => {
@@ -2171,8 +2171,6 @@ function DetailPane({
   const commentRef = useRef<HTMLTextAreaElement | null>(null);
   const decisionNotesRef = useRef<HTMLTextAreaElement | null>(null);
   const savingIndicatorTimeoutRef = useRef<number | null>(null);
-  const aiRequestAttemptRef = useRef(0);
-  const aiRequestAbortControllerRef = useRef<AbortController | null>(null);
   const repositoryId = textUnit.tmTextUnit?.asset?.repository?.id ?? null;
   const repositoryName = textUnit.tmTextUnit?.asset?.repository?.name ?? null;
   const assetPath =
@@ -2462,20 +2460,12 @@ function DetailPane({
   );
 
   useEffect(() => {
-    aiRequestAttemptRef.current += 1;
-    aiRequestAbortControllerRef.current?.abort();
-    aiRequestAbortControllerRef.current = null;
+    cancelAiReview();
     if (!isAgentReview) {
       setStoredAiConversation({ contextKey: aiContextKey, messages: [] });
     }
     setAiInput('');
-    setIsAiResponding(false);
-    return () => {
-      aiRequestAttemptRef.current += 1;
-      aiRequestAbortControllerRef.current?.abort();
-      aiRequestAbortControllerRef.current = null;
-    };
-  }, [aiContextKey, isAgentReview, sourceChanged]);
+  }, [aiContextKey, cancelAiReview, isAgentReview, sourceChanged]);
 
   const {
     target: draftTarget,
@@ -3007,31 +2997,20 @@ function DetailPane({
     if (!aiPreferencesReady || aiAutomaticDisabled || agentReview != null) {
       return;
     }
-    const requestAttempt = (aiRequestAttemptRef.current += 1);
-    aiRequestAbortControllerRef.current?.abort();
-    aiRequestAbortControllerRef.current = null;
+    cancelAiReview();
     if (isTerminologyProject || sourceChanged || !localeTag) {
       setAiMessages([]);
       setAiInput('');
-      setIsAiResponding(false);
       return;
     }
 
-    let cancelled = false;
     setAiMessages([]);
     setAiInput('');
-    setIsAiResponding(false);
 
     if (glossaryMatchesQuery.isLoading) {
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
-
-    const abortController = new AbortController();
     const suggestionOrigin = createAiSuggestionOrigin(snapshot.reviewStateRevision);
-    aiRequestAbortControllerRef.current = abortController;
-    setIsAiResponding(true);
     setIsAiCollapsed(false);
 
     const initialMessage: AiReviewMessage = {
@@ -3045,82 +3024,29 @@ function DetailPane({
     );
     const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
-    void (async () => {
-      try {
-        const contextMessages = [translationContextMessage, glossaryContextMessage].filter(
-          (message): message is AiReviewMessage => message != null,
-        );
-        const response = await requestAiReview(
-          {
-            presetId: aiPreset,
-            reviewStyle: aiReviewStyle,
-            requestType: 'automatic',
-            surface: 'review_project',
-            source: source ?? '',
-            target: snapshot.target,
-            localeTag,
-            sourceDescription: sourceComment ?? '',
-            tmTextUnitId: workbenchTextUnitId ?? undefined,
-            screenshotImageKey: aiScreenshotImageKey,
-            messages: [...contextMessages, initialMessage],
-          },
-          { signal: abortController.signal },
-        );
-        if (cancelled) {
-          return;
-        }
-        if (aiRequestAttemptRef.current !== requestAttempt) {
-          return;
-        }
-
-        setAiMessages([
-          {
-            id: `assistant-${Date.now()}`,
-            sender: 'assistant',
-            content: response.message.content,
-            suggestions: ownReviewProjectAiSuggestions(response.suggestions, suggestionOrigin),
-            review: response.review,
-            reviewedTarget: snapshot.target,
-          },
-        ]);
-      } catch (error: unknown) {
-        if (cancelled) {
-          return;
-        }
-        if (aiRequestAttemptRef.current !== requestAttempt) {
-          return;
-        }
-
-        const aiError = formatAiReviewError(error);
-        setAiMessages([
-          {
-            id: `assistant-error-${Date.now()}`,
-            sender: 'assistant',
-            content: aiError.message,
-            isError: true,
-            errorDetail: aiError.detail,
-          },
-        ]);
-      } finally {
-        if (!cancelled && aiRequestAttemptRef.current === requestAttempt) {
-          setIsAiResponding(false);
-        }
-        if (aiRequestAbortControllerRef.current === abortController) {
-          aiRequestAbortControllerRef.current = null;
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      abortController.abort();
-      if (aiRequestAbortControllerRef.current === abortController) {
-        aiRequestAttemptRef.current += 1;
-        aiRequestAbortControllerRef.current = null;
-        setIsAiResponding(false);
-      }
-    };
+    const contextMessages = [translationContextMessage, glossaryContextMessage].filter(
+      (message): message is AiReviewMessage => message != null,
+    );
+    return startAiReview(
+      {
+        presetId: aiPreset,
+        reviewStyle: aiReviewStyle,
+        requestType: 'automatic',
+        surface: 'review_project',
+        source: source ?? '',
+        target: snapshot.target,
+        localeTag,
+        sourceDescription: sourceComment ?? '',
+        tmTextUnitId: workbenchTextUnitId ?? undefined,
+        screenshotImageKey: aiScreenshotImageKey,
+        messages: [...contextMessages, initialMessage],
+      },
+      (message) => setAiMessages([message]),
+      (suggestions) => ownReviewProjectAiSuggestions(suggestions, suggestionOrigin),
+    );
   }, [
+    startAiReview,
+    cancelAiReview,
     aiContextKey,
     aiPreset,
     aiReviewStyle,
@@ -3983,87 +3909,47 @@ function DetailPane({
     };
 
     const baseMessages = aiMessages.filter((message) => !message.isError);
-    const requestAttempt = (aiRequestAttemptRef.current += 1);
-    aiRequestAbortControllerRef.current?.abort();
-    const abortController = new AbortController();
     const suggestionOrigin = createAiSuggestionOrigin();
-    aiRequestAbortControllerRef.current = abortController;
     setAiMessages((previous) => [...previous, userMessage]);
     setAiInput('');
-    setIsAiResponding(true);
 
-    void (async () => {
-      try {
-        const conversation: AiReviewMessage[] = [...baseMessages, userMessage].map((message) => ({
-          role: message.sender,
-          content: message.content,
-        }));
-        const translationContextMessage = buildAiTranslationContextMessage(
-          buildTranslationWarnings(source ?? '', draftTarget),
-          draftTarget,
-        );
-        const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
-        const contextMessages = [
-          translationContextMessage,
-          glossaryContextMessage,
-          agentReview ? buildAgentReviewChatContext(agentReview) : null,
-        ].filter((message): message is AiReviewMessage => message != null);
-
-        const response = await requestAiReview(
-          {
-            presetId: aiPreset,
-            reviewStyle: aiReviewStyle,
-            requestType: baseMessages.length > 0 ? 'follow_up' : 'manual',
-            surface: 'review_project',
-            source: source ?? '',
-            target: draftTarget,
-            localeTag,
-            sourceDescription: sourceComment ?? '',
-            tmTextUnitId: workbenchTextUnitId ?? undefined,
-            screenshotImageKey: aiScreenshotImageKey,
-            messages: [...contextMessages, ...conversation],
-          },
-          { signal: abortController.signal },
-        );
-        if (aiRequestAttemptRef.current !== requestAttempt) {
-          return;
-        }
-
-        const assistantMessage: AiChatReviewMessage = {
-          id: `assistant-${Date.now()}`,
-          sender: 'assistant',
-          content: response.message.content,
-          suggestions: ownReviewProjectAiSuggestions(response.suggestions, suggestionOrigin),
-          review: response.review,
-          reviewedTarget: draftTarget,
-        };
-
-        setAiMessages((previous) => [...previous, assistantMessage]);
-      } catch (error: unknown) {
-        if (aiRequestAttemptRef.current !== requestAttempt) {
-          return;
-        }
-        const aiError = formatAiReviewError(error);
+    const conversation: AiReviewMessage[] = [...baseMessages, userMessage].map((message) => ({
+      role: message.sender,
+      content: message.content,
+    }));
+    const translationContextMessage = buildAiTranslationContextMessage(
+      buildTranslationWarnings(source ?? '', draftTarget),
+      draftTarget,
+    );
+    const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
+    const contextMessages = [
+      translationContextMessage,
+      glossaryContextMessage,
+      agentReview ? buildAgentReviewChatContext(agentReview) : null,
+    ].filter((message): message is AiReviewMessage => message != null);
+    startAiReview(
+      {
+        presetId: aiPreset,
+        reviewStyle: aiReviewStyle,
+        requestType: baseMessages.length > 0 ? 'follow_up' : 'manual',
+        surface: 'review_project',
+        source: source ?? '',
+        target: draftTarget,
+        localeTag,
+        sourceDescription: sourceComment ?? '',
+        tmTextUnitId: workbenchTextUnitId ?? undefined,
+        screenshotImageKey: aiScreenshotImageKey,
+        messages: [...contextMessages, ...conversation],
+      },
+      (message) =>
         setAiMessages((previous) => [
-          ...previous.filter((message) => !message.isError),
-          {
-            id: `assistant-error-${Date.now()}`,
-            sender: 'assistant',
-            content: aiError.message,
-            isError: true,
-            errorDetail: aiError.detail,
-          },
-        ]);
-      } finally {
-        if (aiRequestAttemptRef.current === requestAttempt) {
-          setIsAiResponding(false);
-        }
-        if (aiRequestAbortControllerRef.current === abortController) {
-          aiRequestAbortControllerRef.current = null;
-        }
-      }
-    })();
+          ...(message.isError ? previous.filter((entry) => !entry.isError) : previous),
+          message,
+        ]),
+      (suggestions) => ownReviewProjectAiSuggestions(suggestions, suggestionOrigin),
+    );
   }, [
+    startAiReview,
     agentReview,
     aiPreset,
     aiReviewStyle,
@@ -4103,77 +3989,33 @@ function DetailPane({
         retryTarget,
       );
       const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
-
-      setIsAiResponding(true);
-      const requestAttempt = (aiRequestAttemptRef.current += 1);
-      aiRequestAbortControllerRef.current?.abort();
-      const abortController = new AbortController();
       const suggestionOrigin = createAiSuggestionOrigin();
-      aiRequestAbortControllerRef.current = abortController;
-      void (async () => {
-        try {
-          const contextMessages = [
-            translationContextMessage,
-            glossaryContextMessage,
-            agentReview ? buildAgentReviewChatContext(agentReview) : null,
-          ].filter((message): message is AiReviewMessage => message != null);
-          const response = await requestAiReview(
-            {
-              presetId: aiPreset,
-              reviewStyle: aiReviewStyle,
-              requestType,
-              surface: 'review_project',
-              source: source ?? '',
-              target: retryTarget,
-              localeTag,
-              sourceDescription: sourceComment ?? '',
-              tmTextUnitId: workbenchTextUnitId ?? undefined,
-              screenshotImageKey: aiScreenshotImageKey,
-              messages: [...contextMessages, ...conversation],
-            },
-            { signal: abortController.signal },
-          );
-          if (aiRequestAttemptRef.current !== requestAttempt) {
-            return;
-          }
-          const assistantMessage: AiChatReviewMessage = {
-            id: `assistant-${Date.now()}`,
-            sender: 'assistant',
-            content: response.message.content,
-            suggestions: ownReviewProjectAiSuggestions(response.suggestions, suggestionOrigin),
-            review: response.review,
-            reviewedTarget: retryTarget,
-          };
-          setAiMessages((previous) => [
-            ...previous.filter((message) => !message.isError),
-            assistantMessage,
-          ]);
-        } catch (error: unknown) {
-          if (aiRequestAttemptRef.current !== requestAttempt) {
-            return;
-          }
-          const aiError = formatAiReviewError(error);
-          setAiMessages((previous) => [
-            ...previous.filter((message) => !message.isError),
-            {
-              id: `assistant-error-${Date.now()}`,
-              sender: 'assistant',
-              content: aiError.message,
-              isError: true,
-              errorDetail: aiError.detail,
-            },
-          ]);
-        } finally {
-          if (aiRequestAttemptRef.current === requestAttempt) {
-            setIsAiResponding(false);
-          }
-          if (aiRequestAbortControllerRef.current === abortController) {
-            aiRequestAbortControllerRef.current = null;
-          }
-        }
-      })();
+      const contextMessages = [
+        translationContextMessage,
+        glossaryContextMessage,
+        agentReview ? buildAgentReviewChatContext(agentReview) : null,
+      ].filter((message): message is AiReviewMessage => message != null);
+      startAiReview(
+        {
+          presetId: aiPreset,
+          reviewStyle: aiReviewStyle,
+          requestType,
+          surface: 'review_project',
+          source: source ?? '',
+          target: retryTarget,
+          localeTag,
+          sourceDescription: sourceComment ?? '',
+          tmTextUnitId: workbenchTextUnitId ?? undefined,
+          screenshotImageKey: aiScreenshotImageKey,
+          messages: [...contextMessages, ...conversation],
+        },
+        (message) =>
+          setAiMessages((previous) => [...previous.filter((entry) => !entry.isError), message]),
+        (suggestions) => ownReviewProjectAiSuggestions(suggestions, suggestionOrigin),
+      );
     },
     [
+      startAiReview,
       agentReview,
       aiPreset,
       aiReviewStyle,

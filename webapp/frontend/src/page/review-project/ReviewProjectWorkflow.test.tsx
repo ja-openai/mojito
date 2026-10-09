@@ -51,7 +51,6 @@ vi.mock('../../utils/integrityCheck', async (importActual) => ({
   checkTextUnitIntegrityWithRetry: integrityMock,
 }));
 vi.mock('../../api/ai-review', () => ({
-  fetchPrecomputedAiReview: vi.fn().mockResolvedValue(null),
   formatAiReviewError: () => ({ message: 'Fixture AI error', detail: null }),
   requestAiReview: vi.fn().mockResolvedValue({
     message: { role: 'assistant', content: 'No issues found.' },

@@ -1,3 +1,4 @@
+import { isTransientHttpError, poll } from '../utils/poller';
 import type { AiReviewPreset, AiReviewStyle } from './userPreferences';
 
 export type AiReviewMessage = {
@@ -38,31 +39,6 @@ export type AiReviewResponse = {
   message: AiReviewMessage;
   suggestions: AiReviewSuggestion[];
   review?: AiReviewReview;
-};
-
-type ProtoAiReviewTarget = {
-  content?: string | null;
-  explanation?: string | null;
-  confidenceLevel?: number | null;
-};
-
-type ProtoAiReviewReview = {
-  score?: number | null;
-  explanation?: string | null;
-};
-
-type ProtoAiReviewOutput = {
-  target?: ProtoAiReviewTarget | null;
-  altTarget?: ProtoAiReviewTarget | null;
-  existingTargetRating?: ProtoAiReviewReview | null;
-  reviewRequired?: {
-    required?: boolean | null;
-    reason?: string | null;
-  } | null;
-};
-
-type ProtoAiReviewSingleTextUnitResponse = {
-  aiReviewOutput?: ProtoAiReviewOutput | null;
 };
 
 export type AiReviewRequestError = Error & {
@@ -156,25 +132,6 @@ function waitBeforeAutomaticReview(signal?: AbortSignal): Promise<void> {
     }, AUTOMATIC_REVIEW_DELAY_MS);
     signal?.addEventListener('abort', cancel, { once: true });
   });
-}
-
-export async function fetchPrecomputedAiReview(
-  tmTextUnitVariantId: number | null | undefined,
-  options: { signal?: AbortSignal } = {},
-): Promise<AiReviewResponse | null> {
-  if (tmTextUnitVariantId == null) {
-    return null;
-  }
-
-  const params = new URLSearchParams({
-    tmTextUnitVariantId: String(tmTextUnitVariantId),
-    onlyPrecomputed: 'true',
-  });
-  const response = await getJson<ProtoAiReviewSingleTextUnitResponse>(
-    `/api/proto-ai-review-single-text-unit?${params.toString()}`,
-    options,
-  );
-  return toAiReviewResponse(response.aiReviewOutput);
 }
 
 export function formatAiReviewError(error: unknown): {
@@ -289,86 +246,6 @@ async function postJson<TResponse>(
   return JSON.parse(text) as TResponse;
 }
 
-function toAiReviewResponse(
-  output: ProtoAiReviewOutput | null | undefined,
-): AiReviewResponse | null {
-  if (!output) {
-    return null;
-  }
-
-  const suggestions = dedupeSuggestions(
-    [output.target, output.altTarget]
-      .map(toAiReviewSuggestion)
-      .filter((suggestion): suggestion is AiReviewSuggestion => suggestion != null),
-  );
-  const review = toAiReviewReview(output.existingTargetRating) ?? undefined;
-  const reviewRequiredReason = normalizeOptionalText(output.reviewRequired?.reason);
-  const reviewRequired = output.reviewRequired?.required === true;
-  const reviewRequiredFallback = reviewRequired
-    ? 'AI review marked this translation for review.'
-    : null;
-  if (suggestions.length === 0 && !review && !reviewRequiredReason && !reviewRequiredFallback) {
-    return null;
-  }
-
-  const reply =
-    normalizeOptionalText(output.target?.explanation) ??
-    reviewRequiredReason ??
-    reviewRequiredFallback ??
-    'Here are the latest suggestions.';
-
-  return {
-    message: {
-      role: 'assistant',
-      content: reply,
-    },
-    suggestions,
-    review,
-  };
-}
-
-function toAiReviewSuggestion(
-  target: ProtoAiReviewTarget | null | undefined,
-): AiReviewSuggestion | null {
-  const content = normalizeOptionalText(target?.content);
-  if (!content) {
-    return null;
-  }
-  return {
-    content,
-    confidenceLevel: target?.confidenceLevel ?? undefined,
-    explanation: normalizeOptionalText(target?.explanation) ?? undefined,
-  };
-}
-
-function toAiReviewReview(review: ProtoAiReviewReview | null | undefined): AiReviewReview | null {
-  const explanation = normalizeOptionalText(review?.explanation);
-  const score = review?.score;
-  if (!isAiReviewScore(score) || !explanation) {
-    return null;
-  }
-
-  return {
-    score,
-    explanation,
-  };
-}
-
-function isAiReviewScore(score: number | null | undefined): score is number {
-  return typeof score === 'number' && Number.isInteger(score) && score >= 0 && score <= 2;
-}
-
-function dedupeSuggestions(suggestions: AiReviewSuggestion[]): AiReviewSuggestion[] {
-  const seen = new Set<string>();
-  return suggestions.filter((suggestion) => {
-    if (seen.has(suggestion.content)) {
-      return false;
-    }
-    seen.add(suggestion.content);
-    return true;
-  });
-}
-
 function extractErrorDetails(
   responseText: string,
   contentType: string | null,
@@ -425,11 +302,6 @@ function truncateText(value: string, maxLength: number): string {
   return `${value.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
-function normalizeOptionalText(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
 function isLikelyHtml(value: string): boolean {
   const sample = value.trim().slice(0, 600).toLowerCase();
   return (
@@ -440,4 +312,3 @@ function isLikelyHtml(value: string): boolean {
     sample.includes('<title')
   );
 }
-import { isTransientHttpError, poll } from '../utils/poller';
