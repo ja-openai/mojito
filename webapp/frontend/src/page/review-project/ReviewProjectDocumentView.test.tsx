@@ -842,7 +842,7 @@ describe('ReviewProjectDocumentView', () => {
     });
     expect(screen.getByRole('heading', { name: 'Version détaillée' })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'Version courte' })).not.toBeInTheDocument();
-    expect(screen.getByText('Version courte', { selector: 'h1' })).not.toBeVisible();
+    expect(screen.queryByText('Version courte', { selector: 'h1' })).not.toBeInTheDocument();
 
     fireEvent.click(brief);
 
@@ -852,7 +852,7 @@ describe('ReviewProjectDocumentView', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Version courte' })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'Version détaillée' })).not.toBeInTheDocument();
-    expect(screen.getByText('Version détaillée', { selector: 'h1' })).not.toBeVisible();
+    expect(screen.queryByText('Version détaillée', { selector: 'h1' })).not.toBeInTheDocument();
     expect(detailed).toHaveTextContent('0/2 reviewed');
     expect(brief).toHaveTextContent('0/2 reviewed');
     expect(documentReviewRows(props.data, props.textUnits)).toEqual([

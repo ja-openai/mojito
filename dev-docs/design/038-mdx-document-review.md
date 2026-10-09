@@ -271,6 +271,8 @@ under the reserved `PreviewChoice` name.
 
 Both alternatives are extracted and included in the review response. A dropdown
 shows one at a time, using the first localized heading as its label when available.
+Only the selected alternative is mounted and formatted; inactive alternatives remain
+in the response data for navigation and review counts without building hidden DOM.
 In a Review Project, each option shows its mapped strings' review count; shared
 strings are counted once per alternative and retain the same underlying decision.
 Repository Content previews omit those review counts. Switching options

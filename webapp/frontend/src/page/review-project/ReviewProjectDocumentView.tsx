@@ -283,7 +283,8 @@ export function ReviewProjectDocumentView({
               );
             }
             const key = `${currentDocumentKey}:${occurrenceId}`;
-            const selected = visibleChoices[key];
+            const selected =
+              children.find((child) => child.occurrenceId === visibleChoices[key]) ?? children[0];
             return (
               <section
                 key={occurrenceId}
@@ -298,7 +299,7 @@ export function ReviewProjectDocumentView({
                   <span>Preview variant</span>
                   <SingleSelectDropdown<string>
                     label="Preview variant"
-                    value={selected}
+                    value={selected.occurrenceId}
                     searchable={false}
                     disabled={navigationDisabled}
                     onChange={(value) => {
@@ -322,11 +323,7 @@ export function ReviewProjectDocumentView({
                     })}
                   />
                 </div>
-                {children.map((child) => (
-                  <div key={child.occurrenceId} hidden={selected !== child.occurrenceId}>
-                    {renderNode(child)}
-                  </div>
-                ))}
+                {renderNode(selected)}
               </section>
             );
           }
