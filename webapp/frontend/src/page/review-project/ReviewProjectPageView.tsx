@@ -2281,6 +2281,74 @@ function DetailPane({
     () => buildTerminologyFeedbackSnapshot(textUnit, user.username),
     [textUnit, user.username],
   );
+  const terminologyTerm = textUnit.terminologyTerm ?? null;
+  const glossaryTargetsQuery = useQuery({
+    queryKey: ['review-project-glossary-targets'],
+    enabled:
+      terminologyTerm?.glossaryId == null &&
+      Boolean(assetPath) &&
+      (repositoryId != null || Boolean(repositoryName?.trim())),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: () => fetchGlossaries({ limit: 200 }),
+  });
+  const glossaryTermTarget = useMemo(
+    () =>
+      findGlossaryTargetForTextUnit(glossaryTargetsQuery.data?.glossaries ?? [], {
+        repositoryId,
+        repositoryName,
+        assetPath,
+      }),
+    [assetPath, glossaryTargetsQuery.data?.glossaries, repositoryId, repositoryName],
+  );
+  const terminologyGlossaryId =
+    terminologyTerm?.glossaryId ?? glossaryTermTarget?.glossaryId ?? null;
+  const glossaryTermQuery = useQuery({
+    queryKey: [
+      'review-project-glossary-term',
+      glossaryTermTarget?.glossaryId ?? null,
+      workbenchTextUnitId,
+      source,
+      localeTag,
+    ],
+    enabled:
+      terminologyTerm == null &&
+      glossaryTermTarget != null &&
+      workbenchTextUnitId != null &&
+      Boolean(source?.trim()),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (glossaryTermTarget == null || workbenchTextUnitId == null || !source?.trim()) {
+        return null as ApiGlossaryTerm | null;
+      }
+      const response = await fetchGlossaryTerms(glossaryTermTarget.glossaryId, {
+        search: source,
+        localeTags: localeTag ? [localeTag] : [],
+        limit: 25,
+      });
+      return findGlossaryTermByTmTextUnitId(response.terms, workbenchTextUnitId);
+    },
+  });
+  const glossaryTerm = glossaryTermQuery.data ?? null;
+  const glossaryEvidence =
+    terminologyTerm?.evidence ?? textUnit.glossaryTermEvidence ?? glossaryTerm?.evidence;
+  const glossaryTermScreenshotImages = useMemo(
+    () => getGlossaryTermScreenshotKeys(glossaryEvidence),
+    [glossaryEvidence],
+  );
+  const detailScreenshotImages = useMemo(
+    () => mergeScreenshotImageKeys(screenshotImages, glossaryTermScreenshotImages),
+    [glossaryTermScreenshotImages, screenshotImages],
+  );
+  const safeScreenshotIdx = detailScreenshotImages.length
+    ? Math.min(currentScreenshotIdx, detailScreenshotImages.length - 1)
+    : 0;
+  const selectedScreenshotImage = detailScreenshotImages[safeScreenshotIdx];
+  const aiScreenshotImageKey =
+    selectedScreenshotImage && !isVideoAttachmentKey(selectedScreenshotImage)
+      ? selectedScreenshotImage
+      : undefined;
   const aiContextKey = useMemo(() => {
     const variantId =
       textUnit.currentTmTextUnitVariant?.id ?? textUnit.baselineTmTextUnitVariant?.id ?? 'none';
@@ -2301,12 +2369,14 @@ function DetailPane({
         agentReview.proposedTarget,
         aiPreset,
         aiReviewStyle,
+        aiScreenshotImageKey,
       ]);
     }
-    return `${textUnit.id}:${localeTag}:${variantId}:${textUnit.reviewStateRevision ?? 'none'}:none:none:none:${aiPreset}:${aiReviewStyle}`;
+    return `${textUnit.id}:${localeTag}:${variantId}:${textUnit.reviewStateRevision ?? 'none'}:none:none:none:${aiPreset}:${aiReviewStyle}:${aiScreenshotImageKey ?? 'none'}`;
   }, [
     aiPreset,
     aiReviewStyle,
+    aiScreenshotImageKey,
     agentReview,
     localeTag,
     textUnit.baselineTmTextUnitVariant?.id,
@@ -2606,69 +2676,6 @@ function DetailPane({
   const decisionVariant = decision?.decisionTmTextUnitVariant ?? null;
   const decisionVariantId = decisionVariant?.id ?? null;
   const translationLang = toHtmlLangTag(localeTag);
-  const terminologyTerm = textUnit.terminologyTerm ?? null;
-  const glossaryTargetsQuery = useQuery({
-    queryKey: ['review-project-glossary-targets'],
-    enabled:
-      terminologyTerm?.glossaryId == null &&
-      Boolean(assetPath) &&
-      (repositoryId != null || Boolean(repositoryName?.trim())),
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-    queryFn: () => fetchGlossaries({ limit: 200 }),
-  });
-  const glossaryTermTarget = useMemo(
-    () =>
-      findGlossaryTargetForTextUnit(glossaryTargetsQuery.data?.glossaries ?? [], {
-        repositoryId,
-        repositoryName,
-        assetPath,
-      }),
-    [assetPath, glossaryTargetsQuery.data?.glossaries, repositoryId, repositoryName],
-  );
-  const terminologyGlossaryId =
-    terminologyTerm?.glossaryId ?? glossaryTermTarget?.glossaryId ?? null;
-  const glossaryTermQuery = useQuery({
-    queryKey: [
-      'review-project-glossary-term',
-      glossaryTermTarget?.glossaryId ?? null,
-      workbenchTextUnitId,
-      source,
-      localeTag,
-    ],
-    enabled:
-      terminologyTerm == null &&
-      glossaryTermTarget != null &&
-      workbenchTextUnitId != null &&
-      Boolean(source?.trim()),
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
-    queryFn: async () => {
-      if (glossaryTermTarget == null || workbenchTextUnitId == null || !source?.trim()) {
-        return null as ApiGlossaryTerm | null;
-      }
-      const response = await fetchGlossaryTerms(glossaryTermTarget.glossaryId, {
-        search: source,
-        localeTags: localeTag ? [localeTag] : [],
-        limit: 25,
-      });
-      return findGlossaryTermByTmTextUnitId(response.terms, workbenchTextUnitId);
-    },
-  });
-  const glossaryTerm = glossaryTermQuery.data ?? null;
-  const glossaryEvidence =
-    terminologyTerm?.evidence ?? textUnit.glossaryTermEvidence ?? glossaryTerm?.evidence;
-  const glossaryTermScreenshotImages = useMemo(
-    () => getGlossaryTermScreenshotKeys(glossaryEvidence),
-    [glossaryEvidence],
-  );
-  const detailScreenshotImages = useMemo(
-    () => mergeScreenshotImageKeys(screenshotImages, glossaryTermScreenshotImages),
-    [glossaryTermScreenshotImages, screenshotImages],
-  );
-  const safeScreenshotIdx = detailScreenshotImages.length
-    ? Math.min(currentScreenshotIdx, detailScreenshotImages.length - 1)
-    : 0;
   const glossaryTermHref =
     terminologyGlossaryId != null
       ? `/glossaries/${terminologyGlossaryId}${
@@ -3054,6 +3061,7 @@ function DetailPane({
             localeTag,
             sourceDescription: sourceComment ?? '',
             tmTextUnitId: workbenchTextUnitId ?? undefined,
+            screenshotImageKey: aiScreenshotImageKey,
             messages: [...contextMessages, initialMessage],
           },
           { signal: abortController.signal },
@@ -3131,6 +3139,7 @@ function DetailPane({
     sourceChanged,
     sourceComment,
     workbenchTextUnitId,
+    aiScreenshotImageKey,
   ]);
 
   const draftStatusApi = mapChoiceToApi(draftStatusChoice);
@@ -4011,6 +4020,7 @@ function DetailPane({
             localeTag,
             sourceDescription: sourceComment ?? '',
             tmTextUnitId: workbenchTextUnitId ?? undefined,
+            screenshotImageKey: aiScreenshotImageKey,
             messages: [...contextMessages, ...conversation],
           },
           { signal: abortController.signal },
@@ -4070,6 +4080,7 @@ function DetailPane({
     sourceChanged,
     sourceComment,
     workbenchTextUnitId,
+    aiScreenshotImageKey,
   ]);
 
   const handleRetryAi = useCallback(
@@ -4117,6 +4128,7 @@ function DetailPane({
               localeTag,
               sourceDescription: sourceComment ?? '',
               tmTextUnitId: workbenchTextUnitId ?? undefined,
+              screenshotImageKey: aiScreenshotImageKey,
               messages: [...contextMessages, ...conversation],
             },
             { signal: abortController.signal },
@@ -4177,6 +4189,7 @@ function DetailPane({
       sourceChanged,
       sourceComment,
       workbenchTextUnitId,
+      aiScreenshotImageKey,
     ],
   );
 

@@ -2293,6 +2293,137 @@ one {{Você tem {$count} arquivo.}}
     });
   });
 
+  it('includes the selected screenshot and current text in automatic, follow-up, and retry reviews', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectRequest: {
+          ...project.reviewProjectRequest!,
+          screenshotImageIds: ['email-first.png', 'email-selected.png'],
+        },
+      },
+    });
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+      requestType: 'automatic',
+      screenshotImageKey: 'email-first.png',
+      source: textUnit.tmTextUnit!.content,
+      target: textUnit.baselineTmTextUnitVariant!.content,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Next screenshot' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(2));
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+      requestType: 'automatic',
+      screenshotImageKey: 'email-selected.png',
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Translation' }), {
+      target: { value: 'Pagar {price} hoje' },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Chat with AI: rephrase, adjust the tone, or ask a question…'),
+      {
+        target: { value: 'Check this in the email context.' },
+      },
+    );
+    requestAiReviewMock.mockRejectedValueOnce(new Error('Review failed'));
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+    await screen.findByText('No issues found.');
+    expect(requestAiReviewMock).toHaveBeenCalledTimes(4);
+    for (const [index, requestType] of [
+      [2, 'follow_up'],
+      [3, 'retry'],
+    ] as const) {
+      expect(requestAiReviewMock.mock.calls[index][0]).toMatchObject({
+        requestType,
+        screenshotImageKey: 'email-selected.png',
+        target: 'Pagar {price} hoje',
+      });
+      const payload = requestAiReviewMock.mock.calls[index][0] as AiReviewRequest;
+      expect(payload.messages).toContainEqual({
+        role: 'user',
+        content: 'Check this in the email context.',
+      });
+    }
+  });
+
+  it.each([false, true])(
+    'cancels stale screenshot review results with automatic review disabled=%s',
+    async (automaticDisabled) => {
+      fetchUserPreferencesMock.mockResolvedValue({
+        ...preferences,
+        aiReviewAutomaticDisabled: automaticDisabled,
+      });
+      let finishOldReview!: (value: AiReviewResponse) => void;
+      requestAiReviewMock.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishOldReview = resolve;
+          }),
+      );
+      renderReviewProjectPageView({
+        project: {
+          ...project,
+          reviewProjectRequest: {
+            ...project.reviewProjectRequest!,
+            screenshotImageIds: ['first.png', 'second.png'],
+          },
+        },
+      });
+      if (automaticDisabled) fireEvent.click(await screen.findByRole('button', { name: 'Review' }));
+      await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(1));
+      const oldSignal = (requestAiReviewMock.mock.calls[0][1] as { signal: AbortSignal }).signal;
+      expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
+        screenshotImageKey: 'first.png',
+        requestType: automaticDisabled ? 'manual' : 'automatic',
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Next screenshot' }));
+      expect(oldSignal.aborted).toBe(true);
+      if (automaticDisabled) {
+        expect(requestAiReviewMock).toHaveBeenCalledTimes(1);
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      }
+      await screen.findByText('No issues found.');
+      expect(requestAiReviewMock.mock.calls[1][0]).toMatchObject({
+        screenshotImageKey: 'second.png',
+        requestType: automaticDisabled ? 'manual' : 'automatic',
+      });
+      await act(async () => {
+        finishOldReview({
+          message: { role: 'assistant', content: 'Stale first screenshot response.' },
+          suggestions: [{ content: 'Stale screenshot suggestion' }],
+        });
+        await Promise.resolve();
+      });
+      expect(screen.queryByText('Stale first screenshot response.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Stale screenshot suggestion')).not.toBeInTheDocument();
+      expect(screen.getByText('No issues found.')).toBeVisible();
+    },
+  );
+
+  it('keeps video review text-only and includes the image when it is selected', async () => {
+    renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectRequest: {
+          ...project.reviewProjectRequest!,
+          screenshotImageIds: ['demo.mp4', 'screen.png'],
+        },
+      },
+    });
+    await screen.findByText('No issues found.');
+    expect(
+      (requestAiReviewMock.mock.calls[0][0] as AiReviewRequest).screenshotImageKey,
+    ).toBeUndefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Next screenshot' }));
+    await waitFor(() => expect(requestAiReviewMock).toHaveBeenCalledTimes(2));
+    expect((requestAiReviewMock.mock.calls[1][0] as AiReviewRequest).screenshotImageKey).toBe(
+      'screen.png',
+    );
+  });
+
   it('bypasses untagged precomputed reviews and sends the selected preset and default style', async () => {
     fetchPrecomputedAiReviewMock.mockResolvedValue({
       message: { role: 'assistant', content: 'Cached review from an unknown version.' },

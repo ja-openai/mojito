@@ -210,7 +210,8 @@ public class AiReviewInteractiveService {
         request.surface(),
         request.reasoningEffort(),
         request.presetId(),
-        reviewStyle);
+        reviewStyle,
+        request.screenshotImageKey());
   }
 
   private String requestType(AiReviewChatRequest request) {

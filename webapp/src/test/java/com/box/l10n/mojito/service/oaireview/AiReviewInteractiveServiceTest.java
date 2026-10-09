@@ -24,6 +24,7 @@ import com.box.l10n.mojito.service.oaireview.AiReviewRequestUsageService.StartIn
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.security.user.UserPreferencesService;
 import com.box.l10n.mojito.service.security.user.UserService;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
@@ -518,6 +519,103 @@ public class AiReviewInteractiveServiceTest {
   }
 
   @Test
+  public void screenshotKeySurvivesLocaleAndStyleNormalizationAndPreparedRoundTrip() {
+    authenticate(17L, UserPreferences.defaults());
+    for (String locale : List.of("fr", " \tfr-CA \n")) {
+      for (String style : new String[] {null, "corrections_only"}) {
+        AiReviewChatRequest request =
+            screenshotRequest(
+                locale,
+                style,
+                "  screenshots/selected.png  ",
+                List.of(new AiReviewChatMessage("user", "Review this translation.")));
+
+        Prepared prepared = service.prepare(request);
+        Prepared restored =
+            objectMapper.readValueUnchecked(
+                objectMapper.writeValueAsStringUnchecked(prepared), Prepared.class);
+
+        assertEquals(locale.trim(), prepared.request().localeTag());
+        assertEquals(
+            style == null ? UserPreferences.defaults().aiReviewStyle() : style,
+            prepared.request().reviewStyle());
+        assertEquals("screenshots/selected.png", prepared.request().screenshotImageKey());
+        assertEquals(prepared, restored);
+      }
+    }
+    verifyNoInteractions(tasks, usage);
+  }
+
+  @Test
+  public void screenshotRequestDefensivelyFreezesMessagesAcrossPreparationAndSerialization() {
+    authenticate(17L, UserPreferences.defaults());
+    AiReviewChatMessage original = new AiReviewChatMessage("user", "Review this translation.");
+    List<AiReviewChatMessage> callerMessages = new ArrayList<>(List.of(original));
+    AiReviewChatRequest request = screenshotRequest(" fr ", null, "selected.png", callerMessages);
+    callerMessages.add(new AiReviewChatMessage("user", "Added after request creation."));
+
+    Prepared prepared = service.prepare(request);
+    callerMessages.clear();
+    Prepared restored =
+        objectMapper.readValueUnchecked(
+            objectMapper.writeValueAsStringUnchecked(prepared), Prepared.class);
+
+    assertEquals(List.of(original), request.messages());
+    assertEquals(List.of(original), prepared.request().messages());
+    assertEquals(List.of(original), restored.request().messages());
+    assertThrows(UnsupportedOperationException.class, () -> request.messages().clear());
+    assertThrows(UnsupportedOperationException.class, () -> prepared.request().messages().clear());
+    assertThrows(UnsupportedOperationException.class, () -> restored.request().messages().clear());
+    assertEquals("selected.png", restored.request().screenshotImageKey());
+  }
+
+  @Test
+  public void screenshotKeysRejectUrlsAndNamespaceTraversalBeforePreparation() {
+    for (String key :
+        List.of(
+            "https://example.com/image.png",
+            "http://example.com/image.png",
+            "//example.com/image.png",
+            "data:image/png;base64,synthetic",
+            "blob:synthetic",
+            "file:/tmp/image.png",
+            "/absolute/image.png",
+            "../image.png",
+            "screenshots/../image.png",
+            "screenshots/./image.png",
+            "screenshots//image.png",
+            "screenshots/",
+            "screenshots\\image.png",
+            "image\u0000.png",
+            "x".repeat(1025))) {
+      ResponseStatusException failure =
+          assertThrows(
+              ResponseStatusException.class, () -> screenshotRequest("fr", null, key, List.of()));
+      assertEquals(HttpStatus.BAD_REQUEST, failure.getStatusCode());
+      assertEquals("Invalid review screenshot key.", failure.getReason());
+    }
+    verifyNoInteractions(users, preferences, tasks, usage);
+  }
+
+  @Test
+  public void oldRequestsAndBlankScreenshotKeysRemainTextOnlyAfterNormalization() {
+    authenticate(17L, UserPreferences.defaults());
+    AiReviewChatRequest oldRequest =
+        objectMapper.readValueUnchecked(
+            """
+            {"source":"Hello","target":"Bonjour","localeTag":" fr ",
+             "messages":[{"role":"user","content":"Review."}]}
+            """,
+            AiReviewChatRequest.class);
+    assertNull(service.prepare(oldRequest).request().screenshotImageKey());
+    assertNull(service.prepareLegacyJob(oldRequest, 81L).request().screenshotImageKey());
+    for (String key : new String[] {null, "", " \t\n"}) {
+      AiReviewChatRequest request = screenshotRequest(" fr ", null, key, oldRequest.messages());
+      assertNull(service.prepare(request).request().screenshotImageKey());
+    }
+  }
+
+  @Test
   public void normalizesRequestLocaleBeforeFreezingItAndRecordingUsage() {
     authenticate(17L, UserPreferences.defaults());
     AiReviewChatRequest request = requestWithLocale(" \tfr-CA \n");
@@ -645,6 +743,24 @@ public class AiReviewInteractiveServiceTest {
 
   private AiReviewChatRequest requestWithLocale(String locale) {
     return requestWithEffort(locale, null);
+  }
+
+  private AiReviewChatRequest screenshotRequest(
+      String locale, String style, String key, List<AiReviewChatMessage> messages) {
+    return new AiReviewChatRequest(
+        "Hello",
+        "Bonjour",
+        locale,
+        "Greeting",
+        42L,
+        messages,
+        null,
+        "manual",
+        "review_project",
+        null,
+        "balanced",
+        style,
+        key);
   }
 
   private AiReviewChatRequest requestWithStyle(AiReviewChatRequest request, String style) {

@@ -11,6 +11,7 @@ export type AiReviewRequest = {
   localeTag?: string;
   sourceDescription?: string;
   tmTextUnitId?: number;
+  screenshotImageKey?: string;
   profileId?: 'version_a' | 'version_b';
   reasoningEffort?: 'low' | 'medium' | 'high';
   presetId?: AiReviewPreset;

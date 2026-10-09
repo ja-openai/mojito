@@ -3,6 +3,7 @@ package com.box.l10n.mojito.rest.textunit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -17,6 +18,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.json.ObjectMapper;
@@ -27,13 +29,17 @@ import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Prepared
 import com.box.l10n.mojito.service.oaireview.AiReviewInteractiveService.Settings;
 import com.box.l10n.mojito.service.oaireview.AiReviewService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateScreenshotService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
+import com.box.l10n.mojito.util.ImageBytes;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -60,6 +66,8 @@ public class AiReviewChatWSTest {
 
   @Mock AiReviewInteractiveService interactiveService;
 
+  @Mock AiTranslateScreenshotService screenshotService;
+
   private AiReviewChatWS aiReviewChatWS;
 
   private SimpleMeterRegistry meterRegistry;
@@ -80,7 +88,8 @@ public class AiReviewChatWSTest {
             tmTextUnitIntegrityCheckService,
             aiTranslateLocalePromptSuffixService,
             meterRegistry,
-            interactiveService);
+            interactiveService,
+            screenshotService);
     lenient()
         .when(interactiveService.prepare(any()))
         .thenAnswer(
@@ -100,6 +109,127 @@ public class AiReviewChatWSTest {
               return new OpenAIClient.ResponsesCall(
                   response, response.handle((value, failure) -> null));
             });
+  }
+
+  @Test
+  public void chatIncludesExactlyOneScreenshotAndCurrentTextForEveryRequestType() {
+    ImageBytes screenshot = pngScreenshot("selected.png");
+    when(screenshotService.getImageBytes("selected.png")).thenReturn(Optional.of(screenshot));
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(successResponse("Reviewed with context.")));
+
+    for (String type : List.of("automatic", "manual", "follow_up", "retry")) {
+      aiReviewChatWS.chat(screenshotRequest("selected.png", type));
+    }
+
+    ArgumentCaptor<OpenAIClient.ResponsesRequest> requests =
+        ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
+    verify(openAIClient, times(4)).getResponses(requests.capture(), any());
+    verify(screenshotService, times(4)).getImageBytes("selected.png");
+    for (OpenAIClient.ResponsesRequest request : requests.getAllValues()) {
+      var content =
+          request.input().stream().flatMap(message -> message.content().stream()).toList();
+      var images =
+          content.stream()
+              .filter(OpenAIClient.ResponsesRequest.InputMessage.ImageUrl.class::isInstance)
+              .map(OpenAIClient.ResponsesRequest.InputMessage.ImageUrl.class::cast)
+              .toList();
+      assertEquals(1, images.size());
+      assertEquals(screenshot.toDataUrl(), images.getFirst().imageUrl());
+      String inputJson =
+          ((OpenAIClient.ResponsesRequest.InputMessage.Text) content.getFirst()).text();
+      var input =
+          new ObjectMapper()
+              .readValueUnchecked(inputJson, AiReviewService.AiReviewTextUnitVariantInput.class);
+      assertEquals("Save", input.source());
+      assertEquals("保存", input.existingTarget().content());
+      assertEquals("Button caption", input.sourceDescription());
+      assertTrue(
+          content.stream()
+              .filter(OpenAIClient.ResponsesRequest.InputMessage.Text.class::isInstance)
+              .map(OpenAIClient.ResponsesRequest.InputMessage.Text.class::cast)
+              .anyMatch(text -> text.text().equals("Review this translation.")));
+    }
+  }
+
+  @Test
+  public void chatWithoutScreenshotRemainsTextOnly() {
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(successResponse("Reviewed text.")));
+
+    aiReviewChatWS.chat(screenshotRequest(null, "manual"));
+
+    ArgumentCaptor<OpenAIClient.ResponsesRequest> request =
+        ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
+    verify(openAIClient).getResponses(request.capture(), any());
+    assertTrue(
+        request.getValue().input().stream()
+            .flatMap(message -> message.content().stream())
+            .allMatch(OpenAIClient.ResponsesRequest.InputMessage.Text.class::isInstance));
+    verifyNoInteractions(screenshotService);
+  }
+
+  @Test
+  public void chatFailsHonestlyWhenSelectedScreenshotIsMissing() {
+    when(screenshotService.getImageBytes("missing.png")).thenReturn(Optional.empty());
+
+    assertScreenshotFailure(
+        "missing.png", HttpStatus.BAD_REQUEST, "Review screenshot is no longer available.");
+  }
+
+  @Test
+  public void chatRejectsUnsupportedScreenshotBytesBeforeCallingProvider() {
+    when(screenshotService.getImageBytes("unsupported.svg"))
+        .thenReturn(
+            Optional.of(
+                ImageBytes.fromBytes(
+                    "unsupported.svg", "<svg></svg>".getBytes(StandardCharsets.UTF_8))));
+
+    assertScreenshotFailure(
+        "unsupported.svg", HttpStatus.BAD_REQUEST, "Unsupported review screenshot format.");
+  }
+
+  @Test
+  public void chatRejectsNonImageContentDisguisedAsPngBeforeCallingProvider() {
+    when(screenshotService.getImageBytes("mislabeled.png"))
+        .thenReturn(
+            Optional.of(
+                ImageBytes.fromBytes(
+                    "mislabeled.png", "%PDF-1.7 synthetic".getBytes(StandardCharsets.UTF_8))));
+
+    assertScreenshotFailure(
+        "mislabeled.png", HttpStatus.BAD_REQUEST, "Unsupported review screenshot format.");
+  }
+
+  @Test
+  public void chatReportsScreenshotLookupFailureWithoutCallingProvider() {
+    when(screenshotService.getImageBytes("selected.png"))
+        .thenThrow(new IllegalStateException("Synthetic image storage failure"));
+
+    assertScreenshotFailure(
+        "selected.png",
+        HttpStatus.SERVICE_UNAVAILABLE,
+        "Review screenshot could not be loaded. Please retry.");
+  }
+
+  @Test
+  public void chatRetriesReuseTheSameScreenshotPayloadWithoutReloadingIt() {
+    when(screenshotService.getImageBytes("selected.png"))
+        .thenReturn(Optional.of(pngScreenshot("selected.png")));
+    var firstFailure = retryableFailure();
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.failedFuture(firstFailure))
+        .thenReturn(CompletableFuture.completedFuture(successResponse("Retry succeeded.")));
+
+    assertEquals(
+        "Retry succeeded.",
+        aiReviewChatWS.chat(screenshotRequest("selected.png", "manual")).message().content());
+
+    ArgumentCaptor<OpenAIClient.ResponsesRequest> requests =
+        ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
+    verify(openAIClient, times(2)).getResponses(requests.capture(), any());
+    assertSame(requests.getAllValues().getFirst(), requests.getAllValues().getLast());
+    verify(screenshotService).getImageBytes("selected.png");
   }
 
   @Test
@@ -1062,6 +1192,38 @@ public class AiReviewChatWSTest {
             List.of(new AiReviewChatWS.AiReviewChatMessage("user", "Review."))),
         7L,
         new Settings("balanced", "gpt-5.6-sol", "max", "low", "default"));
+  }
+
+  private ImageBytes pngScreenshot(String name) {
+    return ImageBytes.fromBytes(
+        name, new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
+  }
+
+  private AiReviewChatWS.AiReviewChatRequest screenshotRequest(String imageKey, String type) {
+    return new AiReviewChatWS.AiReviewChatRequest(
+        "Save",
+        "保存",
+        "ja-JP",
+        "Button caption",
+        null,
+        List.of(new AiReviewChatWS.AiReviewChatMessage("user", "Review this translation.")),
+        null,
+        type,
+        "review_project",
+        null,
+        "balanced",
+        "corrections_only",
+        imageKey);
+  }
+
+  private void assertScreenshotFailure(String imageKey, HttpStatus status, String reason) {
+    ResponseStatusException failure =
+        assertThrows(
+            ResponseStatusException.class,
+            () -> aiReviewChatWS.chat(screenshotRequest(imageKey, "manual")));
+    assertEquals(status, failure.getStatusCode());
+    assertEquals(reason, failure.getReason());
+    verifyNoInteractions(openAIClient);
   }
 
   private OpenAIClient.OpenAIClientResponseException retryableFailure() {

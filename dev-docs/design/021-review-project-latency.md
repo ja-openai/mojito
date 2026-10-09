@@ -38,6 +38,25 @@ request, any PM/admin integrity preflight, and the translator rejection
 follow-up check that prepares detailed validation errors. Fast saves complete
 without flashing a loading state; slow saves still show the indicator.
 
+## Interactive review screenshots
+
+Review Project AI Chat Review includes the selected stored screenshot with the
+source, current target, description, glossary, and integrity context. Automatic,
+manual, follow-up, and retry requests use the same selection. Changing it cancels
+the previous review and resets the normal review conversation. Incident reviews
+retain their history and mark prior suggestions stale; late results cannot appear
+under the newly selected screenshot. A selected video remains text-only.
+
+The screenshot key survives locale/style normalization in the frozen async
+request snapshot. The review service loads it through the existing image service
+once before provider retries, verifies PNG/JPEG/GIF/WebP bytes, and attaches one
+image.
+Missing or unsupported screenshots fail visibly instead of silently falling back
+to text-only review. External URLs and keys outside the image namespace are
+rejected. Full provider requests are not logged, to avoid logging image data.
+The prompt treats the screenshot as context that may show older copy and reviews
+the supplied current target. Text Unit Detail continues to send text context.
+
 ## Backend Metrics
 
 `ReviewProjectService.saveDecisionDuration` times review-project save decisions
