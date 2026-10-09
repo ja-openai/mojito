@@ -10,6 +10,8 @@ import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.service.asset.AssetService;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.badtranslation.TranslationIncidentRepository;
+import com.box.l10n.mojito.service.blobstorage.Retention;
+import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryService;
@@ -43,6 +45,7 @@ public class IncidentReviewBatchDbTest extends ServiceTestBase {
   @Autowired private AgentReviewRunRepository runs;
   @Autowired private IncidentReviewBatchService batches;
   @Autowired private AgentReviewService reviews;
+  @Autowired private StructuredBlobStorage blobs;
   @Autowired private AgentReviewProjectService routing;
   @Autowired private ReviewProjectService projects;
   @Autowired private ReviewFeatureRepository features;
@@ -243,6 +246,28 @@ public class IncidentReviewBatchDbTest extends ServiceTestBase {
                 .preview(otherTeamGlobal, teams.getCurrentUserIdOrThrow())
                 .eligibleIncidentCount())
         .isZero();
+    String checkpointName =
+        "runs/" + run.id() + "/artifacts/" + reviews.getRun(run.id()).checkpointSha256();
+    String checkpoint =
+        blobs.getString(StructuredBlobStorage.Prefix.AGENT_REVIEW, checkpointName).orElseThrow();
+    // The payload still parses and claims completed coverage, but no longer matches its key.
+    String changed = checkpoint.replace("application/json", "application/json; charset=utf-8");
+    assertThat(changed).isNotEqualTo(checkpoint);
+    try {
+      blobs.put(
+          StructuredBlobStorage.Prefix.AGENT_REVIEW, checkpointName, changed, Retention.PERMANENT);
+      var corrupt = batches.preview(request(f), teams.getCurrentUserIdOrThrow());
+      assertThat(corrupt.eligibleIncidentCount()).isZero();
+      assertThat(corrupt.skipped())
+          .extracting(IncidentReviewBatchService.Skipped::reason)
+          .containsExactly("Review checkpoint is unavailable or invalid");
+    } finally {
+      blobs.put(
+          StructuredBlobStorage.Prefix.AGENT_REVIEW,
+          checkpointName,
+          checkpoint,
+          Retention.PERMANENT);
+    }
     var result = batches.create(request(f), teams.getCurrentUserIdOrThrow());
     assertThat(result.projectIds()).hasSize(1);
     var routed = proposals.findById(proposal.getId()).orElseThrow();

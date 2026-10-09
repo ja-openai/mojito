@@ -127,30 +127,34 @@ public class AgentReviewProjectService {
         || run.getStatus() == RunStatus.CANCELLED) {
       return new RouteResult(runId, projectIds(runId), 0, 0, List.of());
     }
-    // Use the same parent-string-before-proposal order as human decisions and incident batches.
-    proposals.findByRunIdOrderByIdAsc(runId).stream()
-        .filter(p -> p.getDisposition() == Disposition.OPEN)
-        .map(AgentReviewProposal::getTmTextUnitId)
-        .distinct()
-        .sorted()
-        .forEach(
-            id ->
-                entityManager.find(
-                    TMTextUnit.class, id, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE));
-    List<AgentReviewProposal> ready = reviews.findReadyProposalsForUpdate(runId);
+    List<String> completedGroups =
+        view.checkpoint().groups().entrySet().stream()
+            .filter(
+                entry -> entry.getValue().status() == AgentReviewContracts.GroupStatus.COMPLETED)
+            .map(Map.Entry::getKey)
+            .toList();
+    if (completedGroups.isEmpty())
+      return new RouteResult(runId, projectIds(runId), 0, 0, List.of());
+    boolean queued = run.getRoutingPolicy() == RoutingPolicy.QUEUED;
+    // Hold the run before selecting candidates, then parent strings before proposals. Delivered
+    // queued findings remain OPEN for batching but need no repeat delivery on lease renewal.
+    List<Long> textUnitIds = proposals.findRoutingTextUnitIds(runId, completedGroups, queued);
+    if (textUnitIds.isEmpty()) return new RouteResult(runId, projectIds(runId), 0, 0, List.of());
+    textUnitIds.forEach(
+        id ->
+            entityManager.find(
+                TMTextUnit.class, id, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE));
+    List<AgentReviewProposal> ready =
+        proposals.findRoutingForUpdate(runId, completedGroups, queued, textUnitIds);
     Map<RoutingGroup, List<AgentReviewProposal>> groups = new LinkedHashMap<>();
     List<String> errors = new ArrayList<>();
     int skipped = 0;
     for (AgentReviewProposal proposal : ready) {
-      AgentReviewContracts.GroupCheckpoint checkpoint =
-          view.checkpoint().groups().get(proposal.getGroupKey());
-      if (checkpoint == null
-          || checkpoint.status() != AgentReviewContracts.GroupStatus.COMPLETED
-          || proposal.getCategory() == Category.OPTIONAL_IMPROVEMENT
-          || proposal.getReviewProjectTextUnitId() != null) {
-        skipped++;
+      // SQL collations can equate distinct manifest keys, including trailing spaces. The exact
+      // checkpoint remains authoritative; the query above is only a candidate prefilter.
+      var checkpoint = view.checkpoint().groups().get(proposal.getGroupKey());
+      if (checkpoint == null || checkpoint.status() != AgentReviewContracts.GroupStatus.COMPLETED)
         continue;
-      }
       TMTextUnit unit = entityManager.find(TMTextUnit.class, proposal.getTmTextUnitId());
       entityManager.refresh(unit, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
       var currentRow =

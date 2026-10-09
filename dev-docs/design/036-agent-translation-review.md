@@ -101,6 +101,11 @@ until human judgment; model verification does not constitute native validation.
   `routingPolicy=QUEUED` records the incidents for later manual or scheduled batch creation;
   omitted policy retains `IMMEDIATE` routing. A proposed replacement is optional. Untyped incidents
   are selected only through the explicit incident-source creation path below.
+- Routing selects ready proposals from completed groups in the database before taking parent-string
+  locks. Queued findings already linked to their existing incident are delivered; claim renewal and
+  checkpoint retries do not reload their translations. Missing incident links remain recoverable.
+  `skippedCount` counts attempted deliveries rejected by current-state, human-decision or closed-incident
+  checks; incomplete groups, nonreviewable proposals and already delivered work are outside the attempt.
 - Batch compatible eligible findings by repository/locale/feature group using existing assignment
   and source-word size rules.
   Creation retries reuse the same project membership and exclude already resolved or routed findings.
@@ -370,6 +375,10 @@ runs retain the original team and review type.
   Sequential takeover uses an expiring claim plus generation/revision checks; an old worker cannot
   publish after takeover. Publish immutable artifacts before atomically advancing the checkpoint.
   Distributed packet scheduling is deferred.
+- All artifact consumers, including incident batching, use one checksum-validating envelope reader.
+  Bulk submissions cache at most two parsed artifacts for that request, keyed by run and content hash;
+  every item still locks and authorizes the run and uses its current manifest/checkpoint hashes.
+  This avoids repeat downloads and decoding without caching leases, human decisions or live state.
 - Checkpoints distinguish `IN_PROGRESS`, `COMPLETED`, `FAILED`, and `MISSING_INPUT`. Save a prepared
   input index before long work and an exact submission-key/payload retry ledger before ingestion.
   Completed coverage remains reusable after the run finishes when frozen inputs, context, method,

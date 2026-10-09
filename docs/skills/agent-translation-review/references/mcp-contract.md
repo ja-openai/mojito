@@ -153,7 +153,10 @@ Routing runs after successful claim/checkpoint/finish and can also be retried ex
 `errors` even when the tool succeeded: committed review progress survives a routing failure.
 For `QUEUED` runs, routing publishes eligible incidents without creating projects. Use the
 **Incidents** review source in Create review project or review automation to batch them later;
-repeated routing does not duplicate their incident identity.
+repeated routing does not duplicate their incident identity or reload already delivered findings.
+`skippedCount` counts attempted deliveries rejected by current-state, human-decision or closed-incident
+checks. Incomplete groups, nonreviewable proposals and already delivered queued findings are outside
+that attempt; it is not a count of all unrouted proposals.
 
 ## Findings, revisions, and feedback
 

@@ -7,8 +7,6 @@ import com.box.l10n.mojito.entity.agentreview.*;
 import com.box.l10n.mojito.entity.review.*;
 import com.box.l10n.mojito.service.DBUtils;
 import com.box.l10n.mojito.service.WordCountService;
-import com.box.l10n.mojito.service.blobstorage.Retention;
-import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.review.ReviewFeatureRepository;
 import com.box.l10n.mojito.service.review.ReviewProjectService;
 import com.box.l10n.mojito.service.security.user.UserService;
@@ -201,7 +199,7 @@ public class IncidentReviewBatchService {
   private final ReviewProjectService projects;
   private final AgentReviewProposalRepository proposals;
   private final AgentReviewRunRepository runs;
-  private final StructuredBlobStorage blobs;
+  private final AgentReviewArtifactStore artifacts;
   private final ObjectMapper mapper;
   private final WordCountService words;
   private final AgentReviewStateService reviewedStates;
@@ -218,7 +216,7 @@ public class IncidentReviewBatchService {
       ReviewProjectService projects,
       AgentReviewProposalRepository proposals,
       AgentReviewRunRepository runs,
-      StructuredBlobStorage blobs,
+      AgentReviewArtifactStore artifacts,
       ObjectMapper mapper,
       WordCountService words,
       AgentReviewStateService reviewedStates,
@@ -233,7 +231,7 @@ public class IncidentReviewBatchService {
     this.projects = projects;
     this.proposals = proposals;
     this.runs = runs;
-    this.blobs = blobs;
+    this.artifacts = artifacts;
     this.mapper = mapper;
     this.words = words;
     this.reviewedStates = reviewedStates;
@@ -943,15 +941,9 @@ public class IncidentReviewBatchService {
   private CheckpointState completed(AgentReviewRun run) {
     if (run.getCheckpointSha256() == null) return new CheckpointState(Set.of(), false);
     try {
-      String content =
-          blobs
-              .getString(
-                  StructuredBlobStorage.Prefix.AGENT_REVIEW,
-                  "runs/" + run.getId() + "/artifacts/" + run.getCheckpointSha256())
-              .orElseThrow();
-      byte[] json =
-          Base64.getDecoder().decode(mapper.readTree(content).get("contentBase64").asText());
-      var checkpoint = mapper.readValue(json, AgentReviewContracts.Checkpoint.class);
+      var checkpoint =
+          artifacts.readJson(
+              run.getId(), run.getCheckpointSha256(), AgentReviewContracts.Checkpoint.class);
       Set<String> completed = new HashSet<>();
       checkpoint
           .groups()
@@ -961,7 +953,7 @@ public class IncidentReviewBatchService {
                   completed.add(key);
               });
       return new CheckpointState(completed, false);
-    } catch (RuntimeException | java.io.IOException e) {
+    } catch (RuntimeException e) {
       return new CheckpointState(Set.of(), true);
     }
   }
@@ -1096,7 +1088,7 @@ public class IncidentReviewBatchService {
           new AgentReviewContracts.GroupCheckpoint(
               AgentReviewContracts.GroupStatus.COMPLETED,
               0,
-              artifact(run.getId(), evidence),
+              artifacts.putJson(run.getId(), evidence),
               "Human incident intake complete; linguistic review is pending."));
       for (Candidate c : group.getValue()) {
         AgentReviewProposal p = new AgentReviewProposal();
@@ -1150,9 +1142,9 @@ public class IncidentReviewBatchService {
             manifestGroups,
             json(Map.of("kind", "HUMAN_INCIDENT_INTAKE", "requestedByUserId", actor)));
     run.setInputFingerprint(hash(json(manifest)));
-    run.setManifestSha256(artifact(run.getId(), manifest));
+    run.setManifestSha256(artifacts.putJson(run.getId(), manifest));
     run.setCheckpointSha256(
-        artifact(run.getId(), new AgentReviewContracts.Checkpoint(checkpoints)));
+        artifacts.putJson(run.getId(), new AgentReviewContracts.Checkpoint(checkpoints)));
     return staged;
   }
 
@@ -1173,23 +1165,6 @@ public class IncidentReviewBatchService {
         "baselineIncludedInLocalizedFile",
         candidate.current() == null ? null : candidate.current().isIncludedInLocalizedFile());
     return snapshot;
-  }
-
-  private String artifact(long runId, Object value) {
-    String content =
-        json(
-            Map.of(
-                "contentType",
-                "application/json",
-                "contentBase64",
-                Base64.getEncoder().encodeToString(json(value).getBytes(StandardCharsets.UTF_8))));
-    String hash = hash(content);
-    blobs.put(
-        StructuredBlobStorage.Prefix.AGENT_REVIEW,
-        "runs/" + runId + "/artifacts/" + hash,
-        content,
-        Retention.PERMANENT);
-    return hash;
   }
 
   private String json(Object value) {

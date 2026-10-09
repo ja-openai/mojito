@@ -77,7 +77,9 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
       throws Exception {
     Fixture fixture = fixture("TRANSLATION_QUALITY");
     AgentReviewProposal proposal = submit(fixture, null, null);
-    assertThat(routing.routeRun(fixture.run().id()).projectIds()).isEmpty();
+    var waiting = routing.routeRun(fixture.run().id());
+    assertThat(waiting.projectIds()).isEmpty();
+    assertThat(waiting.skippedCount()).isZero();
     complete(fixture);
     var result = routing.routeRun(fixture.run().id());
     assertThat(result.errors()).isEmpty();
@@ -94,6 +96,124 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
     assertThat(incident.getResolutionReviewProjectId()).isEqualTo(result.projectIds().getFirst());
     assertThat(incident.getSelectedTarget()).isEqualTo("Désactiver les notifications");
     assertThat(row(saved).agentReview().reviewedTarget()).isEqualTo("Désactiver les notifications");
+  }
+
+  @Test
+  public void routingRequiresExactCompletedGroupDespiteSqlTrailingSpaceComparison()
+      throws Exception {
+    Fixture original = fixture("TRANSLATION_QUALITY");
+    var firstUnit = units.findById(original.textUnitId()).orElseThrow();
+    var secondUnit =
+        tmService.addTMTextUnit(
+            firstUnit.getTm().getId(),
+            firstUnit.getAsset().getId(),
+            "enable-second",
+            "Enable notifications",
+            null);
+    var secondVariant =
+        tmService.addCurrentTMTextUnitVariant(
+            secondUnit.getId(),
+            original.localeId(),
+            "Désactiver les notifications",
+            TMTextUnitVariant.Status.APPROVED,
+            true);
+    var run =
+        reviews.createRun(
+            new CreateRunRequest(
+                UUID.randomUUID().toString(),
+                original.run().reviewType(),
+                original.run().teamId(),
+                "review-v1",
+                "test-config",
+                List.of(
+                    new Group(
+                        "group-1",
+                        original.run().repositoryIds().getFirst(),
+                        original.localeId(),
+                        "notifications",
+                        List.of(original.textUnitId()),
+                        "first-input"),
+                    new Group(
+                        "group-1 ",
+                        original.run().repositoryIds().getFirst(),
+                        original.localeId(),
+                        "notifications",
+                        List.of(secondUnit.getId()),
+                        "second-input")),
+                "{}",
+                7,
+                1500,
+                false));
+    run = reviews.claimRun(run.id(), new ClaimRequest("coordinator", run.claimGeneration(), 900));
+    var claim = new Claim(run.claimOwner(), run.claimGeneration());
+    Fixture ready =
+        new Fixture(
+            run, claim, original.textUnitId(), original.localeId(), original.originalVariantId());
+    var completed = submit(ready, null, null);
+    var unfinished =
+        reviews.submitProposal(
+            run.id(),
+            new SubmitProposalRequest(
+                claim,
+                "finding-2",
+                "group-1 ",
+                secondUnit.getId(),
+                "Enable notifications",
+                null,
+                secondVariant.getId(),
+                "Désactiver les notifications",
+                "APPROVED",
+                true,
+                "Activer les notifications",
+                Category.OBVIOUS_ERROR,
+                Readiness.READY,
+                "The target reverses the action",
+                "[]",
+                "reviewer-fr",
+                "verifier-fr",
+                "Confirmed opposite meaning",
+                null,
+                null,
+                null));
+    complete(ready);
+
+    var result = routing.routeRun(run.id());
+
+    assertThat(result.errors()).isEmpty();
+    assertThat(result.projectIds()).hasSize(1);
+    assertThat(result.proposalCount()).isEqualTo(1);
+    assertThat(result.skippedCount()).isZero();
+    assertThat(proposals.findById(completed.getId()).orElseThrow().getDisposition())
+        .isEqualTo(Disposition.ROUTED);
+    var pending = proposals.findById(unfinished.getId()).orElseThrow();
+    assertThat(pending.getGroupKey()).isEqualTo("group-1 ");
+    assertThat(pending.getDisposition()).isEqualTo(Disposition.OPEN);
+    assertThat(pending.getIncidentId()).isNull();
+    assertThat(pending.getReviewProjectId()).isNull();
+    assertThat(incidents.findByReviewFindingId(pending.getFindingId())).isEmpty();
+  }
+
+  @Test
+  public void queuedRoutingRecoversMissingIncidentWithoutReprocessingDeliveredFindings()
+      throws Exception {
+    Fixture fixture = followUp(fixture("TRANSLATION_QUALITY"), RoutingPolicy.QUEUED);
+    AgentReviewProposal proposal = submit(fixture, null, null);
+    complete(fixture);
+    routing.routeRun(fixture.run().id());
+    Long incidentId = proposals.findById(proposal.getId()).orElseThrow().getIncidentId();
+    assertThat(proposals.findRoutingTextUnitIds(fixture.run().id(), List.of("group-1"), true))
+        .isEmpty();
+
+    incidents.deleteById(incidentId);
+    assertThat(proposals.findRoutingTextUnitIds(fixture.run().id(), List.of("group-1"), true))
+        .containsExactly(fixture.textUnitId());
+    assertThat(routing.routeRun(fixture.run().id()).errors()).isEmpty();
+    var recovered = proposals.findById(proposal.getId()).orElseThrow();
+    assertThat(recovered.getIncidentId()).isNotNull().isNotEqualTo(incidentId);
+    assertThat(incidents.findById(recovered.getIncidentId())).isPresent();
+    assertThat(proposals.findRoutingTextUnitIds(fixture.run().id(), List.of("group-1"), true))
+        .isEmpty();
+    assertThat(current(fixture).getId()).isEqualTo(fixture.originalVariantId());
   }
 
   @Test
@@ -152,6 +272,10 @@ public class AgentReviewProjectDbTest extends ServiceTestBase {
     assertThat(queued.getProducerIdentity()).isEqualTo("agent:fr-reviewer:test-model");
     assertThat(queued.getVerifierIdentity()).isNull();
     assertThat(queued.getVerificationRationale()).isNull();
+    assertThat(proposals.findRoutingTextUnitIds(fixture.run().id(), List.of("group-1"), true))
+        .isEmpty();
+    assertThat(proposals.findRoutingTextUnitIds(fixture.run().id(), List.of("group-1"), false))
+        .containsExactly(fixture.textUnitId());
     assertThat(routing.routeRun(fixture.run().id()).errors()).isEmpty();
     assertThat(proposals.findById(submitted.getId()).orElseThrow().getIncidentId())
         .isEqualTo(incidentId);

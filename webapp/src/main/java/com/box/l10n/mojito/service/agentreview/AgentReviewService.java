@@ -8,8 +8,6 @@ import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.agentreview.*;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.NormalizationUtils;
-import com.box.l10n.mojito.service.blobstorage.Retention;
-import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
@@ -73,7 +71,7 @@ public class AgentReviewService {
   private final TeamRepository teams;
   private final TeamService teamService;
   private final UserService userService;
-  private final StructuredBlobStorage blobs;
+  private final AgentReviewArtifactStore artifacts;
   private final ObjectMapper mapper;
   private final EntityManager entityManager;
   private final TransactionTemplate itemTransaction;
@@ -92,7 +90,7 @@ public class AgentReviewService {
       TeamRepository teams,
       TeamService teamService,
       UserService userService,
-      StructuredBlobStorage blobs,
+      AgentReviewArtifactStore artifacts,
       ObjectMapper mapper,
       EntityManager entityManager,
       PlatformTransactionManager transactionManager) {
@@ -107,7 +105,7 @@ public class AgentReviewService {
     this.teams = teams;
     this.teamService = teamService;
     this.userService = userService;
-    this.blobs = blobs;
+    this.artifacts = artifacts;
     this.mapper = mapper;
     this.entityManager = entityManager;
     this.itemTransaction = new TransactionTemplate(transactionManager);
@@ -252,17 +250,13 @@ public class AgentReviewService {
       throw bad("contentBase64 must be valid base64");
     }
     require(bytes.length <= MAX_ARTIFACT_BYTES, "Artifact exceeds the size limit");
-    String content =
-        json(new ArtifactContent(request.contentType(), Base64.getEncoder().encodeToString(bytes)));
-    String hash = putContent(runId, content);
-    return new Artifact(
-        hash, request.contentType(), Base64.getEncoder().encodeToString(bytes), bytes.length);
+    return artifacts.put(runId, request.contentType(), bytes);
   }
 
   @Transactional(readOnly = true)
   public Artifact readArtifact(long runId, String sha256) {
     readRun(runId);
-    return artifact(runId, sha256);
+    return artifacts.read(runId, sha256);
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -274,7 +268,7 @@ public class AgentReviewService {
     if (Objects.equals(run.getCheckpointRequestFingerprint(), fingerprint)) return view(run);
     if (run.getRevision() != request.expectedRevision())
       conflict("Run checkpoint revision changed");
-    Group group = group(run, request.groupKey());
+    Group group = group(run, request.groupKey(), artifacts.reader());
     require(request.status() != null, "Checkpoint status is required");
     require(
         request.reviewedItemCount() >= 0
@@ -289,7 +283,7 @@ public class AgentReviewService {
     if (request.status() == GroupStatus.FAILED || request.status() == GroupStatus.MISSING_INPUT)
       text(request.note(), "failure or missing-input note", MAX_EVIDENCE_LENGTH, true);
     // Read verifies that the immutable artifact has been durably written in this run namespace.
-    artifact(runId, request.artifactSha256());
+    artifacts.read(runId, request.artifactSha256());
     Map<String, GroupCheckpoint> groups = new LinkedHashMap<>(checkpointOf(run).groups());
     GroupCheckpoint previous = groups.get(request.groupKey());
     if (previous != null && previous.status() == GroupStatus.COMPLETED)
@@ -383,13 +377,14 @@ public class AgentReviewService {
     require(
         requests != null && !requests.isEmpty() && requests.size() <= MAX_BATCH_SIZE,
         "Submit between 1 and " + MAX_BATCH_SIZE + " proposals");
+    AgentReviewArtifactStore.Reader reader = artifacts.reader();
     List<SubmissionResult> result = new ArrayList<>();
     for (int i = 0; i < requests.size(); i++) {
       int index = i;
       SubmitProposalRequest request = requests.get(i);
       try {
         AgentReviewProposal proposal =
-            itemTransaction.execute(status -> persistProposal(runId, request));
+            itemTransaction.execute(status -> persistProposal(runId, request, reader));
         result.add(
             new SubmissionResult(
                 index,
@@ -429,10 +424,11 @@ public class AgentReviewService {
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public AgentReviewProposal submitProposal(long runId, SubmitProposalRequest request) {
-    return persistProposal(runId, request);
+    return persistProposal(runId, request, artifacts.reader());
   }
 
-  private AgentReviewProposal persistProposal(long runId, SubmitProposalRequest request) {
+  private AgentReviewProposal persistProposal(
+      long runId, SubmitProposalRequest request, AgentReviewArtifactStore.Reader reader) {
     AgentReviewRun run = lockedRun(runId);
     require(request != null, "Proposal request is required");
     assertClaim(run, request.claim());
@@ -452,11 +448,11 @@ public class AgentReviewService {
           .findById(alias.getProposalId())
           .orElseThrow(() -> missing("Previously submitted proposal"));
     }
-    Group group = group(run, request.groupKey());
+    Group group = group(run, request.groupKey(), reader);
     require(
         group.tmTextUnitIds().contains(request.tmTextUnitId()),
         "String is not in the frozen group scope");
-    assertGroupAcceptsNewWork(run, group);
+    assertGroupAcceptsNewWork(run, group, reader);
     validateProposal(request, group);
     AgentReviewProposal previous = null;
     AgentReviewFeedback responded = null;
@@ -639,7 +635,7 @@ public class AgentReviewService {
       sameActor(existing);
       return existing;
     }
-    assertGroupAcceptsNewWork(run, responseGroup);
+    assertGroupAcceptsNewWork(run, responseGroup, artifacts.reader());
     pendingResponse(original.getId(), proposal);
     advanceFeedbackVersion(proposal);
     AgentReviewFeedback response =
@@ -752,15 +748,6 @@ public class AgentReviewService {
             ? Disposition.FOLLOW_UP
             : request.action() == FeedbackAction.DEFER ? Disposition.ROUTED : Disposition.RESOLVED);
     return feedback.save(entry);
-  }
-
-  /**
-   * The routing bridge holds the run lock before proposal locks, serializing membership decisions.
-   */
-  @Transactional(propagation = Propagation.MANDATORY, isolation = Isolation.READ_COMMITTED)
-  public List<AgentReviewProposal> findReadyProposalsForUpdate(long runId) {
-    lockedRun(runId);
-    return proposals.findReadyForUpdateByRunId(runId);
   }
 
   @Transactional(propagation = Propagation.MANDATORY, isolation = Isolation.READ_COMMITTED)
@@ -1100,19 +1087,29 @@ public class AgentReviewService {
     }
   }
 
-  private Group group(AgentReviewRun run, String key) {
-    return manifest(run).groups().stream()
+  private Group group(AgentReviewRun run, String key, AgentReviewArtifactStore.Reader reader) {
+    return reader
+        .readJson(run.getId(), run.getManifestSha256(), RunManifest.class)
+        .groups()
+        .stream()
         .filter(g -> Objects.equals(g.key(), key))
         .findFirst()
         .orElseThrow(() -> bad("Group is not in the immutable run manifest"));
   }
 
   private RunManifest manifest(AgentReviewRun run) {
-    return readJson(run.getId(), run.getManifestSha256(), RunManifest.class);
+    return artifacts.readJson(run.getId(), run.getManifestSha256(), RunManifest.class);
   }
 
-  private void assertGroupAcceptsNewWork(AgentReviewRun run, Group group) {
-    GroupCheckpoint checkpoint = checkpointOf(run).groups().get(group.key());
+  private void assertGroupAcceptsNewWork(
+      AgentReviewRun run, Group group, AgentReviewArtifactStore.Reader reader) {
+    GroupCheckpoint checkpoint =
+        run.getCheckpointSha256() == null
+            ? null
+            : reader
+                .readJson(run.getId(), run.getCheckpointSha256(), Checkpoint.class)
+                .groups()
+                .get(group.key());
     if (checkpoint != null && checkpoint.status() == GroupStatus.COMPLETED) {
       conflict("Completed group is immutable; use an unfinished group in a new run for new work");
     }
@@ -1121,7 +1118,7 @@ public class AgentReviewService {
   private Checkpoint checkpointOf(AgentReviewRun run) {
     return run.getCheckpointSha256() == null
         ? new Checkpoint(Map.of())
-        : readJson(run.getId(), run.getCheckpointSha256(), Checkpoint.class);
+        : artifacts.readJson(run.getId(), run.getCheckpointSha256(), Checkpoint.class);
   }
 
   private RunSummary summary(AgentReviewRun run) {
@@ -1183,55 +1180,17 @@ public class AgentReviewService {
         run.getRoutingPolicy());
   }
 
-  private record ArtifactContent(String contentType, String contentBase64) {}
-
   private String putJson(long runId, Object value) {
     byte[] bytes = json(value).getBytes(StandardCharsets.UTF_8);
     require(bytes.length <= MAX_ARTIFACT_BYTES, "Structured artifact exceeds the size limit");
-    return putContent(
-        runId,
-        json(new ArtifactContent("application/json", Base64.getEncoder().encodeToString(bytes))));
-  }
-
-  private String putContent(long runId, String content) {
-    String hash = sha256(content);
-    blobs.put(
-        StructuredBlobStorage.Prefix.AGENT_REVIEW,
-        blobName(runId, hash),
-        content,
-        Retention.PERMANENT);
-    return hash;
+    return artifacts.put(runId, "application/json", bytes).sha256();
   }
 
   /**
    * Trusted project bridge only: the caller must authorize the exact proposal and artifact link.
    */
   Artifact readStoredArtifact(long runId, String sha256) {
-    return artifact(runId, sha256);
-  }
-
-  private Artifact artifact(long runId, String hash) {
-    require(hash != null && hash.matches("[a-f0-9]{64}"), "Artifact SHA-256 is required");
-    String content =
-        blobs
-            .getString(StructuredBlobStorage.Prefix.AGENT_REVIEW, blobName(runId, hash))
-            .orElseThrow(() -> missing("Run artifact"));
-    if (!sha256(content).equals(hash))
-      throw new IllegalStateException("Stored review artifact checksum mismatch");
-    ArtifactContent parsed = parse(content, ArtifactContent.class);
-    byte[] bytes = Base64.getDecoder().decode(parsed.contentBase64());
-    return new Artifact(hash, parsed.contentType(), parsed.contentBase64(), bytes.length);
-  }
-
-  private <T> T readJson(long runId, String hash, Class<T> type) {
-    Artifact artifact = artifact(runId, hash);
-    return parse(
-        new String(Base64.getDecoder().decode(artifact.contentBase64()), StandardCharsets.UTF_8),
-        type);
-  }
-
-  private String blobName(long runId, String hash) {
-    return "runs/" + runId + "/artifacts/" + hash;
+    return artifacts.read(runId, sha256);
   }
 
   private String fingerprint(Object value) {
@@ -1262,14 +1221,6 @@ public class AgentReviewService {
       return mapper.writeValueAsString(value);
     } catch (JsonProcessingException e) {
       throw new IllegalArgumentException("Cannot serialize review data", e);
-    }
-  }
-
-  private <T> T parse(String value, Class<T> type) {
-    try {
-      return mapper.readValue(value, type);
-    } catch (JsonProcessingException e) {
-      throw new IllegalStateException("Invalid stored review data", e);
     }
   }
 

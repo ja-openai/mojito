@@ -54,7 +54,6 @@ public class AgentReviewServiceTest {
   private final UserService userService = mock(UserService.class);
   private final StructuredBlobStorage blobs = mock(StructuredBlobStorage.class);
   private final EntityManager entityManager = mock(EntityManager.class);
-  private final PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
   private final Map<String, String> storedBlobs = new HashMap<>();
   private final Map<Long, AgentReviewRun> storedRuns = new HashMap<>();
   private final Map<Long, AgentReviewProposal> storedProposals = new HashMap<>();
@@ -70,7 +69,7 @@ public class AgentReviewServiceTest {
   @Before
   public void setup() {
     // This mock-only fixture must not inherit a database manager from an earlier Spring test.
-    // Keep annotation advice separate from the item transactions asserted below.
+    // Transaction and version semantics are exercised by AgentReviewTransactionTest.
     PlatformTransactionManager adviceTransactions = mock(PlatformTransactionManager.class);
     when(adviceTransactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
     transactionAdvice = new ThreadBoundTransactionAdvice(adviceTransactions);
@@ -195,17 +194,6 @@ public class AgentReviewServiceTest {
                 storedFeedback.values().stream()
                     .filter(f -> Objects.equals(f.getRespondsToFeedbackId(), i.getArgument(0)))
                     .findFirst());
-    doAnswer(
-            i -> {
-              AgentReviewProposal p = i.getArgument(0);
-              p.setVersion(p.getVersion() + 1);
-              return null;
-            })
-        .when(entityManager)
-        .lock(
-            any(AgentReviewProposal.class),
-            eq(jakarta.persistence.LockModeType.PESSIMISTIC_FORCE_INCREMENT));
-    when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
     service =
         new AgentReviewService(
             runs,
@@ -219,10 +207,10 @@ public class AgentReviewServiceTest {
             teams,
             teamService,
             userService,
-            blobs,
+            new AgentReviewArtifactStore(blobs, new ObjectMapper().findAndRegisterModules()),
             new ObjectMapper().findAndRegisterModules(),
             entityManager,
-            transactions);
+            adviceTransactions);
     ReflectionTestUtils.setField(service, "clock", clock);
     run = service.createRun(create("run-1", "v1"));
     RunView claimed = service.claimRun(run.id(), new ClaimRequest("laptop-session", 0L, 300));
@@ -336,20 +324,6 @@ public class AgentReviewServiceTest {
     assertEquals(1, summary.completedGroupCount());
     assertEquals(1, summary.reviewedItemCount());
     verifyNoInteractions(blobs);
-  }
-
-  @Test
-  public void coordinatorTakeoverFencesOldWorkerAndAllowsExactRetryWithNewClaim() {
-    AgentReviewProposal first = service.submitProposal(run.id(), proposal("a"));
-    assertConflict(() -> service.claimRun(run.id(), new ClaimRequest("devbox", 1L, 300)));
-    ReflectionTestUtils.setField(
-        service, "clock", Clock.offset(clock, java.time.Duration.ofMinutes(6)));
-    RunView takeover = service.claimRun(run.id(), new ClaimRequest("devbox", 1L, 300));
-    assertEquals(2, takeover.claimGeneration());
-    assertConflict(() -> service.submitProposal(run.id(), proposal("b")));
-    claim = new Claim("devbox", 2);
-    assertEquals(first.getId(), service.submitProposal(run.id(), proposal("a")).getId());
-    assertEquals(1, storedProposals.size());
   }
 
   @Test
@@ -648,20 +622,22 @@ public class AgentReviewServiceTest {
   }
 
   @Test
-  public void bulkSubmissionCommitsSuccessfulItemsAndReportsBadItemIndependently() {
-    SubmitProposalRequest invalid =
-        changed(
-            proposal("bad"), "Better", Category.OPTIONAL_IMPROVEMENT, Readiness.READY, null, null);
-    List<SubmissionResult> results =
-        service.submitProposals(run.id(), List.of(proposal("a"), invalid, proposal("b")));
-    assertNotNull(results.get(0).proposalId());
-    assertNull(results.get(0).errorCode());
-    assertNull(results.get(1).proposalId());
-    assertNotNull(results.get(1).errorCode());
-    assertNotNull(results.get(2).proposalId());
-    assertEquals(2, storedProposals.size());
-    verify(transactions, times(2)).commit(any());
-    verify(transactions).rollback(any());
+  public void bulkSubmissionReadsEachImmutableRunArtifactOnce() {
+    String artifact = upload("{}");
+    service.checkpoint(
+        run.id(),
+        new CheckpointRequest(claim, 0, "fr/settings", GroupStatus.IN_PROGRESS, 0, artifact, null));
+    clearInvocations(blobs);
+    List<SubmitProposalRequest> requests =
+        java.util.stream.IntStream.range(0, MAX_BATCH_SIZE)
+            .mapToObj(i -> proposal("batch-" + i))
+            .toList();
+
+    List<SubmissionResult> results = service.submitProposals(run.id(), requests);
+
+    assertEquals(MAX_BATCH_SIZE, results.size());
+    assertTrue(results.stream().allMatch(result -> result.proposalId() != null));
+    verify(blobs, times(2)).getString(eq(StructuredBlobStorage.Prefix.AGENT_REVIEW), anyString());
   }
 
   @Test

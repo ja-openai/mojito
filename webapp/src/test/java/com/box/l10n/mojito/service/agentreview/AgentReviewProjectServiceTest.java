@@ -109,8 +109,9 @@ public class AgentReviewProjectServiceTest {
                         AgentReviewContracts.GroupStatus.COMPLETED, 1, "artifact", null))));
     when(reviews.getRun(1L)).thenReturn(view);
     when(runs.findForUpdateById(1L)).thenReturn(Optional.of(run));
-    when(proposals.findByRunIdOrderByIdAsc(1L)).thenReturn(List.of(proposal));
-    when(reviews.findReadyProposalsForUpdate(1L)).thenReturn(List.of(proposal));
+    when(proposals.findRoutingTextUnitIds(eq(1L), anyList(), anyBoolean())).thenReturn(List.of(6L));
+    when(proposals.findRoutingForUpdate(eq(1L), anyList(), anyBoolean(), anyList()))
+        .thenReturn(List.of(proposal));
     when(entityManager.find(TMTextUnit.class, 6L, LockModeType.PESSIMISTIC_WRITE)).thenReturn(unit);
     when(entityManager.find(TMTextUnit.class, 6L)).thenReturn(unit);
     when(entityManager.find(Locale.class, 4L)).thenReturn(locale);
@@ -224,9 +225,9 @@ public class AgentReviewProjectServiceTest {
     assertThat(result.projectIds()).isEmpty();
     assertThat(result.skippedCount()).isZero();
     assertThat(proposal.getIncidentId()).isEqualTo(8L);
-    var order = inOrder(entityManager, reviews, currentVariants, incidents, incidentIntake);
+    var order = inOrder(entityManager, proposals, currentVariants, incidents, incidentIntake);
     order.verify(entityManager).find(TMTextUnit.class, 6L, LockModeType.PESSIMISTIC_WRITE);
-    order.verify(reviews).findReadyProposalsForUpdate(1L);
+    order.verify(proposals).findRoutingForUpdate(1L, List.of("fr/settings"), true, List.of(6L));
     order.verify(entityManager).refresh(unit, LockModeType.PESSIMISTIC_WRITE);
     order.verify(currentVariants).findForUpdateByLocaleIdAndTmTextUnitId(4L, 6L);
     order.verify(entityManager).refresh(currentRow, LockModeType.PESSIMISTIC_WRITE);

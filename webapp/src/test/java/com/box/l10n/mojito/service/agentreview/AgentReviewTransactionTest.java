@@ -11,6 +11,7 @@ import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.entity.TranslationIncident;
 import com.box.l10n.mojito.entity.agentreview.*;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.blobstorage.Retention;
@@ -57,6 +58,7 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.SharedEntityManagerCreator;
+import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -496,7 +498,11 @@ public class AgentReviewTransactionTest {
     LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource dataSource) {
       LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
       factory.setDataSource(dataSource);
-      factory.setPackagesToScan("com.box.l10n.mojito.entity.agentreview");
+      factory.setManagedTypes(
+          PersistenceManagedTypes.of(
+              AgentReviewRun.class.getName(), AgentReviewProposal.class.getName(),
+              AgentReviewFeedback.class.getName(), AgentReviewSubmission.class.getName(),
+              IncidentReviewBatchCursor.class.getName(), TranslationIncident.class.getName()));
       factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
       Properties properties = new Properties();
       properties.put("hibernate.hbm2ddl.auto", "none");
@@ -616,7 +622,7 @@ public class AgentReviewTransactionTest {
           teams,
           teamService,
           userService(),
-          blobs,
+          new AgentReviewArtifactStore(blobs, mapper),
           mapper,
           serviceEntityManager,
           tx);

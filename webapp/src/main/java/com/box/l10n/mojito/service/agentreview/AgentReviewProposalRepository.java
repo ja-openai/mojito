@@ -46,12 +46,28 @@ public interface AgentReviewProposalRepository extends JpaRepository<AgentReview
   @Query("select p from AgentReviewProposal p where p.id = :id")
   Optional<AgentReviewProposal> findForUpdateById(@Param("id") Long id);
 
-  @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query(
-      "select p from AgentReviewProposal p where p.runId = :runId and p.readiness in"
+  String ROUTING_CANDIDATES =
+      " from AgentReviewProposal p where p.runId = :runId and p.readiness in"
           + " (com.box.l10n.mojito.entity.agentreview.Readiness.READY,"
           + " com.box.l10n.mojito.entity.agentreview.Readiness.SUSPECTED,"
           + " com.box.l10n.mojito.entity.agentreview.Readiness.HUMAN_REVIEW) and p.disposition ="
-          + " com.box.l10n.mojito.entity.agentreview.Disposition.OPEN order by p.id")
-  List<AgentReviewProposal> findReadyForUpdateByRunId(@Param("runId") Long runId);
+          + " com.box.l10n.mojito.entity.agentreview.Disposition.OPEN"
+          + " and p.category <> com.box.l10n.mojito.entity.agentreview.Category.OPTIONAL_IMPROVEMENT"
+          + " and p.reviewProjectTextUnitId is null and p.groupKey in :groups"
+          + " and (:queued = false or p.incidentId is null or not exists (select i.id"
+          + " from TranslationIncident i where i.id = p.incidentId and i.reviewFindingId = p.findingId))";
+
+  @Query("select distinct p.tmTextUnitId" + ROUTING_CANDIDATES + " order by p.tmTextUnitId")
+  List<Long> findRoutingTextUnitIds(
+      @Param("runId") Long runId,
+      @Param("groups") List<String> completedGroups,
+      @Param("queued") boolean queued);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select p" + ROUTING_CANDIDATES + " and p.tmTextUnitId in :textUnitIds order by p.id")
+  List<AgentReviewProposal> findRoutingForUpdate(
+      @Param("runId") Long runId,
+      @Param("groups") List<String> completedGroups,
+      @Param("queued") boolean queued,
+      @Param("textUnitIds") List<Long> textUnitIds);
 }
