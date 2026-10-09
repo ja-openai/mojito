@@ -314,7 +314,7 @@ describe.each(carryoverFixtures)('Review Project $projectId carryover matrix', (
       const editedTarget = `${fixture.predecessor.target} (સમીક્ષિત)`;
       replaceTranslation(editedTarget);
       await waitFor(() => expect(editorTarget()).toBe(editedTarget));
-      accept({ advance: true });
+      await act(() => Promise.resolve(accept({ advance: true })));
       await waitFor(() => expect(editorTarget()).toBe(fixture.next.target));
       expect(screen.getByRole('textbox', { name: 'Translation' })).not.toBe(originalEditor);
       expect(saveMock).toHaveBeenLastCalledWith(

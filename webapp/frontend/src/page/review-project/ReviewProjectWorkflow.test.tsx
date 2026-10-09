@@ -320,7 +320,7 @@ describe('Review Project save recovery with the real route', () => {
       expect(saveMock).toHaveBeenCalledTimes(status === 409 ? 1 : 3);
       if (status === 500) {
         saveMock.mockImplementation((request) => Promise.resolve(harness.responseFor(request)));
-        accept(true);
+        await act(() => Promise.resolve(accept(true)));
         await expectSecondRow();
         expect(saveMock).toHaveBeenCalledTimes(4);
         expect(saveMock).toHaveBeenLastCalledWith(
@@ -513,7 +513,8 @@ describe('Review Project save recovery with the real route', () => {
 
   it('selects the next pending row once when the saved row leaves the active filter', async () => {
     const harness = mountWorkflow({ filter: '&state=PENDING' });
-    accept(true);
+    // Flush the immediate save and its router transition before checking the selected route.
+    await act(() => Promise.resolve(accept(true)));
     await expectSecondRow();
     expect(screen.getByTestId('review-location')).toHaveTextContent('state=PENDING');
     expect(harness.container.querySelectorAll('.review-project-row')).toHaveLength(2);
