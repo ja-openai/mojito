@@ -79,7 +79,6 @@ public class AiReviewDispatchServiceTest {
 
   @Before
   public void setUpDispatch() {
-    when(interactive.enforceExecutionPolicy(any())).thenAnswer(i -> i.getArgument(0));
     when(chat.prepare(any())).thenReturn(prepared());
     when(store.tryClaim(anyLong(), anyString(), any(Settings.class)))
         .thenAnswer(
@@ -320,7 +319,7 @@ public class AiReviewDispatchServiceTest {
   }
 
   @Test
-  public void executionPolicyIsAppliedBeforeClaimAndProviderCall() {
+  public void frozenUltraSettingsReachClaimAndProviderUnchanged() {
     ControlledTask task = task(60);
     Prepared effective = prepared();
     Prepared original =
@@ -328,14 +327,12 @@ public class AiReviewDispatchServiceTest {
             effective.request(),
             effective.userId(),
             new Settings("ultra", "selected-model", "max", "low", "priority"));
-    doReturn(effective).when(interactive).enforceExecutionPolicy(original);
 
     assertTrue(dispatcher.start(task.id, original));
 
     var order = inOrder(interactive, store, chat);
-    order.verify(interactive).enforceExecutionPolicy(original);
-    order.verify(store).tryClaim(eq(task.id), anyString(), eq(effective.settings()));
-    order.verify(chat).chatPreparedCall(eq(effective), eq(task.id), eq(task.deadline), any());
+    order.verify(store).tryClaim(eq(task.id), anyString(), eq(original.settings()));
+    order.verify(chat).chatPreparedCall(eq(original), eq(task.id), eq(task.deadline), any());
   }
 
   @Test

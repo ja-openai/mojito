@@ -283,7 +283,7 @@ measured from task creation:
 | Balanced | 30 seconds |
 | Thorough (admin) | 60 seconds |
 | Deep (admin) | 90 seconds |
-| Ultra (admin, manual) | 180 seconds |
+| Ultra (admin) | 180 seconds |
 
 Configure individual budgets with `l10n.ai-review.execution.preset-timeout-seconds.<preset>`.
 Partial overrides retain the other defaults. `l10n.ai-review.execution.timeout-seconds` remains a
@@ -292,7 +292,7 @@ These are failure cutoffs, not latency promises. A fast review should not retain
 reservation for three minutes. The initial budgets leave headroom above observed successful calls
 and should be tuned from actual timeout outcomes, especially for larger inputs.
 
-Use the effective preset after access checks and automatic Ultra fallback. Legacy model selections
+Use the effective preset after access checks. Legacy model selections
 use their effective reasoning level: none uses Fast's budget, low Balanced's, medium Thorough's,
 high Deep's, and xhigh/max Ultra's. Old unclaimed Quartz inputs receive the same limits before
 claiming, without extending a shorter stored timeout. Already claimed tasks keep their recorded
@@ -313,9 +313,9 @@ to preserve the guarded lifecycle. Old Quartz chat jobs remain compatible for dr
 provider execution once terminal or expired. AI Translate and background review retain their
 existing scheduling and completion behavior. No schema migration is required.
 
-Automatic Ultra requests fall back to Balanced, including frozen inputs from older deployments.
-The saved Ultra preference remains available for permitted manual requests. The temporary policy is
-controlled by `l10n.ai-review.interactive.ultra-automatic-enabled=false`.
+Automatic reviews, manual Review, Ask, and retry requests use the same selected preset,
+including Ultra. Changing the selector restarts enabled automatic review with the new
+preset after the preference save completes. There is no automatic reasoning downgrade.
 
 Direct requests use configurable adaptive timeout multipliers (`medium=4`, `high=6`, `xhigh=8`,
 `max=12`), capped at 300 seconds by default. These budgets are not measured latency or quality gains.

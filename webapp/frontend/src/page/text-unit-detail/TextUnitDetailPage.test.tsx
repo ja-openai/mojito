@@ -1551,7 +1551,7 @@ describe('TextUnitDetailPage', () => {
     });
   });
 
-  it('explains automatic Ultra fallback while keeping Ultra selected for manual Ask', async () => {
+  it('uses Ultra for automatic review and manual Ask', async () => {
     currentUserRole.role = 'ROLE_ADMIN';
     const saved = { ...preferences, aiReviewPreset: 'ultra' as const };
     const { queryClient } = renderTextUnitDetailPage(
@@ -1560,9 +1560,7 @@ describe('TextUnitDetailPage', () => {
       saved,
     );
     await screen.findByText('No issues found.');
-    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent(
-      'Auto: Balanced',
-    );
+    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent('Ultra');
     expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
       presetId: 'ultra',
       requestType: 'automatic',

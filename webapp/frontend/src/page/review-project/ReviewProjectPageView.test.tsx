@@ -3081,13 +3081,11 @@ one {{Você tem {$count} arquivo.}}
     },
   );
 
-  it('explains automatic Ultra fallback while preserving Ultra for manual Ask', async () => {
+  it('uses Ultra for automatic review and manual Ask', async () => {
     fetchUserPreferencesMock.mockResolvedValue({ ...preferences, aiReviewPreset: 'ultra' });
     renderReviewProjectPageView({}, { ...user, role: 'ROLE_ADMIN' });
     await screen.findByText('No issues found.');
-    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent(
-      'Auto: Balanced',
-    );
+    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent('Ultra');
     expect(requestAiReviewMock.mock.calls[0][0]).toMatchObject({
       presetId: 'ultra',
       requestType: 'automatic',
@@ -3102,9 +3100,7 @@ one {{Você tem {$count} arquivo.}}
       presetId: 'ultra',
       requestType: 'follow_up',
     });
-    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent(
-      'Auto: Balanced',
-    );
+    expect(screen.getByRole('button', { name: 'Review speed: Ultra' })).toHaveTextContent('Ultra');
     expect(saveUserPreferencesMock).not.toHaveBeenCalled();
   });
 

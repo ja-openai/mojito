@@ -79,7 +79,6 @@ public class AiReviewDispatchService {
 
   /** Returns after starting HTTP. A full per-user allowance produces a prompt busy result. */
   public boolean start(long taskId, Prepared prepared) {
-    prepared = interactive.enforceExecutionPolicy(prepared);
     Claim claim = store.tryClaim(taskId, ownerId, prepared.settings());
     switch (claim.disposition()) {
       case DONE -> {

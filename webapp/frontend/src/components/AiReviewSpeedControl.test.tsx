@@ -7,7 +7,7 @@ import { AiReviewSpeedControl } from './AiReviewSpeedControl';
 const automaticEnabled = { automaticDisabled: false, onChangeAutomaticDisabled: vi.fn() };
 
 describe('AiReviewSpeedControl', () => {
-  it('explains automatic Balanced fallback without changing the saved Ultra selection', () => {
+  it('shows one Ultra setting for automatic and manual reviews', () => {
     const onChange = vi.fn();
     const onChangeAutomaticDisabled = vi.fn();
     const props = {
@@ -18,11 +18,11 @@ describe('AiReviewSpeedControl', () => {
     };
     const { rerender } = render(<AiReviewSpeedControl {...props} automaticDisabled={false} />);
     const trigger = screen.getByRole('button', { name: 'Review speed: Ultra' });
-    expect(trigger).toHaveTextContent('Auto: Balanced');
-    expect(trigger).toHaveAccessibleDescription('Auto: Balanced');
+    expect(trigger).toHaveTextContent('Ultra');
+    expect(trigger).not.toHaveTextContent('Auto:');
     fireEvent.click(trigger);
     expect(
-      screen.getByText(/Ultra is temporarily available for manual requests only/),
+      screen.getByText(/The selected speed applies to automatic reviews, Review, and Ask/),
     ).toBeVisible();
     const automatic = screen.getByRole('checkbox', { name: 'Automatic review' });
     fireEvent.click(automatic);
