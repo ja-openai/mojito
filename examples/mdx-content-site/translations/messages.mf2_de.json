@@ -1,4 +1,5 @@
 {
   "calendar.summary": ".input {$count :integer}\n.match $count\none {{Du hast {$count} Lerneinheit geplant.}}\n* {{Du hast {$count} Lerneinheiten geplant.}}",
-  "calendar.date": "Deine nächste Lerneinheit ist am {$date :date dateStyle=long timeZone=UTC}."
+  "calendar.date": "Deine nächste Lerneinheit ist am {$date :date dateStyle=long timeZone=UTC}.",
+  "calendar.terms": "Lies unsere {#termsLink}{#strong}Lernbedingungen{/strong}{/termsLink}.{#br /}Schaffe Raum für Neugier."
 }

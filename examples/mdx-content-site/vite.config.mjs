@@ -14,6 +14,8 @@ export default defineConfig(({ isSsrBuild }) => {
   }
   return {
     base: "./",
+    resolve: { dedupe: ["react", "react-dom", "@mojito-mf2/core"] },
+    ssr: { noExternal: ["@mojito-mf2/react", "@mojito-mf2/core"] },
     plugins: [
       { enforce: "pre", ...mdx({ providerImportSource: "@mdx-js/react" }) },
       react({ include: /\.(jsx|js|mdx|md|tsx|ts)$/ }),
@@ -25,7 +27,9 @@ export default defineConfig(({ isSsrBuild }) => {
             .flatMap((item) => item.moduleIds);
           if (
             modules.some((id) =>
-              /(?:mf2\/javascript|@mojito-mf2\/core)\/src\/parser\.js/.test(id),
+              /(?:mf2\/javascript|@mojito-mf2\/core)\/src\/parser\.js|(?:mf2\/react|@mojito-mf2\/react)\/src\/parser\.js/.test(
+                id,
+              ),
             )
           )
             this.error("MF2 parser must not be included in the runtime build");
@@ -34,7 +38,7 @@ export default defineConfig(({ isSsrBuild }) => {
             fileName: "mf2-build-info.json",
             source: JSON.stringify({
               parserIncluded: false,
-              resources: "precompiled models",
+              resources: "parsed models",
             }),
           });
         },

@@ -1,11 +1,28 @@
 import { type MF2Message } from '@mojito-mf2/core';
-import { formatMessage, FunctionRegistry } from '@mojito-mf2/core/formatter';
+import { formatMessageToParts, FunctionRegistry } from '@mojito-mf2/core/formatter';
 import { createIntlFunctionRegistry } from '@mojito-mf2/core/intl';
-import { useMemo } from 'react';
+import { renderMF2Parts } from '@mojito-mf2/react';
+import { type ReactNode, useMemo } from 'react';
 
 import { parseMf2 } from '../../components/mf2/model';
 
-const functions = createIntlFunctionRegistry(FunctionRegistry);
+const functions = createIntlFunctionRegistry(FunctionRegistry, { timeZone: 'UTC' });
+
+// These bindings belong to Mojito, not to uploaded MDX or catalog data. Links
+// show their label without navigating or running the application's handlers.
+const previewMarkupRenderers = {
+  strong: (children: ReactNode) => <strong>{children}</strong>,
+  em: (children: ReactNode) => <em>{children}</em>,
+  termsLink: (children: ReactNode) => (
+    <span className="review-project-document__message-link" title="Terms link (preview only)">
+      {children}
+    </span>
+  ),
+  br: (children: ReactNode) => {
+    if (children !== null) throw new Error('The br preview markup must be standalone.');
+    return <br />;
+  },
+};
 
 type Props = {
   value: string;
@@ -14,7 +31,7 @@ type Props = {
 };
 
 // This adapter formats an MF2 message with declared samples. It never evaluates
-// uploaded MDX, component code, expressions or HTML.
+// uploaded MDX or site component code, or interprets catalog text as HTML.
 export function MdxMessagePreview({ value, args, locale }: Props) {
   const preview = useMemo(() => {
     try {
@@ -33,23 +50,26 @@ export function MdxMessagePreview({ value, args, locale }: Props) {
       if (!parsed.model || parsed.diagnostics.some((item) => item.severity === 'error')) {
         throw new Error('The message could not be parsed.');
       }
-      const result = formatMessage(parsed.model.rustModel as MF2Message, args, {
+      const result = formatMessageToParts(parsed.model.rustModel as MF2Message, args, {
         locale,
         functions,
       });
       if (result.hasErrors)
         throw new Error('The message could not be formatted with these sample inputs.');
-      return { text: result.value, error: null };
+      return {
+        content: renderMF2Parts(result.parts, previewMarkupRenderers, { bidiIsolation: 'default' }),
+        error: null,
+      };
     } catch (error) {
       return {
-        text: value,
+        content: value,
         error: error instanceof Error ? error.message : 'The message could not be formatted.',
       };
     }
   }, [value, args, locale]);
   return (
     <>
-      <p>{preview.text}</p>
+      <p>{preview.content}</p>
       {preview.error ? (
         <span className="review-project-document__warning">
           Message preview unavailable. {preview.error}

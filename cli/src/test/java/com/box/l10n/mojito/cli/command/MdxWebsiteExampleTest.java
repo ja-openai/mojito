@@ -354,11 +354,16 @@ public class MdxWebsiteExampleTest extends CLITestBase {
         .singleElement()
         .satisfies(block -> assertThat(block.targetContent()).isEqualTo("Équipe"));
     assertThat(preview.document().blocks().stream().filter(block -> "mf2".equals(block.type())))
-        .hasSize(2)
+        .hasSize(3)
         .allSatisfy(
             block -> {
               assertThat(block.assetPath()).isEqualTo("messages.mf2.json");
-              assertThat(block.previewArgs()).isNotEmpty();
+              if ("calendar.terms".equals(block.id())) {
+                assertThat(block.previewArgs()).isEmpty();
+                assertThat(block.targetContent()).contains("{#termsLink}", "{#strong}", "{#br /}");
+              } else {
+                assertThat(block.previewArgs()).isNotEmpty();
+              }
             });
     assertThat(jdbc.queryForObject("select count(*) from review_project", Integer.class)).isZero();
   }

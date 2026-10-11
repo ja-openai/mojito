@@ -364,17 +364,20 @@ production storage provider.
 
 ## MF2 resources and interactive messages
 
-`content/messages.mf2.json` owns two messages: a session count with plural selection,
-and a date. The French fixture is `translations/messages.mf2_fr.json`; pull emits
-the same filename under `localized/`. Both formats must be pushed together so a
-push does not retire the other format's assets. The dedicated demo repository
-configures `json:MF2` integrity checking at creation.
+`content/messages.mf2.json` owns a session count with plural selection, a date,
+and a rich message with nested and standalone markup. The French fixture is
+`translations/messages.mf2_fr.json`; pull emits the same filename under
+`localized/`. Both formats must be pushed together so a push does not retire the
+other format's assets. The dedicated demo repository configures `json:MF2`
+integrity checking at creation.
 
 An MDX page references a message with literal sample inputs:
 
+<!-- prettier-ignore -->
 ```mdx
 <PreviewMessage resource="./messages.mf2.json" name="calendar.summary" args='{"count":2}' />
 <PreviewMessage resource="./messages.mf2.json" name="calendar.date" args='{"date":"2026-09-16T12:00:00Z"}' />
+<PreviewMessage resource="./messages.mf2.json" name="calendar.terms" args='{}' />
 ```
 
 The resource path is relative to its owning MDX asset. Mojito resolves the catalog
@@ -387,14 +390,85 @@ preference is off.
 This is a bounded message adapter; Mojito does not execute the website component
 or claim all runtime values have been reviewed.
 
-The website's own React adapter adds count/date controls. `content:prepare` parses
-catalogs into `.generated/resources.json` at build time using `mf2/javascript`.
-Vite bundles those models with the site; browser and prerendering use the same
-formatter plus Intl bootstrap. Locale comes from the page's HTML language and
-dates use an explicit UTC zone, so hydration starts with the same output.
-The build rejects parser imports into either runtime bundle and validates missing
-messages, changed MF2 arguments/options, references, and sample inputs. Resources
-are included in the static assets: there is no runtime request to Mojito.
+The website's own React adapter adds count/date controls and renders `<MF2>` from
+[`@mojito-mf2/react`](../../mf2/react/README.md). `MF2Provider` supplies resources
+with shape `locale -> resource path -> message name -> parsed MF2 model`, the
+locale, English fallback, and UTC time zone. Each resource catalog maps message
+names to models. Normal MDX prose continues through the existing document
+localization path; explicit MF2 references retain their catalog resource/name
+identity and map to the same review rows.
+
+Rich catalog text names application-owned markup renderers:
+
+```text
+Read our {#termsLink}{#strong}learning terms{/strong}{/termsLink}.{#br /}Make room for curiosity.
+```
+
+`src/message-markup-renderers.mjs` exports `messageMarkupRenderers`, which maps
+`strong`, `em`, `termsLink`, and `br` to plain `(children) => ReactNode` callbacks.
+`<MF2>` receives this map through its `markupRenderers` prop. The callbacks are
+invoked directly and must not call hooks; to use a React component, return
+`<Link>{children}</Link>` from a callback instead of passing `Link` itself.
+The site owns the link destination; catalog markup cannot supply HTML attributes,
+handlers, or URLs. Paired markup receives its rendered children, and standalone
+`br` receives `null`. The site rejects paired `br` markup and nested links during
+build validation and rendering to preserve valid HTML. Arguments are scalar
+formatting values, not React elements. `useMF2().format(resource, name, args)`
+supplies plain text for attributes, as demonstrated by the loading example's
+`title`. Mojito's bounded preview uses the same renderer with inert code-owned
+markup renderers; it never executes uploaded MDX or website component code.
+
+`content:prepare` calls `parseMessage` from `@mojito-mf2/react/parser` at build time
+to create serializable MF2 models and validate syntax and markup. It checks
+allowed names, nesting, and unsupported markup options/attributes. Parsing does
+not generate code or exhaustively check MF2 semantics and runtime behavior.
+Syntax failures expose diagnostic codes, source ranges, and messages through
+`MF2ParseError`; the build adds the file/message identity and preserves that error
+as its `cause`.
+
+The site separately checks missing messages, changed arguments/formatting options,
+references, and sample inputs. Source and target must have the same set of
+per-pattern markup shapes, counting paired and standalone occurrences of each
+markup name.
+Each distinct source shape must remain present; additional translated plural
+branches may repeat a source shape, and markup can be reordered. This check does
+not establish which selector branch corresponds to which source branch, or
+coverage of hidden forms and runtime states.
+
+The build writes `.generated/resources.json`. Vite bundles those models with the
+site; browser and prerendering use the core formatter and Intl entrypoints.
+Locale comes from the page's HTML language and dates use UTC, so hydration starts
+with the same output, including bidi isolation. The build rejects parser imports
+into either runtime bundle and emits `mf2-build-info.json` as evidence. Catalog
+object keys are included as supplied; this example does not assume that JSON
+message keys are individually tree-shaken.
+
+### Loading resources for another locale
+
+The **Messages on demand** panel is a runnable second integration demonstrating
+application-owned asynchronous loading. `scripts/content.mjs` creates per-locale
+JSON envelopes with a deterministic SHA-256 version for the complete catalog
+snapshot. `src/App.jsx` uses Vite lazy imports to load the chosen envelope from a
+separate static chunk. The panel starts from the same bundled version used to
+prerender and hydrate the page, with no initial network fetch. These two small
+demonstrations intentionally contain the same messages in both the bundled and
+lazy catalogs; a real application can choose one loading strategy per resource.
+
+`src/CatalogLoadingExample.mjs` keeps the previous locale/resources visible while
+loading. Only the latest successful request replaces both values together in one
+React state update. Superseded responses are ignored; failed requests and version
+mismatches retain the previous selection and display an error. Each envelope's
+`resources` includes the selected locale's catalogs and the English source
+catalogs for locale-correct fallback. Preserve the generated static chunks for the
+lifetime of the HTML deployment so a hydrated page can keep loading its pinned
+version. No response can silently advance it to a different deployment's catalog.
+
+Fetching obtains resources; swapping the provider state makes React render the
+new messages. There is no DOM text rewriting, runtime parsing, Mojito connection,
+or publication service. Fetch/retry/cache policy stays outside the React package.
+The example's `.npmrc` installs local file dependencies as packaged copies so their
+development React dependency cannot create a second React instance in Node tests;
+re-run `npm ci` after changing the local package.
 
 ## Optional Codex translation stage
 

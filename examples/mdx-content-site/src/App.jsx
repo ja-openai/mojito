@@ -1,8 +1,9 @@
 import { MDXProvider } from "@mdx-js/react";
+import { MF2Provider } from "@mojito-mf2/react";
 import manifest from "../.generated/manifest.json";
 import { createPreviewChoice } from "./PreviewChoice.mjs";
-import { createPreviewMessage } from "./PreviewMessage.mjs";
-import { createMessageFormatter } from "./mf2-runtime.mjs";
+import { PreviewMessage } from "./PreviewMessage.mjs";
+import { CatalogLoadingExample } from "./CatalogLoadingExample.mjs";
 import resources from "../.generated/resources.json";
 
 const modules = import.meta.glob("../.generated/**/*.mdx", {
@@ -24,12 +25,15 @@ const choices = Object.fromEntries(
   ]),
 );
 
-const messages = Object.fromEntries(
-  manifest.locales.map((locale) => [
-    locale,
-    createPreviewMessage(createMessageFormatter(resources, locale)),
-  ]),
-);
+// Vite emits separate hashed chunks. Imports fetch resources; the component
+// decides when to swap React state. No Mojito connection is used at runtime.
+const catalogImports = import.meta.glob("../.generated/catalogs/*.json");
+async function loadCatalog(locale) {
+  const filename = manifest.catalogFiles[locale];
+  const load = catalogImports[`../.generated/catalogs/${filename}`];
+  if (!load) throw new Error(`Unsupported message locale: ${locale}`);
+  return (await load()).default;
+}
 
 export function App({ locale, page }) {
   if (!manifest.locales.includes(locale) || !manifest.pages.includes(page)) {
@@ -78,14 +82,29 @@ export function App({ locale, page }) {
         </nav>
         <main>
           <article>
-            <MDXProvider
-              components={{
-                PreviewChoice: choices[locale],
-                PreviewMessage: messages[locale],
-              }}
+            <MF2Provider
+              resources={resources}
+              locale={locale}
+              sourceLocale="en"
+              timeZone="UTC"
             >
-              <Page />
-            </MDXProvider>
+              <MDXProvider
+                components={{
+                  PreviewChoice: choices[locale],
+                  PreviewMessage,
+                }}
+              >
+                <Page />
+              </MDXProvider>
+            </MF2Provider>
+            <CatalogLoadingExample
+              initialSelection={{
+                locale,
+                resources,
+                version: manifest.catalogVersion,
+              }}
+              loadCatalog={loadCatalog}
+            />
           </article>
         </main>
         <footer>

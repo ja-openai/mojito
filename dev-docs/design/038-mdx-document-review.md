@@ -592,10 +592,21 @@ The current implementation preserves the source structure and does not author
 new localized modules or structural overrides in Mojito.
 
 Dynamic components keep their code and message catalogs separate from MDX prose.
-The example now demonstrates count/date controls using `mf2/javascript`. Its build
-parses source and pulled catalogs into models and bundles them with a parser-free
-formatter and Intl registry shared by prerendering and hydration. The CDN output
-needs no Mojito connection.
+The example demonstrates count/date controls using `@mojito-mf2/react`, backed by
+`@mojito-mf2/core`. Its build parses source and pulled catalogs into models and
+bundles them with a parser-free formatter and Intl registry shared by
+prerendering and hydration. Resources group catalogs by locale and resource path;
+each catalog maps message names to parsed MF2 models. The CDN output needs no
+Mojito connection.
+
+The example's build validation preserves the source/target set of per-pattern
+markup shapes, including tag names, paired/standalone kinds, and occurrence
+counts. Translations may reorder markup and add plural branches that repeat a
+source shape. This does not establish selector-branch correspondence or coverage
+of hidden forms. `parseMessage` itself validates syntax and markup, leaving
+semantic/runtime checks and source/translation contracts to the application.
+Syntax errors expose diagnostic details through `MF2ParseError`; the build adds
+file/message context while retaining the original error as its cause.
 
 The reserved self-closing `PreviewMessage` tag accepts a relative `*.mf2.json`
 resource, a catalog key in `name`, and JSON primitive `args` (up to 32 entries).
@@ -608,11 +619,23 @@ Unknown references remain visible context. Catalogs are dependencies, not top-le
 MDX pages in the navigator. Mixed MDX/MF2 projects default to Preview.
 
 Mojito formats one declared sample through its bounded MF2 parser and Intl
-registry. Formatted output is React text, never executable markup. The site can
-provide interactive controls with the same initial values; arbitrary components
-remain Git-owned. A sample does not establish coverage of all plural forms,
-arguments, or runtime conditions. Direct MF2 syntax inside MDX, rich-markup
-adapters, and general component schemas remain outside this slice.
+registry. The shared [`@mojito-mf2/react`](../../mf2/react/README.md) parts renderer
+supports nested `strong`, `em`, an inert `termsLink` label, and standalone `br`
+through code-owned preview markup renderers. Unknown or malformed markup and
+markup options/attributes produce the existing visible preview warning. Strings remain
+React text; catalog data cannot supply HTML, URLs, handlers, or component code.
+The site can provide interactive controls with the same initial values; arbitrary
+components remain Git-owned. A sample does not establish coverage of all plural
+forms, arguments, or runtime conditions. Direct raw MF2 syntax inside MDX and
+general component schemas remain outside this slice. Trusted React/MDX
+applications can use `MF2Provider`, `<MF2>`, and `useMF2` with parsed catalog
+models. The `markupRenderers` map contains plain `(children) => ReactNode` callbacks,
+which return elements when a React component is needed. Source fallback uses its
+source locale, timezone defaults are explicit, and parsing stays in build/preview
+entrypoints.
+The example includes bundled resources and version-pinned asynchronous loading;
+only a completed current request swaps locale and catalogs together. No Mojito
+connection or DOM text rewriting occurs at runtime.
 
 The optional example translation worker snapshots exact asset/string identities,
 source and extraction baselines, existing targets, and page/module context. It
@@ -656,8 +679,9 @@ features of the current static MDX prototype.
   overrides, and locale-authored modules. Keep market rules and executable
   component implementations in the integration; specify inheritance, revisions,
   and review semantics before adding localized authoring to Mojito.
-- Define MF2 message boundaries, typed preview arguments, rich markup mappings,
-  and review coverage for hidden forms before embedding MF2 in MDX syntax.
+- Expand typed MF2 preview arguments and review coverage for hidden forms as
+  real documents require them; the current named-markup adapter does not imply
+  arbitrary JSX extraction or complete state coverage.
 - Decide whether projects need immutable template snapshots and whole-document
   review revisions before adding page-level approval.
 

@@ -26,7 +26,7 @@ describe('MdxMessagePreview', () => {
         locale="fr"
       />,
     );
-    expect(screen.getByText('Le 16 septembre 2026.')).toBeInTheDocument();
+    expect(screen.getByText(/Le .*16 septembre 2026.*\./)).toBeInTheDocument();
   });
 
   it.each([
@@ -45,7 +45,63 @@ describe('MdxMessagePreview', () => {
     const value = 'Hello {$name}';
     const name = '<img src=x onerror=alert(1)>';
     const view = render(<MdxMessagePreview value={value} args={{ name }} locale="en" />);
-    expect(view.container.querySelector('p')?.textContent).toBe(`Hello ${name}`);
+    expect(view.container.querySelector('p')?.textContent).toBe(`Hello \u2068${name}\u2069`);
     expect(view.container.querySelector('img')).toBeNull();
+  });
+
+  it('renders nested and standalone code-owned markup without executing site code', () => {
+    const view = render(
+      <MdxMessagePreview
+        value="Read {#termsLink}the {#strong}terms{/strong}{/termsLink}.{#br /}{#em}Thank you.{/em}"
+        args={{}}
+        locale="en"
+      />,
+    );
+    const link = screen.getByTitle('Terms link (preview only)');
+    expect(link.tagName).toBe('SPAN');
+    expect(link.querySelector('strong')).toHaveTextContent('terms');
+    expect(view.container.querySelector('a')).toBeNull();
+    expect(view.container.querySelector('br')).toBeInTheDocument();
+    expect(view.container.querySelector('em')).toHaveTextContent('Thank you.');
+    expect(screen.queryByText(/Message preview unavailable/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    '{#unknown}hidden{/unknown}',
+    '{#strong}unclosed',
+    '{/strong}unopened',
+    '{#strong}{#em}crossed{/strong}{/em}',
+    '{#termsLink href=|https://example.com|}terms{/termsLink}',
+    '{#strong @title=|catalog attribute|}content{/strong}',
+    '{#br}must not disappear{/br}',
+  ])('keeps unsupported markup visible with diagnostics: %s', (value) => {
+    const view = render(<MdxMessagePreview value={value} args={{}} locale="en" />);
+    expect(screen.getByText(/Message preview unavailable/)).toBeInTheDocument();
+    expect(view.container.querySelector('p')?.textContent).toBe(value);
+    expect(view.container.querySelector('strong, em, br, a')).toBeNull();
+  });
+
+  it('escapes literal HTML and values inside rich text while preserving bidi isolation', () => {
+    const name = '<img src=x onerror=alert(1)>';
+    const view = render(
+      <MdxMessagePreview
+        value="<script>literal</script> {#strong}{$name}{/strong}"
+        args={{ name }}
+        locale="ar"
+      />,
+    );
+    expect(view.container.querySelector('p')?.textContent).toBe(
+      `<script>literal</script> \u2068${name}\u2069`,
+    );
+    expect(view.container.querySelector('strong')?.textContent).toBe(`\u2068${name}\u2069`);
+    expect(view.container.querySelector('img, script')).toBeNull();
+  });
+
+  it('displays literal context when arguments fail inside rich markup', () => {
+    const value = '{#strong}{$missing}{/strong}';
+    const view = render(<MdxMessagePreview value={value} args={{}} locale="en" />);
+    expect(screen.getByText(/could not be formatted with these sample inputs/)).toBeInTheDocument();
+    expect(view.container.querySelector('p')?.textContent).toBe(value);
+    expect(view.container.querySelector('strong')).toBeNull();
   });
 });

@@ -5,6 +5,9 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   base: '/',
   plugins: [react()],
+  // Local MF2 packages use the application's peer dependencies, including the
+  // same React instance for rendering and hooks.
+  resolve: { dedupe: ['react', 'react-dom', '@mojito-mf2/core'] },
   server: {
     port: Number(process.env.VITE_PORT ?? 5173),
     strictPort: true,

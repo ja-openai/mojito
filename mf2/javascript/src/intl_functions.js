@@ -11,7 +11,7 @@ import { parseNonNegativeOption } from "./unlocalized_numeric_functions.js";
 import { formatOffset } from "./offset_function.js";
 import { markNumericFunctions, markNumericSelectionGuard } from "./numeric_registry_metadata.js";
 
-export function createIntlFunctionRegistry(FunctionRegistry) {
+export function createIntlFunctionRegistry(FunctionRegistry, { timeZone } = {}) {
   const formatters = new Map();
   const selectors = new Map();
   formatters.set("string", (call) => call.value);
@@ -19,9 +19,9 @@ export function createIntlFunctionRegistry(FunctionRegistry) {
   formatters.set("percent", formatIntlPercent);
   formatters.set("integer", formatIntlInteger);
   formatters.set("currency", formatIntlCurrency);
-  formatters.set("date", formatIntlDate);
-  formatters.set("time", formatIntlTime);
-  formatters.set("datetime", formatIntlDateTime);
+  formatters.set("date", (call) => formatIntlDate(call, timeZone));
+  formatters.set("time", (call) => formatIntlTime(call, timeZone));
+  formatters.set("datetime", (call) => formatIntlDateTime(call, timeZone));
   formatters.set("relativeTime", formatIntlRelativeTime);
   formatters.set("offset", formatOffset);
   registerNumericSelectors(selectors);
@@ -59,29 +59,31 @@ function formatIntlCurrency(call) {
   return numberFormatter(call.locale, call, { style: "currency", currency: currency.toUpperCase() }).format(value);
 }
 
-function formatIntlDate(call) {
+function formatIntlDate(call, timeZone) {
   return formatIntlTemporal(
     call,
     { dateStyle: dateTimeStyle(call, "dateStyle", "length", "medium") },
     "Date function requires a date operand.",
+    timeZone,
   );
 }
 
-function formatIntlTime(call) {
+function formatIntlTime(call, timeZone) {
   return formatIntlTemporal(
     call,
     timeOptions(call, "timeStyle", "precision", "medium"),
     "Time function requires a date operand.",
+    timeZone,
   );
 }
 
-function formatIntlDateTime(call) {
+function formatIntlDateTime(call, timeZone) {
   const dateStyle = dateTimeStyle(call, "dateStyle", "dateLength", "medium");
   const time = timeOptions(call, "timeStyle", "timePrecision", "medium");
   const options = time.timeStyle == null
     ? { ...dateStyleComponents(dateStyle), ...time }
     : { dateStyle, ...time };
-  return formatIntlTemporal(call, options, "Datetime function requires a date operand.");
+  return formatIntlTemporal(call, options, "Datetime function requires a date operand.", timeZone);
 }
 
 function formatIntlRelativeTime(call) {
@@ -153,8 +155,8 @@ function validateIntlNumericSelection(call) {
   }
 }
 
-function dateFormatter(locale, call, options) {
-  const timeZone = inheritedOptionValue(call, "timeZone", null, ["date", "time", "datetime"]);
+function dateFormatter(locale, call, options, defaultTimeZone) {
+  const timeZone = inheritedOptionValue(call, "timeZone", defaultTimeZone, ["date", "time", "datetime"]);
   if (timeZone != null) options.timeZone = timeZone;
   try {
     return new Intl.DateTimeFormat(locale, options);
@@ -163,8 +165,8 @@ function dateFormatter(locale, call, options) {
   }
 }
 
-function formatIntlTemporal(call, options, message) {
-  const formatter = dateFormatter(call.locale, call, { ...options });
+function formatIntlTemporal(call, options, message, defaultTimeZone) {
+  const formatter = dateFormatter(call.locale, call, { ...options }, defaultTimeZone);
   const operand = parseCallDate(call, message);
   if (!operand.floating) return formatter.format(operand.value);
   // Offset-free MF2 literals are wall-clock values, not host-zone or UTC instants.

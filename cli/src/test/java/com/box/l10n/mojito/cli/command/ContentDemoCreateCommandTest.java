@@ -123,7 +123,7 @@ public class ContentDemoCreateCommandTest extends CLITestBase {
                     + "where a.repository_id = ?",
                 Integer.class,
                 repository.getId()))
-        .isEqualTo(25);
+        .isEqualTo(26);
     assertThat(
             jdbc.queryForObject(
                 "select count(*) from asset_content c join asset a on a.id = c.asset_id "
@@ -220,7 +220,7 @@ public class ContentDemoCreateCommandTest extends CLITestBase {
                 assertThat(block.reviewProjectTextUnitId()).isNull();
               });
       assertThat(preview.document().blocks().stream().filter(block -> "mf2".equals(block.type())))
-          .hasSize(2);
+          .hasSize(3);
     }
     assertThat(jdbc.queryForObject("select count(*) from mblob", Integer.class)).isZero();
   }

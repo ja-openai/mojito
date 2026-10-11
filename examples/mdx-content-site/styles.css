@@ -25,6 +25,18 @@ a:focus-visible {
   color: #44604e;
   font-size: 12px;
 }
+.catalog-loading-example {
+  margin-top: 3rem;
+  padding: 1.5rem;
+  border: 1px solid #d8ded2;
+  border-radius: 12px;
+}
+.catalog-loading-example h2 {
+  margin-top: 0;
+}
+.catalog-loading-example select {
+  padding: 0.4rem;
+}
 .site-shell {
   width: min(1040px, calc(100% - 80px));
   margin: auto;

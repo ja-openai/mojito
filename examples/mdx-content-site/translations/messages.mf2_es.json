@@ -1,4 +1,5 @@
 {
   "calendar.summary": ".input {$count :integer}\n.match $count\none {{Tienes {$count} sesión de aprendizaje programada.}}\nmany {{Tienes {$count} sesiones de aprendizaje programadas.}}\n* {{Tienes {$count} sesiones de aprendizaje programadas.}}",
-  "calendar.date": "Tu próxima sesión es el {$date :date dateStyle=long timeZone=UTC}."
+  "calendar.date": "Tu próxima sesión es el {$date :date dateStyle=long timeZone=UTC}.",
+  "calendar.terms": "Lee nuestras {#termsLink}{#strong}condiciones de aprendizaje{/strong}{/termsLink}.{#br /}Haz espacio para la curiosidad."
 }

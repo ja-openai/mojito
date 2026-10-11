@@ -483,7 +483,7 @@ describe('MF2 document passage', () => {
     const passage = screen.getByRole('button', {
       name: 'Review calendar.date in messages.mf2.json',
     });
-    expect(passage).toHaveTextContent('Le 16 septembre 2026.');
+    expect(passage).toHaveTextContent(/Le .*16 septembre 2026.*\./);
     fireEvent.click(passage);
     expect(onSelect).toHaveBeenCalledWith(row.id);
   });
@@ -493,7 +493,7 @@ describe('MF2 document passage', () => {
     const data = documentData([messageBlock]);
     data.documents[0].sourceLocaleTag = 'en';
     rerender(<ReviewProjectDocumentView {...props} data={data} />);
-    expect(screen.getByText('On September 16, 2026.')).toBeInTheDocument();
+    expect(screen.getByText(/On .*September 16, 2026.*\./)).toBeInTheDocument();
     rerender(
       <ReviewProjectDocumentView
         {...props}

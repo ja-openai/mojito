@@ -119,3 +119,15 @@ Edit the caller's catalog between format calls to change behavior; do not mutate
 callback metadata. Numeric/source-option caches use weak, per-call ownership and
 exclude variable-dependent histories. See `../spec/runtime-limits.md` for limits,
 direction handling and the remaining application-level budgets.
+
+## React integration
+
+See [`@mojito-mf2/react`](../react/README.md) for `MF2Provider`, `<MF2>`, `useMF2`,
+parsed catalog resources, and named markup renderers. Its `createMF2` and `useMF2`
+APIs return an `MF2Runtime` with plain-text `format` and React `render` methods;
+the core's `MF2Formatter` type describes a registry function callback. The React
+runtime imports `@mojito-mf2/core/formatter` and `@mojito-mf2/core/intl`, without
+importing the parser. `createIntlFunctionRegistry(FunctionRegistry,
+{ timeZone: "UTC" })` sets a default for temporal functions; explicit and inherited
+message timezone options still take precedence. Omitting this option preserves
+the host timezone behavior.

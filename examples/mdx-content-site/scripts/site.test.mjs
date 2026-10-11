@@ -149,7 +149,7 @@ test("compiles real MDX with three levels, reused modules, localized navigation 
     ),
     {
       parserIncluded: false,
-      resources: "precompiled models",
+      resources: "parsed models",
     },
   );
   assert.match(
@@ -344,8 +344,8 @@ test("Vite rejects a parser accidentally imported into browser runtime code", as
     filename,
     (await readFile(filename, "utf8")) +
       `
-import { parseToModel } from "@mojito-mf2/core/parser";
-console.log(parseToModel("Parser must stay in the build"));
+import { parseMessage } from "@mojito-mf2/react/parser";
+console.log(parseMessage("Parser must stay in the build"));
 `,
   );
   await assert.rejects(

@@ -1,12 +1,13 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { parseToModel } from "@mojito-mf2/core/parser";
+import { parseMessage } from "@mojito-mf2/react/parser";
 import { FunctionRegistry } from "@mojito-mf2/core/formatter";
 import { createIntlFunctionRegistry } from "@mojito-mf2/core/intl";
 import { createMessageFormatter } from "../src/mf2-runtime.mjs";
 
 const functions = createIntlFunctionRegistry(FunctionRegistry);
 const maxCatalogBytes = 1_000_000;
+const allowedMarkup = ["strong", "em", "termsLink", "br"];
 
 async function catalogFiles(directory, prefix = "", translated = false) {
   const result = [];
@@ -41,14 +42,39 @@ function visit(value, callback) {
 // can reorder expressions and add plural branches, but cannot change inputs,
 // functions or their options. A production adapter could expose finer policy.
 export function modelContract(model) {
+  // These restrictions belong to the website's HTML bindings. Generic MF2
+  // permits nesting, but HTML anchors cannot nest and br cannot have children.
+  const patterns =
+    model.type === "select"
+      ? model.variants.map((variant) => variant.value)
+      : [model.pattern];
+  const markupShapes = new Set();
+  for (const pattern of patterns) {
+    let inLink = false;
+    const markup = [];
+    for (const part of pattern) {
+      if (part.type !== "markup") continue;
+      if (part.name === "br" && part.kind !== "standalone")
+        throw new Error("br must be standalone MF2 markup");
+      if (part.name === "termsLink") {
+        if (part.kind !== "close" && inLink)
+          throw new Error("termsLink cannot contain another link");
+        if (part.kind === "open") inLink = true;
+        else if (part.kind === "close") inLink = false;
+      }
+      if (part.kind !== "close") markup.push([part.name, part.kind]);
+    }
+    // Preserve names, kinds and counts within each source-approved shape.
+    // Repeated shapes allow locale-added plural branches; selector equivalence
+    // and nesting are separate from this order-independent contract.
+    markupShapes.add(JSON.stringify(markup.sort()));
+  }
   const locals = new Set(
     model.declarations.filter((d) => d.type === "local").map((d) => d.name),
   );
   const variables = new Set();
   const annotations = new Set();
   visit(model, (node) => {
-    if (node.type === "markup")
-      throw new Error("MF2 markup needs a separate component adapter");
     if (node.type === "variable" && !locals.has(node.name))
       variables.add(node.name);
     if (node.type === "expression" && node.function) {
@@ -70,6 +96,7 @@ export function modelContract(model) {
   return {
     arguments: [...variables].sort(),
     annotations: [...annotations].sort(),
+    markupShapes: [...markupShapes].sort(),
   };
 }
 
@@ -93,13 +120,16 @@ async function readCatalog(filename) {
       value.length > 10000
     )
       throw new Error(`Invalid MF2 catalog entry: ${filename}#${name}`);
-    const result = parseToModel(value);
-    if (result.hasDiagnostics)
-      throw new Error(
-        `Invalid MF2: ${filename}#${name}: ${JSON.stringify(result.diagnostics)}`,
-      );
-    modelContract(result.model);
-    models[name] = result.model;
+    let model;
+    try {
+      model = parseMessage(value, { allowedMarkup });
+    } catch (error) {
+      throw new Error(`Invalid MF2: ${filename}#${name}: ${error.message}`, {
+        cause: error,
+      });
+    }
+    modelContract(model);
+    models[name] = model;
   }
   return models;
 }
@@ -195,7 +225,7 @@ export async function prepareMessageResources({
         JSON.stringify(modelContract(targets[name]))
       )
         throw new Error(
-          `French MF2 arguments or formatting differ from source: ${file}#${name}`,
+          `French MF2 arguments, formatting or markup differ from source: ${file}#${name}`,
         );
     }
   }

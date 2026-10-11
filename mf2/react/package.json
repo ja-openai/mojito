@@ -1,0 +1,49 @@
+{
+  "name": "@mojito-mf2/react",
+  "version": "0.1.0",
+  "description": "React rendering for parsed Mojito MessageFormat 2 catalogs.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./markup": {
+      "types": "./src/markup.d.ts",
+      "default": "./src/markup.js"
+    },
+    "./parser": {
+      "types": "./src/parser.d.ts",
+      "default": "./src/parser.js"
+    }
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "@mojito-mf2/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@mojito-mf2/core": "file:../javascript",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "jsdom": "27.4.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-test-renderer": "18.3.1",
+    "typescript": "~5.6.3"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check:types": "tsc -p tsconfig.json"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

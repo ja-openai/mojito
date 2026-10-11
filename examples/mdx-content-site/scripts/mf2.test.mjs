@@ -4,16 +4,28 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import React, { act } from "react";
-import { renderToString } from "react-dom/server";
-import { hydrateRoot } from "react-dom/client";
 import TestRenderer from "react-test-renderer";
-import { JSDOM } from "jsdom";
+import { MF2Provider } from "@mojito-mf2/react";
+import { renderMF2Parts } from "@mojito-mf2/react";
+import { formatMessageToParts } from "@mojito-mf2/core/formatter";
+import { MF2ParseError, parseMessage } from "@mojito-mf2/react/parser";
 import { prepareContent } from "./content.mjs";
 import { createMessageFormatter } from "../src/mf2-runtime.mjs";
-import { createPreviewMessage } from "../src/PreviewMessage.mjs";
+import { PreviewMessage } from "../src/PreviewMessage.mjs";
+import { CatalogLoadingExample } from "../src/CatalogLoadingExample.mjs";
+import { messageMarkupRenderers } from "../src/message-markup-renderers.mjs";
 
 const projectDirectory = fileURLToPath(new URL("..", import.meta.url));
 const resource = "messages.mf2.json";
+
+function previewComponent(resources, locale) {
+  return (props) =>
+    React.createElement(
+      MF2Provider,
+      { resources, locale, sourceLocale: "en", timeZone: "UTC" },
+      React.createElement(PreviewMessage, props),
+    );
+}
 
 async function fixture(t) {
   const directory = await mkdtemp(path.join(projectDirectory, ".test-mf2-"));
@@ -38,17 +50,16 @@ async function resourcesFor(t) {
     ),
   );
 }
-async function editCatalog(paths, change) {
-  const filename = path.join(
-    paths.translationDirectory,
-    "messages.mf2_fr.json",
-  );
+async function editCatalog(paths, change, { source = false } = {}) {
+  const filename = source
+    ? path.join(paths.projectDirectory, "content", resource)
+    : path.join(paths.translationDirectory, "messages.mf2_fr.json");
   const catalog = JSON.parse(await readFile(filename, "utf8"));
   change(catalog);
   await writeFile(filename, JSON.stringify(catalog));
 }
 
-test("precompiles both catalogs and formats locale plurals and explicit UTC dates without a parser", async (t) => {
+test("parses both catalogs at build time and formats locale plurals and explicit UTC dates without a runtime parser", async (t) => {
   const resources = await resourcesFor(t);
   assert.equal(resources.en[resource]["calendar.summary"].type, "select");
   const en = createMessageFormatter(resources, "en");
@@ -71,23 +82,21 @@ test("precompiles both catalogs and formats locale plurals and explicit UTC date
   );
   assert.equal(
     en(resource, "calendar.date", { date: "2026-09-16T12:00:00Z" }),
-    "Your next session is on September 16, 2026.",
+    "Your next session is on \u2068September 16, 2026\u2069.",
   );
   assert.equal(
     fr(resource, "calendar.date", { date: "2026-09-16T12:00:00Z" }),
-    "Votre prochaine séance aura lieu le 16 septembre 2026.",
+    "Votre prochaine séance aura lieu le \u206816 septembre 2026\u2069.",
   );
   assert.throws(
     () => fr(resource, "calendar.summary", {}),
     /MF2 formatting failed/,
   );
-  assert.throws(() => fr(resource, "unknown", {}), /Unknown MF2 message/);
+  assert.throws(() => fr(resource, "unknown", {}), /MF2 formatting failed/);
 });
 
 test("interactive component updates plural and date output from the bundled models", async (t) => {
-  const Component = createPreviewMessage(
-    createMessageFormatter(await resourcesFor(t), "fr"),
-  );
+  const Component = previewComponent(await resourcesFor(t), "fr");
   let tree;
   act(() => {
     tree = TestRenderer.create(
@@ -108,67 +117,123 @@ test("interactive component updates plural and date output from the bundled mode
     );
   });
   t.after(() => act(() => tree.unmount()));
-  const outputs = () =>
-    tree.root.findAllByType("p").map((node) => node.children.join(""));
+  const text = (node) =>
+    typeof node === "string" ? node : node.children.map(text).join("");
+  const outputs = () => tree.root.findAllByType("p").map(text);
   const inputs = tree.root.findAllByType("input");
   act(() => inputs[0].props.onChange({ target: { value: "1" } }));
-  assert.equal(outputs()[0], "Vous avez 1 séance d’apprentissage prévue.");
+  assert.equal(
+    outputs()[0],
+    "Vous avez \u20681\u2069 séance d’apprentissage prévue.",
+  );
   act(() => inputs[1].props.onChange({ target: { value: "2026-12-25" } }));
   assert.equal(
     outputs()[1],
-    "Votre prochaine séance aura lieu le 25 décembre 2026.",
+    "Votre prochaine séance aura lieu le \u206825 décembre 2026\u2069.",
   );
   act(() => inputs[0].props.onChange({ target: { value: "-1" } }));
-  assert.equal(outputs()[0], "Vous avez 1 séance d’apprentissage prévue.");
+  assert.equal(
+    outputs()[0],
+    "Vous avez \u20681\u2069 séance d’apprentissage prévue.",
+  );
 });
 
-test("French prerendered MF2 components hydrate with identical text and no recoverable errors", async (t) => {
-  const Component = createPreviewMessage(
-    createMessageFormatter(await resourcesFor(t), "fr"),
-  );
-  const app = React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(Component, {
-      resource,
-      name: "calendar.summary",
-      args: '{"count":2}',
-    }),
-    React.createElement(Component, {
-      resource,
-      name: "calendar.date",
-      args: '{"date":"2026-09-16T12:00:00Z"}',
-    }),
-  );
-  const html = renderToString(app);
-  const dom = new JSDOM(`<div id="root">${html}</div>`, {
-    url: "https://example.test/fr/",
-  });
-  const previousWindow = globalThis.window;
-  const previousDocument = globalThis.document;
-  const previousAct = globalThis.IS_REACT_ACT_ENVIRONMENT;
-  globalThis.window = dom.window;
-  globalThis.document = dom.window.document;
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  let root;
-  try {
-    const errors = [];
-    const container = dom.window.document.getElementById("root");
-    const beforeHydration = container.innerHTML;
-    await act(async () => {
-      root = hydrateRoot(container, app, {
-        onRecoverableError: (error) => errors.push(error),
-      });
+test("async selection loads first, ignores superseded responses, and retains the previous catalog on failure", async (t) => {
+  const resources = await resourcesFor(t);
+  const pending = [];
+  const loadCatalog = (locale) =>
+    new Promise((resolve, reject) => {
+      pending.push({ locale, resolve, reject });
     });
-    assert.deepEqual(errors, []);
-    assert.equal(container.innerHTML, beforeHydration);
-  } finally {
-    if (root) await act(async () => root.unmount());
-    dom.window.close();
-    globalThis.window = previousWindow;
-    globalThis.document = previousDocument;
-    globalThis.IS_REACT_ACT_ENVIRONMENT = previousAct;
-  }
+  const selection = (locale, version = "fixture-v1") => ({
+    locale,
+    resources,
+    version,
+  });
+  let tree;
+  act(() => {
+    tree = TestRenderer.create(
+      React.createElement(CatalogLoadingExample, {
+        initialSelection: selection("en"),
+        loadCatalog,
+      }),
+    );
+  });
+  t.after(() => act(() => tree.unmount()));
+  const rendered = () =>
+    tree.root.findByProps({ className: "loaded-messages" }).props.title;
+  const select = (locale) => {
+    let request;
+    act(() => {
+      request = tree.root
+        .findByType("select")
+        .props.onChange({ target: { value: locale } });
+    });
+    return request;
+  };
+
+  const oldFrench = select("fr");
+  assert.equal(rendered(), "You have 2 learning sessions planned.");
+  const latestEnglish = select("en");
+  await act(async () => {
+    pending[1].resolve(selection("en"));
+    await latestEnglish;
+  });
+  await act(async () => {
+    pending[0].resolve(selection("fr"));
+    await oldFrench;
+  });
+  assert.equal(rendered(), "You have 2 learning sessions planned.");
+  assert.equal(tree.root.findByType("select").props.value, "en");
+
+  const french = select("fr");
+  await act(async () => {
+    pending[2].resolve(selection("fr"));
+    await french;
+  });
+  assert.equal(rendered(), "Vous avez 2 séances d’apprentissage prévues.");
+  const failedEnglish = select("en");
+  await act(async () => {
+    pending[3].reject(new Error("Network unavailable"));
+    await failedEnglish;
+  });
+  assert.equal(rendered(), "Vous avez 2 séances d’apprentissage prévues.");
+  assert.equal(tree.root.findByType("select").props.value, "fr");
+  assert.equal(tree.root.findAllByProps({ role: "alert" }).length, 1);
+
+  const wrongVersion = select("en");
+  await act(async () => {
+    pending[4].resolve(selection("en", "another-deployment"));
+    await wrongVersion;
+  });
+  assert.equal(rendered(), "Vous avez 2 séances d’apprentissage prévues.");
+  assert.equal(tree.root.findByType("select").props.value, "fr");
+});
+
+test("catalog versions are deterministic and change when message content changes", async (t) => {
+  const paths = await fixture(t);
+  const first = await prepareContent(paths);
+  const second = await prepareContent(paths);
+  assert.equal(first.catalogVersion, second.catalogVersion);
+  const envelope = JSON.parse(
+    await readFile(
+      path.join(
+        paths.projectDirectory,
+        ".generated/catalogs",
+        second.catalogFiles.fr,
+      ),
+      "utf8",
+    ),
+  );
+  assert.equal(envelope.version, first.catalogVersion);
+  assert.equal(envelope.locale, "fr");
+  assert.ok(envelope.resources.en[resource]);
+  assert.ok(envelope.resources.fr[resource]);
+  await editCatalog(paths, (catalog) => {
+    catalog["calendar.terms"] += " Merci.";
+  });
+  const updated = await prepareContent(paths);
+  assert.notEqual(updated.catalogVersion, first.catalogVersion);
 });
 
 test("a saved French correction flows through a fresh preparation into runtime models", async (t) => {
@@ -188,7 +253,7 @@ test("a saved French correction flows through a fresh preparation into runtime m
     createMessageFormatter(resources, "fr")(resource, "calendar.date", {
       date: "2026-09-16T12:00:00Z",
     }),
-    "Rendez-vous le 16 septembre 2026.",
+    "Rendez-vous le \u206816 septembre 2026\u2069.",
   );
 });
 
@@ -208,9 +273,9 @@ test("malformed MF2, changed arguments and unsafe formatting options fail the bu
     ["Invalid {$date", /Invalid MF2/],
     [
       "Date {$other :date dateStyle=long timeZone=UTC}",
-      /arguments or formatting differ/,
+      /arguments, formatting or markup differ/,
     ],
-    ["Date {$date :number}", /arguments or formatting differ/],
+    ["Date {$date :number}", /arguments, formatting or markup differ/],
     ["Date {$date :date dateStyle=long}", /timeZone=UTC/],
     ["Date {$date :unrecognized}", /Unsupported MF2 function/],
   ]) {
@@ -219,6 +284,118 @@ test("malformed MF2, changed arguments and unsafe formatting options fail the bu
       catalog["calendar.date"] = message;
     });
     await assert.rejects(prepareContent(paths), expected);
+  }
+});
+
+test("catalog syntax failures retain message identity and the parser diagnostic cause", async (t) => {
+  const paths = await fixture(t);
+  await editCatalog(paths, (catalog) => {
+    catalog["calendar.date"] = "Invalid {$date";
+  });
+  await assert.rejects(prepareContent(paths), (error) => {
+    assert.match(error.message, /messages\.mf2_fr\.json#calendar\.date/);
+    assert.ok(error.cause instanceof MF2ParseError);
+    assert.ok(error.cause instanceof SyntaxError);
+    assert.equal(error.cause.diagnostics.length, 1);
+    const diagnostic = error.cause.diagnostics[0];
+    assert.equal(diagnostic.code, "unclosed-placeholder");
+    assert.deepEqual([diagnostic.start, diagnostic.end], [8, 14]);
+    assert.ok(error.message.includes(diagnostic.code));
+    assert.ok(error.message.includes(diagnostic.message));
+    assert.ok(error.message.includes(error.cause.message));
+    return true;
+  });
+});
+
+test("catalog parsing rejects unknown, unbalanced and option-bearing markup", async (t) => {
+  for (const message of [
+    "{#unknown}Terms{/unknown}",
+    "{#strong}Terms{/em}",
+    "{#termsLink href=|https://example.com/other|}Terms{/termsLink}",
+  ]) {
+    const paths = await fixture(t);
+    await editCatalog(paths, (catalog) => {
+      catalog["calendar.terms"] = message;
+    });
+    await assert.rejects(prepareContent(paths), /Invalid MF2/);
+  }
+});
+
+test("catalog contracts reject dropped, added, recast and repeated markup", async (t) => {
+  for (const change of [
+    (message) =>
+      message.replace("{#termsLink}", "").replace("{/termsLink}", ""),
+    (message) => `{#em}${message}{/em}`,
+    (message) =>
+      message.replace("{#strong}", "{#strong /}").replace("{/strong}", ""),
+    (message) => message.replace("{#br /}", "{#br /}{#br /}"),
+    (message) =>
+      message
+        .replace("{#strong}", "{#strong}{#strong}")
+        .replace("{/strong}", "{/strong}{/strong}"),
+  ]) {
+    const paths = await fixture(t);
+    await editCatalog(paths, (catalog) => {
+      catalog["calendar.terms"] = change(catalog["calendar.terms"]);
+    });
+    await assert.rejects(
+      prepareContent(paths),
+      /arguments, formatting or markup differ from source: messages\.mf2\.json#calendar\.terms/,
+    );
+  }
+});
+
+test("catalog contracts allow reordering and valid nesting changes within a markup shape", async (t) => {
+  const paths = await fixture(t);
+  await editCatalog(paths, (catalog) => {
+    catalog["calendar.terms"] =
+      "{#br /}Consultez {#strong}nos{/strong} {#termsLink}conditions{/termsLink}.";
+  });
+  await assert.doesNotReject(prepareContent(paths));
+});
+
+test("catalog contracts allow added plural branches that repeat source markup shapes", async (t) => {
+  const paths = await fixture(t);
+  await editCatalog(
+    paths,
+    (catalog) => {
+      catalog["calendar.summary"] =
+        ".input {$count :number}\n.match $count\none {{{#strong}{$count} session{/strong}}}\n* {{{#termsLink}{$count} sessions{/termsLink}}}";
+    },
+    { source: true },
+  );
+  await editCatalog(paths, (catalog) => {
+    catalog["calendar.summary"] =
+      ".input {$count :number}\n.match $count\none {{{#strong}{$count} séance{/strong}}}\nmany {{{#termsLink}{$count} séances{/termsLink}}}\n* {{{#termsLink}{$count} séances{/termsLink}}}";
+  });
+  await assert.doesNotReject(prepareContent(paths));
+});
+
+test("HTML binding rules reject paired br and nested links before publishing and during rendering", async (t) => {
+  for (const [message, expected] of [
+    ["{#br}Text must survive{/br}", /br must be standalone/],
+    [
+      "{#termsLink}{#strong}{#termsLink}Terms{/termsLink}{/strong}{/termsLink}",
+      /termsLink cannot contain/,
+    ],
+    ["{#termsLink}{#termsLink /}{/termsLink}", /termsLink cannot contain/],
+  ]) {
+    const paths = await fixture(t);
+    await editCatalog(paths, (catalog) => {
+      catalog["calendar.terms"] = message;
+    });
+    await assert.rejects(prepareContent(paths), expected);
+    const model = parseMessage(message, {
+      allowedMarkup: Object.keys(messageMarkupRenderers),
+    });
+    assert.throws(
+      () =>
+        renderMF2Parts(
+          formatMessageToParts(model).parts,
+          messageMarkupRenderers,
+        ),
+      expected,
+    );
   }
 });
 

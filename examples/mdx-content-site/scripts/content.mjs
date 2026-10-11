@@ -1,5 +1,6 @@
 import { readdir, readFile, mkdir, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { prepareMessageResources } from "./mf2-resources.mjs";
 
 export const pages = ["index", "guide"];
@@ -159,7 +160,34 @@ export async function assembleContent({
     path.join(generatedDirectory, "resources.json"),
     `${JSON.stringify(messages.resources)}\n`,
   );
-  return { source, translated, files, catalogs: messages.files };
+  const catalogVersion = createHash("sha256")
+    .update(JSON.stringify(messages.resources))
+    .digest("hex");
+  const catalogFiles = {};
+  await mkdir(path.join(generatedDirectory, "catalogs"));
+  for (const locale of ["en", targetLocale]) {
+    const filename = `${locale}.${catalogVersion}.json`;
+    catalogFiles[locale] = filename;
+    await writeFile(
+      path.join(generatedDirectory, "catalogs", filename),
+      `${JSON.stringify({
+        version: catalogVersion,
+        locale,
+        resources: {
+          en: messages.resources.en,
+          [locale]: messages.resources[locale],
+        },
+      })}\n`,
+    );
+  }
+  return {
+    source,
+    translated,
+    files,
+    catalogs: messages.files,
+    catalogVersion,
+    catalogFiles,
+  };
 }
 
 export async function prepareContent({
@@ -191,6 +219,8 @@ export async function prepareContent({
     pages,
     assets: documents.files,
     catalogs: documents.catalogs,
+    catalogVersion: documents.catalogVersion,
+    catalogFiles: documents.catalogFiles,
     titles,
   };
   await writeFile(

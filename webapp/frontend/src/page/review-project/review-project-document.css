@@ -336,6 +336,10 @@ a.review-project-document__link {
   line-height: 1.4;
   margin-top: var(--space-1);
 }
+.review-project-document__message-link {
+  text-decoration: underline;
+}
+
 .review-project-document__warning,
 .review-project-document__block.is-stale .review-project-document__status {
   color: var(--color-danger);
