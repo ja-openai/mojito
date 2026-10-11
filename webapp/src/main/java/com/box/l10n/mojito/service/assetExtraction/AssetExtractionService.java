@@ -1362,14 +1362,6 @@ public class AssetExtractionService {
     return tu -> namesToCreate.contains(tu.getName());
   }
 
-  Predicate<BranchStateTextUnit> usedBranchStateTextUnit() {
-    return m -> !m.getBranchNameToBranchDatas().isEmpty();
-  }
-
-  Predicate<BranchStateTextUnit> unusedBranchStateTextUnit() {
-    return m -> m.getBranchNameToBranchDatas().isEmpty();
-  }
-
   Predicate<TextUnitDTO> isInSourceAndCommentToCreatePredicate(
       ImmutableList<BranchStateTextUnit> textUnitsToCreate) {
     ImmutableSet<String> sourceAndCommentToCreate =
