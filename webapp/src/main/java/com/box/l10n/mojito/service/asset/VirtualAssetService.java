@@ -17,7 +17,6 @@ import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.okapi.InheritanceMode;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
-import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.assetExtraction.AssetExtractionRepository;
 import com.box.l10n.mojito.service.assetExtraction.AssetExtractionService;
 import com.box.l10n.mojito.service.assetExtraction.AssetTextUnitToTMTextUnitRepository;
@@ -40,7 +39,6 @@ import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
-import com.google.common.base.Strings;
 import com.ibm.icu.text.MessageFormat;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
@@ -468,14 +466,6 @@ public class VirtualAssetService {
     virtualAssetTextUnit.setDoNotTranslate(assetTextUnitDTO.isDoNotTranslate());
 
     return virtualAssetTextUnit;
-  }
-
-  void normalizeVirtualAssetTextUnit(VirtualAssetTextUnit virtualAssetTextUnit) {
-    virtualAssetTextUnit.setName(NormalizationUtils.normalize(virtualAssetTextUnit.getName()));
-    virtualAssetTextUnit.setContent(
-        NormalizationUtils.normalize(Strings.nullToEmpty(virtualAssetTextUnit.getContent())));
-    virtualAssetTextUnit.setComment(
-        NormalizationUtils.normalize(virtualAssetTextUnit.getComment()));
   }
 
   Asset getVirtualAsset(long assetId) throws VirtualAssetRequiredException {
