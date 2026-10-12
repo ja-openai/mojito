@@ -500,19 +500,6 @@ public class RepositoryStatisticService {
     return t -> Long.valueOf(wordCountService.getEnglishWordCount(t.getSource()));
   }
 
-  TextUnitAndWordCount getForTranslationStatistics(RepositoryLocale repositoryLocale) {
-    logger.debug("Compute \"for translation\" statistics using textunitsearcher");
-    TextUnitSearcherParameters textUnitSearcherParameters = new TextUnitSearcherParameters();
-    textUnitSearcherParameters.setRepositoryIds(repositoryLocale.getRepository().getId());
-    textUnitSearcherParameters.setStatusFilter(StatusFilter.FOR_TRANSLATION);
-    textUnitSearcherParameters.setLocaleId(repositoryLocale.getLocale().getId());
-    textUnitSearcherParameters.setUsedFilter(UsedFilter.USED);
-    textUnitSearcherParameters.setDoNotTranslateFilter(false);
-    TextUnitAndWordCount countTextUnitAndWordCount =
-        textUnitSearcher.countTextUnitAndWordCount(textUnitSearcherParameters);
-    return countTextUnitAndWordCount;
-  }
-
   TextUnitAndWordCount getUntranslatedTextUnitsCountBeforeCreatedDate(
       Long repositoryId, ZonedDateTime createdBefore) {
     logger.debug(
