@@ -447,7 +447,7 @@ public class PullCommand extends Command {
             .getTargetDirectoryPath()
             .resolve(sourceFileMatch.getTargetPath(localizedAsset.getBcp47Tag()));
 
-    if (skipWritingEmptyOutput(localizedAsset.getContent(), targetPath, sourceFileMatch)) {
+    if (skipWritingEmptyOutput(localizedAsset.getContent(), targetPath)) {
       return;
     }
 
@@ -457,8 +457,7 @@ public class PullCommand extends Command {
     consoleWriter.a(" --> ").fg(Color.MAGENTA).a(relativeTargetFilePath.toString()).println();
   }
 
-  boolean skipWritingEmptyOutput(String content, Path targetPath, FileMatch sourceFileMatch)
-      throws CommandException {
+  boolean skipWritingEmptyOutput(String content, Path targetPath) throws CommandException {
     if (!skipEmptyOutput || !(content == null || content.isBlank())) {
       return false;
     }

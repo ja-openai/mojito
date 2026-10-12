@@ -124,7 +124,7 @@ public class PullCommandParallel extends PullCommand {
             .getTargetDirectoryPath()
             .resolve(sourceFileMatch.getTargetPath(localizedAsset.getBcp47Tag()));
 
-    if (skipWritingEmptyOutput(localizedAsset.getContent(), targetPath, sourceFileMatch)) {
+    if (skipWritingEmptyOutput(localizedAsset.getContent(), targetPath)) {
       return;
     }
 
@@ -152,12 +152,7 @@ public class PullCommandParallel extends PullCommand {
 
   @Override
   synchronized void printSkippedEmptyOutputToConsole(Path relativeTargetFilePath) {
-    consoleWriter
-        .a(" --> ")
-        .fg(Ansi.Color.MAGENTA)
-        .a("skipped empty content: ")
-        .a(relativeTargetFilePath.toString())
-        .println();
+    super.printSkippedEmptyOutputToConsole(relativeTargetFilePath);
   }
 
   private PollableTask generateLocalizedFilesParallel(
