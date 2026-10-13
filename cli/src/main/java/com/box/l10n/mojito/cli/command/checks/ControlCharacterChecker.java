@@ -10,6 +10,9 @@ import java.util.stream.Collectors;
 
 public class ControlCharacterChecker extends AbstractCliChecker {
 
+  private static final CharMatcher DISALLOWED_CONTROL_CHARACTERS =
+      CharMatcher.anyOf("\t\r\n").negate().and(CharMatcher.javaIsoControl());
+
   class ControlCharacterCheckerResult {
     boolean isSuccessful = true;
     String failureText = "";
@@ -36,10 +39,7 @@ public class ControlCharacterChecker extends AbstractCliChecker {
     char[] characters = source.toCharArray();
     List<Integer> indexMatches = new ArrayList<>();
     for (int i = 0; i < characters.length; i++) {
-      if (CharMatcher.anyOf("\t\r\n")
-          .negate()
-          .and(CharMatcher.javaIsoControl())
-          .matches(characters[i])) {
+      if (DISALLOWED_CONTROL_CHARACTERS.matches(characters[i])) {
         indexMatches.add(i);
         result.isSuccessful = false;
       }
