@@ -12,16 +12,13 @@ import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import java.util.ArrayList;
 import java.util.List;
 import net.sf.okapi.common.Event;
-import net.sf.okapi.common.EventType;
 import net.sf.okapi.common.LocaleId;
 import net.sf.okapi.common.pipeline.annotations.StepParameterMapping;
 import net.sf.okapi.common.pipeline.annotations.StepParameterType;
-import net.sf.okapi.common.resource.ITextUnit;
 import net.sf.okapi.common.resource.Property;
 import net.sf.okapi.common.resource.RawDocument;
 import net.sf.okapi.common.resource.TextContainer;
 import net.sf.okapi.common.resource.TextFragment;
-import net.sf.okapi.common.skeleton.GenericSkeleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Configurable;
@@ -33,8 +30,6 @@ import org.springframework.beans.factory.annotation.Configurable;
 public class TranslateStep extends AbstractMd5ComputationStep {
 
   static Logger logger = LoggerFactory.getLogger(TranslateStep.class);
-
-  static final String ANDROID_FIRST_TEXT_UNIT_REGEX = "(?s)(^.*<resources>).*";
 
   Asset asset;
   RepositoryLocale repositoryLocale;
@@ -209,17 +204,6 @@ public class TranslateStep extends AbstractMd5ComputationStep {
     return removeUntranslatedStategyAnnotation == null
         ? RemoveUntranslatedStrategy.NOOP_EVENT
         : removeUntranslatedStategyAnnotation.getUntranslatedStrategy();
-  }
-
-  Event getEventForAndroidFirstTextUnit(ITextUnit textUnit) {
-    Event event = null;
-    String skeleton = textUnit.getSkeleton().toString();
-    if (skeleton.matches(ANDROID_FIRST_TEXT_UNIT_REGEX)) {
-      textUnit.setSkeleton(
-          new GenericSkeleton(skeleton.replaceAll(ANDROID_FIRST_TEXT_UNIT_REGEX, "$1")));
-      event = new Event(EventType.TEXT_UNIT, textUnit);
-    }
-    return event;
   }
 
   public List<Long> getUsedTmTextUnitVariantIds() {

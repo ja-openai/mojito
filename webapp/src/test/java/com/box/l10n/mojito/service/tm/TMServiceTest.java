@@ -2206,9 +2206,8 @@ public class TMServiceTest extends ServiceTestBase {
   }
 
   /**
-   * This test is to test AndroidStrings with REMOVE_UNTRANSLATED inheritance mode with a single
-   * item We need a special case in {@link com.box.l10n.mojito.okapi.TranslateStep} to keep the part
-   * of the skeleton that contains the begining of the document when skipping the text unit.
+   * Removing a single untranslated Android string preserves the XML declaration, comment, and
+   * resources element.
    *
    * @throws Exception
    */
