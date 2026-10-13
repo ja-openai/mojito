@@ -15,9 +15,12 @@ import com.ibm.icu.text.PluralRules.PluralType;
 import com.ibm.icu.util.IllformedLocaleException;
 import com.ibm.icu.util.ULocale;
 import java.math.BigDecimal;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,17 +49,18 @@ public final class Mf2TranslationIntegrityEvaluator {
     TranslationIntegrityEvaluation limits =
         TranslationIntegrityInputLimits.evaluate(source, target);
     if (limits.disposition() != TranslationIntegrityDisposition.PASS) return limits;
+    MarkupContracts markupContracts = new MarkupContracts();
     Model original;
     Model translated;
     try {
-      original = new Model(parse(source));
+      original = new Model(parse(source), markupContracts);
     } catch (MFParseException | IllegalArgumentException exception) {
       return new TranslationIntegrityEvaluation(
           List.of(TranslationIntegrityDiagnostic.sourceError("mf2-invalid-source", Map.of())),
           TranslationIntegrityDisposition.REJECT_SOURCE);
     }
     try {
-      translated = new Model(parse(target));
+      translated = new Model(parse(target), markupContracts);
     } catch (MFParseException | IllegalArgumentException exception) {
       return new TranslationIntegrityEvaluation(
           List.of(TranslationIntegrityDiagnostic.targetError("mf2-invalid-target", Map.of())),
@@ -276,6 +280,13 @@ public final class Mf2TranslationIntegrityEvaluator {
       List<Selector> selectors,
       ULocale locale,
       Set<TranslationIntegrityDiagnostic> diagnostics) {
+    if (!source
+        .patterns
+        .get(sourceRow.pattern)
+        .markup
+        .equals(target.patterns.get(targetRow.pattern).markup)) {
+      error(diagnostics, "mf2-markup-contract-changed", Map.of("variant", display(targetRow.keys)));
+    }
     List<Expression> expected = source.expressions(sourceRow.pattern);
     List<Expression> actual = target.expressions(targetRow.pattern);
     for (Expression expression : expected) {
@@ -425,6 +436,69 @@ public final class Mf2TranslationIntegrityEvaluator {
 
   private record Row(List<String> keys, MFDataModel.Pattern pattern) {}
 
+  private record PatternContract(List<Expression> expressions, MarkupShape markup) {}
+
+  private record MarkupToken(String name, String kind, Expression expression) {}
+
+  private record MarkupShape(List<Integer> roots, List<Expression> unpaired) {}
+
+  private record MarkupNode(Expression open, Expression close, List<Integer> children) {}
+
+  /**
+   * Intern subtree shapes within one evaluation. Child IDs make deeply nested comparisons iterative
+   * and linear in storage; sorting siblings permits translation reordering without losing nesting,
+   * multiplicity, options or attributes. IDs never escape this source/target comparison.
+   */
+  private static final class MarkupContracts {
+    private final Map<MarkupNode, Integer> nodes = new HashMap<>();
+
+    MarkupShape shape(List<MarkupToken> tokens) {
+      ArrayDeque<MarkupFrame> stack = new ArrayDeque<>();
+      stack.push(new MarkupFrame(null));
+      for (MarkupToken token : tokens) {
+        switch (token.kind) {
+          case "OPEN" -> stack.push(new MarkupFrame(token));
+          case "STANDALONE" -> stack.peek().children.add(intern(token.expression, null, List.of()));
+          case "CLOSE" -> {
+            if (stack.size() == 1 || !stack.peek().open.name.equals(token.name))
+              return unpaired(tokens);
+            MarkupFrame frame = stack.pop();
+            stack
+                .peek()
+                .children
+                .add(intern(frame.open.expression, token.expression, frame.children));
+          }
+          default -> throw new IllegalArgumentException("Unsupported markup kind");
+        }
+      }
+      if (stack.size() != 1) return unpaired(tokens);
+      List<Integer> roots = stack.pop().children;
+      Collections.sort(roots);
+      return new MarkupShape(List.copyOf(roots), List.of());
+    }
+
+    private int intern(Expression open, Expression close, List<Integer> children) {
+      if (children.size() > 1) Collections.sort(children);
+      MarkupNode node = new MarkupNode(open, close, List.copyOf(children));
+      return nodes.computeIfAbsent(node, ignored -> nodes.size());
+    }
+
+    private MarkupShape unpaired(List<MarkupToken> tokens) {
+      // MF2 permits non-HTML markup, including unpaired markers. Preserve that source contract
+      // exactly rather than incorrectly rejecting valid MF2 or imposing React rules globally.
+      return new MarkupShape(null, tokens.stream().map(MarkupToken::expression).toList());
+    }
+  }
+
+  private static final class MarkupFrame {
+    final MarkupToken open;
+    final List<Integer> children = new ArrayList<>();
+
+    MarkupFrame(MarkupToken open) {
+      this.open = open;
+    }
+  }
+
   private static final class Selector {
     final Expression expression;
     final PluralType pluralType;
@@ -483,10 +557,11 @@ public final class Mf2TranslationIntegrityEvaluator {
   private static final class Model {
     final Map<String, MFDataModel.Declaration> declarations = new HashMap<>();
     final Set<String> externalBindings = new HashSet<>();
+    final Map<MFDataModel.Pattern, PatternContract> patterns = new IdentityHashMap<>();
     final List<Expression> selectors;
     final List<Row> rows;
 
-    Model(MFDataModel.Message message) {
+    Model(MFDataModel.Message message, MarkupContracts markupContracts) {
       List<MFDataModel.Declaration> declared =
           message instanceof MFDataModel.SelectMessage select
               ? select.declarations
@@ -538,7 +613,24 @@ public final class Mf2TranslationIntegrityEvaluator {
         selectors = List.of();
         rows = List.of(new Row(List.of(), ((MFDataModel.PatternMessage) message).pattern));
       }
-      rows.forEach(row -> expressions(row.pattern));
+      for (Row row : rows) {
+        List<Expression> expressions = new ArrayList<>();
+        List<MarkupToken> markup = new ArrayList<>();
+        for (MFDataModel.PatternPart part : row.pattern.parts) {
+          if (part instanceof MFDataModel.Markup marker) {
+            markup.add(
+                new MarkupToken(
+                    marker.name,
+                    String.valueOf(marker.kind),
+                    resolve(marker, new HashSet<>(), false)));
+          } else if (part instanceof MFDataModel.Expression expression) {
+            expressions.add(resolve(expression, new HashSet<>(), false));
+          }
+        }
+        patterns.put(
+            row.pattern,
+            new PatternContract(List.copyOf(expressions), markupContracts.shape(markup)));
+      }
     }
 
     Expression binding(String name) {
@@ -558,11 +650,7 @@ public final class Mf2TranslationIntegrityEvaluator {
     }
 
     List<Expression> expressions(MFDataModel.Pattern pattern) {
-      return pattern.parts.stream()
-          .filter(MFDataModel.Expression.class::isInstance)
-          .map(MFDataModel.Expression.class::cast)
-          .map(expression -> resolve(expression, new HashSet<>(), false))
-          .toList();
+      return patterns.get(pattern).expressions;
     }
 
     Expression resolve(MFDataModel.Expression expression, Set<String> visiting, boolean input) {

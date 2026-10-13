@@ -14,6 +14,7 @@ import type {
   MF2Resources,
 } from "@mojito-mf2/react";
 import { MF2ParseError, parseMessage } from "@mojito-mf2/react/parser";
+import { FunctionRegistry } from "@mojito-mf2/core/formatter";
 import {
   validateMarkupParts,
   validateMessageMarkup,
@@ -35,11 +36,19 @@ const config: MF2Config = {
   sourceLocale: "en",
   timeZone: "UTC",
   bidiIsolation: "default",
+  formatterCacheSize: 32,
   onError(error, context) {
     const text: string = `${error.message}: ${context.resource}/${context.name}/${context.locale}`;
     void text;
   },
 };
+const customConfig: MF2Config = {
+  ...config,
+  functions: FunctionRegistry.portable().withFunction("app:upper", (call) =>
+    call.value.toUpperCase(),
+  ),
+};
+createMF2(customConfig);
 const formatter: MF2Runtime = createMF2(config);
 const args: MF2Arguments = {
   name: "reader",
@@ -117,6 +126,10 @@ formatter.render("guide", "terms", {}, { link: "a" });
 const missingIdentity = <MF2 name="terms" />;
 // @ts-expect-error unsupported isolation options must not silently pass through
 createMF2({ resources, locale: "en", bidiIsolation: "always" });
+// @ts-expect-error the registry accepts trusted function implementations, not source code
+createMF2({ resources, locale: "en", functions: "app:upper" });
+// @ts-expect-error cache capacity must be numeric
+createMF2({ resources, locale: "en", formatterCacheSize: "64" });
 // @ts-expect-error expression arguments do not carry rich React content
 formatter.format("guide", "terms", { name: <strong>Reader</strong> });
 // @ts-expect-error expression arguments are scalar values or dates, not objects

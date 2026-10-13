@@ -1,0 +1,25 @@
+{
+  "name": "@mojito-mf2/benchmarks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reproducible MF2 and FormatJS runtime, memory, and bundle comparisons.",
+  "scripts": {
+    "runtime": "NODE_ENV=production node --import ./scripts/register-dependencies.mjs scripts/runtime.mjs",
+    "memory": "NODE_ENV=production node --import ./scripts/register-dependencies.mjs --expose-gc scripts/memory.mjs",
+    "bundle": "node scripts/bundle.mjs"
+  },
+  "dependencies": {
+    "@formatjs/icu-messageformat-parser": "3.5.20",
+    "@mojito-mf2/core": "file:../javascript",
+    "@mojito-mf2/react": "file:../react",
+    "esbuild": "0.28.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-intl": "12.1.3",
+    "react-test-renderer": "18.3.1"
+  },
+  "engines": {
+    "node": ">=24.15"
+  }
+}

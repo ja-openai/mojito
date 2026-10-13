@@ -500,7 +500,7 @@ for (const groupUrl of adapterFixtureGroups) {
     }
   }
 }
-assert.equal(checkedSelectionCases, 47);
+assert.equal(checkedSelectionCases, 48);
 assert.equal(new MF2Error("test", "test").code, "test");
 assert.equal("partsToString" in core, false);
 assert.equal("formatMessageStrict" in core, false);

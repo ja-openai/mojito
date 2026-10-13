@@ -31,11 +31,13 @@ test("production package and markup exports import only formatter modules withou
   const result = run(
     `
     import { createMF2, MF2, MF2Provider, useMF2, renderMF2Parts } from "@mojito-mf2/react";
+    import { createMessages } from "@mojito-mf2/react/bindings";
     import { validateMessageMarkup } from "@mojito-mf2/react/markup";
     const message = { type: "message", declarations: [], pattern: ["Parsed catalog"] };
     validateMessageMarkup(message);
     const formatter = createMF2({ resources: { en: { guide: { hello: message } } }, locale: "en" });
     if (formatter.format("guide", "hello") !== "Parsed catalog") throw new Error("Formatting failed");
+    if (createMessages("guide").bind(formatter).format("hello") !== "Parsed catalog") throw new Error("Binding failed");
     if ([MF2, MF2Provider, useMF2, renderMF2Parts].some(value => typeof value !== "function")) throw new Error("Missing public export");
   `,
     true,

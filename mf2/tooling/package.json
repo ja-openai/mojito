@@ -1,0 +1,44 @@
+{
+  "name": "@mojito-mf2/tooling",
+  "version": "0.1.0",
+  "description": "Message contracts, translation checks and typed catalogs for Mojito MF2.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "bin": {
+    "mf2-catalog": "./src/cli.js"
+  },
+  "peerDependencies": {
+    "@mojito-mf2/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@mojito-mf2/core": "file:../javascript",
+    "@mojito-mf2/react": "file:../react",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "~5.6.3"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check:types": "tsc -p tsconfig.json",
+    "bench": "node --expose-gc tests/bench.js",
+    "example": "node examples/build.js"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

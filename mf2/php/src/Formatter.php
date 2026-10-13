@@ -216,11 +216,14 @@ final class FormatContext
     private function applyInputDeclaration(array $input): void
     {
         $functionRef = $input['value']['function'] ?? null;
-        if ($functionRef === null || !$this->functions->hasFormatter($functionRef) || !$this->functions->hasSelector($functionRef)) {
+        if ($functionRef === null || !$this->functions->hasFormatter($functionRef)) {
             return;
         }
         $name = normalize_string_key((string) ($input['name'] ?? ''));
         if (!$this->hasValue($name)) {
+            if (!$this->functions->hasSelector($functionRef)) {
+                return;
+            }
             if (!$this->fallback) {
                 throw MF2Error::missingArgument($name);
             }

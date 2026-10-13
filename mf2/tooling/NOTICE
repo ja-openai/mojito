@@ -1,0 +1,6 @@
+Mojito MessageFormat 2 catalog tooling
+Copyright Mojito contributors.
+
+These tools are licensed under Apache-2.0; see LICENSE.
+The separate @mojito-mf2/core dependency contains the formatter and generated
+CLDR data, with their own license and attribution notices.

@@ -6,6 +6,44 @@ import (
 	"testing"
 )
 
+func TestFormatterOnlyInputPreservesDisplayAndSource(t *testing.T) {
+	functions := PortableFunctionRegistry().WithFunction("display", func(call FunctionCall) (string, error) {
+		prefix, err := call.OptionValue("prefix", "")
+		return prefix + ":" + call.Value, err
+	}).WithFunction("inspect", func(call FunctionCall) (string, error) {
+		source := call.InheritedSource
+		if source == nil || source.Value != "12" || source.Function["name"] != "display" {
+			t.Fatalf("lost formatter-only input provenance: %+v", source)
+		}
+		prefix, err := source.OptionValue("prefix", "")
+		if err != nil || prefix != "USD" {
+			t.Fatalf("lost formatter-only input options: %q, %v", prefix, err)
+		}
+		return source.Value, nil
+	})
+	if functions.HasSelector(map[string]any{"name": "display"}) {
+		t.Fatal("regression requires a formatter without a selector")
+	}
+	parsed := ParseToModel(".input {$amount :display prefix=USD}\n.local $copy = {$amount}\n{{{$amount}|{$copy}|{$copy :inspect}}}")
+	if parsed.HasDiagnostics {
+		t.Fatal(parsed.Diagnostics)
+	}
+	result := FormatMessage(parsed.Model, map[string]any{"amount": 12}, Options{Functions: functions})
+	if result.HasErrors() || result.Value != "USD:12|USD:12|12" {
+		t.Fatal(result)
+	}
+
+	// Registering a formatter does not give its display string selection semantics.
+	parsed = ParseToModel(".input {$amount :display prefix=USD}\n.match $amount\n|USD:12| {{matched}}\n* {{fallback}}")
+	if parsed.HasDiagnostics {
+		t.Fatal(parsed.Diagnostics)
+	}
+	result = FormatMessage(parsed.Model, map[string]any{"amount": 12}, Options{Functions: functions})
+	if result.Value != "fallback" {
+		t.Fatal("formatter-only input unexpectedly selected a key", result)
+	}
+}
+
 func TestIntegerDecimalTruncationDoesNotNarrowToInt64(t *testing.T) {
 	for operand, want := range map[string]string{
 		"1e19": "10000000000000000000", "-1e19": "-10000000000000000000",

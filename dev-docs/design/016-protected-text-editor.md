@@ -486,6 +486,26 @@ invalid MF2 translations from being accepted, while an already rejected row may
 still be marked decided because that transition does not accept the invalid
 target.
 
+The structured editors in Workbench, Review Project and text-unit details also
+offer a collapsed **Preview with sample values** panel. Opening it analyzes the
+already parsed source with `@mojito-mf2/tooling`, derives external argument
+controls and formats the target in its locale using the shared React renderer.
+The panel stays unmounted while collapsed. It uses UTC for reproducible date
+samples, escapes interpolated values, and represents application-specific markup
+with labelled placeholders instead of executing uploaded components. Sample
+formatting errors are visible, but a successful sample is not proof that every
+branch or runtime value is correct. Existing save/accept validation remains the
+authority; preview controls do not change translation text or review state.
+
+Frontend and backend markup checks use the shared conformance fixtures. Balanced
+markup preserves hierarchy, names, multiplicity, options and attributes while
+allowing independent siblings to reorder. Generic MF2 unmatched markers preserve
+their exact sequence; they are not forced into an HTML tree. The browser reuses
+the tooling pattern checker without replacing the TMS's existing argument,
+declaration or locale plural policies. CLI catalog contracts are deliberately
+stricter about missing inputs and declaration changes, while the TMS retains its
+existing missing-argument warning and locale-required plural checks.
+
 ## Mobile Direction
 
 For iOS and Android, ProseMirror is not the runtime. The portable pieces should

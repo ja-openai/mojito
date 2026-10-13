@@ -47,6 +47,12 @@ not covered by a linear-cost claim. Custom callback histories can have additiona
 copying or disable memoization; consult each package's contract. There is no
 global cache retaining arbitrary message models or argument values.
 
+The JavaScript Intl adapter separately keeps a registry-owned LRU of host
+formatter configurations (64 by default, configurable from 0 to 1024). Entries
+contain only resolved locale/options and Intl formatter instances. They do not
+retain catalogs, input objects or output strings; disabling the cache changes
+construction cost, not formatting semantics.
+
 Python and JavaScript callbacks receive detached read-only function annotations
 and source metadata. Read function options through the callback API; edit the
 caller's catalog between format calls to change a message. Returned parts are

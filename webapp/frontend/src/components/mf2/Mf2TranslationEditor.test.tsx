@@ -105,6 +105,46 @@ function placeCaret(element: HTMLElement, offset: number) {
 }
 
 describe('Mf2TranslationEditor', () => {
+  it('keeps runtime preview identity separate from the editor and resets samples when source changes', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const user = userEvent.setup();
+    const editor = (source: string) => (
+      <Mf2TranslationEditor
+        locale="en"
+        showArgumentInputs={false}
+        showLocaleSelector={false}
+        showPreview={false}
+        showRuntimePreview
+        showSource={false}
+        source={source}
+        target={source}
+      />
+    );
+    const view = render(editor(COUNT_SOURCE));
+    const duplicateKeyWarnings = () =>
+      errors.mock.calls.filter((args) =>
+        args.some((arg) => typeof arg === 'string' && arg.includes('same key')),
+      );
+    try {
+      expect(duplicateKeyWarnings()).toHaveLength(0);
+      await user.click(screen.getByText('Preview with sample values'));
+      const input = await screen.findByLabelText('count');
+      await user.clear(input);
+      await user.type(input, '4');
+      expect(input).toHaveValue('4');
+
+      view.rerender(editor(COUNT_SOURCE.replace('files', 'items')));
+      expect(screen.queryByLabelText('Formatted message')).not.toBeInTheDocument();
+      await user.click(screen.getByText('Preview with sample values'));
+      expect(await screen.findByLabelText('count')).toHaveValue('1');
+      expect(screen.getByLabelText('Formatted message')).toHaveTextContent('items.');
+      expect(duplicateKeyWarnings()).toHaveLength(0);
+    } finally {
+      view.unmount();
+      errors.mockRestore();
+    }
+  });
+
   it('keeps source input syntax out of the guided editor and available while editing placeholders', async () => {
     const user = userEvent.setup();
     const { container } = render(

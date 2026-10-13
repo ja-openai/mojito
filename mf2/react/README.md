@@ -3,6 +3,7 @@
 `@mojito-mf2/react` renders parsed models from `@mojito-mf2/core`. It uses
 that engine's formatter and Intl registry, with React as a peer dependency.
 The package has no network client and makes no connection to Mojito.
+React 18.3 and React 19 are supported.
 
 ## Authoring
 
@@ -103,6 +104,7 @@ The entrypoints keep authoring and build tools separate:
 | `@mojito-mf2/react`        | `MF2Provider`, `MF2`, `useMF2`, and `createMF2` for rendering catalog messages; `renderMF2Parts` for adapters that already have formatted parts. No parser imports. |
 | `@mojito-mf2/react/parser` | `parseMessage` and `MF2ParseError` for build tools and development previews.                                                                                        |
 | `@mojito-mf2/react/markup` | `validateMessageMarkup` for existing models and `validateMarkupParts` for formatted parts. Neither parses source strings.                                           |
+| `@mojito-mf2/react/bindings` | `createMessages` for generated resource-specific React components and typed runtimes. No parser imports. |
 
 ## Formatting, fallback, and errors
 
@@ -128,6 +130,43 @@ precedence. `bidiIsolation` defaults to `default`. Rich output uses the core
 `partsToString` isolation markers for expressions, including their direction;
 string output follows the core formatter's numeric isolation optimizations.
 No HTML parsing or `dangerouslySetInnerHTML` is involved.
+
+### Application functions and formatter caches
+
+The default Intl registry retains up to 64 formatter configurations per provider
+or `createMF2` instance. Set `formatterCacheSize` to an integer from 0 to 1024;
+zero disables caching. The cache retains Intl instances and normalized options,
+not arguments, formatted strings, or catalogs.
+
+To add trusted application functions, supply a registry built in application
+code. The same registry is used for rich rendering, string formatting, and source
+fallback:
+
+```js
+import { createMF2 } from "@mojito-mf2/react";
+import { FunctionRegistry } from "@mojito-mf2/core/formatter";
+import { createIntlFunctionRegistry } from "@mojito-mf2/core/intl";
+
+const functions = createIntlFunctionRegistry(FunctionRegistry, {
+  timeZone: "UTC",
+  formatterCacheSize: 32,
+}).withFunction("app:upper", (call) => call.value.toUpperCase());
+// Message source: {$name :app:upper}
+const formatter = createMF2({ resources, locale: "en", functions });
+```
+
+`functions` is also a provider prop. A supplied registry owns its timezone,
+functions, selectors, and caches; provider `timeZone` and `formatterCacheSize`
+do not reconfigure it. Keep registry identity stable and replace the registry
+when changing its configuration. Registries and markup callbacks are trusted
+code, never downloaded as catalog content. Declare custom function signatures
+separately in the catalog tooling so it can validate arguments and translations.
+Pure callbacks support React's repeated rendering and server rendering.
+
+Generated resource bindings from `@mojito-mf2/react/bindings` provide a typed
+`useMF2()` hook. Its formatter and methods retain their identities while the
+underlying provider configuration remains unchanged, so they can be used safely
+as hook dependencies.
 
 ## Resources and loading
 
@@ -161,3 +200,12 @@ npm --prefix mf2/react ci
 npm --prefix mf2/react test
 npm --prefix mf2/react run check:types
 ```
+
+## Message-specific TypeScript bindings
+
+`@mojito-mf2/tooling` checks flat MF2 source/translation catalogs, compiles models,
+and generates bindings with exact message names, arguments and markup render
+callbacks. See the [catalog tooling workflow](../tooling/README.md). Generated
+bindings use `@mojito-mf2/react/bindings`, a small resource facade over this same
+renderer. They contain no runtime catalog schema and import no parser or compiler.
+The existing generic API remains available.

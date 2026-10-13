@@ -1,5 +1,6 @@
 import './mf2-translation-editor.css';
 
+import type { MF2Message } from '@mojito-mf2/core';
 import {
   forwardRef,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -30,6 +31,7 @@ import {
 } from './diagnostics';
 import { formNavigationIntent, formRowActivationIntent } from './keyboard';
 import { Mf2ProseMirrorEditor, type Mf2ProseMirrorEditorHandle } from './Mf2ProseMirrorEditor';
+import { Mf2RuntimePreview } from './Mf2RuntimePreview';
 import {
   addLocalePluralRows,
   cloneModel,
@@ -109,6 +111,7 @@ export type Mf2TranslationEditorProps = {
   showDebugTools?: boolean;
   showLocaleSelector?: boolean;
   showPreview?: boolean;
+  showRuntimePreview?: boolean;
   showSource?: boolean;
   source: string;
   submitLabel?: string;
@@ -159,6 +162,7 @@ export const Mf2TranslationEditor = forwardRef<
     showDebugTools = false,
     showLocaleSelector = true,
     showPreview = true,
+    showRuntimePreview = false,
     showSource = true,
     source,
     submitLabel = 'submit',
@@ -812,6 +816,15 @@ export const Mf2TranslationEditor = forwardRef<
             ))}
           </div>
         </details>
+      ) : null}
+
+      {showRuntimePreview && sourceModel?.rustModel ? (
+        <Mf2RuntimePreview
+          key={`runtime-preview:${source}`}
+          source={sourceModel.rustModel as MF2Message}
+          target={(targetModel?.rustModel as MF2Message | undefined) ?? null}
+          locale={locale}
+        />
       ) : null}
 
       {showPreview ? (

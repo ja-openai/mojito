@@ -14,6 +14,10 @@ tools, and shared examples:
 - `kotlin/`: native Kotlin/JVM parser/runtime package
 - `kotlin-icu4j/`: opt-in ICU4J formatter adapter for the Kotlin runtime package
 - `javascript/`: zero-dependency JavaScript parser/runtime package
+- `react/`: React 18/19 rendering, providers and typed bindings for precompiled catalogs
+- `tooling/`: browser-safe message contracts, translation checks, catalog compilation
+  and TypeScript generation, with a separate build-time CLI
+- `benchmarks/`: reproducible runtime, memory and delivery comparisons with FormatJS
 - `go/`: native Go parser/runtime package
 - `php/`: native PHP parser/runtime package using the built-in `intl` extension
   for Unicode NFC selector keys
@@ -38,6 +42,20 @@ MF2 source
 
 The official data model is the cross-language shape. Language-specific ASTs are
 allowed to differ.
+
+For React and trusted application MDX, start with the
+[catalog workflow](tooling/README.md) and [React integration](react/README.md).
+Explicit messages retain stable IDs, typed arguments and application-owned rich
+markup callbacks. Compilation runs at build time; applications load models by
+locale/resource. Server-rendered email can deliver only HTML, while interactive
+applications retain the formatter. Arbitrary component-tree extraction and DOM
+translation are outside this integration.
+
+Tooling's default capability profile describes the JavaScript Intl registry.
+Shared syntax/models do not imply identical platform formatter support. The
+[coverage audit](conformance/coverage-audit.md) records cross-language coverage;
+the [benchmarks](benchmarks/README.md) document measured performance and the
+remaining portable-plural bundle-size cost.
 
 ## Package Boundaries
 

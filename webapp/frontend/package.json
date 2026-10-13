@@ -36,6 +36,7 @@
     "@formatjs/icu-messageformat-parser": "^3.5.1",
     "@mojito-mf2/core": "file:../../mf2/javascript",
     "@mojito-mf2/react": "file:../../mf2/react",
+    "@mojito-mf2/tooling": "file:../../mf2/tooling",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-virtual": "^3.13.13",
     "@uiw/react-codemirror": "^4.25.10",

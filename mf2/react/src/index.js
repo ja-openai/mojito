@@ -69,12 +69,21 @@ export function createMF2({
   sourceLocale = "en",
   timeZone = "UTC",
   bidiIsolation = "default",
+  functions: configuredFunctions,
+  formatterCacheSize,
   onError,
 }) {
-  // Fail configuration errors early; never depend on the server/browser default zone.
-  new Intl.DateTimeFormat(locale, { timeZone });
-  new Intl.DateTimeFormat(sourceLocale, { timeZone });
-  const functions = createIntlFunctionRegistry(FunctionRegistry, { timeZone });
+  // Validate configuration without allocating native date formatters for the
+  // common UTC case. A custom zone still uses Intl's authoritative validation.
+  Intl.getCanonicalLocales(locale);
+  if (sourceLocale !== locale) Intl.getCanonicalLocales(sourceLocale);
+  if (timeZone !== "UTC") new Intl.DateTimeFormat(locale, { timeZone });
+  const functions =
+    configuredFunctions ??
+    createIntlFunctionRegistry(FunctionRegistry, {
+      timeZone,
+      formatterCacheSize,
+    });
   const report = (error, resource, name, language) =>
     onError?.(error instanceof Error ? error : new Error(String(error)), {
       resource,
@@ -141,6 +150,8 @@ export function MF2Provider({
   sourceLocale = "en",
   timeZone = "UTC",
   bidiIsolation = "default",
+  functions,
+  formatterCacheSize,
   onError,
 }) {
   const value = useMemo(
@@ -151,9 +162,20 @@ export function MF2Provider({
         sourceLocale,
         timeZone,
         bidiIsolation,
+        functions,
+        formatterCacheSize,
         onError,
       }),
-    [resources, locale, sourceLocale, timeZone, bidiIsolation, onError],
+    [
+      resources,
+      locale,
+      sourceLocale,
+      timeZone,
+      bidiIsolation,
+      functions,
+      formatterCacheSize,
+      onError,
+    ],
   );
   return React.createElement(MF2Context.Provider, { value }, children);
 }

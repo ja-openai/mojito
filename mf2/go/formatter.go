@@ -302,11 +302,14 @@ func (c *formatContext) applyDeclarations(declarations []any) error {
 func (c *formatContext) applyInputDeclaration(input map[string]any) error {
 	value := asObject(input["value"])
 	functionRef, ok := objectField(value, "function")
-	if !ok || !c.functions.HasFormatter(functionRef) || !c.functions.HasSelector(functionRef) {
+	if !ok || !c.functions.HasFormatter(functionRef) {
 		return nil
 	}
 	name := normalizeStringKey(stringField(input, "name"))
 	if !c.hasValue(name) {
+		if !c.functions.HasSelector(functionRef) {
+			return nil
+		}
 		if !c.fallback {
 			return missingArgument(name)
 		}

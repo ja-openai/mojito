@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the reference-derived 47-case corpus through real Mojito registries."""
+"""Exercise the reference-derived 48-case corpus through real Mojito registries."""
 import argparse
 import json
 from pathlib import Path
@@ -30,8 +30,8 @@ def main():
                 'source': fixture['source'], 'arguments': case['arguments'], 'locale': case['locale'],
                 'bidiIsolation': 'none', 'registry': args.registry, 'expected': case['expected'],
             }))
-    if len(cases) != 47:
-        raise ValueError(f'Expected the complete 47-case adapter corpus, got {len(cases)}')
+    if len(cases) != 48:
+        raise ValueError(f'Expected the complete 48-case adapter corpus, got {len(cases)}')
     responses = run_bridge(args.command, [request for _, request in cases])
     dispositions = json.loads(args.dispositions.read_text()) if args.dispositions else {}
     unused = set(dispositions)

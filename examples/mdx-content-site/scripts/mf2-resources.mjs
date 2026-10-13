@@ -3,6 +3,7 @@ import path from "node:path";
 import { parseMessage } from "@mojito-mf2/react/parser";
 import { FunctionRegistry } from "@mojito-mf2/core/formatter";
 import { createIntlFunctionRegistry } from "@mojito-mf2/core/intl";
+import { analyzeModel, checkContracts } from "@mojito-mf2/tooling";
 import { createMessageFormatter } from "../src/mf2-runtime.mjs";
 
 const functions = createIntlFunctionRegistry(FunctionRegistry);
@@ -226,6 +227,25 @@ export async function prepareMessageResources({
       )
         throw new Error(
           `French MF2 arguments, formatting or markup differ from source: ${file}#${name}`,
+        );
+      // This site's strict build profile preserves declarations, formatting and
+      // each branch's rich markup while allowing locale-specific plural forms.
+      // Reuse compiled models; translation validation must not reparse strings.
+      const sourceAnalysis = analyzeModel(originals[name]);
+      const targetAnalysis = analyzeModel(targets[name]);
+      const diagnostics = [
+        ...sourceAnalysis.diagnostics,
+        ...targetAnalysis.diagnostics,
+      ];
+      if (sourceAnalysis.ok && targetAnalysis.ok)
+        diagnostics.push(
+          ...checkContracts(sourceAnalysis.contract, targetAnalysis.contract, {
+            targetLocale: "fr",
+          }).diagnostics,
+        );
+      if (diagnostics.some((diagnostic) => diagnostic.severity === "error"))
+        throw new Error(
+          `French MF2 translation contract differs from source: ${file}#${name}: ${diagnostics.map((diagnostic) => diagnostic.message).join(" ")}`,
         );
     }
   }

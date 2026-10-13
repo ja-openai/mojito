@@ -6,10 +6,65 @@ import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic.Severity;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDisposition;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityEvaluation;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class Mf2TranslationIntegrityEvaluatorTest {
+
+  @Test
+  void matchesSharedRichMarkupContractFixtures() throws Exception {
+    for (String file : List.of("markup-contract.json", "markup-model-contract.json")) {
+      Path fixtures = Path.of("../mf2/conformance/fixtures", file);
+      JsonNode cases = new ObjectMapper().readTree(fixtures.toFile());
+      assertThat(cases.size()).isGreaterThan(0);
+      for (JsonNode fixture : cases) {
+        TranslationIntegrityEvaluation result =
+            check(
+                fixture.get("source").asText(),
+                fixture.get("target").asText(),
+                fixture.get("locale").asText());
+        assertThat(result.disposition())
+            .as(fixture.get("name").asText())
+            .isEqualTo(
+                fixture.get("valid").asBoolean()
+                    ? TranslationIntegrityDisposition.PASS
+                    : TranslationIntegrityDisposition.REJECT_TARGET);
+      }
+    }
+  }
+
+  @Test
+  void preservesMarkupOptionsAttributesAndExternalInputs() {
+    String source = "{#link href=$url @id=help}Help{/link}";
+    passes(check(source, "{#link href = $url @id=|help|}Aide{/link}", "fr"));
+    rejects(check(source, source.replace("$url", "$other"), "fr"), "mf2-unknown-binding");
+    rejects(
+        check(source, source.replace("@id=help", "@id=other"), "fr"),
+        "mf2-markup-contract-changed");
+    rejects(
+        check(source, source.replace("href=$url", "href=|https://example.com|"), "fr"),
+        "mf2-markup-contract-changed");
+  }
+
+  @Test
+  void preservesValidNonHtmlMarkupWithoutImposingReactNesting() {
+    String source = "{#style weight=bold}Hello";
+    passes(check(source, "{#style weight=bold}Bonjour", "fr"));
+    rejects(check(source, "{#style weight=normal}Bonjour", "fr"), "mf2-markup-contract-changed");
+  }
+
+  @Test
+  void handlesDeepMarkupWithoutRecursiveTreeComparison() {
+    String open = "{#b}".repeat(2_000);
+    String close = "{/b}".repeat(2_000);
+    passes(check(open + "Hello" + close, open + "Bonjour" + close, "fr"));
+    rejects(
+        check(open + "Hello" + close, open + "Bonjour" + close.substring(4), "fr"),
+        "mf2-markup-contract-changed");
+  }
 
   private static final String SOURCE =
       ".input {$count :number}\n.match $count\none {{One item for {$name}}}\n* {{{ $count } items for {$name}}}";

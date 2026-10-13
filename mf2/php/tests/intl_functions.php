@@ -139,7 +139,7 @@ foreach ($fixturePatterns as $fixturePattern) {
         }
     }
 }
-assert_same('adapter differential case count', 47, $checkedSelectionCases);
+assert_same('adapter differential case count', 48, $checkedSelectionCases);
 
 // Explicit numbering systems keep this regression independent of ICU's locale defaults.
 $offsetSource = json_decode((string) file_get_contents("{$selectionFixtureRoot}/adapters/offset-variable.json"), true, flags: JSON_THROW_ON_ERROR)['source'];

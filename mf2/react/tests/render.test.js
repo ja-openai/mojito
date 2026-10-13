@@ -13,6 +13,11 @@ import {
 } from "@mojito-mf2/react";
 import { MF2ParseError, parseMessage } from "@mojito-mf2/react/parser";
 import { validateMarkupParts } from "@mojito-mf2/react/markup";
+import { createMessages } from "@mojito-mf2/react/bindings";
+import { FunctionRegistry } from "@mojito-mf2/core/formatter";
+import { createIntlFunctionRegistry } from "@mojito-mf2/core/intl";
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const h = React.createElement;
 const html = (value) => renderToStaticMarkup(h(React.Fragment, null, value));
@@ -573,4 +578,120 @@ test("hooks require a provider and inherited object keys cannot resolve catalog 
   const formatter = formatterFor({});
   assert.equal(formatter.format("guide", "constructor"), "guide#constructor");
   assert.equal(formatter.format("toString", "name"), "toString#name");
+});
+
+test("trusted registries extend formatting and retain fallback diagnostics and locale", () => {
+  const calls = [];
+  const functions = createIntlFunctionRegistry(FunctionRegistry, {
+    timeZone: "UTC",
+  }).withFunction("app:upper", (call) => {
+    calls.push(call.locale);
+    if (call.locale === "fr") throw new Error("Custom formatter failed");
+    return call.value.toUpperCase();
+  });
+  const message = model("{$name :app:upper}: {$count :number}");
+  const reports = [];
+  const formatter = createMF2({
+    resources: {
+      fr: { guide: { message } },
+      en: { guide: { message } },
+    },
+    locale: "fr",
+    functions,
+    // The application-owned registry configures its own cache.
+    formatterCacheSize: -1,
+    bidiIsolation: "none",
+    onError: (error, context) => reports.push({ error, context }),
+  });
+  assert.equal(
+    formatter.format("guide", "message", { name: "reader", count: 1234 }),
+    "READER: 1,234",
+  );
+  assert.equal(
+    html(formatter.render("guide", "message", { name: "reader", count: 1234 })),
+    "READER: 1,234",
+  );
+  assert.deepEqual(calls, ["fr", "en", "fr", "en"]);
+  assert.equal(reports.length, 2);
+  assert.ok(reports.every(({ context }) => context.locale === "fr"));
+});
+
+test("builtin formatter cache capacity is configurable and validated", (t) => {
+  const NativeNumberFormat = Intl.NumberFormat;
+  let constructed = 0;
+  t.mock.method(Intl, "NumberFormat", function (...args) {
+    constructed++;
+    return new NativeNumberFormat(...args);
+  });
+  const messages = { count: model("{$count :number}") };
+  const cached = formatterFor(messages, { formatterCacheSize: 1 });
+  const uncached = formatterFor(messages, { formatterCacheSize: 0 });
+  for (const count of [1, 2, 3]) {
+    assert.equal(cached.format("guide", "count", { count }), String(count));
+    assert.equal(uncached.format("guide", "count", { count }), String(count));
+  }
+  assert.equal(constructed, 4);
+  assert.throws(
+    () => formatterFor(messages, { formatterCacheSize: -1 }),
+    RangeError,
+  );
+});
+
+test("typed hooks remain stable until provider configuration changes, including registries", () => {
+  const { useMF2: useMessages } = createMessages("guide");
+  const resources = resourcesFor({ hello: model("{$name :app:case}") });
+  const upper = FunctionRegistry.portable().withFunction("app:case", (call) =>
+    call.value.toUpperCase(),
+  );
+  const lower = FunctionRegistry.portable().withFunction("app:case", (call) =>
+    call.value.toLowerCase(),
+  );
+  const snapshots = [];
+  function View() {
+    const formatter = useMessages();
+    snapshots.push(formatter);
+    return h("p", null, formatter.format("hello", { name: "Reader" }));
+  }
+  const view = (functions) =>
+    h(
+      MF2Provider,
+      { resources, locale: "en", functions, bidiIsolation: "none" },
+      h(View),
+    );
+  let tree;
+  try {
+    act(() => {
+      tree = TestRenderer.create(view(upper));
+    });
+    assert.equal(tree.toJSON().children[0], "READER");
+    act(() => tree.update(view(upper)));
+    assert.equal(snapshots[0], snapshots[1]);
+    assert.equal(snapshots[0].format, snapshots[1].format);
+    act(() => tree.update(view(lower)));
+    assert.equal(tree.toJSON().children[0], "reader");
+    assert.notEqual(snapshots[1], snapshots[2]);
+  } finally {
+    if (tree) act(() => tree.unmount());
+  }
+});
+
+test("configuration validation rejects malformed locales before formatting", () => {
+  const messages = { hello: model("Hello") };
+  for (const timeZone of ["UTC", "Europe/Paris"]) {
+    for (const locale of ["en_US", "not a locale"]) {
+      assert.throws(
+        () => formatterFor(messages, { locale, timeZone }),
+        RangeError,
+      );
+      assert.throws(
+        () => formatterFor(messages, { sourceLocale: locale, timeZone }),
+        RangeError,
+      );
+    }
+  }
+  // Well-formed unsupported locales retain Intl fallback behavior.
+  assert.equal(
+    formatterFor(messages, { locale: "zz" }).format("guide", "hello"),
+    "Hello",
+  );
 });

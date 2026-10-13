@@ -1,0 +1,5 @@
+{
+  "cart.summary": ".input {$count :number}\n.match $count\none {{Vous avez {$count} article.}}\n* {{Vous avez {$count} articles.}}",
+  "welcome": "Bienvenue, {$name}. Consultez les {#terms}conditions{/terms}.",
+  "save": "Enregistrer"
+}

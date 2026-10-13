@@ -5,7 +5,7 @@ and the direct upstream official-corpus bridge for one runtime. Both portable
 and platform registry results use maintained, case-specific dispositions from
 `mf2/conformance/official-dispositions/`. Missing disposition files fail the gate.
 Go currently has no separate platform formatter, so its CI gate runs only the
-portable official corpus. The other seven runtimes also run the shared 47-case
+portable official corpus. The other seven runtimes also run the shared 48-case
 platform adapter corpus. Any reviewed adapter differences are pinned separately
 in `mf2/conformance/adapter-dispositions/<runtime>-platform.json`.
 

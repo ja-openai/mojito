@@ -202,8 +202,9 @@ private class FormatContext(
     private fun applyInputDeclaration(input: Map<String, Any?>) {
         val name = normalizeStringKey(stringValue(input["name"]))
         val functionRef = (asMap(input["value"])["function"] as? Map<String, Any?>)?.let(::immutableFunction) ?: return
-        if (!functions.hasFormatter(functionRef) || !functions.hasSelector(functionRef)) return
+        if (!functions.hasFormatter(functionRef)) return
         if (!hasValue(name)) {
+            if (!functions.hasSelector(functionRef)) return
             if (!fallback) throw Mf2Error.missingArgument(name)
             failedLocals += name
             errors += unresolvedVariable(name)

@@ -15,6 +15,41 @@ fn render(source: &str, value: &str, locale: &str) -> mojito_mf2::FormatResult {
 }
 
 #[test]
+fn formatter_only_input_preserves_display_and_source() {
+    use mojito_mf2::FunctionRegistry;
+    let functions = FunctionRegistry::portable()
+        .with_function("display", |call| {
+            Ok(format!(
+                "{}:{}",
+                call.option_value("prefix")?.unwrap_or_default(),
+                call.value()
+            ))
+        })
+        .with_function("inspect", |call| {
+            let source = call.inherited_source().expect("input source is retained");
+            assert_eq!(source.value(), "12");
+            assert_eq!(source.function().name, "display");
+            assert_eq!(source.option_value("prefix")?.as_deref(), Some("USD"));
+            Ok(source.value().to_string())
+        });
+    let model = parse_to_model(
+        ".input {$amount :display prefix=USD}\n.local $copy = {$amount}\n{{{$amount}|{$copy}|{$copy :inspect}}}",
+    ).model.expect("valid input declaration");
+    let args = Arguments::new().with("amount", 12);
+    let options = FormatOptions::new("en").with_functions(&functions);
+    let result = format_message_with_options(&model, &args, &options).unwrap();
+    assert_eq!(result.value, "USD:12|USD:12|12");
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+
+    // Registering a formatter does not give its display string selection semantics.
+    let model = parse_to_model(
+        ".input {$amount :display prefix=USD}\n.match $amount\n|USD:12| {{matched}}\n* {{fallback}}",
+    ).model.expect("valid selector syntax");
+    let result = format_message_with_options(&model, &args, &options).unwrap();
+    assert_eq!(result.value, "fallback");
+}
+
+#[test]
 fn exact_decimal_arithmetic_and_large_values() {
     for (source, value, expected) in [
         ("{$x :offset add=0}", "0.29", "0.29"),

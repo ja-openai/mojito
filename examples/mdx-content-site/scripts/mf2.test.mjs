@@ -345,13 +345,16 @@ test("catalog contracts reject dropped, added, recast and repeated markup", asyn
   }
 });
 
-test("catalog contracts allow reordering and valid nesting changes within a markup shape", async (t) => {
+test("catalog contracts reject changed parent-child nesting within the same markup shape", async (t) => {
   const paths = await fixture(t);
   await editCatalog(paths, (catalog) => {
     catalog["calendar.terms"] =
       "{#br /}Consultez {#strong}nos{/strong} {#termsLink}conditions{/termsLink}.";
   });
-  await assert.doesNotReject(prepareContent(paths));
+  await assert.rejects(
+    prepareContent(paths),
+    /translation contract differs.*calendar\.terms/,
+  );
 });
 
 test("catalog contracts allow added plural branches that repeat source markup shapes", async (t) => {
@@ -369,6 +372,75 @@ test("catalog contracts allow added plural branches that repeat source markup sh
       ".input {$count :number}\n.match $count\none {{{#strong}{$count} séance{/strong}}}\nmany {{{#termsLink}{$count} séances{/termsLink}}}\n* {{{#termsLink}{$count} séances{/termsLink}}}";
   });
   await assert.doesNotReject(prepareContent(paths));
+});
+
+test("catalog preparation rejects replacement or removal of source link bindings", async (t) => {
+  for (const change of [
+    (message) => message.replaceAll("termsLink", "em"),
+    (message) =>
+      message.replaceAll("{#termsLink}", "").replaceAll("{/termsLink}", ""),
+  ]) {
+    const paths = await fixture(t);
+    await editCatalog(paths, (catalog) => {
+      catalog["calendar.terms"] = change(catalog["calendar.terms"]);
+    });
+    await assert.rejects(
+      prepareContent(paths),
+      /(?:translation contract|arguments, formatting or markup) differ.*calendar\.terms/,
+    );
+  }
+});
+
+test("catalog preparation permits sibling markup to reorder within its source link", async (t) => {
+  const paths = await fixture(t);
+  const sourceFile = path.join(paths.projectDirectory, "content", resource);
+  const source = JSON.parse(await readFile(sourceFile, "utf8"));
+  source["calendar.terms"] =
+    "Read {#termsLink}{#strong}terms{/strong} and {#em}conditions{/em}{/termsLink}.{#br /}Learn more.";
+  await writeFile(sourceFile, JSON.stringify(source));
+  await editCatalog(paths, (catalog) => {
+    catalog["calendar.terms"] =
+      "Lisez {#termsLink}{#em}les conditions{/em} et {#strong}les termes{/strong}{/termsLink}.{#br /}En savoir plus.";
+  });
+  await prepareContent(paths);
+  const resources = JSON.parse(
+    await readFile(
+      path.join(paths.projectDirectory, ".generated/resources.json"),
+      "utf8",
+    ),
+  );
+  assert.equal(
+    createMessageFormatter(resources, "fr")(resource, "calendar.terms"),
+    "Lisez les conditions et les termes.En savoir plus.",
+  );
+});
+
+test("catalog preparation checks rich markup in added locale plural branches", async (t) => {
+  const paths = await fixture(t);
+  const sourceFile = path.join(paths.projectDirectory, "content", resource);
+  const source = JSON.parse(await readFile(sourceFile, "utf8"));
+  source["calendar.summary"] = source["calendar.summary"].replaceAll(
+    "{$count}",
+    "{#termsLink}{$count}{/termsLink}",
+  );
+  await writeFile(sourceFile, JSON.stringify(source));
+  await editCatalog(paths, (catalog) => {
+    catalog["calendar.summary"] = catalog["calendar.summary"].replaceAll(
+      "{$count}",
+      "{#termsLink}{$count}{/termsLink}",
+    );
+  });
+  await prepareContent(paths);
+  await editCatalog(paths, (catalog) => {
+    catalog["calendar.summary"] = catalog["calendar.summary"].replace(
+      "many {{Vous avez {#termsLink}{$count}{/termsLink}",
+      "many {{Vous avez {$count}",
+    );
+  });
+  await assert.rejects(
+    prepareContent(paths),
+    /(?:translation contract|arguments, formatting or markup) differ.*calendar\.summary/,
+  );
 });
 
 test("HTML binding rules reject paired br and nested links before publishing and during rendering", async (t) => {

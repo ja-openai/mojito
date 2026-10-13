@@ -295,6 +295,7 @@ export function TextAssistPrototypePage() {
             showArgumentInputs={false}
             showLocaleSelector={false}
             showPreview={false}
+            showRuntimePreview
             source={MF2_TRANSLATION_SOURCE}
             target={mf2Translation}
           />

@@ -2,6 +2,8 @@
 
 import { describe, expect, it } from 'vitest';
 
+import markupCases from '../../../../../mf2/conformance/fixtures/markup-contract.json';
+import modelCases from '../../../../../mf2/conformance/fixtures/markup-model-contract.json';
 import { mf2TranslationErrors } from './translationValidation';
 
 const source = `.input {$status :string}
@@ -17,6 +19,10 @@ function errors(original: string, target: string, locale = 'fr') {
 }
 
 describe('MF2 protected skeleton', () => {
+  it.each([...markupCases, ...modelCases])('matches shared markup contract: $name', (fixture) => {
+    expect(errors(fixture.source, fixture.target, fixture.locale).length === 0).toBe(fixture.valid);
+  });
+
   it('allows translation, newlines, literal braces, and reordered placeholders', () => {
     const target = source.replace(
       'Jobs for {$name}: {$count}.',

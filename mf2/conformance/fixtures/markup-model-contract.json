@@ -1,0 +1,58 @@
+[
+  {
+    "name": "unpaired opening markers retain their order",
+    "source": "{#style weight=bold}Hello {#color value=blue}world",
+    "target": "{#style weight=|bold|}Bonjour {#color value=|blue|}monde",
+    "locale": "fr",
+    "valid": true
+  },
+  {
+    "name": "unpaired opening markers cannot change order",
+    "source": "{#style}Hello {#color}world",
+    "target": "{#color}Bonjour {#style}monde",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "crossed generic markers retain their sequence",
+    "source": "{#a}{#b}Hello{/a}{/b}",
+    "target": "{#a}{#b}Bonjour{/a}{/b}",
+    "locale": "fr",
+    "valid": true
+  },
+  {
+    "name": "crossed generic markers cannot change sequence",
+    "source": "{#a}{#b}Hello{/a}{/b}",
+    "target": "{#b}{#a}Bonjour{/b}{/a}",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "options and attributes permit equivalent quoted literals",
+    "source": "{#link href=$url @id=help}Help{/link @end=help}",
+    "target": "{#link href = $url @id=|help|}Aide{/link @end=|help|}",
+    "locale": "fr",
+    "valid": true
+  },
+  {
+    "name": "changed unpaired marker options are rejected",
+    "source": "{#style weight=bold}Hello",
+    "target": "{#style weight=normal}Bonjour",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "changed closing attributes are rejected",
+    "source": "{#link}Help{/link @id=help}",
+    "target": "{#link}Aide{/link @id=other}",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "literal options cannot replace external option values",
+    "source": "{#link href=$url}Help{/link}",
+    "target": "{#link href=|https://example.com|}Aide{/link}",
+    "locale": "fr",
+    "valid": false
+  }
+]

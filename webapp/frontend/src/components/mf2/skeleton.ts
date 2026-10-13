@@ -1,4 +1,5 @@
 import type { MF2Message, MF2Pattern, MF2VariantKey } from '@mojito-mf2/core';
+import { checkMarkupPatterns } from '@mojito-mf2/tooling';
 
 import { isOptionalCounterExpression, optionalCounterNames } from './optionalCounter';
 
@@ -72,12 +73,6 @@ function protectedPartsMatch(
     if (index >= 0) targetParts.splice(index, 1);
   }
   return signature(sourceParts) === signature(targetParts);
-}
-
-function markupOrder(pattern: MF2Pattern) {
-  return pattern
-    .filter((part) => typeof part !== 'string' && part.type === 'markup')
-    .map(signature);
 }
 
 export function mf2SkeletonDiagnostics(
@@ -171,7 +166,7 @@ export function mf2SkeletonDiagnostics(
         optionalCounters,
         selectorCounters,
       ) ||
-      signature(markupOrder(original.value)) !== signature(markupOrder(targetPattern.value))
+      !checkMarkupPatterns(original.value, targetPattern.value, { profile: 'model' }).ok
     ) {
       const formLabel = label(targetPattern.keys, selectors);
       issues.push({

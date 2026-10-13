@@ -763,6 +763,24 @@
   padding: 8px;
 }
 
+.mf2-runtime-preview {
+  border-top: 1px solid var(--color-border);
+  padding: 8px;
+}
+
+.mf2-runtime-preview > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.mf2-runtime-preview .mf2-preview-row {
+  padding: 8px 0;
+}
+
+.mf2-preview-component {
+  border-bottom: 1px dotted currentColor;
+}
+
 .mf2-debug pre {
   background: var(--color-surface-muted);
   border-radius: 8px;

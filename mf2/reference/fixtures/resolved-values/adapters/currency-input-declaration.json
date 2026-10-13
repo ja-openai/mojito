@@ -1,0 +1,12 @@
+{
+  "name": "adapter-currency-input-declaration",
+  "source": ".input {$amount :currency currency=USD}\n.local $copy = {$amount}\n.local $plain = {$copy :number}\n{{{$amount}; {$copy}; {$copy :currency}; {$plain :currency currency=EUR}}}",
+  "formatCases": [
+    {
+      "name": "formatter-only-input-preserves-options-and-operand",
+      "locale": "en",
+      "arguments": { "amount": 12 },
+      "expected": "$12.00; $12.00; $12.00; €12.00"
+    }
+  ]
+}

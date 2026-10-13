@@ -496,6 +496,7 @@ export function TextUnitDetailPageView({
                   showArgumentInputs={false}
                   showLocaleSelector={false}
                   showPreview={false}
+                  showRuntimePreview
                   showSource={false}
                   source={keyInfo.source}
                   target={editorInfo.target}

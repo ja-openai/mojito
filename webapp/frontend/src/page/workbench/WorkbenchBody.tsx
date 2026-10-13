@@ -773,6 +773,7 @@ export function WorkbenchBody({
                           showArgumentInputs={false}
                           showLocaleSelector={false}
                           showPreview={false}
+                          showRuntimePreview
                           showSource={false}
                           source={row.source}
                           submitLabel="accept"

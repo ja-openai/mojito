@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import type { MF2BidiIsolation, MF2Part } from "@mojito-mf2/core/formatter";
+import type {
+  FunctionRegistry,
+  MF2BidiIsolation,
+  MF2Part,
+} from "@mojito-mf2/core/formatter";
 import type { MF2Message } from "@mojito-mf2/core";
 
 export type MF2Resources = Record<
@@ -20,6 +24,10 @@ export type MF2Config = {
   sourceLocale?: string;
   timeZone?: string;
   bidiIsolation?: MF2BidiIsolation;
+  /** Trusted application registry; owns its formatter configuration and caches. */
+  functions?: FunctionRegistry;
+  /** Builtin Intl cache capacity, 0–1024 (default 64). Ignored with functions. */
+  formatterCacheSize?: number;
   onError?: (
     error: Error,
     context: { resource: string; name: string; locale: string },

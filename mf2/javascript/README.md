@@ -79,6 +79,15 @@ canonical option names. Legacy `length`, `precision`, `dateLength`,
 `timePrecision`, and shared `style` aliases are accepted for parity with the
 other runtimes.
 
+Each Intl registry keeps at most 64 recently used host formatter configurations.
+This avoids repeatedly constructing `Intl.NumberFormat`, `Intl.DateTimeFormat`
+and `Intl.RelativeTimeFormat` for the same locale and options. The cache contains
+no catalog models, argument objects, or formatted results and is released with
+the registry (copies made with `withFunction` share its bounded cache). Set
+`formatterCacheSize` to an integer from 0 to 1024 when creating the registry to
+choose another bound; 0 disables caching. Variable option values are resolved on
+every call before lookup, and failed formatter constructions are never cached.
+
 Numeric operands for `:number`, `:integer`, and `:percent` are limited to
 JavaScript's safe integer range. Integral strings and `BigInt` values outside
 that range are rejected with an MF2 diagnostic instead of being silently

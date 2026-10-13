@@ -1,7 +1,7 @@
 # Vite MDX content site: English → Mojito → French
 
 A small, neutral website called **Commonplace**, with two pages and six MDX
-modules plus an MF2 catalog: **nine assets and 25 strings**. The same files are fixtures for the
+modules plus an MF2 catalog: **nine assets and 26 strings**. The same files are fixtures for the
 Java CLI integration test. Every paragraph, heading, list item, and quote has an
 explicit `mojito-id`. The demo uses language-only locales, `en` and `fr`.
 
@@ -431,9 +431,13 @@ references, and sample inputs. Source and target must have the same set of
 per-pattern markup shapes, counting paired and standalone occurrences of each
 markup name.
 Each distinct source shape must remain present; additional translated plural
-branches may repeat a source shape, and markup can be reordered. This check does
-not establish which selector branch corresponds to which source branch, or
-coverage of hidden forms and runtime states.
+branches may repeat a source shape. The shared tooling then checks the corresponding
+branches and preserves their parent/child markup associations. Complete sibling
+subtrees may reorder, but moving emphasis out of its source link is rejected even
+when the tag counts match. This intentionally tightens the earlier shape-only
+check. The English/French build's strict contracts also protect declarations and
+formatting; they do not replace Mojito's review warning/save policy or establish
+coverage of every runtime value.
 
 The build writes `.generated/resources.json`. Vite bundles those models with the
 site; browser and prerendering use the core formatter and Intl entrypoints.

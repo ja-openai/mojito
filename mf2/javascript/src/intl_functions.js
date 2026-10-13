@@ -10,41 +10,43 @@ import { registerNumericSelectors } from "./numeric_selectors.js";
 import { parseNonNegativeOption } from "./unlocalized_numeric_functions.js";
 import { formatOffset } from "./offset_function.js";
 import { markNumericFunctions, markNumericSelectionGuard } from "./numeric_registry_metadata.js";
+import { createIntlFormatterCache } from "./intl_formatter_cache.js";
 
-export function createIntlFunctionRegistry(FunctionRegistry, { timeZone } = {}) {
+export function createIntlFunctionRegistry(FunctionRegistry, { timeZone, formatterCacheSize = 64 } = {}) {
+  const intlFormatter = createIntlFormatterCache(formatterCacheSize);
   const formatters = new Map();
   const selectors = new Map();
   formatters.set("string", (call) => call.value);
-  formatters.set("number", formatIntlNumber);
-  formatters.set("percent", formatIntlPercent);
-  formatters.set("integer", formatIntlInteger);
-  formatters.set("currency", formatIntlCurrency);
-  formatters.set("date", (call) => formatIntlDate(call, timeZone));
-  formatters.set("time", (call) => formatIntlTime(call, timeZone));
-  formatters.set("datetime", (call) => formatIntlDateTime(call, timeZone));
-  formatters.set("relativeTime", formatIntlRelativeTime);
+  formatters.set("number", (call) => formatIntlNumber(call, intlFormatter));
+  formatters.set("percent", (call) => formatIntlPercent(call, intlFormatter));
+  formatters.set("integer", (call) => formatIntlInteger(call, intlFormatter));
+  formatters.set("currency", (call) => formatIntlCurrency(call, intlFormatter));
+  formatters.set("date", (call) => formatIntlDate(call, timeZone, intlFormatter));
+  formatters.set("time", (call) => formatIntlTime(call, timeZone, intlFormatter));
+  formatters.set("datetime", (call) => formatIntlDateTime(call, timeZone, intlFormatter));
+  formatters.set("relativeTime", (call) => formatIntlRelativeTime(call, intlFormatter));
   formatters.set("offset", formatOffset);
   registerNumericSelectors(selectors);
   const registry = markNumericFunctions(new FunctionRegistry(formatters, selectors), ["number", "integer", "percent", "currency"]);
   return markNumericSelectionGuard(registry, ["number", "integer", "percent", "offset"], validateIntlNumericSelection);
 }
 
-function formatIntlNumber(call) {
+function formatIntlNumber(call, intlFormatter) {
   const value = parseCallNumber(call, "Number function requires a numeric operand.");
-  return numberFormatter(call.locale, call, {}).format(value);
+  return numberFormatter(call.locale, call, {}, intlFormatter).format(value);
 }
 
-function formatIntlPercent(call) {
+function formatIntlPercent(call, intlFormatter) {
   const value = parseCallNumber(call, "Percent function requires a numeric operand.");
-  return numberFormatter(call.locale, call, { style: "percent" }).format(value);
+  return numberFormatter(call.locale, call, { style: "percent" }, intlFormatter).format(value);
 }
 
-function formatIntlInteger(call) {
+function formatIntlInteger(call, intlFormatter) {
   const value = parseCallNumber(call, "Integer function requires a numeric operand.");
-  return numberFormatter(call.locale, call, { maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(Math.trunc(value));
+  return numberFormatter(call.locale, call, { maximumFractionDigits: 0, minimumFractionDigits: 0 }, intlFormatter).format(Math.trunc(value));
 }
 
-function formatIntlCurrency(call) {
+function formatIntlCurrency(call, intlFormatter) {
   const value = parseCallNumber(call, "Currency function requires a numeric operand.");
   const directCurrency = call.optionValue("currency", MISSING_OPTION);
   const inheritedCurrency = currencyOptionFrom(call.inheritedSource);
@@ -56,37 +58,39 @@ function formatIntlCurrency(call) {
     : directCurrency === MISSING_OPTION ? null : directCurrency;
   if (currency == null) throw MF2Error.badOperand("Currency function requires a currency operand or option.");
   if (!/^[A-Za-z]{3}$/.test(currency)) throw MF2Error.badOption("Currency function requires a three-letter currency option.");
-  return numberFormatter(call.locale, call, { style: "currency", currency: currency.toUpperCase() }).format(value);
+  return numberFormatter(call.locale, call, { style: "currency", currency: currency.toUpperCase() }, intlFormatter).format(value);
 }
 
-function formatIntlDate(call, timeZone) {
+function formatIntlDate(call, timeZone, intlFormatter) {
   return formatIntlTemporal(
     call,
     { dateStyle: dateTimeStyle(call, "dateStyle", "length", "medium") },
     "Date function requires a date operand.",
     timeZone,
+    intlFormatter,
   );
 }
 
-function formatIntlTime(call, timeZone) {
+function formatIntlTime(call, timeZone, intlFormatter) {
   return formatIntlTemporal(
     call,
     timeOptions(call, "timeStyle", "precision", "medium"),
     "Time function requires a date operand.",
     timeZone,
+    intlFormatter,
   );
 }
 
-function formatIntlDateTime(call, timeZone) {
+function formatIntlDateTime(call, timeZone, intlFormatter) {
   const dateStyle = dateTimeStyle(call, "dateStyle", "dateLength", "medium");
   const time = timeOptions(call, "timeStyle", "timePrecision", "medium");
   const options = time.timeStyle == null
     ? { ...dateStyleComponents(dateStyle), ...time }
     : { dateStyle, ...time };
-  return formatIntlTemporal(call, options, "Datetime function requires a date operand.", timeZone);
+  return formatIntlTemporal(call, options, "Datetime function requires a date operand.", timeZone, intlFormatter);
 }
 
-function formatIntlRelativeTime(call) {
+function formatIntlRelativeTime(call, intlFormatter) {
   const value = parseCallNumber(call, "Relative time function requires a numeric operand.");
   const unit = call.optionValue("unit", null);
   if (!["second", "minute", "hour", "day", "week", "month", "quarter", "year"].includes(unit)) {
@@ -95,13 +99,13 @@ function formatIntlRelativeTime(call) {
   const numeric = optionOneOf(call, "numeric", ["always", "auto"], "always");
   const style = optionOneOf(call, "style", ["long", "short", "narrow"], "long");
   try {
-    return new Intl.RelativeTimeFormat(call.locale, { numeric, style }).format(value, unit);
+    return intlFormatter("RelativeTimeFormat", call.locale, { numeric, style }).format(value, unit);
   } catch (error) {
     throw MF2Error.badOption(error.message);
   }
 }
 
-function numberFormatter(locale, call, baseOptions) {
+function numberFormatter(locale, call, baseOptions, intlFormatter) {
   const options = {
     ...baseOptions,
     style: numericStyle(call, baseOptions.style ?? "decimal"),
@@ -125,7 +129,7 @@ function numberFormatter(locale, call, baseOptions) {
     options[optionName] = value;
   }
   try {
-    return new Intl.NumberFormat(locale, options);
+    return intlFormatter("NumberFormat", locale, options);
   } catch (error) {
     throw MF2Error.badOption(error.message);
   }
@@ -155,23 +159,23 @@ function validateIntlNumericSelection(call) {
   }
 }
 
-function dateFormatter(locale, call, options, defaultTimeZone) {
+function dateFormatter(locale, call, options, defaultTimeZone, intlFormatter) {
   const timeZone = inheritedOptionValue(call, "timeZone", defaultTimeZone, ["date", "time", "datetime"]);
   if (timeZone != null) options.timeZone = timeZone;
   try {
-    return new Intl.DateTimeFormat(locale, options);
+    return intlFormatter("DateTimeFormat", locale, options);
   } catch (error) {
     throw MF2Error.badOption(error.message);
   }
 }
 
-function formatIntlTemporal(call, options, message, defaultTimeZone) {
-  const formatter = dateFormatter(call.locale, call, { ...options }, defaultTimeZone);
+function formatIntlTemporal(call, options, message, defaultTimeZone, intlFormatter) {
+  const formatter = dateFormatter(call.locale, call, { ...options }, defaultTimeZone, intlFormatter);
   const operand = parseCallDate(call, message);
   if (!operand.floating) return formatter.format(operand.value);
   // Offset-free MF2 literals are wall-clock values, not host-zone or UTC instants.
   const timeZone = formatter.resolvedOptions().timeZone;
-  return formatter.format(floatingDateToInstant(operand.value, timeZone));
+  return formatter.format(floatingDateToInstant(operand.value, timeZone, intlFormatter));
 }
 
 function parseCallDate(call, message) {
@@ -236,10 +240,10 @@ function parseDateValue(value) {
 
 const MILLISECONDS_PER_DAY = 86_400_000;
 
-function floatingDateToInstant(floating, timeZone) {
+function floatingDateToInstant(floating, timeZone, intlFormatter) {
   if (timeZone === "UTC") return floating;
   const wallTime = floating.getTime();
-  const partsFormatter = new Intl.DateTimeFormat("en-US-u-ca-iso8601-nu-latn", {
+  const partsFormatter = intlFormatter("DateTimeFormat", "en-US-u-ca-iso8601-nu-latn", {
     timeZone,
     year: "numeric",
     month: "2-digit",

@@ -1049,10 +1049,13 @@ impl<'a> FormatContext<'a> {
         let Some(function) = expression.function.as_ref() else {
             return Ok(());
         };
-        if !self.functions.has_selector(function) || !self.functions.has_formatter(function) {
+        if !self.functions.has_formatter(function) {
             return Ok(());
         }
         let Some(input) = self.values.get(name).cloned() else {
+            if !self.functions.has_selector(function) {
+                return Ok(());
+            }
             if self.fallback {
                 self.failed_values.insert(name.to_string());
                 self.errors.push(unresolved_variable(name));

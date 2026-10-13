@@ -1,0 +1,5 @@
+{
+  "cart.summary": ".input {$count :number}\n.match $count\none {{You have {$count} item.}}\n* {{You have {$count} items.}}",
+  "welcome": "Welcome, {$name}. Read the {#terms}terms{/terms}.",
+  "save": "Save"
+}

@@ -1,0 +1,114 @@
+[
+  {
+    "name": "independent links may change order",
+    "source": "Read {#terms}terms{/terms} and {#privacy}privacy{/privacy}.",
+    "target": "Consultez {#privacy}la confidentialite{/privacy} et {#terms}les conditions{/terms}.",
+    "locale": "fr",
+    "valid": true
+  },
+  {
+    "name": "nested spans travel with their link",
+    "source": "{#terms}{#strong}Terms{/strong}{/terms} and {#privacy}privacy{/privacy}.",
+    "target": "{#privacy}Confidentialite{/privacy} et {#terms}{#strong}conditions{/strong}{/terms}.",
+    "locale": "fr",
+    "valid": true
+  },
+  {
+    "name": "sibling spans within a link can move",
+    "source": "{#link}{#strong}A{/strong} and {#em}B{/em}{/link}",
+    "target": "{#link}{#em}B{/em} et {#strong}A{/strong}{/link}",
+    "locale": "fr",
+    "valid": true
+  },
+  {
+    "name": "repeated parents can reorder with their complete subtrees",
+    "source": "{#link}{#strong}A{/strong}{/link} and {#link}{#em}B{/em}{/link}",
+    "target": "{#link}{#em}B{/em}{/link} et {#link}{#strong}A{/strong}{/link}",
+    "locale": "fr",
+    "valid": true
+  },
+  {
+    "name": "children cannot redistribute between repeated parents",
+    "source": "{#link}{#strong}A{/strong}{/link} and {#link}{#em}B{/em}{/link}",
+    "target": "{#link}{#strong}A{/strong} et {#em}B{/em}{/link} {#link}C{/link}",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "invented component is rejected",
+    "source": "Read {#link}help{/link}.",
+    "target": "Lisez {#link}aide{/link} {#button}ici{/button}.",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "duplicate component is rejected",
+    "source": "Read {#link}help{/link}.",
+    "target": "Lisez {#link}aide{/link} {#link}ici{/link}.",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "missing component is rejected",
+    "source": "Read {#link}help{/link}.",
+    "target": "Lisez aide.",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "crossed closing tags are rejected",
+    "source": "{#link}{#strong}Help{/strong}{/link}",
+    "target": "{#link}{#strong}Aide{/link}{/strong}",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "changed nesting is rejected",
+    "source": "{#link}{#strong}Help{/strong}{/link}",
+    "target": "{#strong}{#link}Aide{/link}{/strong}",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "standalone cannot become paired",
+    "source": "Saved {#icon /}",
+    "target": "Enregistre {#icon}ici{/icon}",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "standalone components can move",
+    "source": "{#icon /} Saved",
+    "target": "Enregistre {#icon /}",
+    "locale": "fr",
+    "valid": true
+  },
+  {
+    "name": "unclosed target tag is rejected",
+    "source": "Read {#link}help{/link}.",
+    "target": "Lisez {#link}aide.",
+    "locale": "fr",
+    "valid": false
+  },
+  {
+    "name": "literal braces do not create markup",
+    "source": "Write \\{#link\\} literally.",
+    "target": "Ecrivez \\{#link\\} litteralement.",
+    "locale": "fr",
+    "valid": true
+  },
+  {
+    "name": "plural expansion preserves each rich message",
+    "source": ".input {$n :number}\n.match $n\none {{Read {#link}one{/link}.}}\n* {{Read {#link}{$n}{/link}.}}",
+    "target": ".input {$n :number}\n.match $n\none {{Czytaj {#link}jeden{/link}.}}\nfew {{Czytaj {#link}{$n}{/link}.}}\nmany {{Czytaj {#link}{$n}{/link}.}}\n* {{Czytaj {#link}{$n}{/link}.}}",
+    "locale": "pl",
+    "valid": true
+  },
+  {
+    "name": "markup removed only from added plural form is rejected",
+    "source": ".input {$n :number}\n.match $n\none {{Read {#link}one{/link}.}}\n* {{Read {#link}{$n}{/link}.}}",
+    "target": ".input {$n :number}\n.match $n\none {{Czytaj {#link}jeden{/link}.}}\nfew {{Czytaj {$n}.}}\nmany {{Czytaj {#link}{$n}{/link}.}}\n* {{Czytaj {#link}{$n}{/link}.}}",
+    "locale": "pl",
+    "valid": false
+  }
+]

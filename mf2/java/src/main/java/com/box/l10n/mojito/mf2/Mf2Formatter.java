@@ -234,10 +234,13 @@ public final class Mf2Formatter {
 
         private void applyInputDeclaration(Mf2Message.InputDeclaration input) throws Mf2Exception {
             Mf2Message.FunctionRef function = input.value().function();
-            if (function == null || !functions.hasSelector(function) || !functions.hasFormatter(function)) {
+            if (function == null || !functions.hasFormatter(function)) {
                 return;
             }
             if (!hasValue(input.name())) {
+                if (!functions.hasSelector(function)) {
+                    return;
+                }
                 if (fallback) {
                     addFailedLocal(input.name());
                     errors.add(Mf2Exception.unresolvedVariable(input.name()));

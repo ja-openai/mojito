@@ -5128,6 +5128,7 @@ function DetailPane({
                       showArgumentInputs={false}
                       showLocaleSelector={false}
                       showPreview={false}
+                      showRuntimePreview
                       showSource={false}
                       source={source ?? ''}
                       submitLabel="accept"

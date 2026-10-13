@@ -23,10 +23,14 @@
     "./parser": {
       "types": "./src/parser.d.ts",
       "default": "./src/parser.js"
+    },
+    "./bindings": {
+      "types": "./src/bindings.d.ts",
+      "default": "./src/bindings.js"
     }
   },
   "peerDependencies": {
-    "react": "^18.3.1",
+    "react": "^18.3.1 || ^19.0.0",
     "@mojito-mf2/core": "^0.1.0"
   },
   "devDependencies": {

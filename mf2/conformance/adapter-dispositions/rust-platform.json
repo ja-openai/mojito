@@ -11,5 +11,17 @@
       "diagnostics": []
     },
     "reason": "The Rust ICU4X registry has no currency function. The production registry is exercised and its exact unsupported-function result is recorded; this is not a pass."
+  },
+  "resolved-values/adapters/currency-input-declaration.json#formatter-only-input-preserves-options-and-operand": {
+    "testSha256": "fcbd56594ff09886b26414a46ac084a931de1068a9a777137c88ae2544e7e5be",
+    "actual": {
+      "value": "12; 12; {$copy}; {$plain}",
+      "errors": [
+        "unknown-function",
+        "unknown-function"
+      ],
+      "diagnostics": []
+    },
+    "reason": "The Rust ICU4X registry has no currency formatter. The production bridge records the exact unsupported-function result; formatter-only input resolution is independently checked with a registered custom formatter, without claiming currency or selector support."
   }
 }

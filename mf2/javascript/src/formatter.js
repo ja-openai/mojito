@@ -125,7 +125,10 @@ class FormatContext {
 
   applyInputDeclaration(input) {
     const functionRef = input.value?.function;
-    if (!functionRef || !this.functions.hasFormatter(functionRef) || !this.functions.hasSelector(functionRef)) return;
+    if (!functionRef || !this.functions.hasFormatter(functionRef)) return;
+    // Formatter-only annotations apply to supplied values. Keep missing-input
+    // diagnostics at their use site, as with the Python/Swift runtimes.
+    if (!this.hasValue(input.name) && !this.functions.hasSelector(functionRef)) return;
     if (!this.hasValue(input.name)) {
       if (!this.fallback) throw MF2Error.missingArgument(input.name);
       this.failedLocals.add(input.name);
@@ -513,7 +516,7 @@ function normalizeModelBindings(model) {
     if (result.type === "expression" && result.function) result.function = part(result.function);
     if (["function", "markup"].includes(result.type) && result.options) result.options = Object.fromEntries(Object.entries(result.options).map(([name, value]) => [name, arg(value)]));
     if (result.type === "function") {
-      const snapshot = structuredClone(result);
+      const snapshot = functionSnapshot(result);
       if (snapshot.options) {
         for (const option of Object.values(snapshot.options)) Object.freeze(option);
         Object.freeze(snapshot.options);
@@ -529,6 +532,27 @@ function normalizeModelBindings(model) {
     normalized.variants = model.variants.map((item) => ({ ...item, value: item.value.map(part) }));
   }
   return normalized;
+}
+
+function functionSnapshot(functionRef) {
+  // Standard annotations contain only strings and flat literal/variable
+  // operands. Copy those records directly; structuredClone is substantially
+  // more expensive on every format call. Opaque extension metadata still takes
+  // the deep-copy path so custom callbacks cannot mutate the caller's model.
+  if (Object.keys(functionRef).some((key) => !["type", "name", "options"].includes(key)) ||
+      Object.values(functionRef.options ?? {}).some((option) =>
+        Object.keys(option).some((key) => key !== "type" && key !== (option.type === "variable" ? "name" : "value")))) {
+    return structuredClone(functionRef);
+  }
+  return {
+    type: functionRef.type,
+    name: functionRef.name,
+    ...(functionRef.options ? { options: Object.fromEntries(
+      Object.entries(functionRef.options).map(([name, option]) => [name,
+        option.type === "variable" ? { type: "variable", name: option.name } : { type: "literal", value: option.value },
+      ]),
+    ) } : {}),
+  };
 }
 
 function requireModel(condition) {

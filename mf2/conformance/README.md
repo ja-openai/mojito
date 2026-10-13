@@ -23,7 +23,7 @@ counts do not establish complete string, error or parts coverage.
 The shared corpus contains **80 models, 877 output cases, 12 parts cases,
 7 fallback cases, 1 fallback-parts case, 28 invalid-source cases,
 33 format-error cases and 10 locale-key cases**. `check_adapters.py` also runs
-all 47 reference-derived selection/provenance cases through real platform
+all 48 reference-derived selection/provenance cases through real platform
 registries. Go has no platform registry; Rust ICU4X has no currency formatter.
 
 Run a complete runtime gate from the repository root:
