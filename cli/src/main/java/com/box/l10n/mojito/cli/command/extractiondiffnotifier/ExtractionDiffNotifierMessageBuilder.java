@@ -33,18 +33,15 @@ public class ExtractionDiffNotifierMessageBuilder {
     Preconditions.checkNotNull(extractionDiffStatistics);
 
     MessageFormat messageFormat = new MessageFormat(messageTemplate);
+    ImmutableMap<String, Object> baseMessageMap = getBaseMessageMap(extractionDiffStatistics);
 
     ImmutableMap<String, Object> messageParamMap =
         new Builder<String, Object>()
-            .putAll(getBaseMessageMap(extractionDiffStatistics))
-            .put("baseMessage", getBaseMessage(extractionDiffStatistics))
+            .putAll(baseMessageMap)
+            .put("baseMessage", BASE_MESSAGE_MESSAGE_FORMAT.format(baseMessageMap))
             .build();
 
     return messageFormat.format(messageParamMap);
-  }
-
-  String getBaseMessage(ExtractionDiffStatistics extractionDiffStatistics) {
-    return BASE_MESSAGE_MESSAGE_FORMAT.format(getBaseMessageMap(extractionDiffStatistics));
   }
 
   private ImmutableMap<String, Object> getBaseMessageMap(
