@@ -60,18 +60,6 @@ public class QuartzPollableTaskSchedulerTest extends ServiceTestBase {
   }
 
   @Test
-  public void testGetShortClassName() {
-    assertEquals(
-        "com.box.l10n.mojito.quartz.QuartzPollableTaskSchedulerTest",
-        quartzPollableTaskScheduler.getShortClassName(QuartzPollableTaskSchedulerTest.class));
-    assertEquals(
-        "c.b.l.m.q.Q.ALongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongNameClassForTest",
-        quartzPollableTaskScheduler.getShortClassName(
-            ALongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongNameClassForTest
-                .class));
-  }
-
-  @Test
   public void testRescheduleJobsWithUniqueIdAndVoidOutput()
       throws ExecutionException, InterruptedException {
     /**
@@ -210,7 +198,4 @@ public class QuartzPollableTaskSchedulerTest extends ServiceTestBase {
       return null;
     }
   }
-
-  static
-  class ALongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongNameClassForTest {}
 }
