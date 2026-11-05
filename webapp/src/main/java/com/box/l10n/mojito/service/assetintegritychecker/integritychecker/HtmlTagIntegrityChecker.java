@@ -1,6 +1,5 @@
 package com.box.l10n.mojito.service.assetintegritychecker.integritychecker;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +45,18 @@ public class HtmlTagIntegrityChecker extends RegexIntegrityChecker {
     List<String> sourceHtmlTags = getHtmlTags(sourceContent);
     logger.debug("Source Html tags: {}", sourceHtmlTags);
 
+    Set<String> closingTags = closingTags(targetHtmlTags);
+    if (!IcuPluralBranches.compareTags(
+        sourceContent, targetContent, getPattern(), closingTags, this::checkTagCounts)) {
+      checkTagCounts(sourceHtmlTags, targetHtmlTags);
+      checkOrder(targetHtmlTags, new ArrayList<>(), closingTags);
+    }
+
+    logger.debug("Ad-hoc checks");
+    checkDoubleAnnotationElements(sourceContent, targetContent);
+  }
+
+  private void checkTagCounts(List<String> sourceHtmlTags, List<String> targetHtmlTags) {
     Map<String, Long> sourceTagCount =
         sourceHtmlTags.stream()
             .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
@@ -75,14 +86,6 @@ public class HtmlTagIntegrityChecker extends RegexIntegrityChecker {
       throw new HtmlTagIntegrityCheckerException(
           "HTML tag counts in source and target are different:\n" + differences.toString().trim());
     }
-
-    logger.debug("Make sure the target tags are in valid order");
-    if (!isValidTagOrder(targetHtmlTags)) {
-      throw new HtmlTagIntegrityCheckerException("HTML tags in target are not in valid order");
-    }
-
-    logger.debug("Ad-hoc checks");
-    checkDoubleAnnotationElements(sourceContent, targetContent);
   }
 
   /** Adhoc check to unblock. Eventually needs a better solution. */
@@ -118,29 +121,38 @@ public class HtmlTagIntegrityChecker extends RegexIntegrityChecker {
 
   public static boolean isValidTagOrder(List<String> tags) {
 
-    boolean res = true;
+    try {
+      checkOrder(tags, new ArrayList<>(), closingTags(tags));
+      return true;
+    } catch (HtmlTagIntegrityCheckerException e) {
+      return false;
+    }
+  }
 
-    ArrayDeque<String> stack = new ArrayDeque<>();
-    Set<String> closingTags =
-        tags.stream().filter(tag -> tag.startsWith("</")).collect(Collectors.toSet());
+  private static Set<String> closingTags(List<String> tags) {
+    return tags.stream().filter(tag -> tag.startsWith("</")).collect(Collectors.toSet());
+  }
 
+  static void checkOrder(List<String> tags, List<String> stack, Set<String> closingTags) {
     for (String tag : tags) {
-      if (!tag.startsWith("</")) {
+      if (tag.startsWith("</")) {
+        String name = tag.substring(2, tag.length() - 1);
+        if (stack.isEmpty() || !stack.removeLast().startsWith(name)) {
+          throw new HtmlTagIntegrityCheckerException("HTML tags in target are not in valid order");
+        }
+      } else {
         Matcher voidElement = VOID_ELEMENT_START.matcher(tag);
         if (!tag.endsWith("/>")
             && (!voidElement.find() || closingTags.contains("</" + voidElement.group(1) + ">"))) {
-          stack.push(tag);
+          int end = 1;
+          while (end < tag.length()
+              && tag.charAt(end) != '>'
+              && !Character.isWhitespace(tag.charAt(end))) {
+            end++;
+          }
+          stack.add(tag.substring(1, end));
         }
-      } else {
-        if (stack.isEmpty()
-            || !stack.peek().startsWith(tag.substring(0, tag.length() - 1).replace("</", "<"))) {
-          res = false;
-          break;
-        }
-        stack.pop();
       }
     }
-
-    return res;
   }
 }

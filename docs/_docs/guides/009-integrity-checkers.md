@@ -100,6 +100,14 @@ tag nesting. HTML void elements such as `<br>` can omit the trailing slash. Name
 explicit closing tag remain paired rich-text tags, including `<link>the guide</link>`; their
 closing tags must still appear in the correct order.
 
+For ICU plurals and ordinals, tags in each translated branch are compared with the same source
+branch. A locale-specific category absent from the source uses the source `other` branch.
+For example, if `other` contains `<count>#</count>`, a translation can repeat those tags in
+its additional `few` and `many` forms. A tag may open outside the plural and close inside
+each branch, or open inside each branch and close after the plural. Repeated arguments with
+the same name and type in one message use the whole-message comparison because their
+occurrences can be reordered in translation.
+
 ### FormatJS Rich-Text Integrity Checker
 
 FormatJS rich-text integrity checker rejects translations containing a single ASCII apostrophe
