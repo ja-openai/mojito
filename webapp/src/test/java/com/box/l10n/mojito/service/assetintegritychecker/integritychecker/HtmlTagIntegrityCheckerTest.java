@@ -358,4 +358,108 @@ public class HtmlTagIntegrityCheckerTest {
 
     Assertions.assertThat(HtmlTagIntegrityChecker.isValidTagOrder(tags)).isTrue();
   }
+
+  private static final String SOURCE_PLURAL =
+      "{n, plural, one {<count>#</count> file} other {<count>#</count> files}}";
+
+  @Test
+  public void acceptsTagsInLocaleSpecificPluralBranches() {
+    checker.check(
+        SOURCE_PLURAL,
+        "{n, plural, one {<count>#</count>} many {<count>#</count>} other {<count>#</count>}}");
+    checker.check(
+        SOURCE_PLURAL,
+        "{n, plural, few {<count>#</count>} many {<count>#</count>} other {<count>#</count>} one {<count>#</count>}}");
+    checker.check(SOURCE_PLURAL, "{n, plural, other {<count>#</count>}}");
+  }
+
+  @Test
+  public void comparesEachBranchWithItsSourceOrTheOtherFallback() {
+    String source = "<b>{n, plural, =0 {<empty/>} one {one} other {<em>#</em>}}</b>";
+    checker.check(
+        source,
+        "<b>{n, plural, few {<em>#</em>} other {<em>#</em>} =0 {<empty/>} one {jeden}}</b>");
+    for (String target :
+        List.of(
+            "<b>{n, plural, =0 {<empty/>} one {<em>#</em>} other {#}}</b>",
+            "<b>{n, plural, =0 {<empty/>} one {one} few {#} other {<em>#</em>}}</b>",
+            "{n, plural, =0 {<empty/>} one {one} few {<em>#</em>} other {<em>#</em>}}")) {
+      Assertions.assertThatThrownBy(() -> checker.check(source, target))
+          .isInstanceOf(HtmlTagIntegrityCheckerException.class);
+    }
+  }
+
+  @Test
+  public void handlesNestedSelectorsAndReorderedPluralArguments() {
+    String bold = "{n,plural,one{<b># file</b>}other{<b># files</b>}}";
+    String italic = "{n,plural,one{<i>file #</i>}other{<i>files #</i>}}";
+    checker.check(bold + " / " + italic, italic + " / " + bold);
+
+    String ordinal = "{n,selectordinal,one {<ord>#</ord>} other {<ord>#</ord>}}";
+    String translated =
+        "{n,selectordinal,one {<ord>#</ord>} few {<ord>#</ord>} other {<ord>#</ord>}}";
+    String source = "{kind,select, a {" + ordinal + "} other {<a/>}}" + SOURCE_PLURAL;
+    checker.check(source, SOURCE_PLURAL + "{kind,select, other {<a/>} a {" + translated + "}}");
+  }
+
+  @Test
+  public void keepsExactSelectorsAttributesAndTagOrder() {
+    String source = "{n,plural,=0 {<zero/>} other {<b><i class='x'>#</i></b>}}";
+    for (String branch : List.of("<b><i class='y'>#</i></b>", "<b><i class='x'>#</b></i>")) {
+      String target =
+          "{n,plural,=0 {<zero/>} few {" + branch + "} other {<b><i class='x'>#</i></b>}}";
+      Assertions.assertThatThrownBy(() -> checker.check(source, target))
+          .isInstanceOf(HtmlTagIntegrityCheckerException.class);
+    }
+    Assertions.assertThatThrownBy(
+            () -> checker.check(source, "{n,plural,other {<b><i class='x'>#</i></b>}}"))
+        .isInstanceOf(HtmlTagIntegrityCheckerException.class);
+  }
+
+  @Test
+  public void acceptsMarkupThatCrossesBranchBoundaries() {
+    checker.check("<b>{n,plural,other {#</b>}}", "<b>{n,plural,one {#</b>} other {#</b>}}");
+    checker.check("{n,plural,other {<b>#}}</b>", "{n,plural,one {<b>#} other {<b>#}}</b>");
+    checker.check(
+        "<b>{n,plural,other {{g,select,other {#</b>}}}}",
+        "<b>{n,plural,few {{g,select,other {#</b>}}} other {{g,select,other {#</b>}}}}");
+    checker.check(
+        "{n,plural,one {<b class='one'>#} other {<b class='other'>#}}</b>",
+        "{n,plural,one {<b class='one'>#} few {<b class='other'>#} other {<b class='other'>#}}</b>");
+    // The suffix must be valid after every arm, including one that reorders its openings.
+    Assertions.assertThatThrownBy(
+            () ->
+                checker.check(
+                    "{n,plural,other {<b><i>#}}</i></b>",
+                    "{n,plural,one {<i><b>#} other {<b><i>#}}</i></b>"))
+        .isInstanceOf(HtmlTagIntegrityCheckerException.class);
+    // Both arms have the expected tags, but one closes them in the wrong order.
+    Assertions.assertThatThrownBy(
+            () ->
+                checker.check(
+                    "<b><i>{n,plural,other {#</i></b>}}",
+                    "<b><i>{n,plural,one {#</b></i>} other {#</i></b>}}"))
+        .isInstanceOf(HtmlTagIntegrityCheckerException.class);
+    String source = "<b>{n,plural, one {#</b> item <b>} other {#</b> items <b>}}</b>";
+    String target =
+        "<b>{n,plural, one {#</b> sztuka <b>} few {#</b> sztuki <b>} other {#</b> sztuk <b>}}</b>";
+    checker.check(source, target);
+  }
+
+  @Test
+  public void preservesTheEntireAttributeEvenWhenItContainsPluralSyntax() {
+    String source = "<span title=\"{n,plural,one {item} other {items}}\">Label</span>";
+    String target = source.replace("items", "changed");
+    Assertions.assertThatThrownBy(() -> checker.check(source, target))
+        .isInstanceOf(HtmlTagIntegrityCheckerException.class);
+  }
+
+  @Test
+  public void preservesLegacyChecksForNonIcuAndQuotedText() {
+    checker.check("'{n,plural, other {<b>literal</b>}}'", "'{n,plural, other {<b>tekst</b>}}'");
+    checker.check("{unfinished, plural, <b>one", "{unfinished, plural, <b>jeden");
+    Assertions.assertThatThrownBy(
+            () -> checker.check("{unfinished, plural, <b>one", "{unfinished, plural, one"))
+        .isInstanceOf(HtmlTagIntegrityCheckerException.class);
+  }
 }
