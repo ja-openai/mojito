@@ -7,6 +7,7 @@ package com.box.l10n.mojito.rest.entity;
  */
 public enum IntegrityCheckerType {
   MESSAGE_FORMAT,
+  VALDI,
   MF2,
   MESSAGE_FORMAT_DOUBLE_BRACES,
   PRINTF_LIKE,

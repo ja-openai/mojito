@@ -107,6 +107,18 @@ public class TextUnitWSIntegrityOverrideWSTest extends WSTestBase {
   }
 
   @Test
+  public void translatorCanSaveValdiTokensButCannotChangeTheirSuffix() throws Exception {
+    Fixture fixture =
+        createFixture(
+            "{n%d} items",
+            "Previous translation", Role.ROLE_TRANSLATOR, true, IntegrityCheckerType.VALDI);
+    logInAs(fixture.user());
+    assertSaveRejectedWithoutWrites(fixture, "{n%s} objets", HttpStatus.UNPROCESSABLE_ENTITY);
+    String target = "Objets : {n%d}";
+    assertSaved(fixture, target, save(fixture, target));
+  }
+
+  @Test
   public void translatorCanSaveMixedTemplateBracesWithoutChangingStoredText() throws Exception {
     String source = "Confirm {{type}}: {{{ confirmationUrl }}}; cancel: {{{ cancelUrl }}}.";
     String target = "დაადასტურეთ {{type}}: {{{ confirmationUrl }}}; გაუქმება: {{{ cancelUrl }}}.";

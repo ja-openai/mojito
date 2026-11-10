@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.assetintegritychecker;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
@@ -168,5 +169,36 @@ public class AssetIntegrityCheckerServiceTest extends ServiceTestBase {
     assertEquals(1, textUnitVariants.size());
     assertFalse(textUnitVariants.get(0).isIncludedInLocalizedFile());
     assertEquals(TMTextUnitVariant.Status.TRANSLATION_NEEDED, textUnitVariants.get(0).getStatus());
+  }
+
+  @Test
+  public void importsAndExportsValdiTokensUnchanged() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(testIdWatcher.getEntityName("repository"));
+    String locale = "fr-FR";
+    repositoryService.addRepositoryLocale(repository, locale);
+    Asset asset = assetService.createAsset(repository.getId(), ASSET_PATH, false);
+    String source = "{count%d} items for {user%s}";
+    String target = "{user%s} : {count%d} objets";
+    TMTextUnit unit =
+        tmService.addTMTextUnit(repository.getTm().getId(), asset.getId(), "items", source, null);
+    assetIntegrityCheckerService.addToRepository(
+        repository, ASSET_PATH, IntegrityCheckerType.VALDI);
+
+    String xliff =
+        xliffDataFactory.generateTargetXliff(
+            List.of(
+                xliffDataFactory.createTextUnit(
+                    unit.getId(), "items", source, null, target, locale, XliffState.TRANSLATED)),
+            locale);
+    tmService.updateTMWithXLIFFById(xliff, null);
+
+    List<TMTextUnitVariant> variants =
+        tmTextUnitVariantRepository.findAllByLocale_IdAndTmTextUnit_Tm_id(
+            localeService.findByBcp47Tag(locale).getId(), repository.getTm().getId());
+    assertEquals(1, variants.size());
+    assertTrue(variants.get(0).isIncludedInLocalizedFile());
+    assertEquals(target, variants.get(0).getContent());
+    assertTrue(tmService.exportAssetAsXLIFF(asset.getId(), locale).contains(target));
   }
 }

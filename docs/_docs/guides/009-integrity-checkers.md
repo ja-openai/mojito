@@ -22,6 +22,7 @@ We use `mojito-cli` to configure integrity checkers in a repository.  Integrity 
 |:---------------------------------------|:------------------------------- ---------------|:-------------------------------------|
 | COMPOSITE_FORMAT                       | resw, resx                                     | RESW, RESX                           |
 | MESSAGE_FORMAT                         | properties                                     | Java Properties                      |
+| VALDI                                  | json (Valdi catalogs)                          | Valdi named placeholders             |
 | MF2                                    | json, properties (explicit MF2 catalogs)        | Unicode MessageFormat 2              |
 | FORMATJS                               | json                                           | FormatJS ICU messages                |
 | DOLLAR_TEMPLATE                        | properties, json                               | Python-style dollar templates        |
@@ -112,6 +113,13 @@ checkers using the standard repository integrity-checker option:
 For example, `l'<privacyLink>...</privacyLink>` is rejected while
 `l''<privacyLink>...</privacyLink>` is accepted. The checker does not modify translations or
 generated files.
+
+### Valdi placeholders
+
+Use `VALDI` for catalogs that use `{name}`, `{name%s}`, and `{name%d}` placeholders.
+Translations may reorder tokens and must preserve their spelling, suffix, and number of
+occurrences. Select it instead of `MESSAGE_FORMAT` for the corresponding repository and
+file extension. Keep the other checker mappings when updating the repository.
 
 ### Translation Integrity Checkers
 
