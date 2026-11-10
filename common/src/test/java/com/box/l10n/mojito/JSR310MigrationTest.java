@@ -300,8 +300,14 @@ public class JSR310MigrationTest {
     String id = "PST8PDT";
     DateTimeZone dateTimeZone = dateTimeZoneForIdOld(id);
     ZoneId zoneId = JSR310Migration.dateTimeZoneForId(id);
-    Assertions.assertThat(dateTimeZone.toTimeZone().toZoneId().getRules())
-        .isEqualTo(zoneId.getRules());
+    // Historical rules for this alias can differ between timezone database versions.
+    // Compare modern behavior in both standard time and daylight-saving time.
+    for (String timestamp : new String[] {"2020-01-01T00:00:00Z", "2020-07-01T00:00:00Z"}) {
+      java.time.Instant instant = java.time.Instant.parse(timestamp);
+      Assertions.assertThat(dateTimeZone.getOffset(instant.toEpochMilli()))
+          .as("offset at %s", timestamp)
+          .isEqualTo(zoneId.getRules().getOffset(instant).getTotalSeconds() * 1000);
+    }
   }
 
   @Test
