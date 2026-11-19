@@ -20,6 +20,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskExceptionUtils;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.pushrun.PushRunRepository;
+import com.box.l10n.mojito.service.repository.RepositoryGenerationService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -171,6 +172,9 @@ public class AssetLocalizeAsyncJobServiceConfigurationTest {
         .getBeanFactory()
         .registerSingleton("repositoryLocaleRepository", mock(RepositoryLocaleRepository.class));
     context.getBeanFactory().registerSingleton("tmService", mock(TMService.class));
+    context
+        .getBeanFactory()
+        .registerSingleton("repositoryGenerationService", mock(RepositoryGenerationService.class));
     context.getBeanFactory().registerSingleton("assetService", mock(AssetService.class));
     context.getBeanFactory().registerSingleton("tmXliffRepository", mock(TMXliffRepository.class));
     context.getBeanFactory().registerSingleton("localeService", mock(LocaleService.class));

@@ -14,6 +14,7 @@ import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
 import com.box.l10n.mojito.fileformat.LocalizationParseException;
 import com.box.l10n.mojito.okapi.InheritanceMode;
 import com.box.l10n.mojito.okapi.Status;
+import com.box.l10n.mojito.service.repository.RepositoryGenerationService;
 import java.util.List;
 import org.junit.Test;
 
@@ -25,7 +26,7 @@ public class TMServicePortableSelectionTest {
     asset.setPath("path/to/fake/res/strings.xml");
 
     String localized =
-        new TMService()
+        service()
             .generateLocalized(
                 asset,
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<resources/>\n",
@@ -44,7 +45,7 @@ public class TMServicePortableSelectionTest {
   public void backendDefaultSelectsPortableWithoutChangingFilterOptions() throws Exception {
     Asset asset = new Asset();
     asset.setPath("path/to/fake/res/strings.xml");
-    TMService tmService = new TMService();
+    TMService tmService = service();
     tmService.portableConverter = true;
 
     String localized =
@@ -68,7 +69,7 @@ public class TMServicePortableSelectionTest {
     asset.setPath("path/to/fake/res/strings.xml");
 
     String localized =
-        new TMService()
+        service()
             .generateLocalized(
                 asset,
                 "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\n<resources/>\n",
@@ -91,7 +92,7 @@ public class TMServicePortableSelectionTest {
     asset.setPath("path/to/fake/source.xliff");
 
     try {
-      new TMService()
+      service()
           .generateLocalized(
               asset,
               "<xliff/>",
@@ -119,7 +120,7 @@ public class TMServicePortableSelectionTest {
     NoSourceJsonAugmenter noSourceJsonAugmenter = mock(NoSourceJsonAugmenter.class);
     when(noSourceJsonAugmenter.augment(asset, source, null, filterOptions, branches))
         .thenReturn("{}");
-    TMService tmService = new TMService();
+    TMService tmService = service();
     tmService.noSourceJsonAugmenter = noSourceJsonAugmenter;
 
     String localized =
@@ -147,7 +148,7 @@ public class TMServicePortableSelectionTest {
     asset.setPath("Localizable.xcstrings");
 
     try {
-      new TMService()
+      service()
           .generateLocalized(
               asset,
               "{\"sourceLanguage\":\"en\",\"strings\":{},\"version\":\"1.0\"}",
@@ -163,6 +164,12 @@ public class TMServicePortableSelectionTest {
       return;
     }
     fail("Expected backend Xcode catalog conversion to remain gated");
+  }
+
+  private static TMService service() {
+    TMService service = new TMService();
+    service.repositoryGenerationService = mock(RepositoryGenerationService.class);
+    return service;
   }
 
   private static RepositoryLocale repositoryLocale() {

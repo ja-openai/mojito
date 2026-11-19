@@ -37,6 +37,7 @@ import { SearchIndexPage } from './page/search-index/SearchIndexPage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
 import { AdminAiTranslatePromptsPage } from './page/settings/AdminAiTranslatePromptsPage';
 import { AdminBlobCleanupPage } from './page/settings/AdminBlobCleanupPage';
+import { AdminGenerationSettingsPage } from './page/settings/AdminGenerationSettingsPage';
 import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
 import { AdminGlossaryWorkflowPage } from './page/settings/AdminGlossaryWorkflowPage';
 import { AdminJsonConfigLocalizationPage } from './page/settings/AdminJsonConfigLocalizationPage';
@@ -262,6 +263,7 @@ export function App() {
             <Route path="/settings/box" element={<Navigate to="/settings/system" replace />} />
             <Route path="/settings/admin" element={<Navigate to="/settings/system" replace />} />
             <Route path="/settings/system" element={<AdminSettingsPage />} />
+            <Route path="/settings/system/generation" element={<AdminGenerationSettingsPage />} />
             <Route path="/settings/teams" element={<AdminTeamsPage />} />
             <Route
               path="/settings/team"

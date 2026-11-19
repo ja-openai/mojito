@@ -71,6 +71,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.pullrun.PullRunAssetService;
 import com.box.l10n.mojito.service.pullrun.PullRunService;
+import com.box.l10n.mojito.service.repository.RepositoryGenerationService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
@@ -150,6 +151,8 @@ public class TMService {
   @Autowired AssetExtractor assetExtractor;
 
   @Autowired RepositoryRepository repositoryRepository;
+
+  @Autowired RepositoryGenerationService repositoryGenerationService;
 
   @Autowired TMRepository tmRepository;
 
@@ -1140,6 +1143,12 @@ public class TMService {
       boolean pullWithNoSource,
       List<String> pullWithNoSourceBranches)
       throws UnsupportedAssetFilterTypeException {
+
+    if (repositoryGenerationService
+        .getEffectiveExcludedLocaleTags(asset.getRepository())
+        .contains(repositoryLocale.getLocale().getBcp47Tag())) {
+      throw new LocaleGenerationExcludedException(repositoryLocale.getLocale().getBcp47Tag());
+    }
 
     String contentToLocalize = content;
     if (pullWithNoSource

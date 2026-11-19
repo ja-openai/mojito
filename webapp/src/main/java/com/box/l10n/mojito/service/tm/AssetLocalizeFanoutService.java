@@ -9,6 +9,7 @@ import com.box.l10n.mojito.rest.asset.MultiLocalizedAssetBody;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
+import com.box.l10n.mojito.service.repository.RepositoryGenerationService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.tm.AssetLocalizeFanoutInput.Manifest;
 import com.box.l10n.mojito.service.tm.AssetLocalizeFanoutInput.Reference;
@@ -40,6 +41,7 @@ public class AssetLocalizeFanoutService {
   private final AssetRepository assets;
   private final RepositoryLocaleRepository locales;
   private final AssetLocalizeAsyncJobRepairService repair;
+  private final RepositoryGenerationService repositoryGenerationService;
 
   public AssetLocalizeFanoutService(
       AssetLocalizeFanoutStore store,
@@ -48,7 +50,8 @@ public class AssetLocalizeFanoutService {
       PollableTaskBlobStorage taskBlobs,
       AssetRepository assets,
       RepositoryLocaleRepository locales,
-      AssetLocalizeAsyncJobRepairService repair) {
+      AssetLocalizeAsyncJobRepairService repair,
+      RepositoryGenerationService repositoryGenerationService) {
     this.store = store;
     this.inputs = inputs;
     this.tasks = tasks;
@@ -56,6 +59,7 @@ public class AssetLocalizeFanoutService {
     this.assets = assets;
     this.locales = locales;
     this.repair = repair;
+    this.repositoryGenerationService = repositoryGenerationService;
   }
 
   public PollableTask schedule(MultiLocalizedAssetBody input) {
@@ -88,6 +92,8 @@ public class AssetLocalizeFanoutService {
       throw invalid();
     }
     Asset asset = assets.findById(input.getAssetId()).orElseThrow(this::invalid);
+    Set<String> excludedLocaleTags =
+        repositoryGenerationService.getEffectiveExcludedLocaleTags(asset.getRepository());
     List<Slot> slots = new ArrayList<>();
     Set<String> outputTags = new HashSet<>();
     for (LocaleInfo locale : input.getLocaleInfos()) {
@@ -106,6 +112,9 @@ public class AssetLocalizeFanoutService {
               : locale.getOutputBcp47tag();
       if (!AssetLocalizeFanoutInput.isValidOutputTag(tag) || !outputTags.add(tag)) {
         throw invalid();
+      }
+      if (excludedLocaleTags.contains(repositoryLocale.getLocale().getBcp47Tag())) {
+        continue;
       }
       slots.add(new Slot(locale.getLocaleId(), tag, locale.getOutputBcp47tag()));
     }

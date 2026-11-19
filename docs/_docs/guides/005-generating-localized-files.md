@@ -55,6 +55,47 @@ bye = Goodbye.  Have a nice day!
 ```
 
 
+### Withholding a locale from generation
+
+Administrators can open **System Settings → Localized file generation**, choose excluded locales,
+and select **Save changes**. The list applies to all current and future repositories. The picker
+includes the full locale catalog, so exclusions can be saved before a locale is enabled on a repo.
+**Clear selection** followed by **Save changes** removes global exclusions; **Reset draft** discards
+unsaved edits. Locales remain available for translation, review, imports, and inheritance.
+
+The API supports global settings and additional per-repository exclusions:
+
+| Scope | Endpoint |
+| --- | --- |
+| Global | `/api/generation-excluded-locales` |
+| Repository | `/api/repositories/{repositoryId}/generation-excluded-locales` |
+
+Authenticated users can `GET` the saved list. Administrators can replace it with `PUT`, for example:
+
+```http
+PUT /api/generation-excluded-locales
+Content-Type: application/json
+
+["he"]
+```
+
+Lists start empty; `PUT []` clears that scope. Global and repository lists are combined, so clearing
+a repository list cannot override a global exclusion. Tags must exist in Mojito's locale catalog.
+Repository rules cannot exclude their source locale; global rules apply wherever a locale is
+requested, including as a source locale. Rules survive repository locale updates and re-onboarding.
+Matching uses the canonical locale, not the output filename alias: excluding `fr` does not exclude
+`fr-CA`.
+
+Existing Java and native CLIs need no update. Parallel pulls omit excluded locales, including
+explicit locale mappings and source-less pulls. If all requested locales are excluded, the pull
+succeeds without generating files. Synchronous requests for an excluded locale return HTTP 409;
+single-async tasks fail. These older single-locale protocols have no
+successful skip response, so those pulls fail when they reach an excluded locale.
+
+Existing files and published catalogs are not deleted. Running generation is not cancelled.
+Parallel parents filter before scheduling children, which check again when generation begins;
+saving a new exclusion after a child is scheduled can therefore fail that child and its parent.
+
 ### Locale Mapping
 
     mojito pull -r MyRepo -lm "de:de-DE,es:es-ES,fr:fr-FR,ja:ja-JP"

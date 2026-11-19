@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -44,6 +46,10 @@ public class WebSecurityConfigAuthorizationTest {
   private static final String PREFERENCES_PATH = "/api/users/me/preferences";
   private static final String AI_REVIEW_JOBS_PATH = "/api/ai/review/jobs";
   private static final String PROJECT_DUE_DATE_PATH = "/api/review-projects/7/due-date";
+  private static final String GENERATION_EXCLUSIONS_PATH =
+      "/api/repositories/7/generation-excluded-locales";
+  private static final String GLOBAL_GENERATION_EXCLUSIONS_PATH =
+      "/api/generation-excluded-locales";
   private static final String AGENT_PROPOSAL_PATH = "/api/agent-reviews/projects/7/proposals/901";
   private static final List<String> HUMAN_REVIEW_ACTIONS =
       List.of("review-again", "reopen", "reopen-and-save");
@@ -56,6 +62,52 @@ public class WebSecurityConfigAuthorizationTest {
   public void setup() {
     mockMvc =
         MockMvcBuilders.webAppContextSetup(applicationContext).apply(springSecurity()).build();
+  }
+
+  @Test
+  public void onlyAdministratorsCanChangeRepositoryGenerationExclusions() throws Exception {
+    mockMvc
+        .perform(put(GENERATION_EXCLUSIONS_PATH).with(user("test").roles("ADMIN")))
+        .andExpect(status().isOk());
+    for (String role : List.of("USER", "TRANSLATOR", "PM")) {
+      mockMvc
+          .perform(put(GENERATION_EXCLUSIONS_PATH).with(user("test").roles(role)))
+          .andExpect(status().isForbidden());
+    }
+    mockMvc.perform(put(GENERATION_EXCLUSIONS_PATH)).andExpect(status().isForbidden());
+  }
+
+  @Test
+  public void authenticatedUsersCanReadRepositoryGenerationExclusions() throws Exception {
+    for (String role : List.of("USER", "TRANSLATOR", "PM", "ADMIN")) {
+      mockMvc
+          .perform(get(GENERATION_EXCLUSIONS_PATH).with(user("test").roles(role)))
+          .andExpect(status().isOk());
+    }
+    mockMvc.perform(get(GENERATION_EXCLUSIONS_PATH)).andExpect(status().isForbidden());
+  }
+
+  @Test
+  public void onlyAdministratorsCanChangeGlobalGenerationExclusions() throws Exception {
+    mockMvc
+        .perform(put(GLOBAL_GENERATION_EXCLUSIONS_PATH).with(user("test").roles("ADMIN")))
+        .andExpect(status().isOk());
+    for (String role : List.of("USER", "TRANSLATOR", "PM")) {
+      mockMvc
+          .perform(put(GLOBAL_GENERATION_EXCLUSIONS_PATH).with(user("test").roles(role)))
+          .andExpect(status().isForbidden());
+    }
+    mockMvc.perform(put(GLOBAL_GENERATION_EXCLUSIONS_PATH)).andExpect(status().isForbidden());
+  }
+
+  @Test
+  public void authenticatedUsersCanReadGlobalGenerationExclusions() throws Exception {
+    for (String role : List.of("USER", "TRANSLATOR", "PM", "ADMIN")) {
+      mockMvc
+          .perform(get(GLOBAL_GENERATION_EXCLUSIONS_PATH).with(user("test").roles(role)))
+          .andExpect(status().isOk());
+    }
+    mockMvc.perform(get(GLOBAL_GENERATION_EXCLUSIONS_PATH)).andExpect(status().isForbidden());
   }
 
   @Test
@@ -217,6 +269,16 @@ public class WebSecurityConfigAuthorizationTest {
 
   @RestController
   static class LinguistTimeSpentStubController {
+
+    @GetMapping({GENERATION_EXCLUSIONS_PATH, GLOBAL_GENERATION_EXCLUSIONS_PATH})
+    String getGenerationExclusions() {
+      return "ok";
+    }
+
+    @PutMapping({GENERATION_EXCLUSIONS_PATH, GLOBAL_GENERATION_EXCLUSIONS_PATH})
+    String updateGenerationExclusions() {
+      return "ok";
+    }
 
     @PostMapping(PROJECT_DUE_DATE_PATH)
     String updateProjectDueDate() {

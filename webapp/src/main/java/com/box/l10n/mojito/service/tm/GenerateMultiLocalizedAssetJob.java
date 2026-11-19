@@ -11,9 +11,11 @@ import com.box.l10n.mojito.rest.asset.LocalizedAssetBody;
 import com.box.l10n.mojito.rest.asset.MultiLocalizedAssetBody;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
+import com.box.l10n.mojito.service.repository.RepositoryGenerationService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +32,8 @@ public class GenerateMultiLocalizedAssetJob
   @Autowired AssetRepository assetRepository;
 
   @Autowired RepositoryLocaleRepository repositoryLocaleRepository;
+
+  @Autowired RepositoryGenerationService repositoryGenerationService;
 
   @Autowired MeterRegistry meterRegistry;
 
@@ -58,9 +62,15 @@ public class GenerateMultiLocalizedAssetJob
     String repositoryName = asset.getRepository().getName();
     long startNanos = System.nanoTime();
     try {
+      multiLocalizedAssetBody.getGenerateLocalizedAssetJobIds().clear();
+      Set<String> excludedLocaleTags =
+          repositoryGenerationService.getEffectiveExcludedLocaleTags(asset.getRepository());
 
       for (LocaleInfo localeInfo : multiLocalizedAssetBody.getLocaleInfos()) {
         ResolvedLocale locale = resolveLocale(asset.getRepository().getId(), localeInfo);
+        if (excludedLocaleTags.contains(locale.localeTag())) {
+          continue;
+        }
         QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo =
             QuartzJobInfo.newBuilder(GenerateLocalizedAssetJob.class)
                 .withInlineInput(false)
@@ -99,10 +109,12 @@ public class GenerateMultiLocalizedAssetJob
         repositoryLocaleRepository.findByRepositoryIdAndLocaleId(repositoryId, localeId);
     String outputTag =
         outputOverride != null ? outputOverride : repositoryLocale.getLocale().getBcp47Tag();
-    return new ResolvedLocale(localeId, outputTag, outputOverride);
+    return new ResolvedLocale(
+        localeId, repositoryLocale.getLocale().getBcp47Tag(), outputTag, outputOverride);
   }
 
-  private record ResolvedLocale(Long localeId, String outputTag, String outputOverride) {}
+  private record ResolvedLocale(
+      Long localeId, String localeTag, String outputTag, String outputOverride) {}
 
   String getChildSchedulerName(MultiLocalizedAssetBody multiLocalizedAssetBody) {
     if (childSchedulerName == null || childSchedulerName.trim().isEmpty()) {

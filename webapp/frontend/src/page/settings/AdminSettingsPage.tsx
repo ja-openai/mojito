@@ -252,6 +252,18 @@ export function AdminSettingsPage() {
                 type="button"
                 className="settings-directory__card"
                 onClick={() => {
+                  void navigate('/settings/system/generation');
+                }}
+              >
+                <div className="settings-directory__title">Localized file generation</div>
+                <div className="settings-directory__description">
+                  Exclude locales from localized file generation across all repositories.
+                </div>
+              </button>
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
                   void navigate('/settings/system/blob-cleanup');
                 }}
               >

@@ -436,6 +436,113 @@ fn parallel_pull_preserves_locale_mapping_and_writes_translated_file() {
 }
 
 #[test]
+fn parallel_pull_accepts_server_omission_of_an_explicitly_mapped_locale() {
+    parallel_pull_with_server_exclusions(false);
+}
+
+#[test]
+fn parallel_pull_accepts_server_omission_of_all_locales() {
+    parallel_pull_with_server_exclusions(true);
+}
+
+fn parallel_pull_with_server_exclusions(omit_all: bool) {
+    let directory = tempfile::tempdir().unwrap();
+    let sources = directory.path().join("lang-mojito");
+    std::fs::create_dir_all(&sources).unwrap();
+    std::fs::write(sources.join("en.json"), r#"{"welcome":"Hello"}"#).unwrap();
+    let mut repository = repository();
+    repository[0]["repositoryLocales"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+            "id": 30,
+            "locale": {"id": 30, "bcp47Tag": "he"},
+            "parentLocale": {"id": 10, "locale": {"id": 10, "bcp47Tag": "en"}}
+        }));
+    let mut steps = vec![
+        Step {
+            method: "GET",
+            path: "/api/repositories?name=example",
+            body: repository,
+        },
+        Step {
+            method: "GET",
+            path: "/api/assets?path=lang-mojito%2Fen.json",
+            body: json!([{"id": 7}]),
+        },
+        Step {
+            method: "POST",
+            path: "/api/assets/7/localized/parallel",
+            body: json!({"id": 11}),
+        },
+        Step {
+            method: "GET",
+            path: "/api/pollableTasks/11",
+            body: json!({"id": 11, "allFinished": true}),
+        },
+        Step {
+            method: "GET",
+            path: "/api/pollableTasks/11/output",
+            body: if omit_all {
+                json!({"generateLocalizedAssetJobIds": {}})
+            } else {
+                json!({"generateLocalizedAssetJobIds": {"fr-FR": 12}})
+            },
+        },
+    ];
+    if !omit_all {
+        steps.push(Step {
+            method: "GET",
+            path: "/api/pollableTasks/12/output",
+            body: json!({"bcp47Tag": "fr-FR", "content": "{\"welcome\":\"Bonjour\"}"}),
+        });
+    }
+    let (url, requests, handle) = mock(steps);
+    let output = run(
+        &[
+            "pull",
+            "-r",
+            "example",
+            "-s",
+            directory.path().to_str().unwrap(),
+            "-ft",
+            "JSON_NOBASENAME",
+            "--parallel",
+            "--dir-path-include-patterns",
+            "lang-mojito",
+            "-lm",
+            "fr-FR:fr,he-IL:he",
+        ],
+        &url,
+        directory.path(),
+    );
+    handle.join().unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!sources.join("he-IL.json").exists());
+    if omit_all {
+        assert!(!sources.join("fr-FR.json").exists());
+    } else {
+        assert_eq!(
+            std::fs::read_to_string(sources.join("fr-FR.json")).unwrap(),
+            r#"{"welcome":"Bonjour"}"#
+        );
+    }
+    let recorded = requests.lock().unwrap();
+    let request: Value = serde_json::from_str(&recorded[2].body).unwrap();
+    assert_eq!(
+        request["localeInfos"],
+        json!([
+            {"localeId": 20, "outputBcp47tag": "fr-FR"},
+            {"localeId": 30, "outputBcp47tag": "he-IL"},
+        ])
+    );
+}
+
+#[test]
 fn import_preserves_localized_payload_status_and_polling() {
     let directory = tempfile::tempdir().unwrap();
     let sources = directory.path().join("lang-mojito");

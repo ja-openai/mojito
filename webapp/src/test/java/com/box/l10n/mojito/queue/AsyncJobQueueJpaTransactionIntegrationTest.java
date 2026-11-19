@@ -36,6 +36,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskExceptionUtils;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskRepository;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
+import com.box.l10n.mojito.service.repository.RepositoryGenerationService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobOutputStorage;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobPayload;
@@ -1620,7 +1621,8 @@ public class AsyncJobQueueJpaTransactionIntegrationTest {
             taskBlobs,
             mock(AssetRepository.class),
             mock(RepositoryLocaleRepository.class),
-            repair);
+            repair,
+            mock(RepositoryGenerationService.class));
     long parent = fanout.register();
     initial.resume(parent);
     Map<String, Long> original = fanout.store.mappings(fanout.store.find(parent).orElseThrow());
@@ -1653,7 +1655,8 @@ public class AsyncJobQueueJpaTransactionIntegrationTest {
             taskBlobs,
             mock(AssetRepository.class),
             mock(RepositoryLocaleRepository.class),
-            repair);
+            repair,
+            mock(RepositoryGenerationService.class));
     restarted.resume(parent);
     assertEquals("COMPLETED", fanout.store.find(parent).orElseThrow().state());
     assertEquals(original, fanout.store.mappings(fanout.store.find(parent).orElseThrow()));
@@ -1723,7 +1726,8 @@ public class AsyncJobQueueJpaTransactionIntegrationTest {
           taskBlobs,
           mock(AssetRepository.class),
           mock(RepositoryLocaleRepository.class),
-          repair);
+          repair,
+          mock(RepositoryGenerationService.class));
     }
 
     AssetLocalizeFanoutInput.Manifest manifest() {

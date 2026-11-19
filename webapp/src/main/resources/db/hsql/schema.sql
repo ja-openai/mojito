@@ -45,3 +45,18 @@ CREATE TABLE IF NOT EXISTS asset_localize_fanout_child (
     CONSTRAINT FK__ASSET_FANOUT_CHILD__PARENT FOREIGN KEY (parent_task_id)
         REFERENCES asset_localize_fanout (parent_task_id)
 );
+
+CREATE TABLE IF NOT EXISTS generation_settings (
+    id BIGINT NOT NULL PRIMARY KEY,
+    excluded_locale_tags_json LONGVARCHAR NOT NULL
+);
+MERGE INTO generation_settings AS settings
+USING (VALUES (1, '[]')) AS defaults (id, excluded_locale_tags_json)
+ON settings.id = defaults.id
+WHEN NOT MATCHED THEN INSERT (id, excluded_locale_tags_json)
+    VALUES (defaults.id, defaults.excluded_locale_tags_json);
+
+CREATE TABLE IF NOT EXISTS repository_generation_settings (
+    repository_id BIGINT NOT NULL PRIMARY KEY,
+    excluded_locale_tags_json LONGVARCHAR NOT NULL
+);

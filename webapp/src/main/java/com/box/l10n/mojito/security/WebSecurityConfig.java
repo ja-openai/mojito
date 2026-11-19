@@ -318,6 +318,11 @@ public class WebSecurityConfig {
                 .hasAnyRole("PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/glossaries/*/terms/*/proposals")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/repositories/*/generation-excluded-locales",
+                    "/api/generation-excluded-locales")
+                .hasRole("ADMIN")
                 // Read-only is OK for everyone
                 .requestMatchers(HttpMethod.GET, "/api/**")
                 .authenticated()
