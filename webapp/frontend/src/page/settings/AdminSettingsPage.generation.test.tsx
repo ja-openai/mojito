@@ -17,6 +17,10 @@ function renderDirectory() {
           path="/settings/system/generation"
           element={<h1>Generation settings destination</h1>}
         />
+        <Route
+          path="/settings/system/repositories"
+          element={<h1>Repository settings destination</h1>}
+        />
         <Route path="/settings/me" element={<h1>My settings destination</h1>} />
       </Routes>
     </MemoryRouter>,
@@ -38,6 +42,14 @@ describe('generation settings directory entry', () => {
     ).toBeInTheDocument();
   });
 
+  it('lets administrators open repository settings', async () => {
+    renderDirectory();
+    await userEvent.click(screen.getByRole('button', { name: /Repository settings/ }));
+    expect(
+      await screen.findByRole('heading', { name: 'Repository settings destination' }),
+    ).toBeInTheDocument();
+  });
+
   it.each(['ROLE_PM', 'ROLE_TRANSLATOR', 'ROLE_USER'])('hides the entry from %s', (role) => {
     currentRole = role;
     renderDirectory();
@@ -45,5 +57,6 @@ describe('generation settings directory entry', () => {
     expect(
       screen.queryByRole('button', { name: /Localized file generation/ }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Repository settings/ })).not.toBeInTheDocument();
   });
 });

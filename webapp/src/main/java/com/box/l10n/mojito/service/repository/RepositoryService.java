@@ -10,6 +10,7 @@ import com.box.l10n.mojito.entity.AssetIntegrityChecker;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
+import com.box.l10n.mojito.entity.RepositoryLocaleStatistic;
 import com.box.l10n.mojito.entity.RepositoryStatistic;
 import com.box.l10n.mojito.entity.ScreenshotRun;
 import com.box.l10n.mojito.entity.TM;
@@ -20,6 +21,7 @@ import com.box.l10n.mojito.service.repository.statistics.RepositoryLocaleStatist
 import com.box.l10n.mojito.service.repository.statistics.RepositoryStatisticRepository;
 import com.box.l10n.mojito.service.screenshot.ScreenshotRunRepository;
 import com.box.l10n.mojito.service.tm.TMRepository;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -356,6 +358,53 @@ public class RepositoryService {
   public void updateRepositoryLocales(Set<RepositoryLocale> repositoryLocales)
       throws RepositoryLocaleCreationException {
     updateRepositoryLocales(null, repositoryLocales);
+  }
+
+  /**
+   * Updates target membership while preserving retained locale rows and their settings. The caller
+   * must lock the repository and validate that canonical target tags exclude the source and include
+   * every parent required by a retained target.
+   */
+  @Transactional(rollbackFor = RepositoryLocaleCreationException.class)
+  public void updateRepositoryTargetLocales(Repository repository, Set<String> targetTags)
+      throws RepositoryLocaleCreationException {
+    List<RepositoryLocale> removed =
+        repository.getRepositoryLocales().stream()
+            .filter(locale -> locale.getParentLocale() != null)
+            .filter(locale -> !targetTags.contains(locale.getLocale().getBcp47Tag()))
+            .sorted(Comparator.comparingInt(this::repositoryLocaleDepth).reversed())
+            .toList();
+    for (RepositoryLocale locale : removed) {
+      RepositoryLocaleStatistic statistic =
+          repositoryLocaleStatisticRepository.findByRepositoryStatisticIdAndLocaleId(
+              repository.getRepositoryStatistic().getId(), locale.getLocale().getId());
+      if (statistic != null) {
+        repository.getRepositoryStatistic().getRepositoryLocaleStatistics().remove(statistic);
+        repositoryLocaleStatisticRepository.delete(statistic);
+      }
+      repository.getRepositoryLocales().remove(locale);
+      repositoryLocaleRepository.delete(locale);
+      // Flush each child before deleting its parent, respecting the self-referencing foreign key.
+      repositoryLocaleRepository.flush();
+    }
+    Set<String> retainedTags = new HashSet<>();
+    repository
+        .getRepositoryLocales()
+        .forEach(locale -> retainedTags.add(locale.getLocale().getBcp47Tag()));
+    for (String tag : targetTags) {
+      if (!retainedTags.contains(tag)) {
+        addRepositoryLocale(repository, tag);
+      }
+    }
+  }
+
+  private int repositoryLocaleDepth(RepositoryLocale locale) {
+    int depth = 0;
+    while (locale.getParentLocale() != null) {
+      depth++;
+      locale = locale.getParentLocale();
+    }
+    return depth;
   }
 
   @Transactional

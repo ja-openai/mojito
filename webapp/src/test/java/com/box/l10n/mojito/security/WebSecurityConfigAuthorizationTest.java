@@ -50,6 +50,7 @@ public class WebSecurityConfigAuthorizationTest {
       "/api/repositories/7/generation-excluded-locales";
   private static final String GLOBAL_GENERATION_EXCLUSIONS_PATH =
       "/api/generation-excluded-locales";
+  private static final String TARGET_LOCALES_PATH = "/api/repositories/7/target-locales";
   private static final String AGENT_PROPOSAL_PATH = "/api/agent-reviews/projects/7/proposals/901";
   private static final List<String> HUMAN_REVIEW_ACTIONS =
       List.of("review-again", "reopen", "reopen-and-save");
@@ -108,6 +109,29 @@ public class WebSecurityConfigAuthorizationTest {
           .andExpect(status().isOk());
     }
     mockMvc.perform(get(GLOBAL_GENERATION_EXCLUSIONS_PATH)).andExpect(status().isForbidden());
+  }
+
+  @Test
+  public void onlyAdministratorsCanChangeRepositoryTargetLocales() throws Exception {
+    mockMvc
+        .perform(put(TARGET_LOCALES_PATH).with(user("test").roles("ADMIN")))
+        .andExpect(status().isOk());
+    for (String role : List.of("USER", "TRANSLATOR", "PM")) {
+      mockMvc
+          .perform(put(TARGET_LOCALES_PATH).with(user("test").roles(role)))
+          .andExpect(status().isForbidden());
+    }
+    mockMvc.perform(put(TARGET_LOCALES_PATH)).andExpect(status().isForbidden());
+  }
+
+  @Test
+  public void authenticatedUsersCanReadRepositoryTargetLocales() throws Exception {
+    for (String role : List.of("USER", "TRANSLATOR", "PM", "ADMIN")) {
+      mockMvc
+          .perform(get(TARGET_LOCALES_PATH).with(user("test").roles(role)))
+          .andExpect(status().isOk());
+    }
+    mockMvc.perform(get(TARGET_LOCALES_PATH)).andExpect(status().isForbidden());
   }
 
   @Test
@@ -270,12 +294,20 @@ public class WebSecurityConfigAuthorizationTest {
   @RestController
   static class LinguistTimeSpentStubController {
 
-    @GetMapping({GENERATION_EXCLUSIONS_PATH, GLOBAL_GENERATION_EXCLUSIONS_PATH})
+    @GetMapping({
+      GENERATION_EXCLUSIONS_PATH,
+      GLOBAL_GENERATION_EXCLUSIONS_PATH,
+      TARGET_LOCALES_PATH
+    })
     String getGenerationExclusions() {
       return "ok";
     }
 
-    @PutMapping({GENERATION_EXCLUSIONS_PATH, GLOBAL_GENERATION_EXCLUSIONS_PATH})
+    @PutMapping({
+      GENERATION_EXCLUSIONS_PATH,
+      GLOBAL_GENERATION_EXCLUSIONS_PATH,
+      TARGET_LOCALES_PATH
+    })
     String updateGenerationExclusions() {
       return "ok";
     }

@@ -42,6 +42,7 @@ import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage
 import { AdminGlossaryWorkflowPage } from './page/settings/AdminGlossaryWorkflowPage';
 import { AdminJsonConfigLocalizationPage } from './page/settings/AdminJsonConfigLocalizationPage';
 import { AdminLinguistTimeSpentPage } from './page/settings/AdminLinguistTimeSpentPage';
+import { AdminRepositorySettingsPage } from './page/settings/AdminRepositorySettingsPage';
 import { AdminReviewAutomationBatchPage } from './page/settings/AdminReviewAutomationBatchPage';
 import { AdminReviewAutomationDetailPage } from './page/settings/AdminReviewAutomationDetailPage';
 import { AdminReviewAutomationRunsPage } from './page/settings/AdminReviewAutomationRunsPage';
@@ -264,6 +265,7 @@ export function App() {
             <Route path="/settings/admin" element={<Navigate to="/settings/system" replace />} />
             <Route path="/settings/system" element={<AdminSettingsPage />} />
             <Route path="/settings/system/generation" element={<AdminGenerationSettingsPage />} />
+            <Route path="/settings/system/repositories" element={<AdminRepositorySettingsPage />} />
             <Route path="/settings/teams" element={<AdminTeamsPage />} />
             <Route
               path="/settings/team"

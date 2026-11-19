@@ -69,3 +69,14 @@ Team settings navigation
   switching sections preserves unsaved drafts and editor modes.
 - Long rosters and Slack mappings scroll within bounded lists, with sticky column headings.
   Slack mappings also scroll horizontally on narrow screens.
+
+Repository settings
+-------------------
+
+- `/settings/system/repositories` is the admin entry point for repository configuration. It uses
+  the shared repository selector and a Translation locales section with the shared locale picker;
+  future repository settings can add sections under the same selected repository.
+- Target locale reads and writes use `/api/repositories/{id}/target-locales`, avoiding the legacy
+  whole-repository update. The source locale, retained targets' inheritance and partial-translation
+  flags, integrity checkers, and generation exclusions are preserved. New targets inherit from
+  the source and require full translation. Removing a parent needed by a retained child is rejected.

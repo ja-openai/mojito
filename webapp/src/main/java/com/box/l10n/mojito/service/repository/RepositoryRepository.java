@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.repository;
 
 import com.box.l10n.mojito.entity.Repository;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Sort;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.EntityGraph.EntityGraphType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
@@ -33,6 +35,10 @@ public interface RepositoryRepository
   Optional<Repository> findById(Long aLong);
 
   Optional<Repository> findNoGraphById(Long aLong);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select repository from Repository repository where repository.id = :id")
+  Optional<Repository> findNoGraphByIdForUpdate(@Param("id") Long id);
 
   @Override
   List<Repository> findAll(Specification<Repository> s, Sort sort);

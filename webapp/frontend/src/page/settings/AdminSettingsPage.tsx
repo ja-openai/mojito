@@ -252,6 +252,18 @@ export function AdminSettingsPage() {
                 type="button"
                 className="settings-directory__card"
                 onClick={() => {
+                  void navigate('/settings/system/repositories');
+                }}
+              >
+                <div className="settings-directory__title">Repository settings</div>
+                <div className="settings-directory__description">
+                  Choose translation locales for a repository.
+                </div>
+              </button>
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
                   void navigate('/settings/system/generation');
                 }}
               >

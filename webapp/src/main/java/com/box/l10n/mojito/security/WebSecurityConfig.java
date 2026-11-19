@@ -320,6 +320,7 @@ public class WebSecurityConfig {
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(
                     HttpMethod.PUT,
+                    "/api/repositories/*/target-locales",
                     "/api/repositories/*/generation-excluded-locales",
                     "/api/generation-excluded-locales")
                 .hasRole("ADMIN")

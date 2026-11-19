@@ -8,7 +8,23 @@ permalink: /docs/guides/managing-locales/
 In this guide, let's go over locales in {{ site.mojito_green }} in detail.  Every repository is configured with set of locales.  These locales are used to create translation requests as well as to generate localized files.
 
 
-We use `mojito-cli` to configure locales in a repository.  Locales can be configured when you create and update repository in {{ site.mojito_green }} with `-l` parameter.
+### Edit target locales in Settings
+
+Administrators can open **System Settings → Repository settings**, choose a repository, and edit
+**Translation locales** with the searchable locale picker. Select **Save changes** to apply the
+selection, or **Reset draft** to discard edits. An empty selection removes all target locales.
+
+The source locale stays unchanged. Existing targets keep their inheritance and partial-translation
+settings; newly added targets inherit from the source and require full translation. A parent locale
+cannot be removed while a selected child still inherits from it. Use the CLI for inheritance and
+partial-translation configuration.
+
+Removing a target locale does not delete its translations or generated files. Generation exclusions
+remain separate: see [withholding a locale from generation]({{ site.url }}/docs/guides/generating-localized-files/#withholding-a-locale-from-generation).
+
+### Configure locales with the CLI
+
+Locales can also be configured when you create and update a repository with the `-l` parameter.
 
     mojito repo-create -n MyRepo -l de-DE es-ES fr-FR ja-JP
 
